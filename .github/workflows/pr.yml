@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-upload:
+  build-and-test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -43,6 +43,10 @@ jobs:
       - name: Install dependencies
         if: matrix.os == 'macos-latest'
         run: brew install openssl
+
+      - name: Install dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y gcc-multilib
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
