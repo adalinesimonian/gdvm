@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "gh-pages/**"
+  workflow_dispatch:
 
 # Needed to deploy to GitHub Pages
 permissions:
