@@ -1,0 +1,18 @@
+{
+  "editor.rulers": [80, 120],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[rust]": {
+    "editor.rulers": [100],
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  },
+  "[fluent]": {
+    "editor.rulers": [80, 84, 120]
+  },
+  "search.exclude": {
+    "**/target": true
+  }
+}

@@ -1,0 +1,14 @@
+# Rust build
+/target/
+
+# Rust/Cargo
+**/*.rs.bk
+Cargo.lock
+
+# IDEs and editors
+*.swp
+*.swo
+
+# Other
+.DS_Store
+*.log

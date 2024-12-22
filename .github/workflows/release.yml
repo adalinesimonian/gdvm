@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [
+          x86_64-unknown-linux-gnu,
+          i686-unknown-linux-gnu,
+          aarch64-unknown-linux-gnu,
+          x86_64-apple-darwin,
+          aarch64-apple-darwin,
+          x86_64-pc-windows-gnu,
+          i686-pc-windows-gnu,
+          aarch64-pc-windows-gnu
+        ]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Rename Binary
+        run: mv target/${{ matrix.target }}/release/gdvm${{ contains(matrix.target, 'windows') && '.exe' || '' }} target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}
+
+      - name: Upload Binary
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}

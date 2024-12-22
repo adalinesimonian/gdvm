@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Godot Version Manager</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f4f4;
+            }
+            .container {
+                width: 90%;
+                max-width: 800px;
+                margin: auto;
+                padding: 20px;
+                background-color: #fff;
+                margin-top: 50px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+                text-align: center;
+            }
+            .tabs {
+                display: flex;
+                margin-top: 20px;
+                border-bottom: 1px solid #ccc;
+            }
+            .tab {
+                padding: 10px 20px;
+                cursor: pointer;
+                border: 1px solid #ccc;
+                border-bottom: none;
+                background-color: #eaeaea;
+                margin-right: 5px;
+                border-top-left-radius: 5px;
+                border-top-right-radius: 5px;
+            }
+            .tab.active {
+                background-color: #fff;
+                font-weight: bold;
+            }
+            .tab-content {
+                display: none;
+                padding: 20px;
+                border: 1px solid #ccc;
+            }
+            .tab-content.active {
+                display: block;
+            }
+            .command-box {
+                background-color: #f0f0f0;
+                padding: 15px;
+                border-radius: 5px;
+                cursor: pointer;
+                user-select: all;
+            }
+            .command-box:hover {
+                background-color: #e0e0e0;
+            }
+            .command-box,
+            code {
+                font-family: "Fira Code", monospace;
+            }
+            code {
+                background-color: #f0f0f0;
+                padding: 2px 5px;
+                border-radius: 3px;
+            }
+            .footer {
+                text-align: center;
+                margin-top: 40px;
+                font-size: 0.9em;
+                color: #666;
+            }
+            .github-link {
+                display: block;
+                text-align: center;
+                margin-top: 20px;
+                text-decoration: none;
+                color: #0366d6;
+            }
+            /* Add popover styles */
+            .popover {
+                position: absolute;
+                background-color: #333;
+                color: #fff;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-size: 0.9em;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .popover.show {
+                opacity: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Godot Version Manager</h1>
+            <p>
+                Godot Version Manager (gdvm) is a powerful tool that allows
+                developers to easily install, manage, and switch between
+                different versions of the Godot Engine.
+            </p>
+            <p>
+                Whether you're working on multiple projects or need to test
+                features across various Godot versions, you'll never need to
+                manually fuss with Godot installations again.
+            </p>
+            <a
+                href="https://github.com/adalinesimonian/gdvm"
+                class="github-link"
+                >View on GitHub</a
+            >
+            <h2>Installation</h2>
+            <p>To install gdvm, run the following command in your terminal:</p>
+            <div class="tabs">
+                <div class="tab" id="nix-tab">macOS, Linux</div>
+                <div class="tab" id="windows-tab">Windows</div>
+            </div>
+            <div class="tab-content" id="nix-content">
+                <div class="command-box" id="nix-command">
+                    curl -sSL
+                    https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.sh
+                    | bash
+                </div>
+            </div>
+            <div class="tab-content" id="windows-content">
+                <div class="command-box" id="windows-command">
+                    powershell -Command "iwr -useb
+                    https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.ps1
+                    | iex"
+                </div>
+            </div>
+            <div class="getting-started">
+                <h2>Getting Started</h2>
+                <p>
+                    Once installed, you can use the <code>gdvm</code> command to
+                    manage your Godot installations. Here are some common
+                    commands:
+                </p>
+                <ul>
+                    <li>
+                        <code>gdvm install stable</code> - Install the latest
+                        stable version of Godot
+                    </li>
+                    <li>
+                        <code>gdvm use 4.3</code> - Switch to Godot version 4.3
+                    </li>
+                    <li>
+                        <code>gdvm list</code> - List all installed Godot
+                        versions
+                    </li>
+                </ul>
+                <p>
+                    For more information on how to use <code>gdvm</code>, run
+                    <code>gdvm --help</code>.
+                </p>
+            </div>
+            <div class="footer">
+                &copy; 2024 Adaline Simonian. All rights reserved.
+            </div>
+        </div>
+
+        <script>
+            const tabs = document.querySelectorAll(".tab");
+            const contents = document.querySelectorAll(".tab-content");
+
+            function activateTab(index) {
+                tabs.forEach((tab, i) => {
+                    if (i === index) {
+                        tab.classList.add("active");
+                        contents[i].classList.add("active");
+                    } else {
+                        tab.classList.remove("active");
+                        contents[i].classList.remove("active");
+                    }
+                });
+            }
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener("click", () => {
+                    activateTab(index);
+                });
+            });
+
+            // Detect user platform and activate the corresponding tab
+            window.addEventListener("DOMContentLoaded", () => {
+                const platform = navigator.platform.toLowerCase();
+                if (platform.includes("win")) {
+                    activateTab(1); // Windows tab
+                } else {
+                    activateTab(0); // *nix tab
+                }
+            });
+
+            // Add click event to command boxes to select text
+            const commandBoxes = document.querySelectorAll(".command-box");
+            commandBoxes.forEach((box) => {
+                box.addEventListener("click", () => {
+                    const command = box.textContent.trim().replace(/\s+/g, " ");
+                    navigator.clipboard.writeText(command);
+
+                    // Create popover
+                    let popover = document.createElement("div");
+                    popover.className = "popover";
+                    popover.textContent = "Copied!";
+                    document.body.appendChild(popover);
+
+                    // Position popover
+                    const rect = box.getBoundingClientRect();
+                    popover.style.top = `${rect.top - 30}px`;
+                    popover.style.left = `${rect.left}px`;
+
+                    // Show popover
+                    setTimeout(() => {
+                        popover.classList.add("show");
+                    }, 0);
+
+                    // Hide and remove popover after 2 seconds
+                    setTimeout(() => {
+                        popover.classList.remove("show");
+                        setTimeout(() => {
+                            popover.remove();
+                        }, 300);
+                    }, 2000);
+                });
+            });
+        </script>
+    </body>
+</html>

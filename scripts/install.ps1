@@ -1,0 +1,66 @@
+Param()
+
+# Set install directory
+$installDir = Join-Path $HOME '.gdvm\bin'
+New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+
+# Architecture (assuming Windows)
+if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
+    $arch = 'aarch64-pc-windows-gnu'
+} elseif ([Environment]::Is64BitOperatingSystem) {
+    $arch = 'x86_64-pc-windows-gnu'
+} else {
+    $arch = 'i686-pc-windows-gnu'
+}
+
+$repoUrl   = 'https://github.com/adalinesimonian/gdvm'
+$latestUrl = "$repoUrl/releases/latest/download"
+$file      = "gdvm-$arch.exe"
+$binUrl    = "$latestUrl/$file"
+
+Write-Host "Downloading gdvm from $binUrl..."
+Invoke-WebRequest -Uri $binUrl -OutFile (Join-Path $installDir $file) -UseBasicParsing
+
+# Grant execution rights
+& icacls (Join-Path $installDir $file) /grant Everyone:F > $null
+
+Write-Host "gdvm was installed to $(Join-Path $installDir $file)"
+
+$failedPaths = @()
+
+function Update-UserPath {
+    param($pathToAdd)
+    $existingUserPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User)
+    if (!$existingUserPath -or (-not $existingUserPath.ToLower().Contains($pathToAdd.ToLower()))) {
+        $Env:PATH = "$Env:PATH;$pathToAdd"
+        try {
+            [System.Environment]::SetEnvironmentVariable('PATH', "$existingUserPath;$pathToAdd", [System.EnvironmentVariableTarget]::User)
+            Write-Host "Added $pathToAdd to the user environment PATH."
+        } catch {
+            $failedPaths += $pathToAdd
+        }
+        Write-Host "You may need to log out and log back in for the changes to take effect."
+    } else {
+        Write-Host "$pathToAdd is already in the user environment PATH."
+    }
+}
+
+# Update current user's PATH for $installDir
+Update-UserPath $installDir
+
+$godotDir = Join-Path $installDir 'current_godot'
+Update-UserPath $godotDir
+
+if ($failedPaths.Count -gt 0) {
+    Write-Host "Failed to update the following paths to the user environment PATH:"
+    foreach ($path in $failedPaths) {
+        Write-Host "- $path"
+    }
+    Write-Host "Please add them manually using the following instructions:"
+    Write-Host "1. Open Start Search, type 'env', and select 'Edit the system environment variables'."
+    Write-Host "2. Under 'User variables', select 'Path' and click 'Edit...'."
+    Write-Host "3. Click 'New' and add the paths listed above."
+    Write-Host "4. Click 'OK' to close all windows."
+}
+
+Write-Host "Usage: gdvm --help"
