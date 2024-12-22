@@ -67,3 +67,5 @@ if ($failedPaths.Count -gt 0) {
 Write-Host ""
 Write-Host "To get started, run:"
 Write-Host "Usage: gdvm --help"
+Write-Host ""
+Write-Host "You may possibly need to restart your terminal or IDE (or log out and log back in) for the changes to take effect."

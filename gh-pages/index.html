@@ -22,6 +22,7 @@
                 padding: 20px;
                 background-color: #fff;
                 margin-top: 50px;
+                margin-bottom: 50px;
                 box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             }
             h1 {
@@ -149,14 +150,32 @@
                 </p>
                 <ul>
                     <li>
-                        <code>gdvm install stable</code> - Install the latest
+                        <code>gdvm install stable</code> — Installs the latest
                         stable version of Godot
                     </li>
                     <li>
-                        <code>gdvm use 4.3</code> - Switch to Godot version 4.3
+                        <code>gdvm install stable --csharp</code> — Installs the
+                        latest stable Godot with C# support
+                    </li>
+                    <li><code>gdvm run 4.3</code> — Runs Godot version 4.3</li>
+                    <li>
+                        <code>gdvm use 4.3 --csharp</code> — Sets the default
+                        version to Godot 4.3 with C#
                     </li>
                     <li>
-                        <code>gdvm list</code> - List all installed Godot
+                        <code>godot</code> — Alias added to path when running
+                        "use"
+                    </li>
+                    <li>
+                        <code>godot_console</code> — For Windows users, starts
+                        with a console window
+                    </li>
+                    <li>
+                        <code>gdvm remove 4.3</code> — Removes the Godot version
+                        4.3 without C#
+                    </li>
+                    <li>
+                        <code>gdvm list</code> — Lists all installed Godot
                         versions
                     </li>
                 </ul>

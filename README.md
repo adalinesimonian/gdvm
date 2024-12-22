@@ -21,10 +21,14 @@ powershell -Command "iwr -useb https://raw.githubusercontent.com/adalinesimonian
 ## Usage
 
 ```bash
-gdvm install 4.3
-gdvm use 4.3
-gdvm remove 4.3
-gdvm list
+gdvm install stable          # Installs the latest stable version of Godot
+gdvm install stable --csharp # Installs the latest stable Godot with C# support
+gdvm run 4.3                 # Runs Godot version 4.3
+gdvm use 4.3 --csharp        # Sets the default version to Godot 4.3 with C#
+godot                        # Alias added to path when running "use"
+godot_console                # For Windows users, starts with a console window
+gdvm remove 4.3              # Removes the Godot version 4.3 without C#
+gdvm list                    # Lists all installed Godot versions
 ```
 
 For more information, run
