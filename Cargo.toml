@@ -6,6 +6,8 @@ description = "Godot Version Manager"
 license = "ISC"
 repository = "https://github.com/adalinesimonian/gdvm"
 
+[]
+
 [dependencies]
 
 # For command-line argument parsing:
@@ -53,6 +55,3 @@ openssl = { version = "0.10.68", features = ["vendored"] }
 
 [target.aarch64-unknown-linux-gnu.dependencies]
 openssl = { version = "0.10.68", features = ["vendored"] }
-
-[target.aarch64-unknown-linux-gnu]
-linker = "aarch64-linux-gnu-cc"
