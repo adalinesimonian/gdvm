@@ -29,6 +29,8 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -55,6 +57,8 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
