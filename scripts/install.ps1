@@ -6,11 +6,11 @@ New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 
 # Architecture (assuming Windows)
 if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
-    $arch = 'aarch64-pc-windows-gnu'
+    $arch = 'aarch64-pc-windows-msvc'
 } elseif ([Environment]::Is64BitOperatingSystem) {
-    $arch = 'x86_64-pc-windows-gnu'
+    $arch = 'x86_64-pc-windows-msvc'
 } else {
-    $arch = 'i686-pc-windows-gnu'
+    $arch = 'i686-pc-windows-msvc'
 }
 
 $repoUrl   = 'https://github.com/adalinesimonian/gdvm'
