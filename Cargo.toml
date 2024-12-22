@@ -6,8 +6,6 @@ description = "Godot Version Manager"
 license = "ISC"
 repository = "https://github.com/adalinesimonian/gdvm"
 
-[]
-
 [dependencies]
 
 # For command-line argument parsing:
