@@ -2,13 +2,33 @@
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 # Extract string names from Rust files
-$strings = Get-ChildItem -Path "$ScriptDir/../src" -Recurse -Filter *.rs |
-    Select-String -Pattern 'i18n\.t\s*\(\s*"([^"]*)"' -AllMatches |
-    ForEach-Object { $_.Matches } |
-    ForEach-Object { $_.Groups[1].Value } |
-    Sort-Object -Unique
 
-$exitCode = 0
+# Get all .rs files recursively
+$rsFiles = Get-ChildItem -Path "$ScriptDir\..\src" -Recurse -Filter *.rs
+
+# Initialize an empty array to store keys
+$keys = @()
+
+# Define the regex pattern with single-line and multi-line options
+$pattern = 'i18n\.t(?:_args)?\s*\(\s*"([^"\\]*(?:\\.[^"\\]*)*)"'
+
+foreach ($file in $rsFiles) {
+    # Read the entire file content as a single string
+    $content = Get-Content -Path $file.FullName -Raw
+
+    # Use [regex] with Singleline option to allow . to match newlines
+    $regexMatches = [regex]::Matches($content, $pattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
+
+    foreach ($match in $regexMatches) {
+        # Add the captured key to the array
+        $keys += $match.Groups[1].Value
+    }
+}
+
+# Remove duplicates and sort
+$uniqueKeys = $keys | Sort-Object -Unique
+
+$script:exitCode = 0
 
 # Iterate through each .ftl file in the i18n directory
 Get-ChildItem -Path "$ScriptDir/../i18n" -Filter *.ftl | ForEach-Object {
@@ -23,7 +43,7 @@ Get-ChildItem -Path "$ScriptDir/../i18n" -Filter *.ftl | ForEach-Object {
 
     $missing = @()
     # Check for missing strings
-    foreach ($string in $strings) {
+    foreach ($string in $uniqueKeys) {
         if (-not ($keys -contains $string)) {
             $missing += $string
         }
@@ -31,7 +51,7 @@ Get-ChildItem -Path "$ScriptDir/../i18n" -Filter *.ftl | ForEach-Object {
 
     # Print missing translations
     if ($missing.Count -gt 0) {
-        $exitCode = 1
+        $script:exitCode = 1
         Write-Output "Missing translations in ${lang}:"
         foreach ($m in $missing) {
             Write-Output "  - ${m}"
@@ -43,4 +63,4 @@ Get-ChildItem -Path "$ScriptDir/../i18n" -Filter *.ftl | ForEach-Object {
     Write-Output ""
 }
 
-exit $exitCode
+exit $script:exitCode

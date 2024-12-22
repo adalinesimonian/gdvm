@@ -11,6 +11,13 @@ help-remove = Fjern ein installert Godot-versjon
 
 help-branch = Greina (stable, beta, alpha eller tilpassa).
 help-csharp = Bruk Godot-versjonen med C#-støtte.
+help-run-csharp-long = Køyr Godot-versjonen med C#-støtte.
+
+    Ved å gjeva ein verdi, overskridar du standardversjonen sett med «use». Elles
+    vert standardversjonen brukt. Med andre ord, om du set ein standardversjon med
+    «use --csharp», kan du prøva å køyra den same versjon men utan C#-støtte med
+    «run --csharp false». Det kan likevel ikkje fungera som forventa om versjonen
+    utan C#-støtte ikkje er installert. (Berre køyr «install» for å installere han.)
 help-version = Versjonen som skal installerast (t.d. 4), eller «stable» for den siste stabile versjonen.
 help-version-long =
     Versjonen som skal installerast (t.d. 4), eller «stable» for den siste stabile
@@ -72,11 +79,11 @@ operation-download-complete = Nedlasting fullført.
 operation-extracting = Pakkar ut...
 operation-extract-complete = Utpakking fullført.
 
-error-version-not-found = Versjonen vart ikkje funne.
+error-version-not-found = Versjonen vart ikkje funne. (Gløymde du å spesifisere --csharp?)
 error-multiple-versions-found = Fleire versjonar samsvarar med førespurnaden:
 
 error-invalid-godot-version = Ugyldig Godot-versjonsformat. Forventa formater: x, x.y, x.y.z, x.y.z.w eller x.y.z-tag.
-error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventa formater: x, x.y, x.y.z, x.y.z.w, x.y.z-tag eller "stable".
+error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventa formater: x, x.y, x.y.z, x.y.z.w, x.y.z-tag eller «stable».
 
 error-no-stable-releases-found = Ingen stabile utgivelser funne.
 
@@ -85,10 +92,8 @@ no-matching-releases = Ingen samsvarande utgjevingar funne.
 available-releases = Tilgjengelege utgjevingar:
 cache-cleared = Hurtigbufferet vart tømt.
 
-version-already-installed = Versjonen er allereie installert.
-version-not-found = Versjonen vart ikkje funne.
+version-already-installed = Versjon {$version} er allereie installert.
 godot-executable-not-found = Godot-køyrberr fil vart ikkje funne for versjon {$version}.
-no-cache-file-found = Inga hurtigbufferfil funne.
 warning-cache-metadata-reset = Hurtigbufferindeksen for utgjevingar er ugyldig eller korrupt. Tilbakestiller.
 cache-files-removed = Hurtigbufferfilene vart fjerna.
 cache-metadata-removed = Hurtigbuffermetadataene vart fjerna.
@@ -117,3 +122,4 @@ error-create-file = Kunne ikkje opprette fila { $path }: { $error }
 error-read-zip-file = Kunne ikkje lese frå ZIP-fila { $file }: { $error }
 error-write-file = Kunne ikkje skrive til fila { $path }: { $error }
 error-strip-prefix = Kunne ikkje fjerne prefiks: { $error }
+error-set-permissions = Kunne ikkje setje tillatingar for { $path }: { $error }

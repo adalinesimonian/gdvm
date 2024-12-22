@@ -1,3 +1,4 @@
+use regex::Regex;
 use semver::Version;
 use std::fmt;
 
@@ -117,4 +118,20 @@ impl fmt::Display for GodotVersion {
             write!(f, "{}", build_release_tag(&self.version, &self.branch))
         }
     }
+}
+
+pub fn validate_godot_version(s: &str) -> Result<String, String> {
+    let re = Regex::new(r"^\d+(\.\d+){0,3}(-[A-Za-z0-9]+)?$").unwrap();
+    if re.is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err(String::from("error-invalid-godot-version"))
+    }
+}
+
+pub fn validate_remote_version(s: &str) -> Result<String, String> {
+    if s == "stable" {
+        return Ok(s.to_string());
+    }
+    validate_godot_version(s).map_err(|_| String::from("error-invalid-remote-version"))
 }

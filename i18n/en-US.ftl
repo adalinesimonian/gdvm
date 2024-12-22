@@ -12,6 +12,13 @@ help-remove = Remove an installed Godot version
 
 help-branch = The branch (stable, beta, alpha, or custom).
 help-csharp = Use the Godot version with C# support.
+help-run-csharp-long = Run the Godot version with C# support.
+
+    If given, value overrides the default version set with "use". Otherwise, the
+    default version is used. In other words, if you set a default version with
+    "use --csharp", you can try to run the same version but without C# support with
+    "run --csharp false". However, it may not work as expected if the version
+    without C# support is not installed. (Just run "install" to install it.)
 help-version = The version to install (e.g. 4), or "stable" for the latest stable version.
 help-version-long =
     The version to install (e.g. 4), or "stable" for the latest stable version.
@@ -77,7 +84,7 @@ error-find-user-dirs = Failed to find user directories.
 fetching-releases = Fetching releases...
 releases-fetched = Releases fetched.
 
-error-version-not-found = Version not found.
+error-version-not-found = Version not found. (Did you forget to set --csharp?)
 error-multiple-versions-found = Multiple versions match your request:
 
 error-invalid-godot-version = Invalid Godot version format. Expected formats: x, x.y, x.y.z, x.y.z.w, x.y.z-tag.
@@ -88,10 +95,8 @@ no-matching-releases = No matching releases found.
 available-releases = Available releases:
 cache-cleared = Cache cleared successfully.
 
-version-already-installed = Version already installed.
-version-not-found = Version not found.
+version-already-installed = Version {$version} already installed.
 godot-executable-not-found = Godot executable not found for version {$version}.
-no-cache-file-found = No cache file found.
 
 error-no-stable-releases-found = No stable releases found.
 
@@ -115,3 +120,4 @@ error-create-file = Failed to create file { $path }: { $error }
 error-read-zip-file = Failed to read from ZIP file { $file }: { $error }
 error-write-file = Failed to write to file { $path }: { $error }
 error-strip-prefix = Error stripping prefix: { $error }
+error-set-permissions = Failed to set permissions for { $path }: { $error }

@@ -17,14 +17,15 @@ $repoUrl   = 'https://github.com/adalinesimonian/gdvm'
 $latestUrl = "$repoUrl/releases/latest/download"
 $file      = "gdvm-$arch.exe"
 $binUrl    = "$latestUrl/$file"
+$outFile   = Join-Path $installDir "gdvm.exe"
 
 Write-Host "Downloading gdvm from $binUrl..."
-Invoke-WebRequest -Uri $binUrl -OutFile (Join-Path $installDir $file) -UseBasicParsing
+Invoke-WebRequest -Uri $binUrl -OutFile $outFile -UseBasicParsing
 
 # Grant execution rights
-& icacls (Join-Path $installDir $file) /grant Everyone:F > $null
+& icacls $outFile /grant Everyone:F > $null
 
-Write-Host "gdvm was installed to $(Join-Path $installDir $file)"
+Write-Host "gdvm was installed to $outFile"
 
 $failedPaths = @()
 
@@ -63,4 +64,6 @@ if ($failedPaths.Count -gt 0) {
     Write-Host "4. Click 'OK' to close all windows."
 }
 
+Write-Host ""
+Write-Host "To get started, run:"
 Write-Host "Usage: gdvm --help"

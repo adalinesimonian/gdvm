@@ -4,7 +4,13 @@
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Extract string names from Rust files
-strings=$(grep -rhoP 'i18n\.t\s*\(\s*"[^"]*"' "$SCRIPT_DIR/../src" | sed 's/i18n\.t\s*(\s*"\([^"]*\)".*/\1/' | sort | uniq)
+# shellcheck disable=SC2016
+strings=$(find "$SCRIPT_DIR/../src" -type f -name '*.rs' -print0 | \
+    xargs -0 perl -0777 -ne '
+        while (/i18n\.t(?:_args)?\s*\(\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
+            print "$1\n";
+        }
+    ' | sort | uniq)
 
 exitCode=0
 
@@ -12,9 +18,6 @@ exitCode=0
 for ftl in "$SCRIPT_DIR/../i18n/"*.ftl; do
     lang=$(basename "$ftl" .ftl)
     echo "Checking translations for language: ${lang}"
-
-    # Extract keys from the .ftl file
-    keys=$(grep -E '^[a-zA-Z0-9_-]+ *= ' "$ftl" | cut -d '=' -f1 | tr -d ' ')
 
     missing=()
     # Check for missing strings

@@ -8,26 +8,9 @@ use clap::{value_parser, Arg, ArgMatches, Command};
 use fluent_bundle::FluentValue;
 use godot_manager::{GodotManager, InstallOutcome};
 use i18n::I18n;
-use regex::Regex;
 use std::io::{self, Write};
 
 use version_utils::{GodotBranch, GodotVersion};
-
-fn validate_godot_version(s: &str) -> Result<String, String> {
-    let re = Regex::new(r"^\d+(\.\d+){0,3}(-[A-Za-z0-9]+)?$").unwrap();
-    if re.is_match(s) {
-        Ok(s.to_string())
-    } else {
-        Err(String::from("error-invalid-godot-version"))
-    }
-}
-
-fn validate_remote_version(s: &str) -> Result<String, String> {
-    if s == "stable" {
-        return Ok(s.to_string());
-    }
-    validate_godot_version(s).map_err(|_| String::from("error-invalid-remote-version"))
-}
 
 fn main() -> Result<()> {
     let i18n = I18n::new()?;
@@ -63,7 +46,7 @@ fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(validate_remote_version)
+                        .value_parser(version_utils::validate_remote_version)
                         .help(i18n.t("help-version"))
                         .long_help(i18n.t("help-version-long")),
                 )
@@ -94,14 +77,19 @@ fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(validate_godot_version)
+                        .value_parser(version_utils::validate_godot_version)
                         .help(i18n.t("help-version-installed")),
                 )
                 .arg(
                     Arg::new("csharp")
                         .long("csharp")
-                        .num_args(0)
-                        .help(i18n.t("help-csharp")),
+                        .value_parser(value_parser!(bool))
+                        .num_args(0..=1)
+                        .default_missing_value("true")
+                        .default_value("false")
+                        .require_equals(true)
+                        .help(i18n.t("help-csharp"))
+                        .long_help(i18n.t("help-run-csharp-long")),
                 )
                 .arg(
                     Arg::new("console")
@@ -116,6 +104,7 @@ fn main() -> Result<()> {
                             #[cfg(not(target_os = "windows"))]
                             "true",
                         )
+                        .require_equals(true)
                         .help(i18n.t("help-console")),
                 ),
         )
@@ -125,7 +114,7 @@ fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(validate_godot_version)
+                        .value_parser(version_utils::validate_godot_version)
                         .help(i18n.t("help-version-installed")),
                 )
                 .arg(
@@ -296,16 +285,24 @@ fn sub_list(i18n: &I18n, manager: &GodotManager) -> Result<()> {
 
 /// Handle the 'run' subcommand
 fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+    // specifically check if --csharp was provided as a flag or if we're reading the default value
+    let csharp_given =
+        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
+    let mut csharp = matches.get_flag("csharp");
     let version_input = matches.get_one::<String>("version");
     let version_to_run = if let Some(v) = version_input {
         v.to_string()
     } else if let Some(default_ver) = manager.get_default()? {
+        csharp = if csharp_given {
+            csharp
+        } else {
+            default_ver.ends_with("-csharp")
+        };
         default_ver
     } else {
         return Err(anyhow!(i18n.t("no-default-set")));
     };
 
-    let csharp = matches.get_flag("csharp");
     let console = matches.get_flag("console");
     let resolved_versions = manager.resolve_installed_version(&version_to_run, csharp)?;
 

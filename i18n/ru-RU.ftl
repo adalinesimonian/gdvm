@@ -12,6 +12,14 @@ help-remove = Удалить установленную версию Godot
 
 help-branch = Ветка (stable, beta, alpha или custom).
 help-csharp = Использовать версию Godot с поддержкой C#.
+help-run-csharp-long = Запустить версию Godot с поддержкой C#.
+
+    Если указано значение, оно переопределяет версию по умолчанию, установленную с помощью
+    "use". В противном случае используется версия по умолчанию. Другими словами, если вы
+    установили версию по умолчанию с "use --csharp", вы можете попробовать запустить ту же
+    версию, но без поддержки C# с "run --csharp false". Однако это может не работать
+    ожидаемым образом, если версия без поддержки C# не установлена. (Просто запустите
+    "install", чтобы установить ее.)
 help-version = Версия для установки (например, 4), или "stable" для последней стабильной версии.
 help-version-long =
     Версия для установки (например, 4), или "stable" для последней стабильной версии.
@@ -51,7 +59,7 @@ force-reinstalling-version = Принудительная переустанов
 
 removing-version = Удаление версии {$version}
 
-error-version-not-found = Версия не найдена.
+error-version-not-found = Версия не найдена. (Не забыли вы --csharp?)
 error-multiple-versions-found = Найдено несколько версий, соответствующих запросу:
 
 error-invalid-godot-version = Неверный формат версии Godot. Ожидаемые форматы: x, x.y, x.y.z, x.y.z.w или x.y.z-тег.
@@ -62,10 +70,8 @@ no-matching-releases = Соответствующие релизы не найд
 available-releases = Доступные релизы:
 cache-cleared = Кэш успешно очищен.
 
-version-already-installed = Версия уже установлена.
-version-not-found = Версия не найдена.
+version-already-installed = Версия {$version} уже установлена.
 godot-executable-not-found = Исполняемый файл Godot не найден для версии {$version}.
-no-cache-file-found = Файл кэша не найден.
 warning-cache-metadata-reset = Индекс кэша релизов недействителен или поврежден. Сброс.
 cache-files-removed = Файлы кэша успешно удалены.
 cache-metadata-removed = Метаданные кэша успешно удалены.
@@ -117,3 +123,4 @@ error-create-file = Не удалось создать файл { $path }: { $er
 error-read-zip-file = Не удалось прочитать из ZIP файла { $file }: { $error }
 error-write-file = Не удалось записать в файл { $path }: { $error }
 error-strip-prefix = Ошибка удаления префикса: { $error }
+error-set-permissions = Не удалось установить разрешения для { $path }: { $error }

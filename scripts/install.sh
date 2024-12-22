@@ -28,25 +28,33 @@ case "$arch" in
 esac
 
 file="gdvm-${arch}-${os}"
+outFile="gdvm"
 
 # Windows binaries have a .exe extension
 if [ "$os" = "pc-windows-gnu" ]; then
     file="${file}.exe"
+    outFile="${outFile}.exe"
 fi
 
 binUrl="$latestUrl/$file"
+outPath="$installDir/$outFile"
 
 # Download the binary
 echo "Downloading gdvm from $binUrl..."
-curl -sL "$binUrl" -o "$installDir/$file"
-chmod +x "$installDir/$file"
+curl -sL "$binUrl" -o "$outPath"
+chmod +x "$outPath"
 
 # ...existing code...
-echo "gdvm was installed to $installDir/$file"
+echo "gdvm was installed to $outPath"
 echo "Make sure $installDir and $installDir/current_godot is in your PATH."
 
 # Add the installation directory to PATH for the current session
-export PATH="$installDir:$installDir/current_godot:$PATH"
+if [[ ":$PATH:" != *":$installDir:"* ]] && [[ ":$PATH:" != *":$installDir/current_godot:"* ]]; then
+    export PATH="$installDir:$installDir/current_godot:$PATH"
+    echo "Updated PATH for the current session."
+else
+    echo "PATH already includes $installDir or $installDir/current_godot."
+fi
 
 errorMessage="Could not detect shell profile file. Please add \$installDir to your PATH manually.
 For example, add the following line to your shell's profile file:
@@ -71,12 +79,20 @@ if [ -n "$SHELL" ]; then
     esac
 
     if [ -n "$profileFile" ]; then
-        echo "export PATH=\"$installDir/current_godot:\$installDir:\$PATH\"" >> "$profileFile"
-        echo "Added $installDir to PATH in $profileFile"
+        if ! grep -Fxq "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" "$profileFile"; then
+            echo "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" >> "$profileFile"
+            echo "Added $installDir to PATH in $profileFile"
+        else
+            echo "$profileFile already adds $installDir and $installDir/current_godot to PATH."
+        fi
     else
         echo "$errorMessage"
     fi
 else
     echo "$errorMessage"
 fi
+echo
+echo "To get started, run:"
 echo "Usage: gdvm --help"
+echo
+echo "You may possibly need to restart your shell session or reload your profile file."

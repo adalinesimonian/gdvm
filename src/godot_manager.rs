@@ -40,11 +40,14 @@ pub enum InstallOutcome {
 
 /// GodotManager is a struct that manages the installation and running of Godot versions.
 pub struct GodotManager<'a> {
+    /// Path to GDVM base directory
+    base_path: PathBuf,
+    /// Path to directory to store installed Godot versions
     install_path: PathBuf,
     /// Path to cache.json
-    cache_path: PathBuf,
+    cache_index_path: PathBuf,
     /// Path to directory to store cached zip files
-    cache_dir: PathBuf,
+    cache_path: PathBuf,
     i18n: &'a I18n,
 }
 
@@ -220,15 +223,19 @@ impl<'a> GodotManager<'a> {
     pub fn new(i18n: &'a I18n) -> Result<Self> {
         // For cross-platform user directory management:
         let base_dirs = BaseDirs::new().ok_or(anyhow!(i18n.t("error-find-user-dirs")))?;
-        let install_path = base_dirs.home_dir().join(".gdvm");
+        let base_path = base_dirs.home_dir().join(".gdvm");
+        let install_path = base_path.join("installs");
+        let cache_index_path = base_path.join("cache.json");
+        let cache_path = base_path.join("cache");
+
         fs::create_dir_all(&install_path)?;
-        let cache_path = install_path.join("cache.json");
-        let cache_dir = install_path.join("cache");
-        fs::create_dir_all(&cache_dir)?;
+        fs::create_dir_all(&cache_path)?;
+
         Ok(GodotManager {
+            base_path,
             install_path,
+            cache_index_path,
             cache_path,
-            cache_dir,
             i18n,
         })
     }
@@ -282,7 +289,7 @@ impl<'a> GodotManager<'a> {
         let release_tag = version_utils::build_release_tag(&gv.version, &gv.branch);
         let archive_name = get_archive_name(&release_tag, gv.is_csharp, self.i18n);
         let download_url = get_download_url(&release_tag, &archive_name);
-        let cache_zip_path = self.cache_dir.join(&archive_name);
+        let cache_zip_path = self.cache_path.join(&archive_name);
 
         if !redownload && cache_zip_path.exists() {
             println!("{}", self.i18n.t("using-cached-zip"));
@@ -320,7 +327,16 @@ impl<'a> GodotManager<'a> {
         for entry in fs::read_dir(&self.install_path)? {
             let entry = entry?;
             if entry.file_type()?.is_dir() {
-                versions.push(entry.file_name().to_string_lossy().to_string());
+                let name = entry.file_name().to_string_lossy().to_string();
+                let validation_name = if name.ends_with("-csharp") {
+                    &name.trim_end_matches("-csharp").to_string()
+                } else {
+                    &name
+                };
+                match version_utils::validate_godot_version(&validation_name) {
+                    Ok(_) => versions.push(name),
+                    Err(_) => (), // Ignore invalid version directories
+                }
             }
         }
         version_utils::sort_releases(&mut versions);
@@ -348,7 +364,7 @@ impl<'a> GodotManager<'a> {
             fs::remove_dir_all(path)?;
             Ok(())
         } else {
-            Err(anyhow!(self.i18n.t("version-not-found")))
+            Err(anyhow!(self.i18n.t("error-version-not-found")))
         }
     }
 
@@ -357,7 +373,7 @@ impl<'a> GodotManager<'a> {
         let version_dir = self.install_path.join(version);
         if !version_dir.exists() {
             return Err(anyhow!(self.i18n.t_args(
-                "version-not-found",
+                "error-version-not-found",
                 &[(
                     "version",
                     FluentValue::from(version_utils::friendly_installed_version(version))
@@ -554,8 +570,8 @@ impl<'a> GodotManager<'a> {
 
     // Load the release cache from cache.json
     fn load_cache(&self) -> Result<GithubReleasesCache> {
-        if self.cache_path.exists() {
-            let data = fs::read_to_string(&self.cache_path)?;
+        if self.cache_index_path.exists() {
+            let data = fs::read_to_string(&self.cache_index_path)?;
             match serde_json::from_str::<GithubReleasesCache>(&data) {
                 Ok(cache) => Ok(cache),
                 Err(_) => {
@@ -583,21 +599,21 @@ impl<'a> GodotManager<'a> {
 
     fn save_cache(&self, cache: &GithubReleasesCache) -> Result<()> {
         let data = serde_json::to_string(cache)?;
-        fs::write(&self.cache_path, data)?;
+        fs::write(&self.cache_index_path, data)?;
         Ok(())
     }
 
     /// Clears the release cache by deleting the cache file and all cached zip files
     pub fn clear_cache(&self) -> Result<()> {
-        if self.cache_path.exists() {
-            fs::remove_file(&self.cache_path)?;
+        if self.cache_index_path.exists() {
+            fs::remove_file(&self.cache_index_path)?;
             println!("{}", self.i18n.t("cache-metadata-removed"));
         } else {
             println!("{}", self.i18n.t("no-cache-metadata-found"));
         }
 
-        if self.cache_dir.exists() {
-            for entry in fs::read_dir(&self.cache_dir)? {
+        if self.cache_path.exists() {
+            for entry in fs::read_dir(&self.cache_path)? {
                 let entry = entry?;
                 let path = entry.path();
                 if path.is_file() {
@@ -662,15 +678,15 @@ impl<'a> GodotManager<'a> {
         // Check if the version exists
         let version_path = self.install_path.join(version_str);
         if !version_path.exists() {
-            return Err(anyhow!(self.i18n.t("version-not-found")));
+            return Err(anyhow!(self.i18n.t("error-version-not-found")));
         }
 
         // Write version to .gdvm/default
-        let default_path = self.install_path.join("default");
+        let default_path = self.base_path.join("default");
         fs::write(&default_path, version_str)?;
 
         // Create directory symlink .gdvm/bin/current_godot -> .gdvm/<version_str>/
-        let symlink_dir = self.install_path.join("bin").join("current_godot");
+        let symlink_dir = self.base_path.join("bin").join("current_godot");
         let target_dir = self.install_path.join(version_str);
 
         // Make sure bin directory exists
@@ -717,24 +733,24 @@ impl<'a> GodotManager<'a> {
 
     pub fn unset_default(&self) -> Result<()> {
         // Remove default file and symlink
-        let default_file = self.install_path.join("default");
+        let default_file = self.base_path.join("default");
         if default_file.exists() {
             fs::remove_file(default_file)?;
         }
 
-        let symlink_dir = self.install_path.join("bin").join("current_godot");
+        let symlink_dir = self.base_path.join("bin").join("current_godot");
         if symlink_dir.exists() {
             fs::remove_dir_all(symlink_dir)?;
         }
 
-        let symlink_path = self.install_path.join("bin").join("godot");
+        let symlink_path = self.base_path.join("bin").join("godot");
         if symlink_path.exists() {
             fs::remove_file(symlink_path)?;
         }
 
         #[cfg(target_family = "windows")]
         {
-            let symlink_path = self.install_path.join("bin").join("godot_console");
+            let symlink_path = self.base_path.join("bin").join("godot_console");
             if symlink_path.exists() {
                 fs::remove_file(symlink_path)?;
             }
@@ -744,7 +760,7 @@ impl<'a> GodotManager<'a> {
     }
 
     pub fn get_default(&self) -> Result<Option<String>> {
-        let default_file = self.install_path.join("default");
+        let default_file = self.base_path.join("default");
         if default_file.exists() {
             let contents = fs::read_to_string(&default_file)?;
             Ok(Some(contents.trim().to_string()))
