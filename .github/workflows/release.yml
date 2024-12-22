@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   release:
     types: [published]
 
@@ -13,20 +13,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [
-          x86_64-unknown-linux-gnu,
-          i686-unknown-linux-gnu,
-          aarch64-unknown-linux-gnu,
-          x86_64-apple-darwin,
-          aarch64-apple-darwin,
-          x86_64-pc-windows-gnu,
-          i686-pc-windows-gnu,
-          aarch64-pc-windows-gnu
-        ]
+        target:
+          [
+            x86_64-unknown-linux-gnu,
+            i686-unknown-linux-gnu,
+            aarch64-unknown-linux-gnu,
+            x86_64-apple-darwin,
+            aarch64-apple-darwin,
+            x86_64-pc-windows-gnu,
+            i686-pc-windows-gnu,
+            aarch64-pc-windows-gnu,
+          ]
 
     steps:
       - name: Check out code
         uses: actions/checkout@v3
+
+      - name: Set up dependencies
+        run: sudo apt-get install -y libssl-dev
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
