@@ -45,7 +45,7 @@ no-default-set = Լռելյայն տարբերակը սահմանված չէ:
 installing-version = Տեղադրվում է {$version} տարբերակը
 installed-success = {$version} տարբերակը հաջողությամբ տեղադրվեց
 
-warning-prerelease = զգուշացում: դուք տեղադրում եք նախընտրական վերաշուք ({$branch}։
+warning-prerelease = Զգուշացում: Դուք տեղադրում եք նախնական թողարկում ({$branch}).
 
 no-versions-installed = Տեղադրված տարբերակներ չկան:
 installed-versions = Տեղադրված Godot տարբերակներ:
@@ -58,7 +58,7 @@ confirm-yes = այո
 remove-cancelled = Հեռացումը չեղարկված է:
 
 error-version-not-found = Տարբերակը չի գտնվել: (Մոռացե՞իք սահմանել --csharp-ը:)
-error-multiple-versions-found = Հավաստապատրաստված տարբերակներից մի քանի հիմնավորվեցին:
+error-multiple-versions-found = Մի քանի տարբերակներ են համընկնում ձեր հարցմանը:
 
 error-invalid-godot-version = Անվավեր Godot տարբերակի ձևաչափ: սպասվող ձևաչափեր՝ x, x.y, x.y.z, x.y.z.w կամ x.y.z-tag.
 error-invalid-remote-version = Անվավեր հեռավոր Godot տարբերակի ձևաչափ: սպասվող ձևաչափեր՝ x, x.y, x.y.z, x.y.z.w, x.y.z-tag կամ "stable".
@@ -87,9 +87,9 @@ error-starting-godot = Չհաջողվեց գործարկել Godot-ը՝ { $error
 
 help-console = Godot-ը կատարողական կոնսոլով: լռելյայն է Windows-ում, այլ համակարգչներում ակտիվացվում է:
 
-default-set-success = Հաջողությամբ տեղադրվել է {$version} որպես Godot-ի डीफոլտ տարբերակը։
-default-unset-success = Հաջողությամբ հեռացված է Godot-ի डीֆոլտ տարբերակը։
-provide-version-or-unset = Խնդրում ենք տրամադրել տարբերակ՝ որպես डीֆոլտ տարբերակ կամ 'unset' Godot-ի डीֆոլտ տարբերակը հեռացնելու համար։
+default-set-success = Հաջողությամբ սահմանվել է {$version} որպես լռելյայն Godot տարբերակը։
+default-unset-success = Հաջողությամբ հեռացվեց լռելյայն Godot տարբերակը։
+provide-version-or-unset = Խնդրում ենք տրամադրել տարբերակ՝ սահմանելու համար լռելյայն կամ 'unset'՝ լռելյայն տարբերակը հեռացնելու համար։
 
 error-no-stable-releases-found = Կայուն թողարկումներ չեն գտնվել:
 force-reinstalling-version = Բարդ ընդկարեն տեղադրությունը տարբերակ {$version}.
