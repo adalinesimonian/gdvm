@@ -6,77 +6,47 @@ on:
       - main
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
+  build-and-upload:
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        target:
-          [
-            x86_64-unknown-linux-gnu,
-            i686-unknown-linux-gnu,
-            aarch64-unknown-linux-gnu,
-            x86_64-pc-windows-gnu,
-            i686-pc-windows-gnu,
-            aarch64-pc-windows-gnu,
-          ]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+          - os: windows-latest
+            target: i686-pc-windows-gnu
+          - os: windows-latest
+            target: aarch64-pc-windows-gnu
+
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Install dependencies for Linux x86_32
-        if: ${{ matrix.target == 'i686-unknown-linux-gnu' }}
-        run: sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install libssl-dev:i386
-
-      - name: Install dependencies for Linux x86_64
-        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
-        run: sudo apt-get update && sudo apt-get install pkg-config libssl-dev
-
-      - name: Install dependencies for Linux aarch64
-        if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
-        run: sudo dpkg --add-architecture arm64 && sudo apt-get update && sudo apt-get install libssl-dev:arm64
+        uses: actions/checkout@v4
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Check i18n
-        run: scripts/find-missing-i18n.sh
-
-      - name: Rename Binary
-        run: |
-          if [[ ${{ matrix.target }} == *"windows"* ]]; then
-            mv target/${{ matrix.target }}/release/gdvm.exe target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}.exe
-          else
-            mv target/${{ matrix.target }}/release/gdvm target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}
-          fi
-
-  build-macos:
-    runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin]
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Set up dependencies
+      - name: Install dependencies
+        if: matrix.os == 'macos-latest'
         run: brew install openssl
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Check i18n
+        shell: bash
         run: scripts/find-missing-i18n.sh
