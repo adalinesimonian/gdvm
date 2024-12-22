@@ -7,6 +7,11 @@ on:
   release:
     types: [published]
 
+# Needed to upload artifacts to releases
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build-and-upload:
     runs-on: ${{ matrix.os }}
