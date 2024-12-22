@@ -18,14 +18,26 @@ jobs:
             x86_64-unknown-linux-gnu,
             i686-unknown-linux-gnu,
             aarch64-unknown-linux-gnu,
+            x86_64-pc-windows-gnu,
+            i686-pc-windows-gnu,
+            aarch64-pc-windows-gnu,
           ]
 
     steps:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Set up dependencies
-        run: sudo apt-get install -y libssl-dev
+      - name: Install dependencies for Linux x86_32
+        if: ${{ matrix.target == 'i686-unknown-linux-gnu' }}
+        run: sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install libssl-dev:i386
+
+      - name: Install dependencies for Linux x86_64
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        run: sudo apt-get update && sudo apt-get install pkg-config libssl-dev
+
+      - name: Install dependencies for Linux aarch64
+        if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
+        run: sudo dpkg --add-architecture arm64 && sudo apt-get update && sudo apt-get install libssl-dev:arm64
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -36,40 +48,22 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename Binary
-        run: mv target/${{ matrix.target }}/release/gdvm target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}
+        run: |
+          if [[ ${{ matrix.target }} == *"windows"* ]]; then
+            mv target/${{ matrix.target }}/release/gdvm.exe target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}.exe
+          else
+            mv target/${{ matrix.target }}/release/gdvm target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}
+          fi
 
       - name: Upload Binary
         uses: softprops/action-gh-release@v2
         with:
-          files: target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}
-
-  build-windows:
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          [x86_64-pc-windows-gnu, i686-pc-windows-gnu, aarch64-pc-windows-gnu]
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Rename Binary
-        run: ren target\${{ matrix.target }}\release\gdvm.exe target\${{ matrix.target }}\release\gdvm-${{ matrix.target }}.exe
-
-      - name: Upload Binary
-        uses: softprops/action-gh-release@v2
-        with:
-          files: target\${{ matrix.target }}\release\gdvm-${{ matrix.target }}.exe
+          files: |
+            if [[ ${{ matrix.target }} == *"windows"* ]]; then
+              target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}.exe
+            else
+              target/${{ matrix.target }}/release/gdvm-${{ matrix.target }}
+            fi
 
   build-macos:
     runs-on: macos-latest
