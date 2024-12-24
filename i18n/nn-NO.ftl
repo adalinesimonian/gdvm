@@ -125,7 +125,9 @@ remove-cancelled = Fjerning avbroten.
 default-set-success = Standardversjon {$version} er sett.
 default-unset-success = Standardversjonen er fjerna.
 provide-version-or-unset = Vennligst oppgjeva ein versjon for å setja som standard eller «unset» for å fjerne standardversjonen.
-no-default-set = Ingen standardversjon er sett.
+no-default-set = Ingen standardversjon er sett. Køyr «gdvm use <version>» for å setja ein
+    standardversjon systemomfattande, eller «gdvm pin <version>» for å setja ein
+    standardversjon for den gjeldende mappa.
 
 error-starting-godot = Kunne ikkje starte Godot: { $error }
 

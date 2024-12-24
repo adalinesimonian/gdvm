@@ -17,6 +17,53 @@ fn main() -> Result<()> {
     let i18n = I18n::new()?;
     let manager = GodotManager::new(&i18n)?;
 
+    // Detect if running through "godot" or "godot_console" symlink
+    let exe_name = std::env::current_exe()?
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_lowercase();
+
+    if exe_name.contains("godot") {
+        // Forward all args (skip clap) and treat it like "gdvm run"
+
+        #[cfg(target_os = "windows")]
+        let console_mode = exe_name.contains("console");
+
+        #[cfg(not(target_os = "windows"))]
+        let console_mode = true;
+
+        // Pass all arguments to Godot
+        let args: Vec<String> = std::env::args().skip(1).collect();
+
+        // Search for the first argument that is a valid file and change to its directory
+        // This is to make sure that we are using the working directory of the project when checking
+        // for the Godot version to run
+        if let Some(file) = args.iter().find(|arg| std::path::Path::new(arg).exists()) {
+            let file_path = std::path::Path::new(file);
+            if let Some(file_dir) = file_path.parent() {
+                std::env::set_current_dir(file_dir)?;
+            }
+        }
+
+        if let Err(err) = sub_run_inner(
+            &I18n::new()?,
+            &GodotManager::new(&I18n::new()?)?,
+            None,
+            false,
+            false,
+            console_mode,
+            args,
+        ) {
+            eprintln!("{}", err);
+
+            // Wait for 5 seconds before exiting
+            std::thread::sleep(std::time::Duration::from_secs(5));
+
+            std::process::exit(1);
+        }
+    }
+
     let matches = Command::new("gdvm")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Adaline Simonian <adalinesimonian@gmail.com>")
@@ -274,12 +321,39 @@ fn sub_list(i18n: &I18n, manager: &GodotManager) -> Result<()> {
 
 /// Handle the 'run' subcommand
 fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+    // Capture args after "--" to pass directly to child
+    let raw_args = match std::env::args().position(|x| x == "--") {
+        Some(pos) => std::env::args().skip(pos + 1).collect(),
+        None => Vec::new(),
+    };
+
     // specifically check if --csharp was provided as a flag or if we're reading the default value
     let csharp_given =
         matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
     let csharp_flag = matches.get_flag("csharp");
     let version_input = matches.get_one::<String>("version");
+    let console = matches.get_flag("console");
 
+    sub_run_inner(
+        i18n,
+        manager,
+        version_input,
+        csharp_given,
+        csharp_flag,
+        console,
+        raw_args,
+    )
+}
+
+fn sub_run_inner(
+    i18n: &I18n,
+    manager: &GodotManager,
+    version_input: Option<&String>,
+    csharp_given: bool,
+    csharp_flag: bool,
+    console: bool,
+    raw_args: Vec<String>,
+) -> Result<()> {
     let resolved_version = if let Some(v) = version_input {
         let mut requested_version = GodotVersion::from_match_str(&v)?;
 
@@ -298,13 +372,12 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         return Err(anyhow!(i18n.t("no-default-set")));
     };
 
-    let console = matches.get_flag("console");
     println_i18n!(
         i18n,
         "running-version",
         [("version", &resolved_version.to_display_str())]
     );
-    manager.run(&resolved_version, console)?;
+    manager.run(&resolved_version, console, raw_args)?;
 
     Ok(())
 }

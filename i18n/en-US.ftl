@@ -52,7 +52,9 @@ help-console = Run Godot with the console attached. Defaults to false on Windows
 
 help-default = Manage the default version
 help-default-version = The version to set as default (e.g. 4.2 or 4.2-stable).
-no-default-set = No default version set.
+no-default-set = No default version set. Run "gdvm use <version>" to set a default version
+    system-wide, or "gdvm pin <version>" to set a default version for the current
+    directory.
 
 installing-version = Installing version {$version}
 installed-success = Successfully installed {$version}

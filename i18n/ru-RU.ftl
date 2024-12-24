@@ -44,7 +44,9 @@ cached-zip-stored = Архив релиза Godot сохранен в кэше.
 
 help-default = Управление версией по умолчанию
 help-default-version = Версия для установки по умолчанию (например, 4.2 или 4.2-stable).
-no-default-set = Версия по умолчанию не установлена.
+no-default-set =Локальная версия не установлена. Запустите "gdvm use <version>", чтобы установить
+    локальную версию для всей системы, или "gdvm pin <version>", чтобы установить
+    локальную версию для текущего каталога.
 
 installing-version = Установка версии {$version}
 auto-installing-version = Автоматическая установка версии {$version}

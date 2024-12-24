@@ -239,6 +239,34 @@ impl<'a> GodotManager<'a> {
         fs::create_dir_all(&install_path)?;
         fs::create_dir_all(&cache_path)?;
 
+        // Create symlinks to godot and godot_console executables
+        #[cfg(target_family = "unix")]
+        {
+            let godot_symlink = base_path.join("bin").join("godot");
+            if !godot_symlink.exists() {
+                std::os::unix::fs::symlink(&base_path.join("bin").join("gdvm"), &godot_symlink)?;
+            }
+        }
+
+        #[cfg(target_family = "windows")]
+        {
+            let godot_symlink = base_path.join("bin").join("godot.exe");
+            if !godot_symlink.exists() {
+                std::os::windows::fs::symlink_file(
+                    &base_path.join("bin").join("gdvm.exe"),
+                    &godot_symlink,
+                )?;
+            }
+
+            let godot_console_symlink = base_path.join("bin").join("godot_console.exe");
+            if !godot_console_symlink.exists() {
+                std::os::windows::fs::symlink_file(
+                    &base_path.join("bin").join("gdvm.exe"),
+                    &godot_console_symlink,
+                )?;
+            }
+        }
+
         Ok(GodotManager {
             base_path,
             install_path,
@@ -363,7 +391,12 @@ impl<'a> GodotManager<'a> {
     }
 
     /// Run a specified Godot version
-    pub fn run(&self, gv: &GodotVersionDeterminate, console: bool) -> Result<()> {
+    pub fn run(
+        &self,
+        gv: &GodotVersionDeterminate,
+        console: bool,
+        godot_args: Vec<String>,
+    ) -> Result<()> {
         let version_dir = self.install_path.join(gv.to_install_str());
         if !version_dir.exists() {
             return Err(anyhow!(self.i18n.t_args(
@@ -404,35 +437,13 @@ impl<'a> GodotManager<'a> {
             }
         }
 
+        let mut cmd = std::process::Command::new(&path);
         if console {
-            // Run the process attached to the terminal and wait for it to exit
-            std::process::Command::new(&path)
-                .stdin(std::process::Stdio::inherit())
+            cmd.stdin(std::process::Stdio::inherit())
                 .stdout(std::process::Stdio::inherit())
-                .stderr(std::process::Stdio::inherit())
-                .status()?;
-        } else {
-            // Detached process configuration
-            #[cfg(target_family = "unix")]
-            {
-                Daemonize::new().start().map_err(|e| {
-                    anyhow!(self.i18n.t_args(
-                        "error-starting-godot",
-                        &[("error", FluentValue::from(e.to_string()))]
-                    ))
-                })?;
-                std::process::Command::new(&path).spawn()?;
-            }
-
-            #[cfg(target_family = "windows")]
-            {
-                use std::os::windows::process::CommandExt;
-                use winapi::um::winbase::DETACHED_PROCESS;
-                std::process::Command::new(&path)
-                    .creation_flags(DETACHED_PROCESS)
-                    .spawn()?;
-            }
+                .stderr(std::process::Stdio::inherit());
         }
+        cmd.args(&godot_args).spawn()?;
 
         Ok(())
     }
@@ -710,34 +721,6 @@ impl<'a> GodotManager<'a> {
         #[cfg(target_family = "windows")]
         std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir).map_err(|e| anyhow!(e))?;
 
-        // Create symlink for godot executable
-        // .gdvm/bin/godot -> .gdvm/<version_str>/godot-executable-name(.exe)
-
-        if let Some(godot_executable) = find_godot_executable(&version_path, false)? {
-            let symlink_path = symlink_dir.join("godot");
-            if symlink_path.exists() {
-                fs::remove_file(&symlink_path)?;
-            }
-            #[cfg(target_family = "unix")]
-            std::os::unix::fs::symlink(&godot_executable, &symlink_path)?;
-            #[cfg(target_family = "windows")]
-            std::os::windows::fs::symlink_file(&godot_executable, &symlink_path)
-                .map_err(|e| anyhow!(e))?;
-        }
-
-        // (on Windows) .gdvm/bin/godot_console -> .gdvm/<version_str>/godot-executable-name_console.exe
-        #[cfg(target_family = "windows")]
-        {
-            if let Some(godot_executable) = find_godot_executable(&version_path, true)? {
-                let symlink_path = symlink_dir.join("godot_console");
-                if symlink_path.exists() {
-                    fs::remove_file(&symlink_path)?;
-                }
-                std::os::windows::fs::symlink_file(&godot_executable, &symlink_path)
-                    .map_err(|e| anyhow!(e))?;
-            }
-        }
-
         Ok(())
     }
 
@@ -751,19 +734,6 @@ impl<'a> GodotManager<'a> {
         let symlink_dir = self.base_path.join("bin").join("current_godot");
         if symlink_dir.exists() {
             fs::remove_dir_all(symlink_dir)?;
-        }
-
-        let symlink_path = self.base_path.join("bin").join("godot");
-        if symlink_path.exists() {
-            fs::remove_file(symlink_path)?;
-        }
-
-        #[cfg(target_family = "windows")]
-        {
-            let symlink_path = self.base_path.join("bin").join("godot_console");
-            if symlink_path.exists() {
-                fs::remove_file(symlink_path)?;
-            }
         }
 
         Ok(())
