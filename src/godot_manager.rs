@@ -5,6 +5,7 @@ use directories::BaseDirs;
 use fluent_bundle::FluentValue;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::fs;
@@ -20,17 +21,29 @@ use crate::zip_utils;
 
 use version_utils::{GodotVersion, GodotVersionDeterminateVecExt};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct ReleaseCache {
     id: u64,
     tag_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct GithubReleasesCache {
     /// Unix timestamp in seconds
     last_fetched: u64,
     releases: Vec<ReleaseCache>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct GdvmCache {
+    last_update_check: u64,
+    new_version: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct FullCache {
+    gdvm: GdvmCache,
+    godot_github: GithubReleasesCache,
 }
 
 #[derive(Debug)]
@@ -267,13 +280,18 @@ impl<'a> GodotManager<'a> {
             }
         }
 
-        Ok(GodotManager {
+        let manager = GodotManager {
             base_path,
             install_path,
             cache_index_path,
             cache_path,
             i18n,
-        })
+        };
+
+        // Don't fail if update check fails, since it isn't critical
+        manager.check_for_upgrades().ok();
+
+        Ok(manager)
     }
 
     /// Gets the path to the GodotManager's base directory
@@ -562,44 +580,73 @@ impl<'a> GodotManager<'a> {
             .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
             .as_secs();
 
-        self.save_cache(cache)?;
+        self.save_github_cache(cache)?;
 
+        Ok(())
+    }
+
+    fn load_full_cache(&self) -> Result<FullCache> {
+        if self.cache_index_path.exists() {
+            let data = fs::read_to_string(&self.cache_index_path)?;
+            match serde_json::from_str::<FullCache>(&data) {
+                Ok(full) => Ok(full),
+                Err(_) => {
+                    // Overwrite with a default FullCache if corrupted
+                    let empty_full = FullCache {
+                        gdvm: GdvmCache {
+                            last_update_check: 0,
+                            new_version: None,
+                        },
+                        godot_github: GithubReleasesCache {
+                            last_fetched: 0,
+                            releases: vec![],
+                        },
+                    };
+                    self.save_full_cache(&empty_full)?;
+                    Ok(empty_full)
+                }
+            }
+        } else {
+            Ok(FullCache {
+                gdvm: GdvmCache {
+                    last_update_check: 0,
+                    new_version: None,
+                },
+                godot_github: GithubReleasesCache {
+                    last_fetched: 0,
+                    releases: vec![],
+                },
+            })
+        }
+    }
+
+    fn save_full_cache(&self, full: &FullCache) -> Result<()> {
+        let data = serde_json::to_string(full)?;
+        fs::write(&self.cache_index_path, data)?;
         Ok(())
     }
 
     // Load the release cache from cache.json
     fn load_cache(&self) -> Result<GithubReleasesCache> {
-        if self.cache_index_path.exists() {
-            let data = fs::read_to_string(&self.cache_index_path)?;
-            match serde_json::from_str::<GithubReleasesCache>(&data) {
-                Ok(cache) => Ok(cache),
-                Err(_) => {
-                    // Log a warning about the corrupted or unexpected cache format
-                    println_i18n!(self.i18n, "warning-cache-metadata-reset");
-
-                    // Overwrite the cache with an empty cache
-                    let empty_cache = GithubReleasesCache {
-                        last_fetched: 0,
-                        releases: vec![],
-                    };
-                    self.save_cache(&empty_cache)?;
-
-                    Ok(empty_cache)
-                }
-            }
-        } else {
-            // Initialize empty cache
-            Ok(GithubReleasesCache {
-                last_fetched: 0,
-                releases: vec![],
-            })
-        }
+        let full = self.load_full_cache()?;
+        Ok(full.godot_github)
     }
 
-    fn save_cache(&self, cache: &GithubReleasesCache) -> Result<()> {
-        let data = serde_json::to_string(cache)?;
-        fs::write(&self.cache_index_path, data)?;
-        Ok(())
+    fn save_github_cache(&self, cache: &GithubReleasesCache) -> Result<()> {
+        let mut full = self.load_full_cache()?;
+        full.godot_github = cache.clone();
+        self.save_full_cache(&full)
+    }
+
+    fn load_gdvm_cache(&self) -> Result<GdvmCache> {
+        let full = self.load_full_cache()?;
+        Ok(full.gdvm)
+    }
+
+    fn save_gdvm_cache(&self, cache: &GdvmCache) -> Result<()> {
+        let mut full = self.load_full_cache()?;
+        full.gdvm = cache.clone();
+        self.save_full_cache(&full)
     }
 
     /// Clears the release cache by deleting the cache file and all cached zip files
@@ -814,5 +861,144 @@ impl<'a> GodotManager<'a> {
 
         let installed_versions = self.list_installed()?;
         Ok(installed_versions.iter().any(|v| gv.matches(v)))
+    }
+
+    pub fn check_for_upgrades(&self) -> Result<()> {
+        // Load or initialize gdvm cache
+        let gdvm_cache = self.load_gdvm_cache()?;
+
+        // Check for updates
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
+            .as_secs();
+        let cache_duration = Duration::from_secs(48 * 3600); // 48 hours
+        let cache_age = now - gdvm_cache.last_update_check;
+
+        if cache_age > cache_duration.as_secs() {
+            let progress = ProgressBar::new_spinner();
+            progress
+                .set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
+            progress.enable_steady_tick(Duration::from_millis(100));
+            progress.set_message(self.i18n.t("checking-updates"));
+
+            let mut new_version = None;
+
+            if let Err(err) = {
+                let client = reqwest::blocking::Client::new();
+                let url = "https://api.github.com/repos/adalinesimonian/gdvm/releases/latest";
+                let resp = client
+                    .get(url)
+                    .header("User-Agent", "gdvm")
+                    .timeout(Duration::from_secs(3))
+                    .send()?
+                    .error_for_status()?;
+                let release: serde_json::Value = serde_json::from_str(&resp.text()?)?;
+
+                if let Some(tag_name) = release.get("tag_name").and_then(|t| t.as_str()) {
+                    let latest_version = Version::parse(tag_name.trim_start_matches('v'))?;
+                    let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+                    if latest_version > current_version {
+                        new_version = Some(tag_name.to_string());
+                    }
+                }
+
+                Ok(())
+            } {
+                progress.finish_and_clear();
+                return Err(err);
+            }
+
+            progress.finish_and_clear();
+
+            if let Some(new_version) = new_version {
+                print!("\x1b[1;32m"); // Bold and green
+                println_i18n!(self.i18n, "upgrade-available", [("version", &new_version)]);
+                print!("\x1b[0m"); // Reset
+                println!();
+
+                self.save_gdvm_cache(&GdvmCache {
+                    last_update_check: now,
+                    new_version: Some(new_version),
+                })?;
+            }
+        } else if let Some(new_version) = &gdvm_cache.new_version {
+            if let Ok(new_version) = Version::parse(new_version.trim_start_matches('v')) {
+                let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+                if new_version > current_version {
+                    print!("\x1b[1;32m"); // Bold and green
+                    println_i18n!(
+                        self.i18n,
+                        "upgrade-available",
+                        [("version", new_version.to_string())]
+                    );
+                    print!("\x1b[0m"); // Reset
+                    println!();
+                } else {
+                    self.save_gdvm_cache(&GdvmCache {
+                        last_update_check: now,
+                        new_version: None,
+                    })?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn upgrade(&self) -> Result<()> {
+        println_i18n!(self.i18n, "upgrade-starting");
+        println_i18n!(self.i18n, "upgrade-downloading-latest");
+
+        // Define install directory
+        let install_dir = self.get_base_path().join("bin");
+        std::fs::create_dir_all(&install_dir)
+            .map_err(|_| anyhow!(self.i18n.t("upgrade-install-dir-failed")))?;
+
+        // Detect architecture
+        #[cfg(target_arch = "aarch64")]
+        let arch = "aarch64-pc-windows-msvc";
+        #[cfg(all(target_arch = "x86_64"))]
+        let arch = "x86_64-pc-windows-msvc";
+        #[cfg(target_arch = "x86")]
+        let arch = "i686-pc-windows-msvc";
+
+        // Set download URL based on architecture
+        let repo_url = "https://github.com/adalinesimonian/gdvm";
+        let latest_url = format!("{}/releases/latest/download", repo_url);
+        #[cfg(target_os = "windows")]
+        let file = format!("gdvm-{}.exe", arch);
+        #[cfg(not(target_os = "windows"))]
+        let file = format!("gdvm-{}", arch);
+        let bin_url = format!("{}/{}", latest_url, file);
+        let out_file = install_dir.join("gdvm.new");
+
+        // Download the new binary
+        if let Err(err) = download_file(&bin_url, &out_file, self.i18n) {
+            println_i18n!(self.i18n, "upgrade-download-failed");
+            return Err(err);
+        }
+
+        // Rename current executable to .bak and replace it with the new file
+        let current_exe = std::env::current_exe()?;
+        let backup_exe = current_exe.with_extension("bak");
+
+        std::fs::rename(&current_exe, &backup_exe)
+            .map_err(|_| anyhow!(self.i18n.t("upgrade-rename-failed")))?;
+        std::fs::rename(&out_file, &current_exe)
+            .map_err(|_| anyhow!(self.i18n.t("upgrade-replace-failed")))?;
+
+        // Update gdvm cache
+        self.save_gdvm_cache(&GdvmCache {
+            last_update_check: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
+                .as_secs(),
+            new_version: None,
+        })?;
+
+        println_i18n!(self.i18n, "upgrade-complete");
+
+        Ok(())
     }
 }

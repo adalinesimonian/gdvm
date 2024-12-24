@@ -143,6 +143,8 @@ upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $
 upgrade-rename-failed = Klarte ikke å endre navn på den nåværende kjørbare filen: { $error }
 upgrade-replace-failed = Klarte ikke å erstatte den kjørbare filen med den nye: { $error }
 
+upgrade-available = 💡 En ny versjon av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade» for å oppgradere.
+
 help-pin = Fest en versjon av Godot til gjeldende mappe.
 help-pin-long = Fest en versjon av Godot til gjeldende mappe.
 
@@ -160,3 +162,5 @@ pin-subcommand-description = Setter eller oppdaterer .gdvmrc med forespurt versj
 
 error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren.
 error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }
+
+checking-updates = Sjekker etter oppdateringer til gdvm...

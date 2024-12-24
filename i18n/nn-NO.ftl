@@ -156,5 +156,9 @@ upgrade-install-dir-failed = Klarte ikkje å opprette installasjonskatalogen: { 
 upgrade-rename-failed = Klarte ikkje å endre namn på den noverande køyrberre fila: { $error }
 upgrade-replace-failed = Klarte ikkje å erstatte den køyrberre fila med den nye: { $error }
 
+upgrade-available = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade» for å oppgradere.
+
 error-file-not-found = Fil vart ikkje funnen. Ho finst kanskje ikkje på tenaren.
 error-download-failed = Nedlasting feila på grunn av ein uventa feil: { $error }
+
+checking-updates = Sjekkar etter oppdateringar til gdvm...

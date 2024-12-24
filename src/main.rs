@@ -4,7 +4,6 @@ mod i18n;
 mod version_utils;
 mod zip_utils;
 
-use crate::download_utils::download_file;
 use anyhow::{anyhow, Result};
 use clap::{value_parser, Arg, ArgMatches, Command};
 use godot_manager::{GodotManager, InstallOutcome};
@@ -253,7 +252,7 @@ fn main() -> Result<()> {
         Some(("search", sub_m)) => sub_search(&i18n, &manager, sub_m)?,
         Some(("clear-cache", _)) => sub_clear_cache(&i18n, &manager)?,
         Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m)?,
-        Some(("upgrade", _)) => sub_upgrade(&i18n, &manager)?,
+        Some(("upgrade", _)) => sub_upgrade(&manager)?,
         Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m)?,
         _ => {}
     }
@@ -501,50 +500,8 @@ fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
 }
 
 /// Handle the 'upgrade' subcommand
-fn sub_upgrade(i18n: &I18n, manager: &GodotManager) -> Result<()> {
-    println_i18n!(i18n, "upgrade-starting");
-    println_i18n!(i18n, "upgrade-downloading-latest");
-
-    // Define install directory
-    let install_dir = manager.get_base_path().join("bin");
-    std::fs::create_dir_all(&install_dir)
-        .map_err(|_| anyhow!(i18n.t("upgrade-install-dir-failed")))?;
-
-    // Detect architecture
-    #[cfg(target_arch = "aarch64")]
-    let arch = "aarch64-pc-windows-msvc";
-    #[cfg(all(target_arch = "x86_64"))]
-    let arch = "x86_64-pc-windows-msvc";
-    #[cfg(target_arch = "x86")]
-    let arch = "i686-pc-windows-msvc";
-
-    // Set download URL based on architecture
-    let repo_url = "https://github.com/adalinesimonian/gdvm";
-    let latest_url = format!("{}/releases/latest/download", repo_url);
-    #[cfg(target_os = "windows")]
-    let file = format!("gdvm-{}.exe", arch);
-    #[cfg(not(target_os = "windows"))]
-    let file = format!("gdvm-{}", arch);
-    let bin_url = format!("{}/{}", latest_url, file);
-    let out_file = install_dir.join("gdvm.new");
-
-    // Download the new binary
-    if let Err(_) = download_file(&bin_url, &out_file, i18n) {
-        println_i18n!(i18n, "upgrade-download-failed");
-        return Ok(());
-    }
-
-    // Rename current executable to .bak and replace it with the new file
-    let current_exe = std::env::current_exe()?;
-    let backup_exe = current_exe.with_extension("bak");
-
-    std::fs::rename(&current_exe, &backup_exe)
-        .map_err(|_| anyhow!(i18n.t("upgrade-rename-failed")))?;
-    std::fs::rename(&out_file, &current_exe)
-        .map_err(|_| anyhow!(i18n.t("upgrade-replace-failed")))?;
-
-    println_i18n!(i18n, "upgrade-complete");
-    Ok(())
+fn sub_upgrade(manager: &GodotManager) -> Result<()> {
+    manager.upgrade()
 }
 
 /// Handle the 'pin' subcommand

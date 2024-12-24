@@ -138,6 +138,8 @@ upgrade-file-write-failed = Failed to write to upgrade file: { $error }
 upgrade-install-dir-failed = Failed to create the installation directory: { $error }
 upgrade-rename-failed = Failed to rename the current executable: { $error }
 upgrade-replace-failed = Failed to replace the executable with the new one: { $error }
+checking-updates = Checking for updates to gdvm...
+upgrade-available = 💡 A new version of gdvm is available: {$version}. Run "gdvm upgrade" to update.
 
 help-pin = Pin a version of Godot to the current directory.
 help-pin-long = Pin a version of Godot to the current directory.
