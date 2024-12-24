@@ -49,21 +49,35 @@ impl I18n {
             .next()
             .unwrap_or("en-US")
             .replace("_", "-");
-        let bundle = self.bundles.get(&locale).unwrap_or_else(|| {
-            self.bundles
-                .get("en-US")
-                .expect("Fallback locale not found")
-        });
 
-        let msg = bundle.get_message(key).unwrap_or_else(|| {
-            self.bundles
-                .get("en-US")
-                .expect("Fallback locale not found")
-                .get_message(key)
-                .expect("Message not found in fallback locale")
-        });
+        let fallback_bundle = if let Some(fallback_bundle) = self.bundles.get("en-US") {
+            fallback_bundle
+        } else {
+            panic!("Fallback locale en-US not found");
+        };
 
-        let pattern = msg.value().expect("Message has no value.");
+        let bundle = if let Some(bundle) = self.bundles.get(&locale) {
+            bundle
+        } else {
+            fallback_bundle
+        };
+
+        let msg = if let Some(msg) = bundle
+            .get_message(key)
+            .or_else(|| fallback_bundle.get_message(key))
+        {
+            msg
+        } else {
+            return key.to_string();
+        };
+
+        let pattern = match msg.value() {
+            Some(pattern) => pattern,
+            None => {
+                return key.to_string();
+            }
+        };
+
         let mut errors = vec![];
         let value = bundle.format_pattern(pattern, None, &mut errors);
 
@@ -78,27 +92,38 @@ impl I18n {
             .next()
             .unwrap_or("en-US")
             .replace("_", "-");
-        let bundle = self.bundles.get(&locale).unwrap_or_else(|| {
-            self.bundles
-                .get("en-US")
-                .expect("Fallback locale not found")
-        });
 
-        let msg = bundle.get_message(key).unwrap_or_else(|| {
-            self.bundles
-                .get("en-US")
-                .expect("Fallback locale not found")
-                .get_message(key)
-                .expect("Message not found in fallback locale")
-        });
+        let fallback_bundle = if let Some(fallback_bundle) = self.bundles.get("en-US") {
+            fallback_bundle
+        } else {
+            panic!("Fallback locale en-US not found");
+        };
 
-        let pattern = msg.value().expect("Message has no value.");
+        let bundle = self.bundles.get(&locale).unwrap_or(fallback_bundle);
+
+        let msg = if let Some(msg) = bundle
+            .get_message(key)
+            .or_else(|| fallback_bundle.get_message(key))
+        {
+            msg
+        } else {
+            return key.to_string();
+        };
+
+        let pattern = match msg.value() {
+            Some(pattern) => pattern,
+            None => {
+                return key.to_string();
+            }
+        };
+
         let mut errors = vec![];
         let mut fluent_args = fluent_bundle::FluentArgs::new();
         for (k, v) in args {
             fluent_args.set(*k, v.clone());
         }
         let value = bundle.format_pattern(pattern, Some(&fluent_args), &mut errors);
+
         value.to_string()
     }
 }
