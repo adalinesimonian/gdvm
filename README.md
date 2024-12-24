@@ -20,15 +20,32 @@ powershell -Command "iwr -useb https://raw.githubusercontent.com/adalinesimonian
 
 ## Usage
 
+Once installed, you can use the `gdvm` command to manage your Godot installations. Here are some common commands:
+
 ```bash
-gdvm install stable          # Installs the latest stable version of Godot
-gdvm install stable --csharp # Installs the latest stable Godot with C# support
-gdvm run 4.3                 # Runs Godot version 4.3
-gdvm use 4.3 --csharp        # Sets the default version to Godot 4.3 with C#
-godot                        # Alias added to path when running "use"
-godot_console                # For Windows users, starts with a console window
-gdvm remove 4.3              # Removes the Godot version 4.3 without C#
+gdvm use stable              # Sets the system-wide default version of Godot to
+                             # the latest stable version
+
+gdvm pin stable --csharp     # Pins the default version for the current folder
+                             # to the latest stable version with C# support,
+                             # using a .gdvmrc file in the current folder
+```
+
+> [!TIP]
+> If you pin or use a global system version, you can associate `.godot` files in your OS with `~/.gdvm/bin/godot.exe` to automatically use either the system-wide version of Godot or the pinned version for the project directory to open that project file.
+
+```bash
+gdvm run                     # Runs the default version of Godot for the current
+                             # folder or the system-wide default version if the
+                             # current folder is not pinned
+godot                        # Equivalent to `gdvm run`
+godot_console                # (Windows only) Same as `gdvm run`, but with the
+                             # console window open
+gdvm run 3.5 --csharp        # Runs Godot version 3.5 with C# support
+gdvm remove 3.5              # Removes Godot version 3.5 without C# support
 gdvm list                    # Lists all installed Godot versions
+gdvm search 4                # Searches for all 4.x versions of Godot
+gdvm upgrade                 # Upgrades gdvm to the latest version
 ```
 
 For more information, run

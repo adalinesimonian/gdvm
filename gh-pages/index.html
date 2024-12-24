@@ -21,6 +21,7 @@
                 margin: 0;
                 padding: 0;
                 background-color: #f4f4f4;
+                color: #000;
             }
             .container {
                 width: 90%;
@@ -94,7 +95,6 @@
                 text-decoration: none;
                 color: #0366d6;
             }
-            /* Add popover styles */
             .popover {
                 position: absolute;
                 background-color: #333;
@@ -107,6 +107,70 @@
             }
             .popover.show {
                 opacity: 1;
+            }
+            ul li {
+                margin-bottom: 10px;
+            }
+            ul li:last-child {
+                margin-bottom: 0;
+            }
+            body {
+                line-height: 1.3;
+            }
+            .tip-box {
+                background-color: #e7f3fe;
+                border-left: 6px solid #2196f3;
+                padding: 10px;
+                margin-top: 20px;
+                border-radius: 5px;
+                display: flex;
+                align-items: center;
+            }
+            .tip-box .emoji {
+                font-size: 1.5em;
+                margin-right: 10px;
+            }
+            @media (prefers-color-scheme: dark) {
+                body {
+                    background-color: #121212;
+                    color: #e0e0e0;
+                }
+                .container {
+                    background-color: #1e1e1e;
+                    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+                }
+                .tab {
+                    background-color: #333;
+                    border-color: #555;
+                }
+                .tab.active {
+                    background-color: #1e1e1e;
+                }
+                .tab-content {
+                    border-color: #555;
+                }
+                .command-box {
+                    background-color: #333;
+                }
+                .command-box:hover {
+                    background-color: #444;
+                }
+                code {
+                    background-color: #333;
+                }
+                .footer {
+                    color: #999;
+                }
+                .github-link {
+                    color: #58a6ff;
+                }
+                .popover {
+                    background-color: #555;
+                }
+                .tip-box {
+                    background-color: #2a3b4d;
+                    border-left-color: #2196f3;
+                }
             }
         </style>
     </head>
@@ -157,33 +221,59 @@
                 </p>
                 <ul>
                     <li>
-                        <code>gdvm install stable</code> — Installs the latest
-                        stable version of Godot
+                        <code>gdvm use stable</code> — Sets the system-wide
+                        default version of Godot to the latest stable version
                     </li>
                     <li>
-                        <code>gdvm install stable --csharp</code> — Installs the
-                        latest stable Godot with C# support
+                        <code>gdvm pin stable --csharp</code> — Pins the default
+                        version for the current folder to the latest stable
+                        version with C# support, using a
+                        <code>.gdvmrc</code> file in the current folder
                     </li>
-                    <li><code>gdvm run 4.3</code> — Runs Godot version 4.3</li>
+                </ul>
+                <div class="tip-box">
+                    <span class="emoji">💡</span>
+                    <span
+                        >If you pin or use a global system version, you can
+                        associate <code>.godot</code> files in your OS with
+                        <code>~/.gdvm/bin/godot.exe</code> to automatically use
+                        either the system-wide version of Godot or the pinned
+                        version for the project directory to open that project
+                        file.</span
+                    >
+                </div>
+                <ul>
                     <li>
-                        <code>gdvm use 4.3 --csharp</code> — Sets the default
-                        version to Godot 4.3 with C#
+                        <code>gdvm run</code> — Runs the default version of
+                        Godot for the current folder or the system-wide default
+                        version if the current folder is not pinned
                     </li>
                     <li>
-                        <code>godot</code> — Alias added to path when running
-                        "use"
+                        <code>godot</code> — Equivalent to <code>gdvm run</code>
                     </li>
                     <li>
-                        <code>godot_console</code> — For Windows users, starts
-                        with a console window
+                        <code>godot_console</code> — For Windows users, same as
+                        <code>gdvm run</code>, but with the console window open
                     </li>
                     <li>
-                        <code>gdvm remove 4.3</code> — Removes the Godot version
-                        4.3 without C#
+                        <code>gdvm run 3.5 --csharp</code> — Runs Godot version
+                        3.5 with C# support
+                    </li>
+                    <li>
+                        <code>gdvm remove 3.5</code> — Removes Godot version 3.5
+                        without C# support
                     </li>
                     <li>
                         <code>gdvm list</code> — Lists all installed Godot
                         versions
+                    </li>
+                    <li>
+                        <code>gdvm search 4</code> — Searches for all 4.x
+                        versions of Godot
+                    </li>
+                    <li>
+                        <code>gdvm upgrade</code> — Upgrades gdvm to the latest
+                        version
                     </li>
                 </ul>
                 <p>
