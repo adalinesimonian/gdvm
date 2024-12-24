@@ -124,3 +124,15 @@ error-read-zip-file = Failed to read from ZIP file { $file }: { $error }
 error-write-file = Failed to write to file { $path }: { $error }
 error-strip-prefix = Error stripping prefix: { $error }
 error-set-permissions = Failed to set permissions for { $path }: { $error }
+
+help-upgrade = Upgrade gdvm to the latest version
+upgrade-starting = Starting gdvm upgrade...
+upgrade-downloading-latest = Downloading the latest gdvm version...
+upgrade-complete = gdvm was successfully upgraded!
+upgrade-failed = Upgrade failed: { $error }
+upgrade-download-failed = Upgrade download failed: { $error }
+upgrade-file-create-failed = Failed to create upgrade file: { $error }
+upgrade-file-write-failed = Failed to write to upgrade file: { $error }
+upgrade-install-dir-failed = Failed to create the installation directory: { $error }
+upgrade-rename-failed = Failed to rename the current executable: { $error }
+upgrade-replace-failed = Failed to replace the executable with the new one: { $error }

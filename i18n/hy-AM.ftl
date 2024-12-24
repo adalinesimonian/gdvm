@@ -42,6 +42,8 @@ help-default = Կառավարել լռելյայն տարբերակը
 help-default-version = Տարբերակը, որը պետք է տեղադրվի լռելյայն (օրինակ՝ 4.2 կամ 4.2-stable):
 no-default-set = Լռելյայն տարբերակը սահմանված չէ:
 
+help-upgrade = Թարմացնել gdvm-ը վերջին տարբերակին
+
 installing-version = Տեղադրվում է {$version} տարբերակը
 installed-success = {$version} տարբերակը հաջողությամբ տեղադրվեց
 
@@ -126,3 +128,14 @@ error-set-permissions = Չհաջողվեց սահմանել արտոնայինո
 
 auto-installing-version = Ինքնաշխատ տեղադրում { $version } տարբերակի
 warning-sha-sums-missing = Չհաջողվեց գտնել ստուգանակոչումները այս թողարկման համար։ Թողարկման հաստատումը հապողվեց։
+
+upgrade-starting = Սկսվում է gdvm-ի թարմացումը...
+upgrade-downloading-latest = Ներբեռնում է gdvm-ի վերջին տարբերակը...
+upgrade-complete = gdvm-ը հաջողությամբ թարմացվեց!
+upgrade-failed = Թարմացումը ձախողվեց՝ { $error }
+upgrade-download-failed = Թարմացման բեռնումը ձախողվեց: { $error }
+upgrade-file-create-failed = Չհաջողվեց ստեղծել թարմացման ֆայլը: { $error }
+upgrade-file-write-failed = Չհաջողվեց գրելու տվյալները թարմացման ֆայլում: { $error }
+upgrade-install-dir-failed = Չհաջողվեց ստեղծել տեղադրման ծառարանները: { $error }
+upgrade-rename-failed = Չհաջողվեց փոխանակել գործող գործարկվող ֆայլի անունը: { $error }
+upgrade-replace-failed = Չհաջողվեց փոխարինել գործող գործարկվող ֆայլը նորով: { $error }

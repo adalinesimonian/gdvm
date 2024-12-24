@@ -49,6 +49,8 @@ help-default-version = Versjonen som skal setjast som standard (t.d. 4.2 eller 4
 
 help-help-command = Vis denne meldinga eller hjelpa for dei gjeve underkommandoane
 
+help-upgrade = Oppgrader gdvm til nyaste versjon
+
 installing-version = Installerer versjon {$version}
 installed-success = Installerte {$version} vellukka.
 auto-installing-version = Automatisk installasjon av versjon { $version }
@@ -126,3 +128,14 @@ error-strip-prefix = Kunne ikkje fjerne prefiks: { $error }
 error-set-permissions = Kunne ikkje setje tillatingar for { $path }: { $error }
 
 warning-sha-sums-missing = Sjekksumfiler vart ikkje funne for denne utgjevinga. Hoppar over verifisering.
+
+upgrade-starting = Startar oppgradering av gdvm...
+upgrade-downloading-latest = Lastar ned nyaste gdvm...
+upgrade-complete = gdvm vart oppgradert!
+upgrade-failed = Oppgradering feila: { $error }
+upgrade-download-failed = Nedlasting av oppgradering feila: { $error }
+upgrade-file-create-failed = Klarte ikkje å opprette oppgraderingsfila: { $error }
+upgrade-file-write-failed = Klarte ikkje å skrive til oppgraderingsfila: { $error }
+upgrade-install-dir-failed = Klarte ikkje å opprette installasjonskatalogen: { $error }
+upgrade-rename-failed = Klarte ikkje å endre namn på den noverande køyrberre fila: { $error }
+upgrade-replace-failed = Klarte ikkje å erstatte den køyrberre fila med den nye: { $error }

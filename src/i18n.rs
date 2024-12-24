@@ -137,7 +137,7 @@ macro_rules! println_i18n {
             $i18n.t_args(
                 $key,
                 &[
-                    $( ($arg_key, FluentValue::from($arg_val)) ),*
+                    $( ($arg_key, fluent_bundle::FluentValue::from($arg_val)) ),*
                 ]
             )
         );

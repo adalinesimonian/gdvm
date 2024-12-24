@@ -55,6 +55,8 @@ help-console = Kjør Godot med konsoll tilkobla. Standard er false på Windows, 
 help-default = Administrer standardversjonen
 help-default-version = Versjonen som skal settes som standard (f.eks. 4.2 eller 4.2-stable).
 
+help-upgrade = Oppgrader gdvm til nyeste versjon
+
 help-help-command = Vis denne meldingen eller hjelpa for de gitte underkommandoene
 
 installing-version = Installerer versjon {$version}
@@ -127,3 +129,14 @@ error-strip-prefix = Kunne ikke fjerne prefiks: { $error }
 error-set-permissions = Kunne ikke sette tillatelser for { $path }: { $error }
 
 auto-installing-version = Automatisk installasjon av versjon { $version }
+
+upgrade-starting = Starter oppgradering av gdvm...
+upgrade-downloading-latest = Laster ned nyeste gdvm...
+upgrade-complete = gdvm ble oppgradert!
+upgrade-failed = Oppgradering mislyktes: { $error }
+upgrade-download-failed = Nedlasting av oppgradering mislyktes: { $error }
+upgrade-file-create-failed = Klarte ikke å opprette oppgraderingsfilen: { $error }
+upgrade-file-write-failed = Klarte ikke å skrive til oppgraderingsfilen: { $error }
+upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $error }
+upgrade-rename-failed = Klarte ikke å endre navn på den nåværende kjørbare filen: { $error }
+upgrade-replace-failed = Klarte ikke å erstatte den kjørbare filen med den nye: { $error }

@@ -127,3 +127,15 @@ error-strip-prefix = Ошибка удаления префикса: { $error }
 error-set-permissions = Не удалось установить разрешения для { $path }: { $error }
 
 warning-sha-sums-missing = Контрольные суммы не найдены для этого релиза. Пропуск проверки.
+
+help-upgrade = Обновить gdvm до последней версии
+upgrade-starting = Начинается обновление gdvm...
+upgrade-downloading-latest = Загрузка последней версии gdvm...
+upgrade-complete = gdvm успешно обновлён!
+upgrade-failed = Ошибка обновления: { $error }
+upgrade-download-failed = Не удалось загрузить обновление: { $error }
+upgrade-file-create-failed = Не удалось создать файл обновления: { $error }
+upgrade-file-write-failed = Не удалось записать данные в файл обновления: { $error }
+upgrade-install-dir-failed = Не удалось создать директорию установки: { $error }
+upgrade-rename-failed = Не удалось переименовать текущий исполняемый файл: { $error }
+upgrade-replace-failed = Не удалось заменить исполняемый файл на новый: { $error }

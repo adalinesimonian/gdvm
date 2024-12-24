@@ -8,11 +8,10 @@ use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::fs;
-use std::io::Read;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::download_utils::download_file;
 use crate::i18n;
 use crate::println_i18n;
 use crate::version_utils;
@@ -247,6 +246,12 @@ impl<'a> GodotManager<'a> {
             cache_path,
             i18n,
         })
+    }
+
+    /// Gets the path to the GodotManager's base directory
+    /// (e.g. `~/.gdvm` on Unix-like systems)
+    pub fn get_base_path(&self) -> &Path {
+        &self.base_path
     }
 
     /// Install a specified Godot version
@@ -815,37 +820,4 @@ impl<'a> GodotManager<'a> {
         let installed_versions = self.list_installed()?;
         Ok(installed_versions.iter().any(|v| gv.matches(v)))
     }
-}
-
-fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
-    // Print downloading URL message
-    println_i18n!(i18n, "operation-downloading-url", [("url", url)]);
-
-    let response = reqwest::blocking::get(url)?;
-    let total_size = response
-        .content_length()
-        .ok_or_else(|| anyhow!("Failed to get content length"))?;
-    let pb = ProgressBar::new(total_size);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
-            .progress_chars("#>-"),
-    );
-    pb.enable_steady_tick(Duration::from_millis(100));
-    let mut file = fs::File::create(dest)?;
-    let mut downloaded: u64 = 0;
-    let mut buffer = [0; 8192]; // 8 KB buffer
-    let mut reader = response;
-
-    loop {
-        let bytes_read = reader.read(&mut buffer)?;
-        if bytes_read == 0 {
-            break; // Download complete
-        }
-        file.write_all(&buffer[..bytes_read])?;
-        downloaded += bytes_read as u64;
-        pb.set_position(downloaded);
-    }
-    pb.finish_with_message(i18n.t("operation-download-complete"));
-    Ok(())
 }
