@@ -140,3 +140,21 @@ upgrade-file-write-failed = Klarte ikke å skrive til oppgraderingsfilen: { $err
 upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $error }
 upgrade-rename-failed = Klarte ikke å endre navn på den nåværende kjørbare filen: { $error }
 upgrade-replace-failed = Klarte ikke å erstatte den kjørbare filen med den nye: { $error }
+
+help-pin = Fest en versjon av Godot til gjeldende mappe.
+help-pin-long = Fest en versjon av Godot til gjeldende mappe.
+
+    Dette vil opprette en .gdvmrc-fil i gjeldende mappe med den festede versjonen.
+    Når du kjører «gdvm run» i denne katalogen eller noen av underkatalogene, vil
+    den festede versjonen bli brukt i stedet for standardversjonen.
+
+    Dette er nyttig når du vil bruke en spesifikk versjon av Godot for et prosjekt
+    uten å endre standardversjonen systemomfattende.
+
+help-pin-version = Versjonen som skal festes
+pinned-success = Versjon {$version} ble festet i .gdvmrc
+error-pin-version-not-found = Kan ikke feste versjon {$version}
+pin-subcommand-description = Setter eller oppdaterer .gdvmrc med forespurt versjon
+
+error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren.
+error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }

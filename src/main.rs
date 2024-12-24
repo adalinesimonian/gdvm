@@ -179,6 +179,22 @@ fn main() -> Result<()> {
                 ),
         )
         .subcommand(Command::new("upgrade").about(i18n.t("help-upgrade")))
+        .subcommand(
+            Command::new("pin")
+                .about(i18n.t("help-pin"))
+                .long_about(i18n.t("help-pin-long"))
+                .arg(
+                    Arg::new("version")
+                        .help(i18n.t("help-pin-version"))
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("csharp")
+                        .long("csharp")
+                        .num_args(0)
+                        .help(i18n.t("help-csharp")),
+                ),
+        )
         .get_matches();
 
     // Match the subcommand and call the appropriate function
@@ -191,6 +207,7 @@ fn main() -> Result<()> {
         Some(("clear-cache", _)) => sub_clear_cache(&i18n, &manager)?,
         Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m)?,
         Some(("upgrade", _)) => sub_upgrade(&i18n, &manager)?,
+        Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m)?,
         _ => {}
     }
 
@@ -269,6 +286,8 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         requested_version.is_csharp = Some(csharp_flag);
 
         manager.auto_install_version(&requested_version)?
+    } else if let Some(pinned) = manager.get_pinned_version() {
+        manager.auto_install_version(&pinned)?
     } else if let Some(mut default_ver) = manager.get_default()? {
         if csharp_given {
             default_ver.is_csharp = Some(csharp_flag);
@@ -452,5 +471,30 @@ fn sub_upgrade(i18n: &I18n, manager: &GodotManager) -> Result<()> {
         .map_err(|_| anyhow!(i18n.t("upgrade-replace-failed")))?;
 
     println_i18n!(i18n, "upgrade-complete");
+    Ok(())
+}
+
+/// Handle the 'pin' subcommand
+fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+    let version_str = matches.get_one::<String>("version").unwrap();
+    let csharp = matches.get_flag("csharp");
+    let mut version = GodotVersion::from_match_str(&version_str)?;
+
+    version.is_csharp = Some(csharp);
+
+    let resolved_version = manager.auto_install_version(&version)?;
+
+    match manager.pin_version(&resolved_version) {
+        Ok(()) => println_i18n!(
+            i18n,
+            "pinned-success",
+            [("version", &resolved_version.to_display_str())]
+        ),
+        Err(_) => println_i18n!(
+            i18n,
+            "error-pin-version-not-found",
+            [("version", &resolved_version.to_display_str())]
+        ),
+    }
     Ok(())
 }

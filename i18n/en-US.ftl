@@ -136,3 +136,20 @@ upgrade-file-write-failed = Failed to write to upgrade file: { $error }
 upgrade-install-dir-failed = Failed to create the installation directory: { $error }
 upgrade-rename-failed = Failed to rename the current executable: { $error }
 upgrade-replace-failed = Failed to replace the executable with the new one: { $error }
+
+help-pin = Pin a version of Godot to the current directory.
+help-pin-long = Pin a version of Godot to the current directory.
+
+    This will create a .gdvmrc file in the current directory with the pinned
+    version. When you run "gdvm run" in this directory or any of its subdirectories,
+    the pinned version will be used instead of the default version.
+
+    This is useful when you want to use a specific version of Godot for a project
+    without changing the default version system-wide.
+help-pin-version = The version to pin
+pinned-success = Successfully pinned version {$version} in .gdvmrc
+error-pin-version-not-found = Could not pin version {$version}
+pin-subcommand-description = Set or update .gdvmrc with the requested version
+
+error-file-not-found = File not found. It may not exist on the server.
+error-download-failed = Download failed due to an unexpected error: { $error }

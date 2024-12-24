@@ -51,6 +51,20 @@ help-help-command = Vis denne meldinga eller hjelpa for dei gjeve underkommandoa
 
 help-upgrade = Oppgrader gdvm til nyaste versjon
 
+help-pin = Fest ein versjon av Godot til gjeldande katalog.
+help-pin-long = Fest ein versjon av Godot til gjeldande mappe.
+
+    Dette vil opprette ei .gdvmrc-fil i gjeldande mappe med den festa versjonen. Når
+    du køyrer «gdvm run» i denne katalogen eller nokon av underkatalogane, vil den
+    festa versjonen verta bruka i staden for standardversjonen.
+
+    Dette er nyttig når du vil bruke ein spesifikk versjon av Godot for eit prosjekt
+    utan å endre standardversjonen systemomfattande.
+help-pin-version = Versjonen som skal festast
+pinned-success = Versjon {$version} vart festa i .gdvmrc
+error-pin-version-not-found = Kan ikkje feste versjon {$version}
+pin-subcommand-description = Set eller oppdater .gdvmrc med ønskja versjon
+
 installing-version = Installerer versjon {$version}
 installed-success = Installerte {$version} vellukka.
 auto-installing-version = Automatisk installasjon av versjon { $version }
@@ -139,3 +153,6 @@ upgrade-file-write-failed = Klarte ikkje å skrive til oppgraderingsfila: { $err
 upgrade-install-dir-failed = Klarte ikkje å opprette installasjonskatalogen: { $error }
 upgrade-rename-failed = Klarte ikkje å endre namn på den noverande køyrberre fila: { $error }
 upgrade-replace-failed = Klarte ikkje å erstatte den køyrberre fila med den nye: { $error }
+
+error-file-not-found = Fil vart ikkje funnen. Ho finst kanskje ikkje på tenaren.
+error-download-failed = Nedlasting feila på grunn av ein uventa feil: { $error }

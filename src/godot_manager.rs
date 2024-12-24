@@ -781,6 +781,31 @@ impl<'a> GodotManager<'a> {
         }
     }
 
+    /// Recursively search upward for .gdvmrc, return the pinned version if found
+    pub fn get_pinned_version(&self) -> Option<GodotVersion> {
+        let mut current = std::env::current_dir().ok()?;
+        loop {
+            let candidate = current.join(".gdvmrc");
+            if candidate.is_file() {
+                if let Ok(contents) = fs::read_to_string(&candidate) {
+                    return GodotVersion::from_install_str(contents.trim()).ok();
+                }
+            }
+            if !current.pop() {
+                break;
+            }
+        }
+        None
+    }
+
+    /// Pin a version to .gdvmrc in the current directory
+    pub fn pin_version(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+        let path = std::env::current_dir()?;
+        let file = path.join(".gdvmrc");
+        fs::write(&file, gv.to_install_str())?;
+        Ok(())
+    }
+
     pub fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone,

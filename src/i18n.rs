@@ -140,10 +140,10 @@ macro_rules! println_i18n {
                     $( ($arg_key, fluent_bundle::FluentValue::from($arg_val)) ),*
                 ]
             )
-        );
+        )
     };
     // Without arguments
     ($i18n:expr, $key:expr) => {
-        println!("{}", $i18n.t($key));
+        println!("{}", $i18n.t($key))
     };
 }
