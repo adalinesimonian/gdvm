@@ -40,7 +40,17 @@ fn main() -> Result<()> {
         // for the Godot version to run
         if let Some(file) = args.iter().find(|arg| std::path::Path::new(arg).exists()) {
             let file_path = std::path::Path::new(file);
-            if let Some(file_dir) = file_path.parent() {
+
+            // Resolve to absolute path
+            let abs_path: std::path::PathBuf = if file_path.is_absolute() {
+                file_path.to_path_buf()
+            } else {
+                std::env::current_dir()?.join(file_path)
+            };
+
+            // Get the parent directory of the file
+            if let Some(file_dir) = abs_path.parent() {
+                // Change the current working directory to the file's directory
                 std::env::set_current_dir(file_dir)?;
             }
         }
@@ -61,6 +71,8 @@ fn main() -> Result<()> {
 
             std::process::exit(1);
         }
+
+        return Ok(());
     }
 
     let matches = Command::new("gdvm")

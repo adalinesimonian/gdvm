@@ -204,39 +204,77 @@ fn verify_sha512(
 /// - `Ok(None)` if no executable is found.
 /// - `Err(io::Error)` if there is an error reading the directory.
 fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<PathBuf>> {
-    // Read the entries in the specified directory
-    let godot_executable = fs::read_dir(version_dir)?
-        .filter_map(|entry| entry.ok()) // Filter out entries that resulted in an error
-        .find(|entry| {
-            // Get the file name
+    // Collect all entries (files/folders) under version_dir
+    let entries: Vec<_> = fs::read_dir(version_dir)?
+        .filter_map(|entry| entry.ok())
+        .collect();
+
+    #[cfg(target_os = "windows")]
+    {
+        // If console is requested, try to find a "_console" executable first
+        if console {
+            let console_candidate = entries.iter().find_map(|entry| {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.ends_with("_console.exe") {
+                    Some(entry.path())
+                } else {
+                    None
+                }
+            });
+
+            // If found, return it; otherwise fall back to any .exe
+            if console_candidate.is_some() {
+                return Ok(console_candidate);
+            }
+        }
+
+        // Either console was false, or no _console exe was found. Look for any .exe.
+        let exe_candidate = entries.iter().find_map(|entry| {
             let name = entry.file_name().to_string_lossy().to_string();
-
-            // Determine if the current entry is the Godot executable based on the OS
-            #[cfg(target_os = "windows")]
-            let is_godot_executable = if console {
-                // For console builds on Windows
-                name.ends_with("_console.exe")
+            if name.ends_with(".exe") {
+                Some(entry.path())
             } else {
-                // For regular builds on Windows
-                name.ends_with(".exe")
-            };
+                None
+            }
+        });
 
-            #[cfg(target_os = "macos")]
-            let is_godot_executable = name == "Godot.app" || name == "Godot_mono.app";
+        return Ok(exe_candidate);
+    }
 
-            #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-            let is_godot_executable =
-                // For Linux or other Unix-like systems
-                (name.starts_with("Godot_v") && name.ends_with(".exe")) ||
-                name.ends_with(".x86_64") ||
-                name.ends_with(".x86_32") ||
-                name.ends_with(".arm64");
+    #[cfg(target_os = "macos")]
+    {
+        // On macOS, look for Godot.app or Godot_mono.app
+        let app_candidate = entries.iter().find_map(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == "Godot.app" || name == "Godot_mono.app" {
+                Some(entry.path())
+            } else {
+                None
+            }
+        });
 
-            is_godot_executable
-        })
-        .map(|entry| entry.path()); // Extract the path of the found executable
+        return Ok(app_candidate);
+    }
 
-    Ok(godot_executable)
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        // For Linux or other Unix-likes
+        // Look for a few known suffixes or naming patterns
+        let unix_candidate = entries.iter().find_map(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("Godot_v")
+                || name.ends_with(".x86_64")
+                || name.ends_with(".x86_32")
+                || name.ends_with(".arm64")
+            {
+                Some(entry.path())
+            } else {
+                None
+            }
+        });
+
+        return Ok(unix_candidate);
+    }
 }
 
 impl<'a> GodotManager<'a> {
@@ -455,13 +493,37 @@ impl<'a> GodotManager<'a> {
             }
         }
 
-        let mut cmd = std::process::Command::new(&path);
         if console {
-            cmd.stdin(std::process::Stdio::inherit())
+            // Run the process attached to the terminal and wait for it to exit
+            std::process::Command::new(&path)
+                .args(godot_args)
+                .stdin(std::process::Stdio::inherit())
                 .stdout(std::process::Stdio::inherit())
-                .stderr(std::process::Stdio::inherit());
+                .stderr(std::process::Stdio::inherit())
+                .status()?;
+        } else {
+            // Detached process configuration
+            #[cfg(target_family = "unix")]
+            {
+                Daemonize::new().start().map_err(|e| {
+                    anyhow!(self.i18n.t_args(
+                        "error-starting-godot",
+                        &[("error", FluentValue::from(e.to_string()))]
+                    ))
+                })?;
+                std::process::Command::new(&path).args(godot_args).spawn()?;
+            }
+
+            #[cfg(target_family = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                use winapi::um::winbase::DETACHED_PROCESS;
+                std::process::Command::new(&path)
+                    .args(godot_args)
+                    .creation_flags(DETACHED_PROCESS)
+                    .spawn()?;
+            }
         }
-        cmd.args(&godot_args).spawn()?;
 
         Ok(())
     }
