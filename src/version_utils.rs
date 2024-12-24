@@ -530,27 +530,45 @@ mod tests {
         let gv = GodotVersion::from_match_str("stable").unwrap();
         assert_eq!(gv.release_type.as_deref(), Some("stable"));
 
-        assert!(GodotVersion::from_match_str("4.1.1-rc1").is_err());
+        let gv = GodotVersion::from_match_str("4.1.1-rc1").unwrap();
+        assert_eq!(gv.major, Some(4));
+        assert_eq!(gv.minor, Some(1));
+        assert_eq!(gv.patch, Some(1));
+        assert_eq!(gv.release_type.as_deref(), Some("rc1"));
+
+        let gv = GodotVersion::from_match_str("4.1.1-csharp").unwrap();
+        assert_eq!(gv.major, Some(4));
+        assert_eq!(gv.minor, Some(1));
+        assert_eq!(gv.patch, Some(1));
+        assert_eq!(gv.release_type.as_deref(), Some("csharp"));
     }
 
     #[test]
     fn test_to_install_str() {
-        let gv = GodotVersion::from_install_str("2.0.4.1-stable-csharp").unwrap();
-        assert_eq!(gv.to_install_str().unwrap(), "2.0.4.1-stable-csharp");
+        let gv = GodotVersion::from_install_str("2.0.4.1-stable-csharp")
+            .unwrap()
+            .to_determinate();
+        assert_eq!(gv.to_install_str(), "2.0.4.1-stable-csharp");
     }
 
     #[test]
     fn test_sort_by_version() {
         let mut versions = vec![
-            GodotVersion::from_install_str("3.0.0-stable").unwrap(),
-            GodotVersion::from_install_str("4.1.1-rc2").unwrap(),
-            GodotVersion::from_install_str("4.1.1-rc1").unwrap(),
+            GodotVersion::from_install_str("3.0.0-stable")
+                .unwrap()
+                .to_determinate(),
+            GodotVersion::from_install_str("4.1.1-rc2")
+                .unwrap()
+                .to_determinate(),
+            GodotVersion::from_install_str("4.1.1-rc1")
+                .unwrap()
+                .to_determinate(),
         ];
         versions.sort_by_version();
         // We expect 4.1.1-rc2 > 4.1.1-rc1 > 3.0.0-stable
-        assert_eq!(versions[0].release_type.as_deref(), Some("rc2"));
-        assert_eq!(versions[1].release_type.as_deref(), Some("rc1"));
-        assert_eq!(versions[2].major, Some(3));
+        assert_eq!(versions[0].release_type, "rc2");
+        assert_eq!(versions[1].release_type, "rc1");
+        assert_eq!(versions[2].major, 3);
     }
 
     #[test]
@@ -568,11 +586,11 @@ mod tests {
 
     #[test]
     fn test_get_pre_release_priority() {
-        assert_eq!(get_pre_release_priority("stable"), 0);
-        assert_eq!(get_pre_release_priority("rc1"), 1);
+        assert_eq!(get_pre_release_priority("stable"), 4);
+        assert_eq!(get_pre_release_priority("rc1"), 3);
         assert_eq!(get_pre_release_priority("beta1"), 2);
-        assert_eq!(get_pre_release_priority("dev1"), 3);
-        assert_eq!(get_pre_release_priority("unknown"), 4);
+        assert_eq!(get_pre_release_priority("dev1"), 1);
+        assert_eq!(get_pre_release_priority("unknown"), 0);
     }
 
     #[test]
