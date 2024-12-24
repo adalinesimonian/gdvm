@@ -61,6 +61,8 @@ warning-prerelease = Warning: You are installing a pre-release version ({$branch
 
 force-reinstalling-version = Forcing reinstallation of version {$version}.
 
+auto-installing-version = Auto-installing version { $version }
+
 no-versions-installed = No versions installed.
 installed-versions = Installed Godot versions:
 removed-version = Removed version {$version}
@@ -78,13 +80,14 @@ unsupported-architecture = Unsupported architecture
 verifying-checksum = Verifying checksum...
 checksum-verified = Checksum verified.
 error-checksum-mismatch = Checksum mismatch for file { $file }
+warning-sha-sums-missing = Checksum files not found for this release. Skipping verification.
 
 error-find-user-dirs = Failed to find user directories.
 
 fetching-releases = Fetching releases...
 releases-fetched = Releases fetched.
 
-error-version-not-found = Version not found. (Did you forget to set --csharp?)
+error-version-not-found = Version not found.
 error-multiple-versions-found = Multiple versions match your request:
 
 error-invalid-godot-version = Invalid Godot version format. Expected formats: x, x.y, x.y.z, x.y.z.w, x.y.z-tag.

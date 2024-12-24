@@ -102,3 +102,23 @@ impl I18n {
         value.to_string()
     }
 }
+
+#[macro_export]
+macro_rules! println_i18n {
+    // With arguments
+    ($i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
+        println!(
+            "{}",
+            $i18n.t_args(
+                $key,
+                &[
+                    $( ($arg_key, FluentValue::from($arg_val)) ),*
+                ]
+            )
+        );
+    };
+    // Without arguments
+    ($i18n:expr, $key:expr) => {
+        println!("{}", $i18n.t($key));
+    };
+}

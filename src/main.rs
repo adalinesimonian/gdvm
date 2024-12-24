@@ -10,7 +10,7 @@ use godot_manager::{GodotManager, InstallOutcome};
 use i18n::I18n;
 use std::io::{self, Write};
 
-use version_utils::{GodotBranch, GodotVersion};
+use version_utils::GodotVersion;
 
 fn main() -> Result<()> {
     let i18n = I18n::new()?;
@@ -77,7 +77,7 @@ fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(version_utils::validate_godot_version)
+                        .value_parser(version_utils::validate_remote_version)
                         .help(i18n.t("help-version-installed")),
                 )
                 .arg(
@@ -114,7 +114,7 @@ fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(version_utils::validate_godot_version)
+                        .value_parser(version_utils::validate_remote_version)
                         .help(i18n.t("help-version-installed")),
                 )
                 .arg(
@@ -200,67 +200,36 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
 
-    let version_branch = if version_input == "stable" {
-        // Fetch the latest stable version
-        manager.get_latest_stable_version()?
-    } else {
-        // Validate that the version exists
-        match manager.resolve_available_version(version_input, false) {
-            Some(v) => v,
-            None => {
-                println!("{}", i18n.t("error-version-not-found"));
-                return Ok(());
-            }
-        }
-    };
+    let requested_version = GodotVersion::from_match_str(&version_input)?;
+    let mut gv = manager
+        .resolve_available_version(&requested_version, false)
+        .ok_or_else(|| anyhow!(i18n.t("error-version-not-found")))?;
 
     let is_csharp = matches.get_flag("csharp");
-
-    // Split version and branch if present
-    let parts: Vec<&str> = version_branch.split('-').collect();
-    let version_str = parts[0];
-    let branch_str = parts.get(1).unwrap_or(&"stable");
-
-    // Determine the branch type based on the input string
-    let branch = match *branch_str {
-        "stable" => GodotBranch::Stable,
-        other => GodotBranch::PreRelease(other.to_string()),
-    };
-
-    let gv = GodotVersion {
-        version: version_str.to_string(),
-        branch,
-        is_csharp,
-    };
+    gv.is_csharp = Some(is_csharp);
 
     // Print a message indicating the start of the installation process
-    println!(
-        "{}",
-        i18n.t_args(
-            "installing-version",
-            &[("version", FluentValue::from(gv.to_string()))]
-        )
+    println_i18n!(
+        i18n,
+        "installing-version",
+        [("version", &gv.to_display_str())]
     );
 
     match manager.install(&gv, force_reinstall, redownload)? {
         InstallOutcome::Installed => {
             // Print a message indicating the successful installation
-            println!(
-                "{}",
-                i18n.t_args(
-                    "installed-success",
-                    &[("version", FluentValue::from(gv.to_string()))]
-                )
+            println_i18n!(
+                i18n,
+                "installed-success",
+                [("version", &gv.to_display_str())]
             );
         }
         InstallOutcome::AlreadyInstalled => {
             // Print a message indicating the version is already installed
-            println!(
-                "{}",
-                i18n.t_args(
-                    "version-already-installed",
-                    &[("version", FluentValue::from(gv.to_string()))]
-                )
+            println_i18n!(
+                i18n,
+                "version-already-installed",
+                [("version", &gv.to_display_str())]
             );
             return Ok(());
         }
@@ -273,9 +242,9 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
 fn sub_list(i18n: &I18n, manager: &GodotManager) -> Result<()> {
     let versions = manager.list_installed()?;
     if versions.is_empty() {
-        println!("{}", i18n.t("no-versions-installed"));
+        println_i18n!(i18n, "no-versions-installed");
     } else {
-        println!("{}", i18n.t("installed-versions"));
+        println_i18n!(i18n, "installed-versions");
         for v in versions {
             println!("- {}", v);
         }
@@ -288,50 +257,32 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     // specifically check if --csharp was provided as a flag or if we're reading the default value
     let csharp_given =
         matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
-    let mut csharp = matches.get_flag("csharp");
+    let csharp_flag = matches.get_flag("csharp");
     let version_input = matches.get_one::<String>("version");
-    let version_to_run = if let Some(v) = version_input {
-        v.to_string()
-    } else if let Some(default_ver) = manager.get_default()? {
-        csharp = if csharp_given {
-            csharp
-        } else {
-            default_ver.ends_with("-csharp")
-        };
+
+    let resolved_version = if let Some(v) = version_input {
+        let mut requested_version = GodotVersion::from_match_str(&v)?;
+
+        requested_version.is_csharp = Some(csharp_flag);
+
+        manager.auto_install_version(&requested_version)?
+    } else if let Some(mut default_ver) = manager.get_default()? {
+        if csharp_given {
+            default_ver.is_csharp = Some(csharp_flag);
+        }
+
         default_ver
     } else {
         return Err(anyhow!(i18n.t("no-default-set")));
     };
 
     let console = matches.get_flag("console");
-    let resolved_versions = manager.resolve_installed_version(&version_to_run, csharp)?;
-
-    match resolved_versions.len() {
-        0 => {
-            println!("{}", i18n.t("error-version-not-found"));
-        }
-        1 => {
-            println!(
-                "{}",
-                i18n.t_args(
-                    "running-version",
-                    &[(
-                        "version",
-                        FluentValue::from(version_utils::friendly_installed_version(
-                            &resolved_versions[0]
-                        ))
-                    )]
-                )
-            );
-            manager.run(&resolved_versions[0], console)?;
-        }
-        _ => {
-            println!("{}", i18n.t("error-multiple-versions-found"));
-            for v in resolved_versions {
-                println!("- {}", version_utils::friendly_installed_version(&v));
-            }
-        }
-    }
+    println_i18n!(
+        i18n,
+        "running-version",
+        [("version", &resolved_version.to_display_str())]
+    );
+    manager.run(&resolved_version, console)?;
 
     Ok(())
 }
@@ -340,61 +291,38 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
 fn sub_remove(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version").unwrap();
     let csharp = matches.get_flag("csharp");
-    let resolved_versions = manager.resolve_installed_version(version_input, csharp)?;
+    let mut requested_version = GodotVersion::from_match_str(&version_input)?;
+
+    requested_version.is_csharp = Some(csharp);
+
+    let resolved_versions = manager.resolve_installed_version(&requested_version)?;
 
     match resolved_versions.len() {
         0 => {
-            println!("{}", i18n.t("error-version-not-found"));
+            println_i18n!(i18n, "error-version-not-found");
         }
         1 => {
-            let version_str = &resolved_versions[0];
-            // Parse GodotVersion from version_str
-            let parts: Vec<&str> = version_str.split('-').collect();
-            let version = parts[0].to_string();
-            let branch = if parts.len() > 1 && parts[1] != "csharp" {
-                GodotBranch::PreRelease(parts[1].to_string())
-            } else {
-                GodotBranch::Stable
-            };
-            let is_csharp = version_str.ends_with("-csharp");
+            let gv = &resolved_versions[0];
 
-            let gv = GodotVersion {
-                version,
-                branch,
-                is_csharp,
-            };
-
-            println!(
-                "{}",
-                i18n.t_args(
-                    "removing-version",
-                    &[("version", FluentValue::from(gv.to_string()))]
-                )
-            );
+            println_i18n!(i18n, "removing-version", [("version", gv.to_display_str())]);
 
             if !matches.get_flag("yes") {
-                print!("{}", i18n.t("confirm-remove"));
+                println_i18n!(i18n, "confirm-remove");
                 io::stdout().flush().unwrap();
                 let mut input = String::new();
                 io::stdin().read_line(&mut input).unwrap();
                 if input.trim().to_lowercase() != i18n.t("confirm-yes") {
-                    println!("{}", i18n.t("remove-cancelled"));
+                    println_i18n!(i18n, "remove-cancelled");
                     return Ok(());
                 }
             }
             manager.remove(&gv)?;
-            println!(
-                "{}",
-                i18n.t_args(
-                    "removed-version",
-                    &[("version", FluentValue::from(gv.to_string()))]
-                )
-            );
+            println_i18n!(i18n, "removed-version", [("version", gv.to_display_str())]);
         }
         _ => {
-            println!("{}", i18n.t("error-multiple-versions-found"));
+            println_i18n!(i18n, "error-multiple-versions-found");
             for v in resolved_versions {
-                println!("- {}", version_utils::friendly_installed_version(&v));
+                println!("- {}", v.to_display_str());
             }
         }
     }
@@ -407,16 +335,17 @@ fn sub_search(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
     let filter = matches.get_one::<String>("filter").map(|s| s.as_str());
     let include_pre = matches.get_flag("include-pre");
     let cache_only = matches.get_flag("cache-only");
-    let mut releases = manager.fetch_available_releases(filter, cache_only)?;
+
+    let requested_version = match filter {
+        Some(filter) => Some(GodotVersion::from_match_str(filter)?),
+        None => None,
+    };
+
+    let mut releases = manager.fetch_available_releases(&requested_version, cache_only)?;
 
     // Default to showing only stable releases unless `--include-pre` is specified
     if !include_pre {
-        releases.retain(|r| {
-            let version = version_utils::normalize_version(r);
-            version
-                .map(|v| v.pre.is_empty() || v.pre.as_str().starts_with("stable"))
-                .unwrap_or(false)
-        });
+        releases.retain(|r| r.is_stable());
     }
 
     let limit = matches.get_one::<usize>("limit").unwrap();
@@ -425,9 +354,9 @@ fn sub_search(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
     }
 
     if releases.is_empty() {
-        println!("{}", i18n.t("no-matching-releases"));
+        println_i18n!(i18n, "no-matching-releases");
     } else {
-        println!("{}", i18n.t("available-releases"));
+        println_i18n!(i18n, "available-releases");
         for r in releases {
             println!("- {}", r);
         }
@@ -438,50 +367,40 @@ fn sub_search(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
 /// Handle the 'clear-cache' subcommand
 fn sub_clear_cache(i18n: &I18n, manager: &GodotManager) -> Result<()> {
     manager.clear_cache()?;
-    println!("{}", i18n.t("cache-cleared"));
+    println_i18n!(i18n, "cache-cleared");
     Ok(())
 }
 
 /// Handle the 'use' subcommand
 fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
     let csharp = matches.get_flag("csharp");
-    if let Some(ver) = matches.get_one::<String>("version") {
-        if ver == "unset" {
-            manager.unset_default()?;
-            println!("{}", i18n.t("default-unset-success"));
-        } else {
-            let resolved_versions = manager.resolve_installed_version(ver, csharp)?;
 
-            match resolved_versions.len() {
-                0 => {
-                    println!("{}", i18n.t("error-version-not-found"));
-                }
-                1 => {
-                    // Set the default version
-                    manager.set_default(&resolved_versions[0])?;
-                    println!(
-                        "{}",
-                        i18n.t_args(
-                            "default-set-success",
-                            &[(
-                                "version",
-                                FluentValue::from(version_utils::friendly_installed_version(
-                                    &resolved_versions[0]
-                                ))
-                            )]
-                        )
-                    );
-                }
-                _ => {
-                    println!("{}", i18n.t("error-multiple-versions-found"));
-                    for v in resolved_versions {
-                        println!("- {}", version_utils::friendly_installed_version(&v));
-                    }
-                }
-            }
+    let version_input = match matches.get_one::<String>("version") {
+        Some(v) => v,
+        None => {
+            println_i18n!(i18n, "provide-version-or-unset");
+            return Ok(());
         }
-    } else {
-        println!("{}", i18n.t("provide-version-or-unset"));
+    };
+
+    if version_input == "unset" {
+        manager.unset_default()?;
+        println_i18n!(i18n, "default-unset-success");
+        return Ok(());
     }
+
+    let mut requested_version = GodotVersion::from_match_str(&version_input)?;
+
+    requested_version.is_csharp = Some(csharp);
+
+    let resolved_version = manager.auto_install_version(&requested_version)?;
+
+    manager.set_default(&resolved_version)?;
+    println_i18n!(
+        i18n,
+        "default-set-success",
+        [("version", &resolved_version.to_display_str())]
+    );
+
     Ok(())
 }

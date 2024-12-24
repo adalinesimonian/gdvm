@@ -7,7 +7,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck disable=SC2016
 strings=$(find "$SCRIPT_DIR/../src" -type f -name '*.rs' -print0 | \
     xargs -0 perl -0777 -ne '
-        while (/i18n\.t(?:_args)?\s*\(\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
+        while (/(?:i18n\.t(?:_args)?\s*\(\s*|println_i18n!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
             print "$1\n";
         }
     ' | sort | uniq)

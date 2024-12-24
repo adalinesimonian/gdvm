@@ -14,10 +14,12 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::i18n;
+use crate::println_i18n;
 use crate::version_utils;
+use crate::version_utils::GodotVersionDeterminate;
 use crate::zip_utils;
 
-use version_utils::{GodotBranch, GodotVersion};
+use version_utils::{GodotVersion, GodotVersionDeterminateVecExt};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ReleaseCache {
@@ -51,7 +53,10 @@ pub struct GodotManager<'a> {
     i18n: &'a I18n,
 }
 
-fn get_archive_name(tag: &str, is_csharp: bool, i18n: &I18n) -> String {
+fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
+    let is_csharp = version.is_csharp == Some(true);
+    let tag = version.to_remote_str();
+
     let platform = if cfg!(target_os = "windows") {
         if cfg!(target_arch = "x86_64") {
             if is_csharp {
@@ -133,12 +138,16 @@ fn verify_sha512(
         release_tag
     );
     let sum_file = file_path.with_extension("SHA512-SUMS");
-    download_file(&sha_url, &sum_file, &i18n)?;
+
+    if let Err(_) = download_file(&sha_url, &sum_file, &i18n) {
+        println_i18n!(i18n, "warning-sha-sums-missing");
+        return Ok(());
+    }
 
     // Initialize indeterminate progress bar
     let pb = ProgressBar::new_spinner();
     pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
+    pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_message(i18n.t("verifying-checksum"));
 
     let sums_content = fs::read_to_string(&sum_file)?;
@@ -246,65 +255,55 @@ impl<'a> GodotManager<'a> {
     /// - `redownload`: If true, ignore cached zip files and download fresh ones.
     pub fn install(
         &self,
-        gv: &GodotVersion,
+        gv: &GodotVersionDeterminate,
         force: bool,
         redownload: bool,
     ) -> Result<InstallOutcome> {
-        let version_path = self.install_path.join(format!(
-            "{}-{}{}",
-            gv.version,
-            match gv.branch {
-                GodotBranch::Stable => "stable".to_string(),
-                GodotBranch::PreRelease(ref pr) => pr.clone(),
-            }
-            .as_str(),
-            if gv.is_csharp { "-csharp" } else { "" }
-        ));
+        let install_str = gv.to_install_str();
+        let version_path = self.install_path.join(install_str);
 
         if version_path.exists() {
             if force {
                 self.remove(&gv)?;
-                println!(
-                    "{}",
-                    self.i18n.t_args(
-                        "force-reinstalling-version",
-                        &[("version", FluentValue::from(gv.to_string()))]
-                    )
+                println_i18n!(
+                    self.i18n,
+                    "force-reinstalling-version",
+                    [("version", gv.to_display_str())]
                 );
             } else {
                 return Ok(InstallOutcome::AlreadyInstalled);
             }
         }
 
-        fs::create_dir_all(&version_path)?;
-
-        if let GodotBranch::PreRelease(pr) = &gv.branch {
-            println!(
-                "{}",
-                self.i18n
-                    .t_args("warning-prerelease", &[("branch", FluentValue::from(pr))])
+        if !gv.is_stable() {
+            println_i18n!(
+                self.i18n,
+                "warning-prerelease",
+                [("branch", &gv.release_type)]
             );
         }
 
-        let release_tag = version_utils::build_release_tag(&gv.version, &gv.branch);
-        let archive_name = get_archive_name(&release_tag, gv.is_csharp, self.i18n);
+        fs::create_dir_all(&self.cache_path)?;
+
+        let release_tag = gv.to_remote_str();
+        let archive_name = get_archive_name(&gv, self.i18n);
         let download_url = get_download_url(&release_tag, &archive_name);
         let cache_zip_path = self.cache_path.join(&archive_name);
 
         if !redownload && cache_zip_path.exists() {
-            println!("{}", self.i18n.t("using-cached-zip"));
+            println_i18n!(self.i18n, "using-cached-zip");
         } else {
             if redownload && cache_zip_path.exists() {
-                println!(
-                    "{}",
-                    self.i18n.t_args(
-                        "force-redownload",
-                        &[("version", FluentValue::from(gv.to_string()))]
-                    )
+                println_i18n!(
+                    self.i18n,
+                    "force-redownload",
+                    [("version", gv.to_display_str())]
                 );
             }
 
-            let tmp_file = self.install_path.join(format!("{}.zip", gv.version));
+            let tmp_file = self
+                .install_path
+                .join(format!("{}.zip", gv.to_install_str()));
 
             // Download the archive
             download_file(&download_url, &tmp_file, &self.i18n)?;
@@ -312,8 +311,10 @@ impl<'a> GodotManager<'a> {
 
             // Move the verified zip to cache_dir
             fs::rename(&tmp_file, &cache_zip_path)?;
-            println!("{}", self.i18n.t("cached-zip-stored"));
+            println_i18n!(self.i18n, "cached-zip-stored");
         }
+
+        fs::create_dir_all(&version_path)?;
 
         // Extract from cache_zip_path
         zip_utils::extract_zip(&cache_zip_path, &version_path, self.i18n)?;
@@ -322,42 +323,30 @@ impl<'a> GodotManager<'a> {
     }
 
     /// List all installed Godot versions
-    pub fn list_installed(&self) -> Result<Vec<String>> {
+    pub fn list_installed(&self) -> Result<Vec<GodotVersionDeterminate>> {
         let mut versions = vec![];
         for entry in fs::read_dir(&self.install_path)? {
             let entry = entry?;
             if entry.file_type()?.is_dir() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                let validation_name = if name.ends_with("-csharp") {
-                    &name.trim_end_matches("-csharp").to_string()
-                } else {
-                    &name
-                };
-                match version_utils::validate_godot_version(&validation_name) {
-                    Ok(_) => versions.push(name),
+                match GodotVersion::from_install_str(&name) {
+                    Ok(gv) => versions.push(gv.to_determinate()),
                     Err(_) => (), // Ignore invalid version directories
                 }
             }
         }
-        version_utils::sort_releases(&mut versions);
+        versions.sort_by_version();
         Ok(versions)
     }
 
     /// Remove a specified Godot version
-    pub fn remove(&self, gv: &GodotVersion) -> Result<()> {
-        let path = self.install_path.join(format!(
-            "{}-{}{}",
-            gv.version,
-            match gv.branch {
-                GodotBranch::Stable => "stable".to_string(),
-                GodotBranch::PreRelease(ref pr) => pr.clone(),
-            },
-            if gv.is_csharp { "-csharp" } else { "" }
-        ));
+    pub fn remove(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+        let path = self.install_path.join(gv.to_install_str());
+
         if path.exists() {
             // If this version is the default, unset it
             if let Some(def) = self.get_default()? {
-                if def == path.file_name().unwrap().to_string_lossy() {
+                if def.to_install_str() == path.file_name().unwrap().to_string_lossy() {
                     self.unset_default()?;
                 }
             }
@@ -369,15 +358,12 @@ impl<'a> GodotManager<'a> {
     }
 
     /// Run a specified Godot version
-    pub fn run(&self, version: &str, console: bool) -> Result<()> {
-        let version_dir = self.install_path.join(version);
+    pub fn run(&self, gv: &GodotVersionDeterminate, console: bool) -> Result<()> {
+        let version_dir = self.install_path.join(gv.to_install_str());
         if !version_dir.exists() {
             return Err(anyhow!(self.i18n.t_args(
                 "error-version-not-found",
-                &[(
-                    "version",
-                    FluentValue::from(version_utils::friendly_installed_version(version))
-                )]
+                &[("version", FluentValue::from(&gv.to_display_str()))]
             )));
         }
 
@@ -387,10 +373,7 @@ impl<'a> GodotManager<'a> {
         let path = godot_executable.ok_or_else(|| {
             anyhow!(self.i18n.t_args(
                 "godot-executable-not-found",
-                &[(
-                    "version",
-                    FluentValue::from(version_utils::friendly_installed_version(version))
-                )]
+                &[("version", FluentValue::from(&gv.to_display_str()))]
             ))
         })?;
 
@@ -402,10 +385,7 @@ impl<'a> GodotManager<'a> {
                 if !inner_path.exists() {
                     return Err(anyhow!(self.i18n.t_args(
                         "godot-executable-not-found",
-                        &[(
-                            "version",
-                            FluentValue::from(version_utils::friendly_installed_version(version))
-                        )]
+                        &[("version", FluentValue::from(&gv.to_display_str()))]
                     )));
                 }
                 if console {
@@ -455,10 +435,11 @@ impl<'a> GodotManager<'a> {
     /// Fetch available releases from GitHub with caching
     pub fn fetch_available_releases(
         &self,
-        filter: Option<&str>,
+        filter: &Option<GodotVersion>,
         use_cache_only: bool,
-    ) -> Result<Vec<String>> {
+    ) -> Result<Vec<GodotVersionDeterminate>> {
         let cache_duration = Duration::from_secs(48 * 3600); // 48 hours
+        let filter = filter.as_ref();
 
         let mut cache = self.load_cache()?;
         let now = SystemTime::now()
@@ -475,26 +456,28 @@ impl<'a> GodotManager<'a> {
         }
 
         // Filter releases
-        let mut filtered_releases: Vec<String> = cache
+        let mut filtered_releases: Vec<GodotVersionDeterminate> = cache
             .releases
             .iter()
-            .filter(|r| filter.map_or(true, |f| r.tag_name.starts_with(f)))
-            .map(|r| r.tag_name.clone())
+            .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
+            .map(|gv| gv.to_determinate())
+            .filter(|r| filter.map_or(true, |f| f.matches(r)))
             .collect();
 
         // If no releases found and not using cache only, try fetching if we haven't already
         if filtered_releases.is_empty() && !use_cache_only && !is_time_to_refresh_index {
-            self.update_cache(&mut cache)?;
+            // self.update_cache(&mut cache)?;
             filtered_releases = cache
                 .releases
                 .iter()
-                .filter(|r| filter.map_or(true, |f| r.tag_name.starts_with(f)))
-                .map(|r| r.tag_name.clone())
+                .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
+                .map(|gv| gv.to_determinate())
+                .filter(|r| filter.map_or(true, |f| f.matches(r)))
                 .collect();
         }
 
         // Sort releases
-        version_utils::sort_releases(&mut filtered_releases);
+        filtered_releases.sort_by_version();
 
         Ok(filtered_releases)
     }
@@ -511,7 +494,7 @@ impl<'a> GodotManager<'a> {
         // Initialize indeterminate progress bar
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-        pb.enable_steady_tick(std::time::Duration::from_millis(100));
+        pb.enable_steady_tick(Duration::from_millis(100));
         pb.set_message(self.i18n.t("fetching-releases"));
 
         while !seen_existing_release {
@@ -576,7 +559,7 @@ impl<'a> GodotManager<'a> {
                 Ok(cache) => Ok(cache),
                 Err(_) => {
                     // Log a warning about the corrupted or unexpected cache format
-                    println!("{}", self.i18n.t("warning-cache-metadata-reset"));
+                    println_i18n!(self.i18n, "warning-cache-metadata-reset");
 
                     // Overwrite the cache with an empty cache
                     let empty_cache = GithubReleasesCache {
@@ -607,9 +590,9 @@ impl<'a> GodotManager<'a> {
     pub fn clear_cache(&self) -> Result<()> {
         if self.cache_index_path.exists() {
             fs::remove_file(&self.cache_index_path)?;
-            println!("{}", self.i18n.t("cache-metadata-removed"));
+            println_i18n!(self.i18n, "cache-metadata-removed");
         } else {
-            println!("{}", self.i18n.t("no-cache-metadata-found"));
+            println_i18n!(self.i18n, "no-cache-metadata-found");
         }
 
         if self.cache_path.exists() {
@@ -620,20 +603,24 @@ impl<'a> GodotManager<'a> {
                     fs::remove_file(&path)?;
                 }
             }
-            println!("{}", self.i18n.t("cache-files-removed"));
+            println_i18n!(self.i18n, "cache-files-removed");
         } else {
-            println!("{}", self.i18n.t("no-cache-files-found"));
+            println_i18n!(self.i18n, "no-cache-files-found");
         }
         Ok(())
     }
 
     /// Fetch the latest stable Godot version
-    pub fn get_latest_stable_version(&self) -> Result<String> {
-        let releases = self.fetch_available_releases(Some("stable"), false)?;
+    pub fn get_latest_stable_version(&self) -> Result<GodotVersionDeterminate> {
+        let stable_version = GodotVersion {
+            release_type: Some("stable".to_string()),
+            ..Default::default()
+        };
+        let releases = self.fetch_available_releases(&Some(stable_version), false)?;
         // Assuming releases are sorted latest first
         releases
             .iter()
-            .find(|r| r.contains("stable"))
+            .find(|r| r.release_type == "stable")
             .cloned()
             .ok_or_else(|| anyhow!(self.i18n.t("error-no-stable-releases-found")))
     }
@@ -644,46 +631,64 @@ impl<'a> GodotManager<'a> {
     /// unless of course the version is not found, in which case the list will
     /// be empty.
     /// Accepts full and partial versions.
-    pub fn resolve_installed_version(&self, version: &str, csharp: bool) -> Result<Vec<String>> {
+    pub fn resolve_installed_version<T>(&self, gv: &T) -> Result<Vec<GodotVersionDeterminate>>
+    where
+        T: Into<GodotVersion> + Clone,
+    {
+        let gv: GodotVersion = gv.clone().into();
         let installed = self.list_installed()?;
-        let mut resolved = vec![];
-        for v in installed {
-            if v.starts_with(version) {
-                if csharp {
-                    if v.ends_with("-csharp") {
-                        resolved.push(v);
-                    }
-                } else {
-                    if !v.ends_with("-csharp") {
-                        resolved.push(v);
-                    }
-                }
-            }
-        }
-        Ok(resolved)
+        let mut matches: Vec<GodotVersionDeterminate> =
+            installed.into_iter().filter(|v| gv.matches(v)).collect();
+
+        matches.sort_by_version();
+        Ok(matches)
     }
 
     /// Resolve the Godot version from a string, for an available version
     /// Returns a single version, whichever is the latest that matches the
     /// input.
     /// Accepts full and partial versions.
-    pub fn resolve_available_version(&self, version: &str, use_cache_only: bool) -> Option<String> {
-        let releases = self
-            .fetch_available_releases(Some(version), use_cache_only)
+    pub fn resolve_available_version<T>(
+        &self,
+        gv: &T,
+        use_cache_only: bool,
+    ) -> Option<GodotVersionDeterminate>
+    where
+        T: Into<GodotVersion> + Clone,
+    {
+        let gv: GodotVersion = gv.clone().into();
+
+        let available_releases = self
+            .fetch_available_releases(&Some(gv), use_cache_only)
             .ok()?;
-        releases.iter().find(|r| r.starts_with(version)).cloned()
+
+        // If some releases were stable, prefer the latest stable release
+
+        let latest_stable = available_releases
+            .iter()
+            .find(|r| r.release_type == "stable")
+            .cloned();
+
+        if let Some(latest_stable) = latest_stable {
+            return Some(latest_stable);
+        }
+
+        // If no stable releases were found, return the latest release
+
+        available_releases.into_iter().next()
     }
 
-    pub fn set_default(&self, version_str: &str) -> Result<()> {
+    pub fn set_default(&self, gv: &GodotVersionDeterminate) -> Result<()> {
         // Check if the version exists
-        let version_path = self.install_path.join(version_str);
+        let version_str = gv.to_install_str();
+        let version_path = self.install_path.join(&version_str);
         if !version_path.exists() {
             return Err(anyhow!(self.i18n.t("error-version-not-found")));
         }
 
         // Write version to .gdvm/default
         let default_path = self.base_path.join("default");
-        fs::write(&default_path, version_str)?;
+        fs::write(&default_path, &version_str)?;
 
         // Create directory symlink .gdvm/bin/current_godot -> .gdvm/<version_str>/
         let symlink_dir = self.base_path.join("bin").join("current_godot");
@@ -759,26 +764,62 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    pub fn get_default(&self) -> Result<Option<String>> {
+    pub fn get_default(&self) -> Result<Option<GodotVersionDeterminate>> {
         let default_file = self.base_path.join("default");
         if default_file.exists() {
             let contents = fs::read_to_string(&default_file)?;
-            Ok(Some(contents.trim().to_string()))
+            Ok(Some(
+                GodotVersion::from_install_str(contents.trim())?.to_determinate(),
+            ))
         } else {
             Ok(None)
         }
+    }
+
+    pub fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    where
+        T: Into<GodotVersion> + Clone,
+    {
+        let gv: GodotVersion = gv.clone().into();
+
+        // If user requested "stable", resolve it similarly to install logic
+        let mut actual_version: GodotVersionDeterminate = if gv.is_stable() && gv.major.is_none() {
+            self.get_latest_stable_version()?
+        } else if gv.is_incomplete() {
+            self.resolve_available_version(&gv, false)
+                .ok_or_else(|| anyhow!(self.i18n.t("error-version-not-found")))?
+        } else {
+            gv.clone().into()
+        };
+
+        actual_version.is_csharp = gv.is_csharp;
+
+        // Check if version is installed, if not, install
+        if !self.is_version_installed(&actual_version)? {
+            println_i18n!(
+                self.i18n,
+                "auto-installing-version",
+                [("version", &actual_version.to_display_str())]
+            );
+            self.install(&actual_version, false, false)?;
+        }
+        Ok(actual_version)
+    }
+
+    fn is_version_installed<T>(&self, gv: &T) -> Result<bool>
+    where
+        T: Into<GodotVersion> + Clone,
+    {
+        let gv: GodotVersion = gv.clone().into();
+
+        let installed_versions = self.list_installed()?;
+        Ok(installed_versions.iter().any(|v| gv.matches(v)))
     }
 }
 
 fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
     // Print downloading URL message
-    println!(
-        "{}",
-        i18n.t_args(
-            "operation-downloading-url",
-            &[("url", FluentValue::from(url))]
-        )
-    );
+    println_i18n!(i18n, "operation-downloading-url", [("url", url)]);
 
     let response = reqwest::blocking::get(url)?;
     let total_size = response
@@ -790,7 +831,7 @@ fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
             .template("{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
             .progress_chars("#>-"),
     );
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
+    pb.enable_steady_tick(Duration::from_millis(100));
     let mut file = fs::File::create(dest)?;
     let mut downloaded: u64 = 0;
     let mut buffer = [0; 8192]; // 8 KB buffer

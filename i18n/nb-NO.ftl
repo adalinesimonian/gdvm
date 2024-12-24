@@ -66,6 +66,7 @@ unsupported-architecture = Arkitekturen støttes ikke
 verifying-checksum = Verifiserer sjekksum...
 checksum-verified = Sjekksum verifisert.
 error-checksum-mismatch = Sjekksumfeil for filen { $file }
+warning-sha-sums-missing = Sjekksumfiler ble ikke funnet for denne utgivelsen. Hopper over verifisering.
 
 error-find-user-dirs = Klarte ikke å finne brukermappene.
 
@@ -87,7 +88,7 @@ operation-download-complete = Nedlasting fullført.
 operation-extracting = Pakker ut...
 operation-extract-complete = Pakking fullført.
 
-error-version-not-found = Versjonen ble ikke funnet. (Glemte du å spesifisere --csharp?)
+error-version-not-found = Versjonen ble ikke funnet.
 error-multiple-versions-found = Flere versjoner samsvarer med forespørselen:
 
 error-invalid-godot-version = Ugyldig Godot-versjonsformat. Forventede formater: x, x.y, x.y.z, x.y.z.w eller x.y.z-tag.
@@ -124,3 +125,5 @@ error-read-zip-file = Kunne ikke lese fra ZIP-fila { $file }: { $error }
 error-write-file = Kunne ikke skrive til fila { $path }: { $error }
 error-strip-prefix = Kunne ikke fjerne prefiks: { $error }
 error-set-permissions = Kunne ikke sette tillatelser for { $path }: { $error }
+
+auto-installing-version = Automatisk installasjon av versjon { $version }

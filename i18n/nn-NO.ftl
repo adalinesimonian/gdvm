@@ -51,6 +51,7 @@ help-help-command = Vis denne meldinga eller hjelpa for dei gjeve underkommandoa
 
 installing-version = Installerer versjon {$version}
 installed-success = Installerte {$version} vellukka.
+auto-installing-version = Automatisk installasjon av versjon { $version }
 
 unsupported-platform = Plattforma er ikkje støtta
 unsupported-architecture = Arkitekturen er ikkje støtta
@@ -79,7 +80,7 @@ operation-download-complete = Nedlasting fullført.
 operation-extracting = Pakkar ut...
 operation-extract-complete = Utpakking fullført.
 
-error-version-not-found = Versjonen vart ikkje funne. (Gløymde du å spesifisere --csharp?)
+error-version-not-found = Versjonen vart ikkje funne.
 error-multiple-versions-found = Fleire versjonar samsvarar med førespurnaden:
 
 error-invalid-godot-version = Ugyldig Godot-versjonsformat. Forventa formater: x, x.y, x.y.z, x.y.z.w eller x.y.z-tag.
@@ -123,3 +124,5 @@ error-read-zip-file = Kunne ikkje lese frå ZIP-fila { $file }: { $error }
 error-write-file = Kunne ikkje skrive til fila { $path }: { $error }
 error-strip-prefix = Kunne ikkje fjerne prefiks: { $error }
 error-set-permissions = Kunne ikkje setje tillatingar for { $path }: { $error }
+
+warning-sha-sums-missing = Sjekksumfiler vart ikkje funne for denne utgjevinga. Hoppar over verifisering.
