@@ -157,3 +157,6 @@ pin-subcommand-description = Set or update .gdvmrc with the requested version
 
 error-file-not-found = File not found. It may not exist on the server.
 error-download-failed = Download failed due to an unexpected error: { $error }
+error-ensure-godot-binaries-failed = Failed to ensure Godot binaries.
+    Error: { $error }.
+    Try removing { $path } and then run gdvm again.

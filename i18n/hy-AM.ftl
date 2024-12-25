@@ -162,3 +162,6 @@ error-file-not-found = Ֆայլը չի գտնվել։ Հնարավոր է, որ 
 error-download-failed = Ներբեռնումը ձախողվեց անակնկալ սխալի պատճառով։ { $error }
 
 checking-updates = Ստուգվում են թարմացումները gdvm-ի համար...
+error-ensure-godot-binaries-failed = Չհաջողվեց ապահովել Godot-ի գործարկվող ֆայլերը։
+    Սխալ: { $error }։
+    Փորձեք ջնջել { $path } ֆայլը և վերսկսեք gdvm-ը:

@@ -277,6 +277,24 @@ fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<Pat
     }
 }
 
+fn copy_over_binary_if_different(source: &Path, dest: &Path) -> Result<()> {
+    if let Ok(metadata) = fs::symlink_metadata(dest) {
+        if metadata.file_type().is_symlink() {
+            fs::remove_file(dest)?;
+        }
+    }
+    if dest.exists() {
+        let source_content = fs::read(source)?;
+        let dest_content = fs::read(dest)?;
+        if source_content != dest_content {
+            fs::copy(source, dest)?;
+        }
+    } else {
+        fs::copy(source, dest)?;
+    }
+    Ok(())
+}
+
 impl<'a> GodotManager<'a> {
     /// Create a new GodotManager instance and set up the installation and cache paths
     pub fn new(i18n: &'a I18n) -> Result<Self> {
@@ -290,34 +308,6 @@ impl<'a> GodotManager<'a> {
         fs::create_dir_all(&install_path)?;
         fs::create_dir_all(&cache_path)?;
 
-        // Create symlinks to godot and godot_console executables
-        #[cfg(target_family = "unix")]
-        {
-            let godot_symlink = base_path.join("bin").join("godot");
-            if !godot_symlink.exists() {
-                std::os::unix::fs::symlink(&base_path.join("bin").join("gdvm"), &godot_symlink)?;
-            }
-        }
-
-        #[cfg(target_family = "windows")]
-        {
-            let godot_symlink = base_path.join("bin").join("godot.exe");
-            if !godot_symlink.exists() {
-                std::os::windows::fs::symlink_file(
-                    &base_path.join("bin").join("gdvm.exe"),
-                    &godot_symlink,
-                )?;
-            }
-
-            let godot_console_symlink = base_path.join("bin").join("godot_console.exe");
-            if !godot_console_symlink.exists() {
-                std::os::windows::fs::symlink_file(
-                    &base_path.join("bin").join("gdvm.exe"),
-                    &godot_console_symlink,
-                )?;
-            }
-        }
-
         let manager = GodotManager {
             base_path,
             install_path,
@@ -326,10 +316,47 @@ impl<'a> GodotManager<'a> {
             i18n,
         };
 
+        manager.ensure_godot_binaries()?;
+
         // Don't fail if update check fails, since it isn't critical
         manager.check_for_upgrades().ok();
 
         Ok(manager)
+    }
+
+    fn ensure_godot_binaries(&self) -> Result<()> {
+        let bin_path = self.base_path.join("bin");
+        let gdvm_exe_source = if cfg!(target_os = "windows") {
+            bin_path.join("gdvm.exe")
+        } else {
+            bin_path.join("gdvm")
+        };
+
+        let targets: &[&str] = if cfg!(target_os = "windows") {
+            &["godot.exe", "godot_console.exe"]
+        } else {
+            &["godot"]
+        };
+
+        for exe in targets.iter() {
+            let exe_path = bin_path.join(exe);
+
+            if std::env::current_exe().ok() != Some(exe_path.clone()) {
+                if let Err(err) = copy_over_binary_if_different(&gdvm_exe_source, &exe_path) {
+                    println_i18n!(
+                        self.i18n,
+                        "error-ensure-godot-binaries-failed",
+                        [
+                            ("error", &err.to_string()),
+                            ("path", &exe_path.to_string_lossy().to_string())
+                        ]
+                    );
+                    return Err(err);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Gets the path to the GodotManager's base directory
@@ -1058,6 +1085,8 @@ impl<'a> GodotManager<'a> {
                 .as_secs(),
             new_version: None,
         })?;
+
+        self.ensure_godot_binaries()?;
 
         println_i18n!(self.i18n, "upgrade-complete");
 

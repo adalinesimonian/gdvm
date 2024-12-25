@@ -164,3 +164,7 @@ error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren
 error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }
 
 checking-updates = Sjekker etter oppdateringer til gdvm...
+
+error-ensure-godot-binaries-failed = Kunne ikke forsikre Godot-kjørbare filer.
+    Feil: { $error }.
+    Prøv å slette { $path } og kjør gdvm på nytt.
