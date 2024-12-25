@@ -341,10 +341,10 @@ impl GodotVersion {
 
 impl GodotVersionDeterminate {
     /// Converts the version to a string.
-    pub fn to_version_string(&self) -> String {
+    pub fn to_version_string(&self, fully_qualified: bool) -> String {
         let mut base = format!("{}.{}", self.major, self.minor);
 
-        if self.patch != 0 || self.subpatch != 0 {
+        if self.patch != 0 || self.subpatch != 0 || fully_qualified {
             base.push_str(&format!(".{}", self.patch));
 
             if self.subpatch != 0 {
@@ -357,7 +357,7 @@ impl GodotVersionDeterminate {
 
     /// Convert to a remote tag, e.g. "4.1.1.1-stable"
     pub fn to_remote_str(&self) -> String {
-        let mut base = self.to_version_string();
+        let mut base = self.to_version_string(false);
         base.push('-');
         base.push_str(&self.release_type);
         base
@@ -366,6 +366,17 @@ impl GodotVersionDeterminate {
     /// Convert to an install folder name, e.g. "4.1.1.1-csharp"
     pub fn to_install_str(&self) -> String {
         let mut base = self.to_remote_str();
+        if self.is_csharp.unwrap_or(false) {
+            base.push_str("-csharp");
+        }
+        base
+    }
+
+    /// Convert to a string to be used for pinning versions, e.g. "4.1.0-stable-csharp"
+    pub fn to_pinned_str(&self) -> String {
+        let mut base = self.to_version_string(true);
+        base.push('-');
+        base.push_str(&self.release_type);
         if self.is_csharp.unwrap_or(false) {
             base.push_str("-csharp");
         }

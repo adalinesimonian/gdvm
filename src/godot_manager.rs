@@ -908,7 +908,7 @@ impl<'a> GodotManager<'a> {
     pub fn pin_version(&self, gv: &GodotVersionDeterminate) -> Result<()> {
         let path = std::env::current_dir()?;
         let file = path.join(".gdvmrc");
-        fs::write(&file, gv.to_install_str())?;
+        fs::write(&file, gv.to_pinned_str())?;
         Ok(())
     }
 
