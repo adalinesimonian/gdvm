@@ -1010,6 +1010,11 @@ impl<'a> GodotManager<'a> {
                     last_update_check: now,
                     new_version: Some(new_version),
                 })?;
+            } else {
+                self.save_gdvm_cache(&GdvmCache {
+                    last_update_check: now,
+                    new_version: None,
+                })?;
             }
         } else if let Some(new_version) = &gdvm_cache.new_version {
             if let Ok(new_version) = Version::parse(new_version.trim_start_matches('v')) {
@@ -1029,6 +1034,11 @@ impl<'a> GodotManager<'a> {
                         new_version: None,
                     })?;
                 }
+            } else {
+                self.save_gdvm_cache(&GdvmCache {
+                    last_update_check: now,
+                    new_version: None,
+                })?;
             }
         }
 
