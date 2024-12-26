@@ -127,6 +127,7 @@ error-read-zip-file = Не удалось прочитать из ZIP файла
 error-write-file = Не удалось записать в файл { $path }: { $error }
 error-strip-prefix = Ошибка удаления префикса: { $error }
 error-set-permissions = Не удалось установить разрешения для { $path }: { $error }
+error-create-symlink-windows = Не удалось создать символьную ссылку. Убедитесь, что {"\u001b"}]8;;ms-settings:developers{"\u001b"}\режим разработчика{"\u001b"}]8;;{"\u001b"}\ включен или запустите от имени администратора.
 
 warning-sha-sums-missing = Контрольные суммы не найдены для этого релиза. Пропуск проверки.
 

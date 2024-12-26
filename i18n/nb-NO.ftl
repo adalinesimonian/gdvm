@@ -129,6 +129,7 @@ error-read-zip-file = Kunne ikke lese fra ZIP-fila { $file }: { $error }
 error-write-file = Kunne ikke skrive til fila { $path }: { $error }
 error-strip-prefix = Kunne ikke fjerne prefiks: { $error }
 error-set-permissions = Kunne ikke sette tillatelser for { $path }: { $error }
+error-create-symlink-windows = Kunne ikke opprette symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklermodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller kjør som administrator.
 
 auto-installing-version = Automatisk installasjon av versjon { $version }
 

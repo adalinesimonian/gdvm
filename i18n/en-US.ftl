@@ -126,6 +126,7 @@ error-read-zip-file = Failed to read from ZIP file { $file }: { $error }
 error-write-file = Failed to write to file { $path }: { $error }
 error-strip-prefix = Error stripping prefix: { $error }
 error-set-permissions = Failed to set permissions for { $path }: { $error }
+error-create-symlink-windows = Could not create symlink. Please ensure {"\u001b"}]8;;ms-settings:developers{"\u001b"}\Developer Mode{"\u001b"}]8;;{"\u001b"}\ is enabled or run as admin.
 
 help-upgrade = Upgrade gdvm to the latest version
 upgrade-starting = Starting gdvm upgrade...

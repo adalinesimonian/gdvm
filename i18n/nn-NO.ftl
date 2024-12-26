@@ -145,6 +145,8 @@ error-set-permissions = Kunne ikkje setje tillatingar for { $path }: { $error }
 
 warning-sha-sums-missing = Sjekksumfiler vart ikkje funne for denne utgjevinga. Hoppar over verifisering.
 
+error-create-symlink-windows = Kunne ikkje laga symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklarmodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller kør som administrator.
+
 upgrade-starting = Startar oppgradering av gdvm...
 upgrade-downloading-latest = Lastar ned nyaste gdvm...
 upgrade-complete = gdvm vart oppgradert!

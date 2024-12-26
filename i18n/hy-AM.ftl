@@ -141,6 +141,7 @@ error-read-zip-file = Չհաջողվեց կարդալ ZIP ֆայլից { $file }
 error-write-file = Չհաջողվեց գրել ֆայլը { $path }: { $error }
 error-strip-prefix = Սխալ է հանել նախաբառը՝ { $error }
 error-set-permissions = Չհաջողվեց սահմանել արտոնայինությունները { $path }: { $error }
+error-create-symlink-windows = Չհաջողվեց ստեղծել symlink։ Ստուգեք, արդյոք {"\u001b"}]8;;ms-settings:developers{"\u001b"}\developer mode-ը{"\u001b"}]8;;{"\u001b"}\ միացած է կամ գործարկեք ադմինի իրավունքներով:
 
 auto-installing-version = Ինքնաշխատ տեղադրում { $version } տարբերակի
 warning-sha-sums-missing = Չհաջողվեց գտնել ստուգանակոչումները այս թողարկման համար։ Թողարկման հաստատումը հապողվեց։

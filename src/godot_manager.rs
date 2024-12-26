@@ -855,7 +855,12 @@ impl<'a> GodotManager<'a> {
         #[cfg(target_family = "unix")]
         std::os::unix::fs::symlink(&target_dir, &symlink_dir)?;
         #[cfg(target_family = "windows")]
-        std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir).map_err(|e| anyhow!(e))?;
+        if let Err(e) = std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir) {
+            if e.raw_os_error() == Some(1314) {
+                return Err(anyhow!(self.i18n.t("error-create-symlink-windows")));
+            }
+            return Err(anyhow!(e));
+        }
 
         Ok(())
     }
