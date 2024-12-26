@@ -92,6 +92,8 @@ else
     echo "$errorMessage"
 fi
 echo
+"$outPath" --version
+echo
 echo "To get started, run:"
 echo "Usage: gdvm --help"
 echo

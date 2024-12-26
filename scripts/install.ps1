@@ -65,6 +65,8 @@ if ($failedPaths.Count -gt 0) {
 }
 
 Write-Host ""
+& "$outFile" --version
+Write-Host ""
 Write-Host "To get started, run:"
 Write-Host "Usage: gdvm --help"
 Write-Host ""
