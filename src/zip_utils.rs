@@ -69,7 +69,11 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
     let common_prefix: Option<PathBuf> =
         if top_level_entries.len() == 1 && top_level_dirs.len() == 1 {
             let prefix = top_level_dirs.into_iter().next().unwrap();
-            Some(PathBuf::from(prefix))
+            if prefix.ends_with(".app") {
+                None
+            } else {
+                Some(PathBuf::from(prefix))
+            }
         } else {
             None
         };
