@@ -1045,12 +1045,37 @@ impl<'a> GodotManager<'a> {
             .map_err(|_| anyhow!(self.i18n.t("upgrade-install-dir-failed")))?;
 
         // Detect architecture
-        #[cfg(target_arch = "aarch64")]
-        let arch = "aarch64-pc-windows-msvc";
-        #[cfg(all(target_arch = "x86_64"))]
-        let arch = "x86_64-pc-windows-msvc";
-        #[cfg(target_arch = "x86")]
-        let arch = "i686-pc-windows-msvc";
+        let arch = if cfg!(target_os = "windows") {
+            if cfg!(target_arch = "aarch64") {
+                "aarch64-pc-windows-msvc"
+            } else if cfg!(target_arch = "x86_64") {
+                "x86_64-pc-windows-msvc"
+            } else if cfg!(target_arch = "x86") {
+                "i686-pc-windows-msvc"
+            } else {
+                return Err(anyhow!(self.i18n.t("unsupported-architecture")));
+            }
+        } else if cfg!(target_os = "linux") {
+            if cfg!(target_arch = "aarch64") {
+                "aarch64-unknown-linux-gnu"
+            } else if cfg!(target_arch = "x86_64") {
+                "x86_64-unknown-linux-gnu"
+            } else if cfg!(target_arch = "x86") {
+                "i686-unknown-linux-gnu"
+            } else {
+                return Err(anyhow!(self.i18n.t("unsupported-architecture")));
+            }
+        } else if cfg!(target_os = "macos") {
+            if cfg!(target_arch = "aarch64") {
+                "aarch64-apple-darwin"
+            } else if cfg!(target_arch = "x86_64") {
+                "x86_64-apple-darwin"
+            } else {
+                return Err(anyhow!(self.i18n.t("unsupported-architecture")));
+            }
+        } else {
+            return Err(anyhow!(self.i18n.t("unsupported-platform")));
+        };
 
         // Set download URL based on architecture
         let repo_url = "https://github.com/adalinesimonian/gdvm";
