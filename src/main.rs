@@ -66,7 +66,9 @@ fn main() -> Result<()> {
         ) {
             eprintln!("{}", err);
 
-            // Wait for 5 seconds before exiting
+            // Wait for 5 seconds before exiting on Windows to allow the user to read the error.
+            // On other platforms, the wrapper script will display the error message in a dialog.
+            #[cfg(target_os = "windows")]
             std::thread::sleep(std::time::Duration::from_secs(5));
 
             std::process::exit(1);
