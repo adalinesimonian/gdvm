@@ -91,8 +91,255 @@ if [ -n "$SHELL" ]; then
 else
     echo "$errorMessage"
 fi
+
 echo
 "$outPath" --version
+echo
+
+godotBinPath="$installDir/godot"
+
+# Ask to associate .godot files with gdvm (specifically godot in .gdvm/bin)
+echo
+printf "Would you like to associate .godot files with gdvm (specifically godot in $installDir)? [y/N] "
+read -r REPLY < /dev/tty
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Skipping association of .godot files."
+elif [ "$os" = "apple-darwin" ]; then
+    echo "Creating a minimal .app to associate .godot files with gdvm on macOS..."
+
+    # Download the Godot universal macOS zip to extract its .icns icon
+    icnsZipUrl="https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip"
+    tmpZip="$installDir/godotIconMac.zip"
+    haveIcon="false"
+
+    echo "Downloading Godot macOS zip to extract icon..."
+    if ! curl -sL "$icnsZipUrl" -o "$tmpZip"; then
+        echo "Failed to download $icnsZipUrl. Continuing without icon."
+    else
+        # Extract the icon (Godot.icns or Godot.icns). We'll use Godot.icns for a project file icon.
+        echo "Extracting icon from $tmpZip..."
+        if command -v unzip >/dev/null 2>&1; then
+            # Unzip quietly into a subfolder in $installDir (to not overwrite anything else).
+            unzip -qo "$tmpZip" -d "$installDir"
+
+            # Check if the extracted Godot.app and icon file exist:
+            extractedIcnsPath="$installDir/Godot.app/Contents/Resources/Godot.icns"
+            if [ -f "$extractedIcnsPath" ]; then
+                haveIcon="true"
+            else
+                echo "Godot.icns not found in extracted folder. Will continue without an icon."
+            fi
+        else
+            echo "'unzip' not available on this system. Cannot extract icon. Continuing without icon."
+        fi
+    fi
+
+    # Create the minimal .app structure
+    appName="gdvm-godot.app"
+    appDir="$installDir/$appName"
+    contentsDir="$appDir/Contents"
+    macOsDir="$contentsDir/MacOS"
+    resourcesDir="$contentsDir/Resources"
+
+    mkdir -p "$macOsDir" "$resourcesDir"
+
+    # Generate the Info.plist
+    infoPlist="$contentsDir/Info.plist"
+    cat > "$infoPlist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>gdvm-godot</string>
+    <key>CFBundleDisplayName</key>
+    <string>gdvm Godot Stub</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.example.gdvm-godot</string>
+    <key>CFBundleExecutable</key>
+    <string>godot-wrapper</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+EOF
+
+    if [ "$haveIcon" = "true" ]; then
+        cat >> "$infoPlist" <<EOF
+    <key>CFBundleIconFile</key>
+    <string>Godot.icns</string>
+EOF
+    fi
+
+    cat >> "$infoPlist" <<EOF
+
+    <!-- Tells macOS we handle .godot files -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Godot Project</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.gdvm.godotproject</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>godot</string>
+            </array>
+        </dict>
+    </array>
+
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.gdvm.godotproject</string>
+            <key>UTTypeDescription</key>
+            <string>Godot Project</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <string>godot</string>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
+EOF
+
+    # Create the wrapper script in Contents/MacOS
+    cat > "$macOsDir/godot-wrapper" <<'EOF'
+#!/usr/bin/env bash
+
+# Path to the actual Godot binary
+realGodotBin="__REAL_GODOT_BIN__"
+
+# Execute gdvm, capture both stdout and stderr
+output=$("$realGodotBin" "$@" 2>&1)
+exit_code=$?
+
+# Display an error alert if gdvm failed
+if [ $exit_code -ne 0 ]; then
+    # Escape backslashes and double quotes
+    escaped_output=$(printf '%s' "$output" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+    osascript -e "display alert \"gdvm Error\" message \"${escaped_output}\" as critical buttons {\"OK\"}"
+fi
+
+# Exit with the original exit code from gdvm
+exit $exit_code
+EOF
+    sed -i '' "s|__REAL_GODOT_BIN__|$installDir/godot|g" "$macOsDir/godot-wrapper"
+    chmod +x "$macOsDir/godot-wrapper"
+
+    # If we successfully extracted an icon, place it in Contents/Resources
+    if [ "$haveIcon" = "true" ]; then
+        cp "$extractedIcnsPath" "$resourcesDir/Godot.icns"
+        # Clean up the leftover Godot.app from the extraction
+        rm -rf "$installDir/Godot.app"
+    fi
+
+    # Also remove the downloaded zip
+    rm -f "$tmpZip"
+
+    echo
+    echo "Stub .app created at: $appDir"
+
+    showManualSteps="false"
+
+    # Optionally try to set defaults with 'duti' if installed:
+    if command -v duti >/dev/null 2>&1; then
+        echo
+        echo "Attempting to set .godot -> $appName as default with duti..."
+        if ! duti -s com.example.gdvm-godot .godot all; then
+            echo "Failed to set .godot -> $appName as default with duti."
+            showManualSteps="true"
+        fi
+    elif command -v brew >/dev/null 2>&1; then
+        if ! brew install duti; then
+            echo "Failed to install 'duti' with Homebrew."
+            showManualSteps="true"
+        else
+            echo
+            echo "Attempting to set .godot -> $appName as default with duti..."
+            if ! duti -s com.example.gdvm-godot .godot all; then
+                echo "Failed to set .godot -> $appName as default with duti."
+                showManualSteps="true"
+            fi
+        fi
+    else
+        showManualSteps="true"
+    fi
+
+    echo
+    if [ "$showManualSteps" = "true" ]; then
+        echo
+        echo "You will need to set the default app manually. To do so:"
+        echo "  1) Right-click a .godot file, select 'Get Info'"
+        echo "  2) Under 'Open with:', choose $appName"
+        echo "  3) Click 'Change All...' to apply for all .godot files."
+    fi
+elif [ "$os" = "unknown-linux-gnu" ]; then
+    echo "You appear to be on Linux."
+    wrapperScript="$installDir/godot-wrapper-linux"
+    cat > "$wrapperScript" <<'EOF'
+#!/usr/bin/env bash
+
+# Execute gdvm and capture both stdout and stderr
+output=$("$HOME/.gdvm/bin/godot" "$@" 2>&1)
+exitCode=$?
+
+if [ $exitCode -ne 0 ]; then
+    zenity --error --text="$output" || \
+    kdialog --error "$output" || \
+    Xdialog --msgbox "$output" 0 0 || \
+    notify-send "gdvm Error" "$output" || \
+    echo "$output"
+fi
+
+exit $exitCode
+EOF
+    chmod +x "$wrapperScript"
+    desktopDir="$HOME/.local/share/applications"
+    mkdir -p "$desktopDir"
+    desktopFile="$desktopDir/gdvm.desktop"
+
+    echo "[Desktop Entry]" > "$desktopFile"
+    echo "Name=Godot Engine (via gdvm)" >> "$desktopFile"
+    echo "Exec=\"$wrapperScript\" %f" >> "$desktopFile"
+    echo "Type=Application" >> "$desktopFile"
+    echo "MimeType=application/x-godot-project;" >> "$desktopFile"
+    echo "Comment=Launch Godot projects via gdvm" >> "$desktopFile"
+
+    # Download the Godot icon
+    iconUrl="https://godotengine.org/assets/press/icon_color_outline.svg"
+    iconFile="$installDir/godot.svg"
+
+    echo "Downloading Godot icon from $iconUrl..."
+    if ! curl -sL "$iconUrl" -o "$iconFile"; then
+        echo "Failed to download Godot icon."
+    else
+        echo "Icon=$iconFile" >> "$desktopFile"
+    fi
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "$desktopDir" 2>/dev/null || echo "Failed to update desktop database."
+    else
+        echo "update-desktop-database not found. You may need to install or run it manually."
+    fi
+
+    echo "Created $desktopFile to help associate .godot files."
+    echo "You may still need to set it as the default app in your file manager."
+fi
 echo
 echo "To get started, run:"
 echo "Usage: gdvm --help"

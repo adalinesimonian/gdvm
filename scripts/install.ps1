@@ -66,6 +66,62 @@ if ($failedPaths.Count -gt 0) {
 
 Write-Host ""
 & "$outFile" --version
+
+# Ask to associate .godot files with gdvm (specifically godot.exe in .gdvm/bin)
+$godotExe = Join-Path $installDir 'godot.exe'
+$godotConsoleExe = Join-Path $installDir 'godot_console.exe'
+$godotAssoc = Read-Host "Would you like to associate .godot files with gdvm (specifically godot.exe in .gdvm/bin)? (y/n)"
+
+if ($godotAssoc -eq 'y') {
+    try {
+        New-Item -Path "HKCU:\Software\Classes\.godot" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\Software\Classes\.godot" -Name "(Default)" -Value "godot"
+
+        New-Item -Path "HKCU:\Software\Classes\godot" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\Software\Classes\godot" -Name "(Default)" -Value "Godot Engine Project"
+
+        New-Item -Path "HKCU:\Software\Classes\godot\shell\open\command" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\Software\Classes\godot\shell\open\command" -Name "(Default)" -Value "$godotExe ""%1"""
+
+        # Add Open with Godot and Open with Godot (show console) to the context menu
+        $godotContextMenu = "HKCU:\Software\Classes\godot\shell"
+        New-Item -Path $godotContextMenu -Force | Out-Null
+        New-Item -Path "$godotContextMenu\Open with Godot" -Force | Out-Null
+        New-Item -Path "$godotContextMenu\Open with Godot (show console)" -Force | Out-Null
+
+        New-Item -Path "$godotContextMenu\Open with Godot\command" -Force | Out-Null
+        Set-ItemProperty -Path "$godotContextMenu\Open with Godot\command" -Name "(Default)" -Value "$godotExe ""%1"""
+
+        New-Item -Path "$godotContextMenu\Open with Godot (show console)\command" -Force | Out-Null
+        Set-ItemProperty -Path "$godotContextMenu\Open with Godot (show console)\command" -Name "(Default)" -Value "$godotConsoleExe ""%1"""
+
+        try {
+            $iconUrl = 'https://godotengine.org/favicon.ico'
+            $iconPath = Join-Path $installDir 'godot.ico'
+
+            Invoke-WebRequest -Uri $iconUrl -OutFile $iconPath -UseBasicParsing
+
+            # Set the icon for the .godot file type and context menu
+
+            New-Item -Path "HKCU:\Software\Classes\godot\DefaultIcon" -Force | Out-Null
+            Set-ItemProperty -Path "HKCU:\Software\Classes\godot\DefaultIcon" -Name "(Default)" -Value "$iconPath,0"
+
+            Set-ItemProperty -Path "$godotContextMenu\Open with Godot" -Name "Icon" -Value "$iconPath,0"
+            Set-ItemProperty -Path "$godotContextMenu\Open with Godot (show console)" -Name "Icon" -Value "$iconPath,0"
+
+            # Refresh the icon cache
+            $iconCachePath = "$env:LOCALAPPDATA\Microsoft\Windows\Explorer"
+            Remove-Item -Path $iconCachePath\iconcache* -Force -ErrorAction SilentlyContinue
+        } catch {
+            Write-Error "Failed to download the Godot icon."
+        }
+
+        Write-Host "Associated .godot files with gdvm."
+    } catch {
+        Write-Error "Failed to associate .godot files with gdvm."
+    }
+}
+
 Write-Host ""
 Write-Host "To get started, run:"
 Write-Host "Usage: gdvm --help"
