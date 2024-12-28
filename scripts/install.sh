@@ -40,20 +40,19 @@ binUrl="$latestUrl/$file"
 outPath="$installDir/$outFile"
 
 # Download the binary
-echo "Downloading gdvm from $binUrl..."
+echo -e "\e[32m🔄 Downloading gdvm from $binUrl...\e[0m"
 curl -sL "$binUrl" -o "$outPath"
 chmod +x "$outPath"
 
-# ...existing code...
-echo "gdvm was installed to $outPath"
-echo "Make sure $installDir and $installDir/current_godot is in your PATH."
+echo -e "\e[32m✅ gdvm was installed to $outPath\e[0m"
+echo -e "\e[36m🔗 Make sure $installDir and $installDir/current_godot is in your PATH.\e[0m"
 
 # Add the installation directory to PATH for the current session
 if [[ ":$PATH:" != *":$installDir:"* ]] && [[ ":$PATH:" != *":$installDir/current_godot:"* ]]; then
     export PATH="$installDir:$installDir/current_godot:$PATH"
-    echo "Updated PATH for the current session."
+    echo -e "\e[32m✅ Updated PATH for the current session.\e[0m"
 else
-    echo "PATH already includes $installDir or $installDir/current_godot."
+    echo -e "\e[36mℹ️ PATH already includes $installDir or $installDir/current_godot.\e[0m"
 fi
 
 errorMessage="Could not detect shell profile file. Please add \$installDir to your PATH manually.
@@ -81,15 +80,15 @@ if [ -n "$SHELL" ]; then
     if [ -n "$profileFile" ]; then
         if ! grep -Fxq "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" "$profileFile"; then
             echo "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" >> "$profileFile"
-            echo "Added $installDir to PATH in $profileFile"
+            echo -e "\e[32m✅ Added $installDir to PATH in $profileFile\e[0m"
         else
-            echo "$profileFile already adds $installDir and $installDir/current_godot to PATH."
+            echo -e "\e[36mℹ️ $profileFile already adds $installDir and $installDir/current_godot to PATH.\e[0m"
         fi
     else
-        echo "$errorMessage"
+        echo -e "\e[31m❌ $errorMessage\e[0m" >&2
     fi
 else
-    echo "$errorMessage"
+    echo -e "\e[31m❌ $errorMessage\e[0m" >&2
 fi
 
 echo
@@ -99,12 +98,13 @@ echo
 godotBinPath="$installDir/godot"
 
 # Ask to associate .godot files with gdvm (specifically godot in .gdvm/bin)
-echo
-printf "Would you like to associate .godot files with gdvm (specifically godot in $installDir)? [y/N] "
+# printf "Would you like to associate .godot files with gdvm (specifically godot in $installDir)? [y/N] "
+printf "Would you like to create a shortcut for the current Godot version? [y/N] "
 read -r REPLY < /dev/tty
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Skipping association of .godot files."
+    # echo "Skipping association of .godot files."
+    echo "Skipping shortcut creation."
 elif [ "$os" = "apple-darwin" ]; then
     echo "Creating a minimal .app to associate .godot files with gdvm on macOS..."
 
@@ -113,12 +113,12 @@ elif [ "$os" = "apple-darwin" ]; then
     tmpZip="$installDir/godotIconMac.zip"
     haveIcon="false"
 
-    echo "Downloading Godot macOS zip to extract icon..."
+    echo -e "\e[32m🔄 Downloading Godot macOS zip to extract icon...\e[0m"
     if ! curl -sL "$icnsZipUrl" -o "$tmpZip"; then
-        echo "Failed to download $icnsZipUrl. Continuing without icon."
+        echo -e "\e[33m⚠️ Failed to download $icnsZipUrl. Continuing without icon.\e[0m" >&2
     else
         # Extract the icon (Godot.icns or Godot.icns). We'll use Godot.icns for a project file icon.
-        echo "Extracting icon from $tmpZip..."
+        echo -e "\e[32m🔄 Extracting icon from $tmpZip...\e[0m"
         if command -v unzip >/dev/null 2>&1; then
             # Unzip quietly into a subfolder in $installDir (to not overwrite anything else).
             unzip -qo "$tmpZip" -d "$installDir"
@@ -127,16 +127,21 @@ elif [ "$os" = "apple-darwin" ]; then
             extractedIcnsPath="$installDir/Godot.app/Contents/Resources/Godot.icns"
             if [ -f "$extractedIcnsPath" ]; then
                 haveIcon="true"
+                echo -e "\e[32m✅ Extracted Godot.icns to $extractedIcnsPath\e[0m"
             else
-                echo "Godot.icns not found in extracted folder. Will continue without an icon."
+                echo -e "\e[33m⚠️ Godot.icns not found in extracted folder. Will continue without an icon.\e[0m" >&2
             fi
         else
-            echo "'unzip' not available on this system. Cannot extract icon. Continuing without icon."
+            echo -e "\e[33m⚠️ 'unzip' not available on this system. Cannot extract icon. Continuing without icon.\e[0m" >&2
         fi
     fi
 
     # Create the minimal .app structure
-    appName="gdvm-godot.app"
+    userAppDir="$HOME/Applications"
+
+    mkdir -p "$userAppDir"
+
+    appName="Godot (via gdvm).app"
     appDir="$installDir/$appName"
     contentsDir="$appDir/Contents"
     macOsDir="$contentsDir/MacOS"
@@ -252,41 +257,50 @@ EOF
     rm -f "$tmpZip"
 
     echo
-    echo "Stub .app created at: $appDir"
+    echo -e "\e[32m✅ Created a shortcut for the current Godot version in the user Applications folder.\e[0m"
 
-    showManualSteps="false"
 
-    # Optionally try to set defaults with 'duti' if installed:
-    if command -v duti >/dev/null 2>&1; then
-        echo
-        echo "Attempting to set .godot -> $appName as default with duti..."
-        if ! duti -s com.example.gdvm-godot .godot all; then
-            echo "Failed to set .godot -> $appName as default with duti."
-            showManualSteps="true"
-        fi
-    elif command -v brew >/dev/null 2>&1; then
-        if ! brew install duti; then
-            echo "Failed to install 'duti' with Homebrew."
-            showManualSteps="true"
-        else
+    printf "Would you like to associate .godot files with gdvm (specifically godot in $installDir)? [y/N] "
+    read -r REPLY < /dev/tty
+    echo
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Skipping association of .godot files."
+    else
+        showManualSteps="false"
+
+        # Optionally try to set defaults with 'duti' if installed:
+        if command -v duti >/dev/null 2>&1; then
             echo
-            echo "Attempting to set .godot -> $appName as default with duti..."
+            echo -e "\e[32m🔄 Attempting to set .godot -> $appName as default with duti...\e[0m"
             if ! duti -s com.example.gdvm-godot .godot all; then
-                echo "Failed to set .godot -> $appName as default with duti."
+                echo -e "\e[33m⚠️ Failed to set .godot -> $appName as default with duti.\e[0m" >&2
                 showManualSteps="true"
             fi
+        elif command -v brew >/dev/null 2>&1; then
+            if ! brew install duti; then
+                echo -e "\e[33m⚠️ Failed to install 'duti' with Homebrew.\e[0m" >&2
+                showManualSteps="true"
+            else
+                echo
+                echo -e "\e[32m🔄 Attempting to set .godot -> $appName as default with duti...\e[0m"
+                if ! duti -s com.example.gdvm-godot .godot all; then
+                    echo -e "\e[33m⚠️ Failed to set .godot -> $appName as default with duti.\e[0m" >&2
+                    showManualSteps="true"
+                fi
+            fi
+        else
+            showManualSteps="true"
         fi
-    else
-        showManualSteps="true"
-    fi
 
-    echo
-    if [ "$showManualSteps" = "true" ]; then
         echo
-        echo "You will need to set the default app manually. To do so:"
-        echo "  1) Right-click a .godot file, select 'Get Info'"
-        echo "  2) Under 'Open with:', choose $appName"
-        echo "  3) Click 'Change All...' to apply for all .godot files."
+        if [ "$showManualSteps" = "true" ]; then
+            echo
+            echo -e "\e[36mℹ️ You will need to set the default app manually. To do so:\e[0m"
+            echo -e "\e[36m  1) Right-click a .godot file, select 'Get Info'\e[0m"
+            echo -e "\e[36m  2) Under 'Open with:', choose $appName\e[0m"
+            echo -e "\e[36m  3) Click 'Change All...' to apply for all .godot files.\e[0m"
+        fi
     fi
 elif [ "$os" = "unknown-linux-gnu" ]; then
     echo "You appear to be on Linux."
@@ -311,10 +325,10 @@ EOF
     chmod +x "$wrapperScript"
     desktopDir="$HOME/.local/share/applications"
     mkdir -p "$desktopDir"
-    desktopFile="$desktopDir/gdvm.desktop"
+    desktopFile="$desktopDir/godot-gdvm.desktop"
 
     echo "[Desktop Entry]" > "$desktopFile"
-    echo "Name=Godot Engine (via gdvm)" >> "$desktopFile"
+    echo "Name=Godot (via gdvm)" >> "$desktopFile"
     echo "Exec=\"$wrapperScript\" %f" >> "$desktopFile"
     echo "Type=Application" >> "$desktopFile"
     echo "MimeType=application/x-godot-project;" >> "$desktopFile"
@@ -324,24 +338,25 @@ EOF
     iconUrl="https://godotengine.org/assets/press/icon_color_outline.svg"
     iconFile="$installDir/godot.svg"
 
-    echo "Downloading Godot icon from $iconUrl..."
+    echo -e "\e[32m🔄 Downloading Godot icon from $iconUrl...\e[0m"
     if ! curl -sL "$iconUrl" -o "$iconFile"; then
-        echo "Failed to download Godot icon."
+        echo -e "\e[33m⚠️ Failed to download Godot icon. Will continue without an icon.\e[0m" >&2
     else
         echo "Icon=$iconFile" >> "$desktopFile"
+        echo -e "\e[32m✅ Downloaded Godot icon to $iconFile\e[0m"
     fi
 
     if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database "$desktopDir" 2>/dev/null || echo "Failed to update desktop database."
+        update-desktop-database "$desktopDir" 2>/dev/null || echo -e "\e[33m⚠️ Failed to update desktop database.\e[0m" >&2
     else
-        echo "update-desktop-database not found. You may need to install or run it manually."
+        echo -e "\e[33m⚠️ update-desktop-database not found. You may need to install or run it manually.\e[0m" >&2
     fi
 
-    echo "Created $desktopFile to help associate .godot files."
-    echo "You may still need to set it as the default app in your file manager."
+    echo -e "\e[32m✅ Created $desktopFile as a shortcut for the current Godot version.\e[0m"
+    echo -e "\e[36mℹ️ You can set it as the default app for .godot files in your file manager.\e[0m"
 fi
 echo
-echo "To get started, run:"
-echo "Usage: gdvm --help"
+echo -e "\e[36mℹ️ To get started, run:\e[0m"
+echo -e "\e[36mUsage: gdvm --help\e[0m"
 echo
 echo "You may possibly need to restart your shell session or reload your profile file."

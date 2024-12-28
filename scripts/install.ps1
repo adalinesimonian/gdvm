@@ -19,13 +19,13 @@ $file      = "gdvm-$arch.exe"
 $binUrl    = "$latestUrl/$file"
 $outFile   = Join-Path $installDir "gdvm.exe"
 
-Write-Host "Downloading gdvm from $binUrl..."
+Write-Host "🔄 Downloading gdvm from $binUrl..." -ForegroundColor Green
 Invoke-WebRequest -Uri $binUrl -OutFile $outFile -UseBasicParsing
 
 # Grant execution rights
 & icacls $outFile /grant Everyone:F > $null
 
-Write-Host "gdvm was installed to $outFile"
+Write-Host "✅ gdvm was installed to $outFile" -ForegroundColor Green
 
 $failedPaths = @()
 
@@ -36,13 +36,14 @@ function Update-UserPath {
         $Env:PATH = "$Env:PATH;$pathToAdd"
         try {
             [System.Environment]::SetEnvironmentVariable('PATH', "$existingUserPath;$pathToAdd", [System.EnvironmentVariableTarget]::User)
-            Write-Host "Added $pathToAdd to the user environment PATH."
+            Write-Host "✅ Added $pathToAdd to the user environment PATH." -ForegroundColor Green
         } catch {
             $failedPaths += $pathToAdd
+            Write-Error "❌ Failed to add $pathToAdd to the PATH." -ForegroundColor Red
         }
-        Write-Host "You may need to log out and log back in for the changes to take effect."
+        Write-Host "ℹ️ You may need to log out and log back in for the changes to take effect." -ForegroundColor Yellow
     } else {
-        Write-Host "$pathToAdd is already in the user environment PATH."
+        Write-Host "ℹ️ $pathToAdd is already in the user environment PATH." -ForegroundColor Cyan
     }
 }
 
@@ -53,9 +54,9 @@ $godotDir = Join-Path $installDir 'current_godot'
 Update-UserPath $godotDir
 
 if ($failedPaths.Count -gt 0) {
-    Write-Host "Failed to update the following paths to the user environment PATH:"
+    Write-Error "❌ Failed to update the following paths to the user environment PATH:"
     foreach ($path in $failedPaths) {
-        Write-Host "- $path"
+        Write-Error "- $path"
     }
     Write-Host "Please add them manually using the following instructions:"
     Write-Host "1. Open Start Search, type 'env', and select 'Edit the system environment variables'."
@@ -66,6 +67,16 @@ if ($failedPaths.Count -gt 0) {
 
 Write-Host ""
 & "$outFile" --version
+Write-Host ""
+
+$iconUrl = 'https://godotengine.org/favicon.ico'
+$iconPath = Join-Path $installDir 'godot.ico'
+
+try {
+    Invoke-WebRequest -Uri $iconUrl -OutFile $iconPath -UseBasicParsing
+} catch {
+    Write-Error "❌ Failed to download the Godot icon."
+}
 
 # Ask to associate .godot files with gdvm (specifically godot.exe in .gdvm/bin)
 $godotExe = Join-Path $installDir 'godot.exe'
@@ -95,35 +106,65 @@ if ($godotAssoc -eq 'y') {
         New-Item -Path "$godotContextMenu\Open with Godot (show console)\command" -Force | Out-Null
         Set-ItemProperty -Path "$godotContextMenu\Open with Godot (show console)\command" -Name "(Default)" -Value "$godotConsoleExe ""%1"""
 
-        try {
-            $iconUrl = 'https://godotengine.org/favicon.ico'
-            $iconPath = Join-Path $installDir 'godot.ico'
+        # Set the icon for the .godot file type and context menu
 
-            Invoke-WebRequest -Uri $iconUrl -OutFile $iconPath -UseBasicParsing
+        New-Item -Path "HKCU:\Software\Classes\godot\DefaultIcon" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\Software\Classes\godot\DefaultIcon" -Name "(Default)" -Value "$iconPath,0"
 
-            # Set the icon for the .godot file type and context menu
+        Set-ItemProperty -Path "$godotContextMenu\Open with Godot" -Name "Icon" -Value "$iconPath,0"
+        Set-ItemProperty -Path "$godotContextMenu\Open with Godot (show console)" -Name "Icon" -Value "$iconPath,0"
 
-            New-Item -Path "HKCU:\Software\Classes\godot\DefaultIcon" -Force | Out-Null
-            Set-ItemProperty -Path "HKCU:\Software\Classes\godot\DefaultIcon" -Name "(Default)" -Value "$iconPath,0"
+        # Refresh the icon cache
+        $iconCachePath = "$env:LOCALAPPDATA\Microsoft\Windows\Explorer"
+        Remove-Item -Path $iconCachePath\iconcache* -Force -ErrorAction SilentlyContinue
 
-            Set-ItemProperty -Path "$godotContextMenu\Open with Godot" -Name "Icon" -Value "$iconPath,0"
-            Set-ItemProperty -Path "$godotContextMenu\Open with Godot (show console)" -Name "Icon" -Value "$iconPath,0"
-
-            # Refresh the icon cache
-            $iconCachePath = "$env:LOCALAPPDATA\Microsoft\Windows\Explorer"
-            Remove-Item -Path $iconCachePath\iconcache* -Force -ErrorAction SilentlyContinue
-        } catch {
-            Write-Error "Failed to download the Godot icon."
-        }
-
-        Write-Host "Associated .godot files with gdvm."
+        Write-Host "✅ Associated .godot files with gdvm." -ForegroundColor Green
     } catch {
-        Write-Error "Failed to associate .godot files with gdvm."
+        Write-Error "❌ Failed to associate .godot files with gdvm."
     }
 }
 
 Write-Host ""
-Write-Host "To get started, run:"
-Write-Host "Usage: gdvm --help"
+
+$godotShortcuts = Read-Host "Would you like to create shortcuts for gdvm and the current Godot version in the Start Menu? (y/n)"
+
+if ($godotShortcuts -eq 'y') {
+    # Create shortcuts for Godot and Godot (Console) in the Start Menu
+
+    $startMenuDir = [System.Environment]::GetFolderPath('StartMenu')
+
+    $WshShell = New-Object -ComObject WScript.Shell
+
+    $godotShortcut = Join-Path $startMenuDir 'Godot (via gdvm).lnk'
+
+    $Shortcut = $WshShell.CreateShortcut($godotShortcut)
+    $Shortcut.TargetPath = $godotExe
+    $Shortcut.IconLocation = "$iconPath,0"
+    $Shortcut.WorkingDirectory = $env:USERPROFILE
+    $Shortcut.Save()
+
+    $godotConsoleShortcut = Join-Path $startMenuDir 'Godot (Console, via gdvm).lnk'
+
+    $Shortcut = $WshShell.CreateShortcut($godotConsoleShortcut)
+    $Shortcut.TargetPath = $godotConsoleExe
+    $Shortcut.IconLocation = "$iconPath,0"
+    $Shortcut.WorkingDirectory = $env:USERPROFILE
+    $Shortcut.Save()
+
+    $gdvmConsoleShortcut = Join-Path $startMenuDir 'gdvm Console.lnk'
+
+    $Shortcut = $WshShell.CreateShortcut($gdvmConsoleShortcut)
+    $Shortcut.TargetPath = "$((Get-Process -id $pid | Get-Item).FullName)"
+    $Shortcut.Arguments = "-NoExit -Command ""gdvm --help"""
+    $Shortcut.IconLocation = "$iconPath,0"
+    $Shortcut.WorkingDirectory = $env:USERPROFILE
+    $Shortcut.Save()
+
+    Write-Host "✅ Created shortcuts in the Start Menu." -ForegroundColor Green
+}
+
 Write-Host ""
-Write-Host "You may possibly need to restart your terminal or IDE (or log out and log back in) for the changes to take effect."
+Write-Host "ℹ️ To get started, run:" -ForegroundColor Cyan
+Write-Host "Usage: gdvm --help" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "You may need to restart your terminal or IDE for the changes to take effect."
