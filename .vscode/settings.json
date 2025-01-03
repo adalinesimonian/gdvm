@@ -10,7 +10,8 @@
     "editor.defaultFormatter": "tamasfe.even-better-toml"
   },
   "[fluent]": {
-    "editor.rulers": [80, 84, 120]
+    "editor.rulers": [80, 84, 120],
+    "editor.wordWrap": "on"
   },
   "search.exclude": {
     "**/target": true

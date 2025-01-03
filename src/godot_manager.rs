@@ -13,11 +13,11 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::download_utils::download_file;
-use crate::i18n;
 use crate::println_i18n;
 use crate::version_utils;
 use crate::version_utils::GodotVersionDeterminate;
 use crate::zip_utils;
+use crate::{i18n, project_version_detector};
 
 use version_utils::{GodotVersion, GodotVersionDeterminateVecExt};
 
@@ -89,7 +89,7 @@ fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
                 "windows_arm64.exe"
             }
         } else {
-            unimplemented!("{}", i18n.t("unsupported-architecture"))
+            unimplemented!("{}", i18n.t_w("unsupported-architecture"))
         }
     } else if cfg!(target_os = "macos") {
         "macos.universal"
@@ -119,10 +119,10 @@ fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
                 "linux.arm64"
             }
         } else {
-            unimplemented!("{}", i18n.t("unsupported-architecture"))
+            unimplemented!("{}", i18n.t_w("unsupported-architecture"))
         }
     } else {
-        unimplemented!("{}", i18n.t("unsupported-platform"))
+        unimplemented!("{}", i18n.t_w("unsupported-platform"))
     };
 
     if is_csharp {
@@ -160,7 +160,7 @@ fn verify_sha512(
     let pb = ProgressBar::new_spinner();
     pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
     pb.enable_steady_tick(Duration::from_millis(100));
-    pb.set_message(i18n.t("verifying-checksum"));
+    pb.set_message(i18n.t_w("verifying-checksum"));
 
     let sums_content = fs::read_to_string(&sum_file)?;
 
@@ -176,7 +176,7 @@ fn verify_sha512(
             if file_part.ends_with(&target_name) && hash_part == local_hash {
                 fs::remove_file(sum_file)?;
 
-                pb.finish_with_message(i18n.t("checksum-verified"));
+                pb.finish_with_message(i18n.t_w("checksum-verified"));
 
                 return Ok(());
             }
@@ -299,7 +299,7 @@ impl<'a> GodotManager<'a> {
     /// Create a new GodotManager instance and set up the installation and cache paths
     pub fn new(i18n: &'a I18n) -> Result<Self> {
         // For cross-platform user directory management:
-        let base_dirs = BaseDirs::new().ok_or(anyhow!(i18n.t("error-find-user-dirs")))?;
+        let base_dirs = BaseDirs::new().ok_or(anyhow!(i18n.t_w("error-find-user-dirs")))?;
         let base_path = base_dirs.home_dir().join(".gdvm");
         let install_path = base_path.join("installs");
         let cache_index_path = base_path.join("cache.json");
@@ -469,7 +469,7 @@ impl<'a> GodotManager<'a> {
             fs::remove_dir_all(path)?;
             Ok(())
         } else {
-            Err(anyhow!(self.i18n.t("error-version-not-found")))
+            Err(anyhow!(self.i18n.t_w("error-version-not-found")))
         }
     }
 
@@ -478,7 +478,7 @@ impl<'a> GodotManager<'a> {
         &self,
         gv: &GodotVersionDeterminate,
         console: bool,
-        godot_args: Vec<String>,
+        godot_args: &Vec<String>,
     ) -> Result<()> {
         let version_dir = self.install_path.join(gv.to_install_str());
         if !version_dir.exists() {
@@ -518,6 +518,16 @@ impl<'a> GodotManager<'a> {
                 }
                 return Ok(());
             }
+        }
+
+        // If no args pointing to files are provided, but the current directory includes a
+        // project.godot file, add it to the args. Otherwise, Godot may error out with a
+        // "No main scene set" message.
+        let current_dir = std::env::current_dir()?;
+        let project_file = current_dir.join("project.godot");
+        let mut godot_args = godot_args.clone();
+        if project_file.exists() && godot_args.iter().all(|arg| !Path::new(arg).exists()) {
+            godot_args.push(project_file.to_string_lossy().to_string());
         }
 
         if console {
@@ -618,7 +628,7 @@ impl<'a> GodotManager<'a> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
         pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message(self.i18n.t("fetching-releases"));
+        pb.set_message(self.i18n.t_w("fetching-releases"));
 
         while !seen_existing_release {
             let url = format!(
@@ -661,9 +671,9 @@ impl<'a> GodotManager<'a> {
             page += 1;
         }
 
-        pb.finish_with_message(self.i18n.t("releases-fetched"));
+        pb.finish_with_message(self.i18n.t_w("releases-fetched"));
 
-        cache.releases = new_releases;
+        cache.releases.extend(new_releases);
         cache.last_fetched = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
@@ -774,7 +784,7 @@ impl<'a> GodotManager<'a> {
             .iter()
             .find(|r| r.release_type == "stable")
             .cloned()
-            .ok_or_else(|| anyhow!(self.i18n.t("error-no-stable-releases-found")))
+            .ok_or_else(|| anyhow!(self.i18n.t_w("error-no-stable-releases-found")))
     }
 
     /// Resolve the Godot version from a string, for an installed version
@@ -835,7 +845,7 @@ impl<'a> GodotManager<'a> {
         let version_str = gv.to_install_str();
         let version_path = self.install_path.join(&version_str);
         if !version_path.exists() {
-            return Err(anyhow!(self.i18n.t("error-version-not-found")));
+            return Err(anyhow!(self.i18n.t_w("error-version-not-found")));
         }
 
         // Write version to .gdvm/default
@@ -857,7 +867,7 @@ impl<'a> GodotManager<'a> {
         #[cfg(target_family = "windows")]
         if let Err(e) = std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir) {
             if e.raw_os_error() == Some(1314) {
-                return Err(anyhow!(self.i18n.t("error-create-symlink-windows")));
+                return Err(anyhow!(self.i18n.t_w("error-create-symlink-windows")));
             }
             return Err(anyhow!(e));
         }
@@ -909,6 +919,13 @@ impl<'a> GodotManager<'a> {
         None
     }
 
+    /// Try to determine the version to use based on the current Godot project
+    pub fn determine_version(&self) -> Option<GodotVersion> {
+        let current_dir = std::env::current_dir().ok()?;
+
+        return project_version_detector::detect_godot_version_in_path(&self.i18n, current_dir);
+    }
+
     /// Pin a version to .gdvmrc in the current directory
     pub fn pin_version(&self, gv: &GodotVersionDeterminate) -> Result<()> {
         let path = std::env::current_dir()?;
@@ -928,7 +945,7 @@ impl<'a> GodotManager<'a> {
             self.get_latest_stable_version()?
         } else if gv.is_incomplete() {
             self.resolve_available_version(&gv, false)
-                .ok_or_else(|| anyhow!(self.i18n.t("error-version-not-found")))?
+                .ok_or_else(|| anyhow!(self.i18n.t_w("error-version-not-found")))?
         } else {
             gv.clone().into()
         };
@@ -974,7 +991,7 @@ impl<'a> GodotManager<'a> {
             progress
                 .set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
             progress.enable_steady_tick(Duration::from_millis(100));
-            progress.set_message(self.i18n.t("checking-updates"));
+            progress.set_message(self.i18n.t_w("checking-updates"));
 
             let mut new_version = None;
 
@@ -1057,7 +1074,7 @@ impl<'a> GodotManager<'a> {
         // Define install directory
         let install_dir = self.get_base_path().join("bin");
         std::fs::create_dir_all(&install_dir)
-            .map_err(|_| anyhow!(self.i18n.t("upgrade-install-dir-failed")))?;
+            .map_err(|_| anyhow!(self.i18n.t_w("upgrade-install-dir-failed")))?;
 
         // Detect architecture
         let arch = if cfg!(target_os = "windows") {
@@ -1068,7 +1085,7 @@ impl<'a> GodotManager<'a> {
             } else if cfg!(target_arch = "x86") {
                 "i686-pc-windows-msvc"
             } else {
-                return Err(anyhow!(self.i18n.t("unsupported-architecture")));
+                return Err(anyhow!(self.i18n.t_w("unsupported-architecture")));
             }
         } else if cfg!(target_os = "linux") {
             if cfg!(target_arch = "aarch64") {
@@ -1078,7 +1095,7 @@ impl<'a> GodotManager<'a> {
             } else if cfg!(target_arch = "x86") {
                 "i686-unknown-linux-gnu"
             } else {
-                return Err(anyhow!(self.i18n.t("unsupported-architecture")));
+                return Err(anyhow!(self.i18n.t_w("unsupported-architecture")));
             }
         } else if cfg!(target_os = "macos") {
             if cfg!(target_arch = "aarch64") {
@@ -1086,10 +1103,10 @@ impl<'a> GodotManager<'a> {
             } else if cfg!(target_arch = "x86_64") {
                 "x86_64-apple-darwin"
             } else {
-                return Err(anyhow!(self.i18n.t("unsupported-architecture")));
+                return Err(anyhow!(self.i18n.t_w("unsupported-architecture")));
             }
         } else {
-            return Err(anyhow!(self.i18n.t("unsupported-platform")));
+            return Err(anyhow!(self.i18n.t_w("unsupported-platform")));
         };
 
         // Set download URL based on architecture
@@ -1113,9 +1130,9 @@ impl<'a> GodotManager<'a> {
         let backup_exe = current_exe.with_extension("bak");
 
         std::fs::rename(&current_exe, &backup_exe)
-            .map_err(|_| anyhow!(self.i18n.t("upgrade-rename-failed")))?;
+            .map_err(|_| anyhow!(self.i18n.t_w("upgrade-rename-failed")))?;
         std::fs::rename(&out_file, &current_exe)
-            .map_err(|_| anyhow!(self.i18n.t("upgrade-replace-failed")))?;
+            .map_err(|_| anyhow!(self.i18n.t_w("upgrade-replace-failed")))?;
 
         // Update gdvm cache
         self.save_gdvm_cache(&GdvmCache {

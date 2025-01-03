@@ -9,7 +9,7 @@ repository = "https://github.com/adalinesimonian/gdvm"
 [dependencies]
 
 # For command-line argument parsing:
-clap = { version = "4.5.23", features = ["derive"] }
+clap = { version = "4.5.23", features = ["derive", "wrap_help"] }
 regex = "1.11.1"
 
 # For cross-platform paths:
@@ -20,9 +20,14 @@ fluent-bundle = "0.15.3"
 fluent-langneg = "0.14.1"
 unic-langid = { version = "0.9.5", features = ["unic-langid-macros"] }
 anyhow = "1.0.95"
+terminal_size = "0.4.1"
+textwrap = { version = "0.16.1", features = [
+    "unicode-width",
+    "unicode-linebreak",
+] }
 
 # For downloading files:
-reqwest = { version = "0.12.10", features = [
+reqwest = { version = "0.12.12", features = [
     "json",
     "gzip",
     "brotli",
@@ -34,7 +39,7 @@ futures-io = "0.3.31"
 indicatif = "0.17.9"
 sha2 = "0.10.8"
 serde_json = "1.0.134"
-serde = { version = "1.0.216", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 semver = "1.0.24"
 
 # For file system operations:

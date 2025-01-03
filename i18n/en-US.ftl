@@ -12,20 +12,14 @@ help-remove = Remove an installed Godot version
 
 help-branch = The branch (stable, beta, alpha, or custom).
 help-csharp = Use the Godot version with C# support.
-help-run-csharp-long = Run the Godot version with C# support.
+help-run-csharp-long = { help-csharp }
 
-    If given, value overrides the default version set with "use". Otherwise, the
-    default version is used. In other words, if you set a default version with
-    "use --csharp", you can try to run the same version but without C# support with
-    "run --csharp false". However, it may not work as expected if the version
-    without C# support is not installed. (Just run "install" to install it.)
+    If given, value overrides the default version set with "use". Otherwise, the default version is used. In other words, if you set a default version with "use --csharp", you can try to run the same version but without C# support with "run --csharp false". However, it may not work as expected if the version without C# support is not installed. (Just run "install" to install it.)
 help-version = The version to install (e.g. 4), or "stable" for the latest stable version.
 help-version-long =
-    The version to install (e.g. 4), or "stable" for the latest stable version.
+    { help-version }
 
-    Examples: 4.4 will install the latest stable release of Godot 4.4. If only pre-
-    release versions exist, in which case, the latest pre-release version will be
-    installed. 4.3-rc will install the latest release candidate of Godot 4.3, etc.
+    Examples: 4.4 will install the latest stable release of Godot 4.4. If only pre-release versions exist, in which case, the latest pre-release version will be installed. 4.3-rc will install the latest release candidate of Godot 4.3, etc.
 help-version-installed = The installed version (e.g. 4.2 or 4.2-stable).
 
 help-search = List remote releases from godot-builds
@@ -52,14 +46,12 @@ help-console = Run Godot with the console attached. Defaults to false on Windows
 
 help-default = Manage the default version
 help-default-version = The version to set as default (e.g. 4.2 or 4.2-stable).
-no-default-set = No default version set. Run "gdvm use <version>" to set a default version
-    system-wide, or "gdvm pin <version>" to set a default version for the current
-    directory.
+no-default-set = No default version set. Run "gdvm use <version>" to set a default version system-wide, or "gdvm pin <version>" to set a default version for the current directory.
 
 installing-version = Installing version {$version}
 installed-success = Successfully installed {$version}
 
-warning-prerelease = Warning: You are installing a pre-release version ({$branch}).
+warning-prerelease = {"\u001b"}[33mWarning: You are installing a pre-release version ({$branch}).{"\u001b"}[0m
 
 force-reinstalling-version = Forcing reinstallation of version {$version}.
 
@@ -143,14 +135,11 @@ checking-updates = Checking for updates to gdvm...
 upgrade-available = 💡 A new version of gdvm is available: {$version}. Run "gdvm upgrade" to update.
 
 help-pin = Pin a version of Godot to the current directory.
-help-pin-long = Pin a version of Godot to the current directory.
+help-pin-long = { help-pin }
 
-    This will create a .gdvmrc file in the current directory with the pinned
-    version. When you run "gdvm run" in this directory or any of its subdirectories,
-    the pinned version will be used instead of the default version.
+    This will create a .gdvmrc file in the current directory with the pinned version. When you run "gdvm run" in this directory or any of its subdirectories, the pinned version will be used instead of the default version.
 
-    This is useful when you want to use a specific version of Godot for a project
-    without changing the default version system-wide.
+    This is useful when you want to use a specific version of Godot for a project without changing the default version system-wide.
 help-pin-version = The version to pin
 pinned-success = Successfully pinned version {$version} in .gdvmrc
 error-pin-version-not-found = Could not pin version {$version}
@@ -161,3 +150,39 @@ error-download-failed = Download failed due to an unexpected error: { $error }
 error-ensure-godot-binaries-failed = Failed to ensure Godot binaries.
     Error: { $error }.
     Try removing { $path } and then run gdvm again.
+
+error-failed-reading-project-godot = Failed reading project.godot, cannot automatically determine project version.
+warning-using-project-version = Using version { $version } defined in project.godot.
+
+warning-project-version-mismatch =
+    {"\u001b"}[33mWarning: The version defined in project.godot does not match the { $pinned ->
+        [1] pinned
+        *[0] requested
+    } version. Opening the project with the { $pinned ->
+        [1] pinned
+        *[0] requested
+    } version may overwrite the project file.{"\u001b"}[0m
+
+    { $pinned ->
+        [1] Project version: { $project_version }
+            Pinned version:  { $requested_version }
+        *[0] Project version:   { $project_version }
+             Requested version: { $requested_version }
+    }
+
+error-project-version-mismatch = {"\u001b"}[31m{ $pinned ->
+        [1] If you are sure you want to run the project with the pinned version, run {"\u001b"}[0mgdvm run --force{"\u001b"}[31m. Otherwise, update the pinned version in .gdvmrc to match the project version, or remove the .gdvmrc file to use the project version.
+        *[0] If you are sure you want to run the project with the requested version, run {"\u001b"}[0mgdvm run --force <version>{"\u001b"}[31m.
+    }{"\u001b"}[0m
+warning-project-version-mismatch-force = {"\u001b"}[33mSkipping confirmation prompt and continuing with { $pinned ->
+        [1] pinned
+        *[0] requested
+    } version {"\u001b"}[0m({ $requested_version }){"\u001b"}[33m.{"\u001b"}[0m
+
+help-run-args = Additional arguments to pass to the Godot executable (e.g. -- path/to/project.godot).
+help-run-force =
+    Force running the project with the requested or pinned version even if it doesn't match the project version.
+help-run-force-long =
+    { help-run-force }
+
+    If you do this, the requested or pinned version of Godot may overwrite the project file. If pinning versions, it is instead recommended to update the pinned version in .gdvmrc to match the project version, or remove the .gdvmrc file to use the project version.

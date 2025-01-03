@@ -11,21 +11,14 @@ help-remove = Fjern ein installert Godot-versjon
 
 help-branch = Greina (stable, beta, alpha eller tilpassa).
 help-csharp = Bruk Godot-versjonen med C#-støtte.
-help-run-csharp-long = Køyr Godot-versjonen med C#-støtte.
+help-run-csharp-long = { help-csharp }
 
-    Ved å gjeva ein verdi, overskridar du standardversjonen sett med «use». Elles
-    vert standardversjonen brukt. Med andre ord, om du set ein standardversjon med
-    «use --csharp», kan du prøva å køyra den same versjon men utan C#-støtte med
-    «run --csharp false». Det kan likevel ikkje fungera som forventa om versjonen
-    utan C#-støtte ikkje er installert. (Berre køyr «install» for å installere han.)
+    Ved å gjeva ein verdi, overskridar du standardversjonen sett med «use». Elles vert standardversjonen brukt. Med andre ord, om du set ein standardversjon med «use --csharp», kan du prøva å køyra den same versjon men utan C#-støtte med «run --csharp false». Det kan likevel ikkje fungera som forventa om versjonen utan C#-støtte ikkje er installert. (Berre køyr «install» for å installere han.)
 help-version = Versjonen som skal installerast (t.d. 4), eller «stable» for den siste stabile versjonen.
 help-version-long =
-    Versjonen som skal installerast (t.d. 4), eller «stable» for den siste stabile
-    versjonen.
+    { help-version }
 
-    Døme: 4.4 vil installere den siste stabile utgjevinga av Godot 4.4. Om berre
-    førhandsversjonar finst, vil den siste førhandsversjonen verta installert.
-    4.3-rc vil installere den siste utgjevinga av Godot 4.3, osb.
+    Døme: 4.4 vil installere den siste stabile utgjevinga av Godot 4.4. Om berre førhandsversjonar finst, vil den siste førhandsversjonen verta installert. 4.3-rc vil installere den siste utgjevinga av Godot 4.3, osb.
 help-version-installed = Den installerte versjonen (t.d. 4.2 eller 4.2-stable).
 
 help-search = List tilgjengelege utgjevingar frå godot-builds
@@ -52,14 +45,11 @@ help-help-command = Vis denne meldinga eller hjelpa for dei gjeve underkommandoa
 help-upgrade = Oppgrader gdvm til nyaste versjon
 
 help-pin = Fest ein versjon av Godot til gjeldande katalog.
-help-pin-long = Fest ein versjon av Godot til gjeldande mappe.
+help-pin-long = { help-pin }
 
-    Dette vil opprette ei .gdvmrc-fil i gjeldande mappe med den festa versjonen. Når
-    du køyrer «gdvm run» i denne katalogen eller nokon av underkatalogane, vil den
-    festa versjonen verta bruka i staden for standardversjonen.
+    Dette vil opprette ei .gdvmrc-fil i gjeldande mappe med den festa versjonen. Når du køyrer «gdvm run» i denne katalogen eller nokon av underkatalogane, vil den festa versjonen verta bruka i staden for standardversjonen.
 
-    Dette er nyttig når du vil bruke ein spesifikk versjon av Godot for eit prosjekt
-    utan å endre standardversjonen systemomfattande.
+    Dette er nyttig når du vil bruke ein spesifikk versjon av Godot for eit prosjekt utan å endre standardversjonen systemomfattande.
 help-pin-version = Versjonen som skal festast
 pinned-success = Versjon {$version} vart festa i .gdvmrc
 error-pin-version-not-found = Kan ikkje feste versjon {$version}
@@ -125,9 +115,7 @@ remove-cancelled = Fjerning avbroten.
 default-set-success = Standardversjon {$version} er sett.
 default-unset-success = Standardversjonen er fjerna.
 provide-version-or-unset = Vennligst oppgjeva ein versjon for å setja som standard eller «unset» for å fjerne standardversjonen.
-no-default-set = Ingen standardversjon er sett. Køyr «gdvm use <version>» for å setja ein
-    standardversjon systemomfattande, eller «gdvm pin <version>» for å setja ein
-    standardversjon for den gjeldende mappa.
+no-default-set = Ingen standardversjon er sett. Køyr «gdvm use <version>» for å setja ein  standardversjon systemomfattande, eller «gdvm pin <version>» for å setja ein  standardversjon for den gjeldende mappa.
 
 error-starting-godot = Kunne ikkje starte Godot: { $error }
 
@@ -168,3 +156,41 @@ checking-updates = Sjekkar etter oppdateringar til gdvm...
 error-ensure-godot-binaries-failed = Kunne ikkje sikre Godot-køyrberre filer.
     Feil: { $error }.
     Prøv å slette { $path } og køyre gdvm på nytt.
+
+error-failed-reading-project-godot = Kunne ikkje lese project.godot, kan ikkje automatisk bestemme prosjektversjonen.
+warning-using-project-version = Brukar versjon { $version } definert i project.godot.
+
+warning-project-version-mismatch =
+    {"\u001b"}[33mÅtvaring: Versjonen definert i project.godot samsvarer ikkje med den { $pinned ->
+        [1] festa
+        *[0] ynskte
+    } versjonen. Opning av prosjektet med den { $pinned ->
+        [1] festa
+        *[0] ynskte
+    } versjonen kan overskrive prosjektfila.{"\u001b"}[0m
+
+    { $pinned ->
+        [1] Prosjektversjon: { $project_version }
+            Festa versjon:   { $requested_version }
+        *[0] Prosjektversjon:   { $project_version }
+             Førespurd versjon: { $requested_version }
+    }
+
+error-project-version-mismatch =
+    {"\u001b"}[31m{ $pinned ->
+        [1] Om du er sikker på at du vil køyre prosjektet med den festa versjonen, køyr {"\u001b"}[0mgdvm run --force{"\u001b"}[31m. Elles, oppdater den festa versjonen i .gdvmrc for å samsvara med prosjektversjonen, eller fjern .gdvmrc-fila for å bruke prosjektversjonen.
+        *[0] Om du er sikker på at du vil køyre prosjektet med den ynskte versjonen, køyr {"\u001b"}[0mgdvm run --force <version>{"\u001b"}[31m.
+    }{"\u001b"}[0m
+
+warning-project-version-mismatch-force = {"\u001b"}[33mHoppar over bekreftelsesprompt og held fram med den { $pinned ->
+        [1] festa
+        *[0] ynskte
+    } versjonen {"\u001b"}[0m({ $requested_version }){"\u001b"}[33m.{"\u001b"}[0m
+
+help-run-args = Tilleggsargument som skal sendast til Godot-køyrbar fil (t.d. -- path/to/project.godot).
+help-run-force =
+    Tving køyring av prosjektet med den ynskte eller festa versjonen sjølv om han ikkje samsvarar med prosjektversjonen.
+help-run-force-long =
+    { help-run-force }
+
+    Viss du gjer dette, kan den ynskte eller festa versjonen av Godot overskriva prosjektfila. Viss du festar versjonar, er det tilrådd å i staden oppdatere den festa versjonen i .gdvmrc for å samsvara med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.

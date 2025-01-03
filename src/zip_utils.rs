@@ -1,4 +1,5 @@
 use crate::i18n::I18n;
+use crate::println_i18n;
 use anyhow::{anyhow, Result};
 use fluent_bundle::FluentValue;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -10,7 +11,7 @@ use zip::ZipArchive;
 
 pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()> {
     // Print extracting message
-    println!("{}", i18n.t("operation-extracting"));
+    println_i18n!(i18n, "operation-extracting");
 
     // First pass: Calculate total uncompressed size and collect top-level entries
     let file = fs::File::open(zip_path).map_err(|e| {
@@ -57,7 +58,7 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
                 }
             }
         } else {
-            return Err(anyhow!(i18n.t("error-invalid-file-name")));
+            return Err(anyhow!(i18n.t_w("error-invalid-file-name")));
         }
 
         if !file.is_dir() {
@@ -120,7 +121,7 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
         })?;
         let path = file
             .enclosed_name()
-            .ok_or_else(|| anyhow!(i18n.t("error-invalid-file-name")))?;
+            .ok_or_else(|| anyhow!(i18n.t_w("error-invalid-file-name")))?;
 
         // Skip empty or root entries to avoid creating files at extract_to
         if path.as_os_str().is_empty() || path == Path::new(".") {
@@ -132,14 +133,14 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
             // Ensure the file path starts with the prefix
             let stripped_path = path
                 .strip_prefix(prefix)
-                .map_err(|_| anyhow!(i18n.t("error-strip-prefix")))?;
+                .map_err(|_| anyhow!(i18n.t_w("error-strip-prefix")))?;
 
             // Prevent extracting files outside the target directory
             if stripped_path
                 .components()
                 .any(|c| c == std::path::Component::ParentDir)
             {
-                return Err(anyhow!(i18n.t("error-invalid-file-name")));
+                return Err(anyhow!(i18n.t_w("error-invalid-file-name")));
             }
 
             extract_to.join(stripped_path)
@@ -231,6 +232,6 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
         }
     }
 
-    pb.finish_with_message(i18n.t("operation-extract-complete"));
+    pb.finish_with_message(i18n.t_w("operation-extract-complete"));
     Ok(())
 }

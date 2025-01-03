@@ -1,6 +1,7 @@
 mod download_utils;
 mod godot_manager;
 mod i18n;
+mod project_version_detector;
 mod version_utils;
 mod zip_utils;
 
@@ -13,7 +14,7 @@ use std::io::{self, Write};
 use version_utils::GodotVersion;
 
 fn main() -> Result<()> {
-    let i18n = I18n::new()?;
+    let i18n = I18n::new(100)?;
     let manager = GodotManager::new(&i18n)?;
 
     // Detect if running through "godot" or "godot_console" symlink
@@ -56,13 +57,14 @@ fn main() -> Result<()> {
         }
 
         if let Err(err) = sub_run_inner(
-            &I18n::new()?,
-            &GodotManager::new(&I18n::new()?)?,
+            &i18n,
+            &GodotManager::new(&i18n)?,
             None,
             false,
             false,
             console_mode,
-            args,
+            &args,
+            false,
         ) {
             eprintln!("{}", err);
 
@@ -86,6 +88,7 @@ fn main() -> Result<()> {
         .disable_help_flag(true)
         .disable_version_flag(true)
         .disable_help_subcommand(true)
+        .max_term_width(100)
         .arg(
             Arg::new("help")
                 .short('h')
@@ -167,6 +170,21 @@ fn main() -> Result<()> {
                         )
                         .require_equals(true)
                         .help(i18n.t("help-console")),
+                )
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .short('f')
+                        .num_args(0)
+                        .help(i18n.t("help-run-force"))
+                        .long_help(i18n.t("help-run-force-long")),
+                )
+                // Allow any number of command line arguments to be passed to the Godot executable after "--"
+                .arg(
+                    Arg::new("args")
+                        .num_args(0..)
+                        .last(true)
+                        .help(i18n.t("help-run-args")),
                 ),
         )
         .subcommand(
@@ -346,6 +364,7 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     let csharp_flag = matches.get_flag("csharp");
     let version_input = matches.get_one::<String>("version");
     let console = matches.get_flag("console");
+    let force_on_mismatch = matches.get_flag("force");
 
     sub_run_inner(
         i18n,
@@ -354,7 +373,8 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         csharp_given,
         csharp_flag,
         console,
-        raw_args,
+        &raw_args,
+        force_on_mismatch,
     )
 }
 
@@ -365,16 +385,60 @@ fn sub_run_inner(
     csharp_given: bool,
     csharp_flag: bool,
     console: bool,
-    raw_args: Vec<String>,
+    raw_args: &Vec<String>,
+    force_on_mismatch: bool,
 ) -> Result<()> {
     let resolved_version = if let Some(v) = version_input {
         let mut requested_version = GodotVersion::from_match_str(&v)?;
 
         requested_version.is_csharp = Some(csharp_flag);
 
+        if warn_project_version_mismatch(i18n, manager, &requested_version, false) {
+            if force_on_mismatch {
+                println_i18n!(
+                    i18n,
+                    "warning-project-version-mismatch-force",
+                    [
+                        ("requested_version", requested_version.to_display_str()),
+                        ("pinned", 0)
+                    ]
+                );
+            } else {
+                return Err(anyhow!(i18n.t_args_w(
+                    "error-project-version-mismatch",
+                    &[("pinned", fluent_bundle::FluentValue::from(0))]
+                )));
+            }
+        }
+
         manager.auto_install_version(&requested_version)?
     } else if let Some(pinned) = manager.get_pinned_version() {
+        if warn_project_version_mismatch(i18n, manager, &pinned, true) {
+            if force_on_mismatch {
+                println_i18n!(
+                    i18n,
+                    "warning-project-version-mismatch-force",
+                    [
+                        ("requested_version", pinned.to_display_str()),
+                        ("pinned", 1)
+                    ]
+                );
+            } else {
+                return Err(anyhow!(i18n.t_args_w(
+                    "error-project-version-mismatch",
+                    &[("pinned", fluent_bundle::FluentValue::from(1))]
+                )));
+            }
+        }
+
         manager.auto_install_version(&pinned)?
+    } else if let Some(project_version) = manager.determine_version() {
+        println_i18n!(
+            i18n,
+            "warning-using-project-version",
+            [("version", project_version.to_display_str())]
+        );
+        manager.auto_install_version(&project_version)?
     } else if let Some(mut default_ver) = manager.get_default()? {
         if csharp_given {
             default_ver.is_csharp = Some(csharp_flag);
@@ -390,9 +454,46 @@ fn sub_run_inner(
         "running-version",
         [("version", &resolved_version.to_display_str())]
     );
-    manager.run(&resolved_version, console, raw_args)?;
+
+    manager.run(&resolved_version, console, &raw_args)?;
 
     Ok(())
+}
+
+/// Show a warning if the project version is different from the pinned version
+fn warn_project_version_mismatch(
+    i18n: &I18n,
+    manager: &GodotManager,
+    requested: &GodotVersion,
+    is_pin: bool,
+) -> bool {
+    if let Some(project_version) = manager.determine_version() {
+        // Check if they don't match (project versions at most specify major.minor or
+        // major.minor.patch, and if .patch is not specified, it's assumed to allow any patch)
+        if project_version.major != requested.major // Always check major
+            || project_version.minor != requested.minor // Always check minor
+            // Allow either both to be None or both to be Some, but if both are Some, they must match
+            || (project_version.patch.is_some() && requested.patch.is_some()
+                && project_version.patch != requested.patch)
+            // If the project version is C#, the pinned version must also be C#, and vice versa
+            || project_version.is_csharp.unwrap_or(false) != requested.is_csharp.unwrap_or(false)
+        {
+            println_i18n!(
+                i18n,
+                "warning-project-version-mismatch",
+                [
+                    ("project_version", project_version.to_display_str()),
+                    ("requested_version", requested.to_display_str()),
+                    ("pinned", is_pin as i32)
+                ]
+            );
+            println!();
+
+            return true;
+        }
+    }
+
+    false
 }
 
 /// Handle the 'remove' subcommand
@@ -525,6 +626,8 @@ fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     let mut version = GodotVersion::from_match_str(&version_str)?;
 
     version.is_csharp = Some(csharp);
+
+    warn_project_version_mismatch(i18n, manager, &version, true);
 
     let resolved_version = manager.auto_install_version(&version)?;
 
