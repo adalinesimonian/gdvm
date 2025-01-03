@@ -33,6 +33,8 @@ gdvm pin stable --csharp     # Pins the default version for the current folder
 
 > [!TIP]
 > If you pin or use a global system version, you can associate `.godot` files in your OS with `~/.gdvm/bin/godot.exe` to automatically use either the system-wide version of Godot or the pinned version for the project directory to open that project file.
+>
+> gdvm will also try to detect the Godot version from the `project.godot` file and use the appropriate version if it's installed, for projects that don't have a pinned version.
 
 ```bash
 gdvm run                     # Runs the default version of Godot for the current
