@@ -234,6 +234,9 @@ exit_code=$?
 
 # Display an error alert if gdvm failed
 if [ $exit_code -ne 0 ]; then
+    # Strip ANSI color codes from the output
+    output=$(echo "$output" | sed 's/\x1B\[[0-9;]*[JKmsu]//g')
+
     # Escape backslashes and double quotes
     escaped_output=$(printf '%s' "$output" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
@@ -313,6 +316,9 @@ output=$("$HOME/.gdvm/bin/godot" "$@" 2>&1)
 exitCode=$?
 
 if [ $exitCode -ne 0 ]; then
+    # Strip ANSI color codes from the output
+    output=$(echo "$output" | sed 's/\x1B\[[0-9;]*[JKmsu]//g')
+
     zenity --error --text="$output" || \
     kdialog --error "$output" || \
     Xdialog --msgbox "$output" 0 0 || \
