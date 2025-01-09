@@ -9,7 +9,7 @@ repository = "https://github.com/adalinesimonian/gdvm"
 [dependencies]
 
 # For command-line argument parsing:
-clap = { version = "4.5.23", features = ["derive", "wrap_help"] }
+clap = { version = "4.5.24", features = ["derive", "wrap_help"] }
 regex = "1.11.1"
 
 # For cross-platform paths:
@@ -38,7 +38,7 @@ reqwest = { version = "0.12.12", features = [
 futures-io = "0.3.31"
 indicatif = "0.17.9"
 sha2 = "0.10.8"
-serde_json = "1.0.134"
+serde_json = "1.0.135"
 serde = { version = "1.0.217", features = ["derive"] }
 semver = "1.0.24"
 
