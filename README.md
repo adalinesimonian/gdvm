@@ -15,7 +15,7 @@ curl -sSL https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/in
 Install on Windows:
 
 ```powershell
-powershell -Command "iwr -useb https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.ps1 | iex"
+powershell -NoProfile -Command "(iwr -useb 'https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.ps1').Content | iex"
 ```
 
 ## Usage

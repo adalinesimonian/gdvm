@@ -207,8 +207,8 @@
             </div>
             <div class="tab-content" id="windows-content">
                 <div class="command-box" id="windows-command">
-                    powershell -Command "iwr -useb
-                    https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.ps1
+                    powershell -NoProfile -Command "(iwr -useb
+                    'https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.ps1').Content
                     | iex"
                 </div>
             </div>
