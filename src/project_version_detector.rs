@@ -32,6 +32,20 @@ pub fn detect_godot_version_in_path<P: AsRef<Path>>(i18n: &I18n, path: P) -> Opt
     // Check for [dotnet] section in project.godot
     let is_csharp = contents.contains("[dotnet]");
 
+    let config_version = parse_config_version(&contents);
+
+    // If the config_version is 4, then it's a Godot 3.x version.
+    if config_version == Some(4) {
+        return Some(GodotVersion {
+            major: Some(3),
+            minor: None,
+            patch: None,
+            subpatch: None,
+            release_type: None,
+            is_csharp: Some(is_csharp),
+        });
+    }
+
     // Extract lines for `[application]` section.
     let application_lines = match extract_application_section(&contents) {
         Some(lines) => lines,
@@ -230,4 +244,18 @@ fn parse_version_string(version: &str) -> Option<GodotVersion> {
         release_type: None,
         is_csharp: None,
     })
+}
+
+/// Parse the config version from the contents of `project.godot`.
+fn parse_config_version(contents: &str) -> Option<u32> {
+    for line in contents.lines() {
+        if let Some(eq_index) = line.find('=') {
+            let key = line[..eq_index].trim();
+            let val = line[(eq_index + 1)..].trim();
+            if key == "config_version" {
+                return val.parse().ok();
+            }
+        }
+    }
+    None
 }
