@@ -13,7 +13,7 @@ clap = { version = "4.5.24", features = ["derive", "wrap_help"] }
 regex = "1.11.1"
 
 # For cross-platform paths:
-directories = "5.0.1"
+directories = "6.0.0"
 
 # For i18n:
 fluent-bundle = "0.15.3"
