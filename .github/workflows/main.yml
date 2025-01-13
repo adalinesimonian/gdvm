@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "gh-pages/**"
 
 jobs:
   build-and-test:
