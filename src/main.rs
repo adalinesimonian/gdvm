@@ -470,8 +470,8 @@ fn warn_project_version_mismatch(
     if let Some(project_version) = manager.determine_version() {
         // Check if they don't match (project versions at most specify major.minor or
         // major.minor.patch, and if .patch is not specified, it's assumed to allow any patch)
-        if project_version.major != requested.major // Always check major
-            || project_version.minor != requested.minor // Always check minor
+        if project_version.major.is_some() && requested.major.is_some() && project_version.major != requested.major // Check major if both are Some
+            || project_version.minor.is_some() && requested.minor.is_some() && project_version.minor != requested.minor // Check minor if both are Some
             // Allow either both to be None or both to be Some, but if both are Some, they must match
             || (project_version.patch.is_some() && requested.patch.is_some()
                 && project_version.patch != requested.patch)
