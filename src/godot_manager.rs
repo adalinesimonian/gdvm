@@ -204,6 +204,7 @@ fn verify_sha512(
 /// - `Ok(Some(PathBuf))` containing the path to the Godot executable if found.
 /// - `Ok(None)` if no executable is found.
 /// - `Err(io::Error)` if there is an error reading the directory.
+#[allow(unused_variables)]
 fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<PathBuf>> {
     // Collect all entries (files/folders) under version_dir
     let entries: Vec<_> = fs::read_dir(version_dir)?

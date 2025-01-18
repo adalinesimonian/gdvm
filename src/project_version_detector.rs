@@ -14,10 +14,7 @@ use crate::version_utils::GodotVersion;
 /// is specified in `config/features`.
 pub fn detect_godot_version_in_path<P: AsRef<Path>>(i18n: &I18n, path: P) -> Option<GodotVersion> {
     // Find the project root by walking up until we find `project.godot`.
-    let project_file = match find_project_file(path.as_ref()) {
-        Some(p) => p,
-        None => return None,
-    };
+    let project_file = find_project_file(path.as_ref())?;
 
     // Parse the file, looking for the `[application]` section and
     //    `config/features=PackedStringArray(...)`.
@@ -47,26 +44,17 @@ pub fn detect_godot_version_in_path<P: AsRef<Path>>(i18n: &I18n, path: P) -> Opt
     }
 
     // Extract lines for `[application]` section.
-    let application_lines = match extract_application_section(&contents) {
-        Some(lines) => lines,
-        None => return None,
-    };
+    let application_lines = extract_application_section(&contents)?;
 
     // Look for `config/features` line and parse out version.
     let features_line = application_lines
         .iter()
         .find(|line| line.trim_start().starts_with("config/features="));
 
-    let features_line = match features_line {
-        Some(line) => line,
-        None => return None,
-    };
+    let features_line = features_line?;
 
     // Expects something like: config/features=PackedStringArray("4.3", "Forward Plus")
-    let version_candidate = match parse_packed_string_array_for_version(features_line) {
-        Some(v) => v,
-        None => return None,
-    };
+    let version_candidate = parse_packed_string_array_for_version(features_line)?;
 
     // Parse the version string x.x or x.x.x into GodotVersion.
     match parse_version_string(&version_candidate) {

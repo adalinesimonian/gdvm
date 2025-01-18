@@ -65,6 +65,7 @@ jobs:
         run: cargo fmt -- --check
 
       - name: Check clippy
+        shell: bash
         run: |
           cargo clippy --all-targets --all-features -- \
             -D clippy::suspicious -D clippy::style -D clippy::complexity \
