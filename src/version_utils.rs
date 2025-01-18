@@ -1,7 +1,7 @@
 use regex::Regex;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GodotVersion {
     pub major: Option<u32>,
     pub minor: Option<u32>,
@@ -20,19 +20,6 @@ impl From<GodotVersionDeterminate> for GodotVersion {
 impl From<&GodotVersionDeterminate> for GodotVersion {
     fn from(gvd: &GodotVersionDeterminate) -> Self {
         gvd.to_indeterminate()
-    }
-}
-
-impl Default for GodotVersion {
-    fn default() -> Self {
-        Self {
-            major: None,
-            minor: None,
-            patch: None,
-            subpatch: None,
-            release_type: None,
-            is_csharp: None,
-        }
     }
 }
 
@@ -100,7 +87,7 @@ impl Clone for GodotVersionDeterminate {
 impl GodotVersion {
     /// Parse an installed version folder name (e.g. "4.1.1-rc1-csharp", "2.0.4.1-stable", "3-csharp").
     pub fn from_install_str(s: &str) -> Result<Self, anyhow::Error> {
-        Ok(Self::parse_with_csharp_and_pre_release(s, false)?)
+        Self::parse_with_csharp_and_pre_release(s, false)
     }
 
     /// Parse a remote version tag (e.g. "4.1.stable", "3.rc1", "2.0.4.1.stable").
@@ -141,10 +128,7 @@ impl GodotVersion {
         });
 
         // If all components are zero or only major is present
-        let last_non_zero = match last_non_zero {
-            Some(index) => index,
-            None => 0, // Only major is present
-        };
+        let last_non_zero = last_non_zero.unwrap_or(0);
 
         // - If the last non-zero component is before minor but minor is present, include minor.
         // - This ensures "4.0.0.0" becomes "4.0" instead of "4".
@@ -155,10 +139,8 @@ impl GodotVersion {
         };
 
         // Ensure all components up to `truncate_to` are present
-        for i in 0..=truncate_to {
-            if components[i].is_none() {
-                return None; // Missing intermediate component
-            }
+        for component in components.iter().take(truncate_to + 1) {
+            (*component)?;
         }
 
         // Collect and format the version string
@@ -528,7 +510,7 @@ mod tests {
         let gv = GodotVersion::from_install_str("3.5-stable").unwrap();
         assert_eq!(gv.major, Some(3));
         assert_eq!(gv.minor, Some(5));
-        assert_eq!(gv.is_stable(), true);
+        assert!(gv.is_stable());
     }
 
     #[test]

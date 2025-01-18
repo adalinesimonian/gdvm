@@ -167,10 +167,9 @@ impl I18n {
 }
 
 #[macro_export]
-macro_rules! println_i18n {
-    // With arguments
-    ($i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
-        println!(
+macro_rules! i18n_print {
+    ($print_fn:ident, $i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
+        $print_fn!(
             "{}",
             $i18n.t_args_w(
                 $key,
@@ -180,8 +179,39 @@ macro_rules! println_i18n {
             ).as_str()
         )
     };
-    // Without arguments
+    ($print_fn:ident, $i18n:expr, $key:expr) => {
+        $print_fn!("{}", $i18n.t_w($key).as_str())
+    };
+}
+
+#[macro_export]
+macro_rules! println_i18n {
+    ($i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
+        $crate::i18n_print!(println, $i18n, $key, [$( ($arg_key, $arg_val) ),*])
+    };
     ($i18n:expr, $key:expr) => {
-        println!("{}", $i18n.t_w($key).as_str())
+        $crate::i18n_print!(println, $i18n, $key)
+    };
+}
+
+#[macro_export]
+macro_rules! eprintln_i18n {
+    ($i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
+        $crate::i18n_print!(eprintln, $i18n, $key, [$( ($arg_key, $arg_val) ),*])
+    };
+    ($i18n:expr, $key:expr) => {
+        $crate::i18n_print!(eprintln, $i18n, $key)
+    };
+}
+
+/// Prints to stdout if the result of an operation is true, otherwise prints to stderr
+#[macro_export]
+macro_rules! xprintln_i18n {
+    ($result:expr, $i18n:expr, $success_key:expr, $failure_key:expr) => {
+        if $result {
+            $crate::println_i18n!($i18n, $success_key);
+        } else {
+            $crate::eprintln_i18n!($i18n, $failure_key);
+        }
     };
 }

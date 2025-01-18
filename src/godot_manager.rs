@@ -13,10 +13,10 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::download_utils::download_file;
-use crate::println_i18n;
 use crate::version_utils;
 use crate::version_utils::GodotVersionDeterminate;
 use crate::zip_utils;
+use crate::{eprintln_i18n, println_i18n};
 use crate::{i18n, project_version_detector};
 
 use version_utils::{GodotVersion, GodotVersionDeterminateVecExt};
@@ -65,6 +65,7 @@ pub struct GodotManager<'a> {
     i18n: &'a I18n,
 }
 
+#[allow(clippy::unimplemented)]
 fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
     let is_csharp = version.is_csharp == Some(true);
     let tag = version.to_remote_str();
@@ -151,8 +152,8 @@ fn verify_sha512(
     );
     let sum_file = file_path.with_extension("SHA512-SUMS");
 
-    if let Err(_) = download_file(&sha_url, &sum_file, &i18n) {
-        println_i18n!(i18n, "warning-sha-sums-missing");
+    if download_file(&sha_url, &sum_file, i18n).is_err() {
+        eprintln_i18n!(i18n, "warning-sha-sums-missing");
         return Ok(());
     }
 
@@ -238,7 +239,7 @@ fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<Pat
             }
         });
 
-        return Ok(exe_candidate);
+        Ok(exe_candidate)
     }
 
     #[cfg(target_os = "macos")]
@@ -253,7 +254,7 @@ fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<Pat
             }
         });
 
-        return Ok(app_candidate);
+        Ok(app_candidate)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -273,7 +274,7 @@ fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<Pat
             }
         });
 
-        return Ok(unix_candidate);
+        Ok(unix_candidate)
     }
 }
 
@@ -343,7 +344,7 @@ impl<'a> GodotManager<'a> {
 
             if std::env::current_exe().ok() != Some(exe_path.clone()) {
                 if let Err(err) = copy_over_binary_if_different(&gdvm_exe_source, &exe_path) {
-                    println_i18n!(
+                    eprintln_i18n!(
                         self.i18n,
                         "error-ensure-godot-binaries-failed",
                         [
@@ -380,8 +381,8 @@ impl<'a> GodotManager<'a> {
 
         if version_path.exists() {
             if force {
-                self.remove(&gv)?;
-                println_i18n!(
+                self.remove(gv)?;
+                eprintln_i18n!(
                     self.i18n,
                     "force-reinstalling-version",
                     [("version", gv.to_display_str())]
@@ -392,7 +393,7 @@ impl<'a> GodotManager<'a> {
         }
 
         if !gv.is_stable() {
-            println_i18n!(
+            eprintln_i18n!(
                 self.i18n,
                 "warning-prerelease",
                 [("branch", &gv.release_type)]
@@ -402,15 +403,15 @@ impl<'a> GodotManager<'a> {
         fs::create_dir_all(&self.cache_path)?;
 
         let release_tag = gv.to_remote_str();
-        let archive_name = get_archive_name(&gv, self.i18n);
+        let archive_name = get_archive_name(gv, self.i18n);
         let download_url = get_download_url(&release_tag, &archive_name);
         let cache_zip_path = self.cache_path.join(&archive_name);
 
         if !redownload && cache_zip_path.exists() {
-            println_i18n!(self.i18n, "using-cached-zip");
+            eprintln_i18n!(self.i18n, "using-cached-zip");
         } else {
             if redownload && cache_zip_path.exists() {
-                println_i18n!(
+                eprintln_i18n!(
                     self.i18n,
                     "force-redownload",
                     [("version", gv.to_display_str())]
@@ -422,12 +423,12 @@ impl<'a> GodotManager<'a> {
                 .join(format!("{}.zip", gv.to_install_str()));
 
             // Download the archive
-            download_file(&download_url, &tmp_file, &self.i18n)?;
-            verify_sha512(&tmp_file, &archive_name, &release_tag, &self.i18n)?;
+            download_file(&download_url, &tmp_file, self.i18n)?;
+            verify_sha512(&tmp_file, &archive_name, &release_tag, self.i18n)?;
 
             // Move the verified zip to cache_dir
             fs::rename(&tmp_file, &cache_zip_path)?;
-            println_i18n!(self.i18n, "cached-zip-stored");
+            eprintln_i18n!(self.i18n, "cached-zip-stored");
         }
 
         fs::create_dir_all(&version_path)?;
@@ -445,9 +446,8 @@ impl<'a> GodotManager<'a> {
             let entry = entry?;
             if entry.file_type()?.is_dir() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                match GodotVersion::from_install_str(&name) {
-                    Ok(gv) => versions.push(gv.to_determinate()),
-                    Err(_) => (), // Ignore invalid version directories
+                if let Ok(gv) = GodotVersion::from_install_str(&name) {
+                    versions.push(gv.to_determinate())
                 }
             }
         }
@@ -478,7 +478,7 @@ impl<'a> GodotManager<'a> {
         &self,
         gv: &GodotVersionDeterminate,
         console: bool,
-        godot_args: &Vec<String>,
+        godot_args: &[String],
     ) -> Result<()> {
         let version_dir = self.install_path.join(gv.to_install_str());
         if !version_dir.exists() {
@@ -525,7 +525,7 @@ impl<'a> GodotManager<'a> {
         // "No main scene set" message.
         let current_dir = std::env::current_dir()?;
         let project_file = current_dir.join("project.godot");
-        let mut godot_args = godot_args.clone();
+        let mut godot_args = godot_args.to_vec();
         if project_file.exists() && godot_args.iter().all(|arg| !Path::new(arg).exists()) {
             godot_args.push(project_file.to_string_lossy().to_string());
         }
@@ -857,7 +857,7 @@ impl<'a> GodotManager<'a> {
         let target_dir = self.install_path.join(version_str);
 
         // Make sure bin directory exists
-        fs::create_dir_all(&symlink_dir.parent().unwrap())?;
+        fs::create_dir_all(symlink_dir.parent().unwrap())?;
 
         if symlink_dir.exists() {
             fs::remove_dir_all(&symlink_dir)?;
@@ -923,7 +923,7 @@ impl<'a> GodotManager<'a> {
     pub fn determine_version(&self) -> Option<GodotVersion> {
         let current_dir = std::env::current_dir().ok()?;
 
-        return project_version_detector::detect_godot_version_in_path(&self.i18n, current_dir);
+        project_version_detector::detect_godot_version_in_path(self.i18n, current_dir)
     }
 
     /// Pin a version to .gdvmrc in the current directory
@@ -954,7 +954,7 @@ impl<'a> GodotManager<'a> {
 
         // Check if version is installed, if not, install
         if !self.is_version_installed(&actual_version)? {
-            println_i18n!(
+            eprintln_i18n!(
                 self.i18n,
                 "auto-installing-version",
                 [("version", &actual_version.to_display_str())]
@@ -1023,10 +1023,10 @@ impl<'a> GodotManager<'a> {
             progress.finish_and_clear();
 
             if let Some(new_version) = new_version {
-                print!("\x1b[1;32m"); // Bold and green
-                println_i18n!(self.i18n, "upgrade-available", [("version", &new_version)]);
-                print!("\x1b[0m"); // Reset
-                println!();
+                eprint!("\x1b[1;32m"); // Bold and green
+                eprintln_i18n!(self.i18n, "upgrade-available", [("version", &new_version)]);
+                eprint!("\x1b[0m"); // Reset
+                eprintln!();
 
                 self.save_gdvm_cache(&GdvmCache {
                     last_update_check: now,
@@ -1042,14 +1042,14 @@ impl<'a> GodotManager<'a> {
             if let Ok(new_version) = Version::parse(new_version.trim_start_matches('v')) {
                 let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
                 if new_version > current_version {
-                    print!("\x1b[1;32m"); // Bold and green
-                    println_i18n!(
+                    eprint!("\x1b[1;32m"); // Bold and green
+                    eprintln_i18n!(
                         self.i18n,
                         "upgrade-available",
                         [("version", new_version.to_string())]
                     );
-                    print!("\x1b[0m"); // Reset
-                    println!();
+                    eprint!("\x1b[0m"); // Reset
+                    eprintln!();
                 } else {
                     self.save_gdvm_cache(&GdvmCache {
                         last_update_check: now,
@@ -1121,7 +1121,7 @@ impl<'a> GodotManager<'a> {
 
         // Download the new binary
         if let Err(err) = download_file(&bin_url, &out_file, self.i18n) {
-            println_i18n!(self.i18n, "upgrade-download-failed");
+            eprintln_i18n!(self.i18n, "upgrade-download-failed");
             return Err(err);
         }
 

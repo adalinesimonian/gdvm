@@ -2,8 +2,8 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::eprintln_i18n;
 use crate::i18n::I18n;
-use crate::println_i18n;
 use crate::version_utils::GodotVersion;
 
 /// Detect the Godot version by looking for a `project.godot` file in the
@@ -24,7 +24,7 @@ pub fn detect_godot_version_in_path<P: AsRef<Path>>(i18n: &I18n, path: P) -> Opt
     let contents = match fs::read_to_string(&project_file) {
         Ok(s) => s,
         Err(_) => {
-            println_i18n!(i18n, "error-failed-reading-project-godot");
+            eprintln_i18n!(i18n, "error-failed-reading-project-godot");
             return None;
         }
     };
@@ -152,9 +152,7 @@ fn extract_application_section(contents: &str) -> Option<Vec<String>> {
 /// and returns the first substring that matches `x.x` or `x.x.x`.
 fn parse_packed_string_array_for_version(line: &str) -> Option<String> {
     // Strip out the `config/features=` prefix.
-    let Some(eq_index) = line.find('=') else {
-        return None;
-    };
+    let eq_index = line.find('=')?;
     let value_part = line[(eq_index + 1)..].trim();
 
     // Expect something like `PackedStringArray("4.3", "Forward Plus")`.
@@ -196,13 +194,7 @@ fn parse_packed_string_array_for_version(line: &str) -> Option<String> {
     }
 
     // Find the first string that looks like a version `x.x` or `x.x.x`.
-    for v in versions {
-        if is_version_format(&v) {
-            return Some(v);
-        }
-    }
-
-    None
+    versions.into_iter().find(|v| is_version_format(v))
 }
 
 /// Check if a string matches `x.x` or `x.x.x` where x are digits.

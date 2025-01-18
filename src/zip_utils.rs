@@ -1,5 +1,5 @@
+use crate::eprintln_i18n;
 use crate::i18n::I18n;
-use crate::println_i18n;
 use anyhow::{anyhow, Result};
 use fluent_bundle::FluentValue;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -11,7 +11,7 @@ use zip::ZipArchive;
 
 pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()> {
     // Print extracting message
-    println_i18n!(i18n, "operation-extracting");
+    eprintln_i18n!(i18n, "operation-extracting");
 
     // First pass: Calculate total uncompressed size and collect top-level entries
     let file = fs::File::open(zip_path).map_err(|e| {

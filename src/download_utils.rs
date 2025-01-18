@@ -8,11 +8,11 @@ use std::{
 
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::{i18n::I18n, println_i18n};
+use crate::{eprintln_i18n, i18n::I18n};
 
 pub fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
     // Print downloading URL message
-    println_i18n!(i18n, "operation-downloading-url", [("url", url)]);
+    eprintln_i18n!(i18n, "operation-downloading-url", [("url", url)]);
 
     let response = reqwest::blocking::get(url)?;
 

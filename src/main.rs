@@ -56,16 +56,16 @@ fn main() -> Result<()> {
             }
         }
 
-        if let Err(err) = sub_run_inner(
-            &i18n,
-            &GodotManager::new(&i18n)?,
-            None,
-            false,
-            false,
-            console_mode,
-            &args,
-            false,
-        ) {
+        if let Err(err) = sub_run_inner(RunConfig {
+            i18n: &i18n,
+            manager: &GodotManager::new(&i18n)?,
+            version_input: None,
+            csharp_given: false,
+            csharp_flag: false,
+            console: console_mode,
+            raw_args: &args,
+            force_on_mismatch: false,
+        }) {
             eprintln!("{}", err);
 
             // Wait for 5 seconds before exiting on Windows to allow the user to read the error.
@@ -298,7 +298,7 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
 
-    let requested_version = GodotVersion::from_match_str(&version_input)?;
+    let requested_version = GodotVersion::from_match_str(version_input)?;
     let mut gv = manager
         .resolve_available_version(&requested_version, false)
         .ok_or_else(|| anyhow!(i18n.t("error-version-not-found")))?;
@@ -366,36 +366,51 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     let console = matches.get_flag("console");
     let force_on_mismatch = matches.get_flag("force");
 
-    sub_run_inner(
+    sub_run_inner(RunConfig {
         i18n,
         manager,
         version_input,
         csharp_given,
         csharp_flag,
         console,
-        &raw_args,
+        raw_args: &raw_args,
         force_on_mismatch,
-    )
+    })
 }
 
-fn sub_run_inner(
-    i18n: &I18n,
-    manager: &GodotManager,
-    version_input: Option<&String>,
+/// Configuration for the `sub_run_inner` function
+struct RunConfig<'a> {
+    i18n: &'a I18n,
+    manager: &'a GodotManager<'a>,
+    version_input: Option<&'a String>,
     csharp_given: bool,
     csharp_flag: bool,
     console: bool,
-    raw_args: &Vec<String>,
+    raw_args: &'a Vec<String>,
     force_on_mismatch: bool,
-) -> Result<()> {
+}
+
+/// Run the Godot executable
+fn sub_run_inner(config: RunConfig) -> Result<()> {
+    let RunConfig {
+        i18n,
+        manager,
+        version_input,
+        csharp_given,
+        csharp_flag,
+        console,
+        raw_args,
+        force_on_mismatch,
+    } = config;
+
     let resolved_version = if let Some(v) = version_input {
-        let mut requested_version = GodotVersion::from_match_str(&v)?;
+        let mut requested_version = GodotVersion::from_match_str(v)?;
 
         requested_version.is_csharp = Some(csharp_flag);
 
         if warn_project_version_mismatch(i18n, manager, &requested_version, false) {
             if force_on_mismatch {
-                println_i18n!(
+                eprintln_i18n!(
                     i18n,
                     "warning-project-version-mismatch-force",
                     [
@@ -415,7 +430,7 @@ fn sub_run_inner(
     } else if let Some(pinned) = manager.get_pinned_version() {
         if warn_project_version_mismatch(i18n, manager, &pinned, true) {
             if force_on_mismatch {
-                println_i18n!(
+                eprintln_i18n!(
                     i18n,
                     "warning-project-version-mismatch-force",
                     [
@@ -433,7 +448,7 @@ fn sub_run_inner(
 
         manager.auto_install_version(&pinned)?
     } else if let Some(project_version) = manager.determine_version() {
-        println_i18n!(
+        eprintln_i18n!(
             i18n,
             "warning-using-project-version",
             [("version", project_version.to_display_str())]
@@ -449,13 +464,13 @@ fn sub_run_inner(
         return Err(anyhow!(i18n.t("no-default-set")));
     };
 
-    println_i18n!(
+    eprintln_i18n!(
         i18n,
         "running-version",
         [("version", &resolved_version.to_display_str())]
     );
 
-    manager.run(&resolved_version, console, &raw_args)?;
+    manager.run(&resolved_version, console, raw_args)?;
 
     Ok(())
 }
@@ -478,7 +493,7 @@ fn warn_project_version_mismatch(
             // If the project version is C#, the pinned version must also be C#, and vice versa
             || project_version.is_csharp.unwrap_or(false) != requested.is_csharp.unwrap_or(false)
         {
-            println_i18n!(
+            eprintln_i18n!(
                 i18n,
                 "warning-project-version-mismatch",
                 [
@@ -487,7 +502,7 @@ fn warn_project_version_mismatch(
                     ("pinned", is_pin as i32)
                 ]
             );
-            println!();
+            eprintln!();
 
             return true;
         }
@@ -500,7 +515,7 @@ fn warn_project_version_mismatch(
 fn sub_remove(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version").unwrap();
     let csharp = matches.get_flag("csharp");
-    let mut requested_version = GodotVersion::from_match_str(&version_input)?;
+    let mut requested_version = GodotVersion::from_match_str(version_input)?;
 
     requested_version.is_csharp = Some(csharp);
 
@@ -508,7 +523,7 @@ fn sub_remove(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
 
     match resolved_versions.len() {
         0 => {
-            println_i18n!(i18n, "error-version-not-found");
+            eprintln_i18n!(i18n, "error-version-not-found");
         }
         1 => {
             let gv = &resolved_versions[0];
@@ -525,11 +540,11 @@ fn sub_remove(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
                     return Ok(());
                 }
             }
-            manager.remove(&gv)?;
+            manager.remove(gv)?;
             println_i18n!(i18n, "removed-version", [("version", gv.to_display_str())]);
         }
         _ => {
-            println_i18n!(i18n, "error-multiple-versions-found");
+            eprintln_i18n!(i18n, "error-multiple-versions-found");
             for v in resolved_versions {
                 println!("- {}", v.to_display_str());
             }
@@ -598,7 +613,7 @@ fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         return Ok(());
     }
 
-    let mut requested_version = GodotVersion::from_match_str(&version_input)?;
+    let mut requested_version = GodotVersion::from_match_str(version_input)?;
 
     requested_version.is_csharp = Some(csharp);
 
@@ -623,7 +638,7 @@ fn sub_upgrade(manager: &GodotManager) -> Result<()> {
 fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
     let version_str = matches.get_one::<String>("version").unwrap();
     let csharp = matches.get_flag("csharp");
-    let mut version = GodotVersion::from_match_str(&version_str)?;
+    let mut version = GodotVersion::from_match_str(version_str)?;
 
     version.is_csharp = Some(csharp);
 
@@ -637,7 +652,7 @@ fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
             "pinned-success",
             [("version", &resolved_version.to_display_str())]
         ),
-        Err(_) => println_i18n!(
+        Err(_) => eprintln_i18n!(
             i18n,
             "error-pin-version-not-found",
             [("version", &resolved_version.to_display_str())]
