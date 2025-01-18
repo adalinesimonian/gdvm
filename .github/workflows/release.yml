@@ -73,6 +73,7 @@ jobs:
         continue-on-error: true
 
       - name: Check clippy
+        shell: bash
         run: |
           cargo clippy --release --all-targets --all-features -- \
             -D clippy::suspicious -D clippy::style -D clippy::complexity \
