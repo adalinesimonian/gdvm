@@ -7,10 +7,6 @@ on:
     paths-ignore:
       - "gh-pages/**"
 
-concurrency:
-  group: main
-  cancel-in-progress: true
-
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
