@@ -74,7 +74,7 @@ jobs:
 
       - name: Check clippy
         run: |
-          cargo clippy --all-targets --all-features -- \
+          cargo clippy --release --all-targets --all-features -- \
             -D clippy::suspicious -D clippy::style -D clippy::complexity \
             -D clippy::perf -D clippy::dbg_macro -D clippy::todo \
             -D clippy::unimplemented -D warnings
@@ -82,7 +82,7 @@ jobs:
 
       - name: Test
         if: (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
-        run: cargo test --target ${{ matrix.target }}
+        run: cargo test --release --target ${{ matrix.target }}
 
       - name: Rename Binary
         shell: bash
