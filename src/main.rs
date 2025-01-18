@@ -9,7 +9,10 @@ use anyhow::{anyhow, Result};
 use clap::{value_parser, Arg, ArgMatches, Command};
 use godot_manager::{GodotManager, InstallOutcome};
 use i18n::I18n;
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    path::Path,
+};
 
 use version_utils::GodotVersion;
 
@@ -35,26 +38,6 @@ fn main() -> Result<()> {
 
         // Pass all arguments to Godot
         let args: Vec<String> = std::env::args().skip(1).collect();
-
-        // Search for the first argument that is a valid file and change to its directory
-        // This is to make sure that we are using the working directory of the project when checking
-        // for the Godot version to run
-        if let Some(file) = args.iter().find(|arg| std::path::Path::new(arg).exists()) {
-            let file_path = std::path::Path::new(file);
-
-            // Resolve to absolute path
-            let abs_path: std::path::PathBuf = if file_path.is_absolute() {
-                file_path.to_path_buf()
-            } else {
-                std::env::current_dir()?.join(file_path)
-            };
-
-            // Get the parent directory of the file
-            if let Some(file_dir) = abs_path.parent() {
-                // Change the current working directory to the file's directory
-                std::env::set_current_dir(file_dir)?;
-            }
-        }
 
         if let Err(err) = sub_run_inner(RunConfig {
             i18n: &i18n,
@@ -403,12 +386,37 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
         force_on_mismatch,
     } = config;
 
+    // Try to see if a path was given in raw_args. First, by checking if the --path flag was given
+    // and then by checking if the first argument is a path. Prefer the --path flag if both are
+    // given.
+    let mut possible_paths: Vec<&str> = Vec::new();
+    for arg in raw_args.iter() {
+        if arg == "--path" {
+            if let Some(p) = raw_args.get(raw_args.iter().position(|x| x == "--path").unwrap() + 1)
+            {
+                possible_paths.clear();
+                possible_paths.push(p);
+                break;
+            }
+        } else if arg.starts_with('-') {
+            continue;
+        } else {
+            possible_paths.push(arg);
+        }
+    }
+
     let resolved_version = if let Some(v) = version_input {
         let mut requested_version = GodotVersion::from_match_str(v)?;
 
         requested_version.is_csharp = Some(csharp_flag);
 
-        if warn_project_version_mismatch(i18n, manager, &requested_version, false) {
+        if warn_project_version_mismatch(
+            i18n,
+            manager,
+            &requested_version,
+            false,
+            Some(&possible_paths),
+        ) {
             if force_on_mismatch {
                 eprintln_i18n!(
                     i18n,
@@ -428,7 +436,7 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
 
         manager.auto_install_version(&requested_version)?
     } else if let Some(pinned) = manager.get_pinned_version() {
-        if warn_project_version_mismatch(i18n, manager, &pinned, true) {
+        if warn_project_version_mismatch::<&Path>(i18n, manager, &pinned, true, None) {
             if force_on_mismatch {
                 eprintln_i18n!(
                     i18n,
@@ -447,7 +455,10 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
         }
 
         manager.auto_install_version(&pinned)?
-    } else if let Some(project_version) = manager.determine_version() {
+    } else if let Some(project_version) = possible_paths
+        .iter()
+        .find_map(|p| manager.determine_version(Some(p)))
+    {
         eprintln_i18n!(
             i18n,
             "warning-using-project-version",
@@ -476,13 +487,22 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
 }
 
 /// Show a warning if the project version is different from the pinned version
-fn warn_project_version_mismatch(
+fn warn_project_version_mismatch<P: AsRef<Path>>(
     i18n: &I18n,
     manager: &GodotManager,
     requested: &GodotVersion,
     is_pin: bool,
+    paths: Option<&[P]>,
 ) -> bool {
-    if let Some(project_version) = manager.determine_version() {
+    let determined_version = if let Some(paths) = paths {
+        paths
+            .iter()
+            .find_map(|p| manager.determine_version(Some(p)))
+    } else {
+        manager.determine_version::<P>(None)
+    };
+
+    if let Some(project_version) = determined_version {
         // Check if they don't match (project versions at most specify major.minor or
         // major.minor.patch, and if .patch is not specified, it's assumed to allow any patch)
         if project_version.major.is_some() && requested.major.is_some() && project_version.major != requested.major // Check major if both are Some
@@ -642,7 +662,7 @@ fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
 
     version.is_csharp = Some(csharp);
 
-    warn_project_version_mismatch(i18n, manager, &version, true);
+    warn_project_version_mismatch::<&Path>(i18n, manager, &version, true, None);
 
     let resolved_version = manager.auto_install_version(&version)?;
 

@@ -521,16 +521,6 @@ impl<'a> GodotManager<'a> {
             }
         }
 
-        // If no args pointing to files are provided, but the current directory includes a
-        // project.godot file, add it to the args. Otherwise, Godot may error out with a
-        // "No main scene set" message.
-        let current_dir = std::env::current_dir()?;
-        let project_file = current_dir.join("project.godot");
-        let mut godot_args = godot_args.to_vec();
-        if project_file.exists() && godot_args.iter().all(|arg| !Path::new(arg).exists()) {
-            godot_args.push(project_file.to_string_lossy().to_string());
-        }
-
         if console {
             // Run the process attached to the terminal and wait for it to exit
             std::process::Command::new(&path)
@@ -921,10 +911,13 @@ impl<'a> GodotManager<'a> {
     }
 
     /// Try to determine the version to use based on the current Godot project
-    pub fn determine_version(&self) -> Option<GodotVersion> {
-        let current_dir = std::env::current_dir().ok()?;
+    pub fn determine_version<P: AsRef<Path>>(&self, path: Option<P>) -> Option<GodotVersion> {
+        let current_dir = match path {
+            Some(p) => p.as_ref().to_path_buf(),
+            None => std::env::current_dir().ok()?,
+        };
 
-        project_version_detector::detect_godot_version_in_path(self.i18n, current_dir)
+        project_version_detector::detect_godot_version_in_path(self.i18n, &current_dir)
     }
 
     /// Pin a version to .gdvmrc in the current directory
