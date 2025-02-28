@@ -587,7 +587,7 @@ impl<'a> GodotManager<'a> {
             .iter()
             .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
             .map(|gv| gv.to_determinate())
-            .filter(|r| filter.map_or(true, |f| f.matches(r)))
+            .filter(|r| filter.is_none_or(|f| f.matches(r)))
             .collect();
 
         // If no releases found and not using cache only, try fetching if we haven't already
@@ -598,7 +598,7 @@ impl<'a> GodotManager<'a> {
                 .iter()
                 .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
                 .map(|gv| gv.to_determinate())
-                .filter(|r| filter.map_or(true, |f| f.matches(r)))
+                .filter(|r| filter.is_none_or(|f| f.matches(r)))
                 .collect();
         }
 
