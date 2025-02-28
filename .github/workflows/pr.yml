@@ -46,6 +46,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           rustflags: ""
+          cache-key: ${{ github.workflow }}-${{ github.event.number }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
