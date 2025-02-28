@@ -5,8 +5,8 @@ mod project_version_detector;
 mod version_utils;
 mod zip_utils;
 
-use anyhow::{anyhow, Result};
-use clap::{value_parser, Arg, ArgMatches, Command};
+use anyhow::{Result, anyhow};
+use clap::{Arg, ArgMatches, Command, value_parser};
 use godot_manager::{GodotManager, InstallOutcome};
 use i18n::I18n;
 use std::{

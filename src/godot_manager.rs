@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
 use directories::BaseDirs;
@@ -74,17 +74,9 @@ fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
 
     let platform = if cfg!(target_os = "windows") {
         if cfg!(target_arch = "x86_64") {
-            if is_csharp {
-                "win64"
-            } else {
-                "win64.exe"
-            }
+            if is_csharp { "win64" } else { "win64.exe" }
         } else if cfg!(target_arch = "x86") {
-            if is_csharp {
-                "win32"
-            } else {
-                "win32.exe"
-            }
+            if is_csharp { "win32" } else { "win32.exe" }
         } else if cfg!(target_arch = "aarch64") {
             if is_csharp {
                 "windows_arm64"

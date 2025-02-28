@@ -1,6 +1,6 @@
 use crate::eprintln_i18n;
 use crate::i18n::I18n;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use fluent_bundle::FluentValue;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;

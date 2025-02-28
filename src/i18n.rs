@@ -2,7 +2,7 @@ use anyhow::Result;
 use fluent_bundle::{FluentBundle, FluentResource, FluentValue};
 use std::env;
 use terminal_size::terminal_size;
-use textwrap::{wrap, Options, WordSeparator};
+use textwrap::{Options, WordSeparator, wrap};
 use unic_langid::langid;
 
 // Include the Fluent translation files as static strings
