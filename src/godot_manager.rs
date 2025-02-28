@@ -9,6 +9,8 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::fs;
+#[cfg(target_family = "unix")]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -1117,6 +1119,14 @@ impl<'a> GodotManager<'a> {
         if let Err(err) = download_file(&bin_url, &out_file, self.i18n) {
             eprintln_i18n!(self.i18n, "upgrade-download-failed");
             return Err(err);
+        }
+
+        #[cfg(target_family = "unix")]
+        {
+            // Make the new binary executable
+            let mut perms = out_file.metadata()?.permissions();
+            perms.set_mode(perms.mode() | 0o111);
+            std::fs::set_permissions(&out_file, perms)?;
         }
 
         // Rename current executable to .bak and replace it with the new file
