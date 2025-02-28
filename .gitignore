@@ -3,7 +3,6 @@
 
 # Rust/Cargo
 **/*.rs.bk
-Cargo.lock
 
 # IDEs and editors
 *.swp
