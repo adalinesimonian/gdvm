@@ -54,11 +54,11 @@ jobs:
 
       - name: Install dependencies (Linux x86_32)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'i686-unknown-linux-gnu'
-        run: sudo apt-get install -y gcc-multilib
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
 
       - name: Install dependencies (Linux aarch64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get install -y gcc-aarch64-linux-gnu
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
