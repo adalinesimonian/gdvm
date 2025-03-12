@@ -9,25 +9,25 @@ repository = "https://github.com/adalinesimonian/gdvm"
 [dependencies]
 
 # For command-line argument parsing:
-clap = { version = "4.5.31", features = ["derive", "wrap_help"] }
-regex = "1.11.1"
+clap = { version = "=4.5.32", features = ["derive", "wrap_help"] }
+regex = "=1.11.1"
 
 # For cross-platform paths:
-directories = "6.0.0"
+directories = "=6.0.0"
 
 # For i18n:
-fluent-bundle = "0.15.3"
-fluent-langneg = "0.14.1"
-unic-langid = { version = "0.9.5", features = ["unic-langid-macros"] }
-anyhow = "1.0.96"
-terminal_size = "0.4.1"
-textwrap = { version = "0.16.1", features = [
+fluent-bundle = "=0.15.3"
+fluent-langneg = "=0.14.1"
+unic-langid = { version = "=0.9.5", features = ["unic-langid-macros"] }
+anyhow = "=1.0.97"
+terminal_size = "=0.4.2"
+textwrap = { version = "=0.16.2", features = [
     "unicode-width",
     "unicode-linebreak",
 ] }
 
 # For downloading files:
-reqwest = { version = "0.12.12", features = [
+reqwest = { version = "=0.12.13", features = [
     "json",
     "gzip",
     "brotli",
@@ -35,26 +35,26 @@ reqwest = { version = "0.12.12", features = [
     "rustls-tls",
     "blocking",
 ] }
-futures-io = "0.3.31"
-indicatif = "0.17.11"
-sha2 = "0.10.8"
-serde_json = "1.0.139"
-serde = { version = "1.0.218", features = ["derive"] }
-semver = "1.0.25"
+futures-io = "=0.3.31"
+indicatif = "=0.17.11"
+sha2 = "=0.10.8"
+serde_json = "=1.0.140"
+serde = { version = "=1.0.219", features = ["derive"] }
+semver = "=1.0.26"
 
 # For file system operations:
-zip = "2.2.3"
+zip = "=2.2.3"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3.9", features = ["winbase"] }
+winapi = { version = "=0.3.9", features = ["winbase"] }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-daemonize = "0.5.0"
+daemonize = "=0.5.0"
 
 # OpenSSL for cross-compiling:
 [target.i686-unknown-linux-gnu.dependencies]
-openssl = { version = "0.10.71", features = ["vendored"] }
+openssl = { version = "=0.10.71", features = ["vendored"] }
 
 [target.aarch64-unknown-linux-gnu.dependencies]
-openssl = { version = "0.10.71", features = ["vendored"] }
+openssl = { version = "=0.10.71", features = ["vendored"] }
