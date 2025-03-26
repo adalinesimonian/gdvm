@@ -186,3 +186,36 @@ help-run-force-long =
     { help-run-force }
 
     If you do this, the requested or pinned version of Godot may overwrite the project file. If pinning versions, it is instead recommended to update the pinned version in .gdvmrc to match the project version, or remove the .gdvmrc file to use the project version.
+
+help-config = Manage gdvm configuration
+help-config-get = Get a configuration value
+help-config-set = Set a configuration value
+help-config-unset = Unset a configuration value
+help-config-list = List all configuration values
+help-config-key = The configuration key (e.g., github.token)
+help-config-value = The value to set for the configuration key
+help-config-unset-key = The configuration key to unset (e.g., github.token)
+help-config-show-sensitive = Show sensitive configuration values in plaintext
+help-config-available = List all available configuration keys and their values, including defaults
+warning-setting-sensitive = {"\u001b"}[33mWarning: You are setting a sensitive value which will be stored in plaintext in your home directory.{"\u001b"}[0m
+config-set-prompt = Please enter the value for { $key }:
+error-reading-input = Error reading input
+config-set-success = Configuration updated successfully.
+config-unset-success = Configuration key { $key } unset successfully.
+config-key-not-set = Configuration key not set.
+error-unknown-config-key = Unknown configuration key.
+error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
+error-parse-config = Failed to parse configuration file: { $error }
+error-parse-config-using-default = {"\u001b"}[33mUsing default configuration values.{"\u001b"}[0m
+error-github-api = GitHub API error: { $error }
+error-github-rate-limit = GitHub API rate limit exceeded.
+
+  To resolve this, please create a personal access token on GitHub by visiting https://github.com/settings/tokens.
+
+  Click "Generate new token", select only the minimal permissions required (e.g. public_repo), and then set the token via the GITHUB_TOKEN environment variable or by running:
+
+    gdvm config set github.token
+
+  Note: The token will be stored in plaintext in your home directory. Please ensure you keep it secure.
+  It is recommended to regularly review and rotate your tokens for security purposes.
+

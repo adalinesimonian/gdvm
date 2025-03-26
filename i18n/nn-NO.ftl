@@ -194,3 +194,35 @@ help-run-force-long =
     { help-run-force }
 
     Viss du gjer dette, kan den ynskte eller festa versjonen av Godot overskriva prosjektfila. Viss du festar versjonar, er det tilrådd å i staden oppdatere den festa versjonen i .gdvmrc for å samsvara med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.
+
+help-config = Administrer gdvm-konfigurasjon
+help-config-get = Hent ein konfigurasjonsverdi
+help-config-set = Set ein konfigurasjonsverdi
+help-config-unset = Fjern ein konfigurasjonsverdi
+help-config-list = List alle konfigurasjonsverdiar
+help-config-key = Konfigurasjonsnykelen (t.d. github.token)
+help-config-value = Verdien som skal setjast for konfigurasjonsnykelen
+help-config-unset-key = Konfigurasjonsnykelen som skal fjernast (t.d. github.token)
+help-config-show-sensitive = Vis sensitive konfigurasjonsverdiar i klartekst
+help-config-available = List alle tilgjengelege konfigurasjonsnyklar og verdiar, inkludert standardverdiar
+warning-setting-sensitive = {"\u001b"}[33mÅtvaring: Du set ein sensitiv verdi som vil verta lagra i klartekst i heimemappa di.{"\u001b"}[0m
+config-set-prompt = Ver vennleg og oppgjev verdien for { $key }:
+error-reading-input = Feil ved lesing av inndata
+config-set-success = Konfigurasjonen vart oppdatert.
+config-unset-success = Konfigurasjonsnykelen { $key } vart fjerna vellukka.
+config-key-not-set = Konfigurasjonsnykel ikkje sett.
+error-unknown-config-key = Ukjend konfigurasjonsnykel.
+error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk «get», «set» eller «list».
+error-parse-config = Kunne ikkje tolke konfigurasjonsfila: { $error }
+error-parse-config-using-default = {"\u001b"}[33mBrukar standard konfigurasjonsverdiar.{"\u001b"}[0m
+error-github-api = GitHub API-feil: { $error }
+error-github-rate-limit = GitHub API-rategrense overskriden.
+
+  For å løyse dette, ver venleg og opprett ein personleg tilgangstoken på GitHub ved å besøkje https://github.com/settings/tokens.
+
+  Klikk på «Generate new token», vel berre dei minimale løyva som krevst (t.d. public_repo), og set deretter tokenet via miljøvariabelen GITHUB_TOKEN eller ved å køyre:
+
+    gdvm config set github.token
+
+  Merk: Tokenet vil verta lagra i klartekst i heimemappa di. Ver venleg å sørgje for at du held det sikkert.
+  Det er tilrådd å regelmessig gjennomgå og rotere tokena dine for tryggleiksføremål.

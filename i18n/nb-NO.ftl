@@ -193,3 +193,36 @@ help-run-force-long =
     Tving kjøring av prosjektet med den forespurte eller festede versjonen selv om den ikke samsvarer med prosjektversjonen.
 
     Hvis du gjør dette, kan den forespurte eller festede versjonen av Godot overskrive prosjektfila. Hvis du fester versjoner, anbefales det i stedet å oppdatere den festede versjonen i .gdvmrc for å samsvare med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.
+
+help-config = Administrer gdvm-konfigurasjon
+help-config-get = Hent en konfigurasjonsverdi
+help-config-set = Sett en konfigurasjonsverdi
+help-config-unset = Fjern en konfigurasjonsverdi
+help-config-list = List alle konfigurasjonsverdier
+help-config-key = Konfigurasjonsnøkkelen (f.eks. github.token)
+help-config-value = Verdien som skal settes for konfigurasjonsnøkkelen
+help-config-unset-key = Konfigurasjonsnøkkelen som skal fjernes (f.eks. github.token)
+help-config-show-sensitive = Vis sensitive konfigurasjonsverdier i klartekst
+help-config-available = List alle tilgjengelige konfigurasjonsnøkler og verdier, inkludert standardverdier
+warning-setting-sensitive = {"\u001b"}[33mAdvarsel: Du setter en sensitiv verdi som vil bli lagra i klartekst i hjemmekatalogen din.{"\u001b"}[0m
+config-set-prompt = Vennligst skriv inn verdien for { $key }:
+error-reading-input = Feil ved lesing av inndata
+config-set-prompt-sensitive = Vennligst skriv inn den sensitive verdien for { $key }:
+config-set-success = Konfigurasjonen ble oppdatert.
+config-unset-success = Konfigurasjonsnøkkelen { $key } ble fjernet vellykket.
+config-key-not-set = Konfigurasjonsnøkkel ikke satt.
+error-unknown-config-key = Ukjent konfigurasjonsnøkkel.
+error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk "get", "set" eller "list".
+error-parse-config = Kunne ikke tolke konfigurasjonsfilen: { $error }
+error-parse-config-using-default = {"\u001b"}[33mBruker standard konfigurasjonsverdier.{"\u001b"}[0m
+error-github-api = GitHub API-feil: { $error }
+error-github-rate-limit = GitHub API-ratebegrensning overskredet.
+
+  For å løse dette, vennligst opprett en personlig tilgangstoken på GitHub ved å besøke https://github.com/settings/tokens.
+
+  Klikk på "Generate new token", velg kun de minimale tillatelsene som kreves (f.eks. public_repo), og sett deretter tokenet via miljøvariabelen GITHUB_TOKEN eller ved å kjøre:
+
+    gdvm config set github.token
+
+  Merk: Tokenet vil bli lagret i klartekst i hjemmekatalogen din. Vennligst sørg for at du holder det sikkert.
+  Det anbefales å regelmessig gjennomgå og rotere tokenene dine for sikkerhetsformål.

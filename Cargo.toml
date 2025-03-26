@@ -44,6 +44,8 @@ semver = "=1.0.26"
 
 # For file system operations:
 zip = "=2.2.3"
+toml = "0.8.20"
+rpassword = "7.3.1"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]

@@ -1,3 +1,4 @@
+mod config;
 mod download_utils;
 mod godot_manager;
 mod i18n;
@@ -7,6 +8,7 @@ mod zip_utils;
 
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgMatches, Command, value_parser};
+use config::ConfigOps;
 use godot_manager::{GodotManager, InstallOutcome};
 use i18n::I18n;
 use std::{
@@ -256,6 +258,57 @@ fn main() -> Result<()> {
                         .help(i18n.t("help-csharp")),
                 ),
         )
+        .subcommand(
+            Command::new("config")
+                .about(i18n.t("help-config"))
+                .subcommand(
+                    Command::new("get").about(i18n.t("help-config-get")).arg(
+                        Arg::new("key")
+                            .required(true)
+                            .help(i18n.t("help-config-key")),
+                    ),
+                )
+                .subcommand(
+                    Command::new("set")
+                        .about(i18n.t("help-config-set"))
+                        .arg(
+                            Arg::new("key")
+                                .required(true)
+                                .help(i18n.t("help-config-key")),
+                        )
+                        .arg(
+                            Arg::new("value")
+                                .required(false)
+                                .help(i18n.t("help-config-value")),
+                        ),
+                )
+                .subcommand(
+                    Command::new("unset")
+                        .about(i18n.t("help-config-unset"))
+                        .arg(
+                            Arg::new("key")
+                                .required(true)
+                                .help(i18n.t("help-config-unset-key")),
+                        ),
+                )
+                .subcommand(
+                    Command::new("list")
+                        .about(i18n.t("help-config-list"))
+                        .arg(
+                            Arg::new("show-sensitive")
+                                .long("show-sensitive")
+                                .action(clap::ArgAction::SetTrue)
+                                .help(i18n.t("help-config-show-sensitive")),
+                        )
+                        .arg(
+                            Arg::new("available")
+                                .long("available")
+                                .short('a')
+                                .action(clap::ArgAction::SetTrue)
+                                .help(i18n.t("help-config-available")),
+                        ),
+                ),
+        )
         .get_matches();
 
     // Match the subcommand and call the appropriate function
@@ -269,6 +322,7 @@ fn main() -> Result<()> {
         Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m)?,
         Some(("upgrade", _)) => sub_upgrade(&manager)?,
         Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m)?,
+        Some(("config", sub_m)) => sub_config(&i18n, sub_m)?,
         _ => {}
     }
 
@@ -677,6 +731,101 @@ fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
             "error-pin-version-not-found",
             [("version", &resolved_version.to_display_str())]
         ),
+    }
+    Ok(())
+}
+
+/// Handle the 'config' subcommand
+fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
+    let mut config = config::Config::load(i18n)?;
+    match matches.subcommand() {
+        Some(("get", sub_m)) => {
+            let key = sub_m.get_one::<String>("key").unwrap();
+            if let Some(value) = config.get_value(key) {
+                println!("{}", value);
+            } else {
+                println!("{}", i18n.t("config-key-not-set"));
+            }
+        }
+        Some(("set", sub_m)) => {
+            let key = sub_m.get_one::<String>("key").unwrap();
+            // If the value argument is not provided, prompt the user.
+            let value: String = if let Some(v) = sub_m.get_one::<String>("value") {
+                v.clone()
+            } else {
+                // Build the prompt message from the Fluent bundle.
+                let prompt = i18n.t_args("config-set-prompt", &[("key", key.as_str().into())]);
+                eprint!("{} ", prompt);
+                if config.is_sensitive_key(key) {
+                    // Mask input for sensitive values.
+                    match rpassword::prompt_password("") {
+                        Ok(input) => input,
+                        Err(err) => {
+                            eprintln!("{}: {}", i18n.t("error-reading-input"), err);
+                            return Ok(());
+                        }
+                    }
+                } else {
+                    // For non-sensitive values, read normally.
+                    std::io::stdout().flush()?;
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input)?;
+                    input.trim().to_string()
+                }
+            };
+
+            if config.is_sensitive_key(key) {
+                eprintln!("{}", i18n.t("warning-setting-sensitive"));
+            }
+            match config.set_value(key, &value) {
+                Ok(()) => {
+                    config.save(i18n)?;
+                    println!("{}", i18n.t("config-set-success"));
+                }
+                Err(_) => eprintln!("{}", i18n.t("error-unknown-config-key")),
+            }
+        }
+        Some(("unset", sub_m)) => {
+            let key = sub_m.get_one::<String>("key").unwrap();
+            match config.unset_value(key) {
+                Ok(()) => {
+                    config.save(i18n)?;
+                    println!(
+                        "{}",
+                        i18n.t_args("config-unset-success", &[("key", key.into())])
+                    );
+                }
+                Err(_) => eprintln!("{}", i18n.t("error-unknown-config-key")),
+            }
+        }
+        Some(("list", sub_m)) => {
+            let show_sensitive = sub_m.get_flag("show-sensitive");
+            let available = sub_m.get_flag("available");
+            if available {
+                // List all known keys whether set or not.
+                for key in config::KNOWN_KEYS {
+                    let value_opt = config.get_value(key);
+                    let display_value =
+                        match (value_opt, config.is_sensitive_key(key), show_sensitive) {
+                            (Some(_), true, false) => "********".to_string(),
+                            (Some(val), _, _) => val,
+                            (None, _, _) => "<not set>".to_string(),
+                        };
+                    println!("{} = {}", key, display_value);
+                }
+            } else {
+                // List only keys that are set.
+                for (key, value, sensitive) in config.list_set_keys() {
+                    let display_value = if sensitive && !show_sensitive {
+                        "********".to_string()
+                    } else {
+                        value
+                    };
+                    println!("{} = {}", key, display_value);
+                }
+            }
+        }
+        _ => eprintln!("{}", i18n.t("error-invalid-config-subcommand")),
     }
     Ok(())
 }

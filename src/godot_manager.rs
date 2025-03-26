@@ -1,3 +1,4 @@
+use crate::config::Config;
 use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
@@ -8,11 +9,11 @@ use indicatif::{ProgressBar, ProgressStyle};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
-use std::fs;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{env, fs};
 
 use crate::download_utils::download_file;
 use crate::version_utils;
@@ -64,6 +65,8 @@ pub struct GodotManager<'a> {
     cache_index_path: PathBuf,
     /// Path to directory to store cached zip files
     cache_path: PathBuf,
+    /// Client for GitHub API requests
+    client: reqwest::blocking::Client,
     i18n: &'a I18n,
 }
 
@@ -304,11 +307,14 @@ impl<'a> GodotManager<'a> {
         fs::create_dir_all(&install_path)?;
         fs::create_dir_all(&cache_path)?;
 
+        let client = GodotManager::get_github_client(i18n)?;
+
         let manager = GodotManager {
             base_path,
             install_path,
             cache_index_path,
             cache_path,
+            client,
             i18n,
         };
 
@@ -600,9 +606,58 @@ impl<'a> GodotManager<'a> {
         Ok(filtered_releases)
     }
 
+    /// Gets a reqwest client with the GitHub token if available
+    fn get_github_client(i18n: &I18n) -> Result<reqwest::blocking::Client> {
+        let token = env::var("GITHUB_TOKEN").ok().or_else(|| {
+            let config = Config::load(i18n).ok()?;
+            config.github_token
+        });
+        let mut headers = reqwest::header::HeaderMap::new();
+        if let Some(token) = token {
+            headers.insert(
+                reqwest::header::AUTHORIZATION,
+                format!("token {}", token).parse()?,
+            );
+        }
+        Ok(reqwest::blocking::ClientBuilder::new()
+            .default_headers(headers)
+            .user_agent("gdvm")
+            .build()?)
+    }
+
+    /// Tries to query the GitHub API with a GET at a given URL. If it fails due
+    /// to a rate-limit, it will return an error after printing a message.
+    fn get_github_json(&self, url: &str) -> Result<serde_json::Value> {
+        // Rate limits are 403s with a JSON object that has a "message" key that
+        // starts with "API rate limit exceeded".
+
+        let resp = self.client.get(url).header("User-Agent", "gdvm").send()?;
+
+        if resp.status().is_success() {
+            let json: serde_json::Value = resp.json()?;
+            return Ok(json);
+        }
+
+        let status = resp.status();
+        let json: serde_json::Value = resp.json()?;
+        if status == reqwest::StatusCode::FORBIDDEN {
+            if let Some(message) = json.get("message").and_then(|m| m.as_str()) {
+                if message.starts_with("API rate limit exceeded") {
+                    return Err(anyhow!(self.i18n.t_w("error-github-rate-limit")));
+                }
+            }
+        }
+
+        let error_message = json.get("message").and_then(|m| m.as_str());
+
+        Err(anyhow!(self.i18n.t_args_w(
+            "error-github-api",
+            &[("error", FluentValue::from(error_message))]
+        )))
+    }
+
     /// Update the cache by fetching from GitHub and updating `last_fetched`
     fn update_cache(&self, cache: &mut GithubReleasesCache) -> Result<()> {
-        let client = reqwest::blocking::Client::new();
         let mut page = 1;
         let page_size = if cache.releases.is_empty() { 100 } else { 10 };
 
@@ -616,16 +671,10 @@ impl<'a> GodotManager<'a> {
         pb.set_message(self.i18n.t_w("fetching-releases"));
 
         while !seen_existing_release {
-            let url = format!(
+            let releases = self.get_github_json(&format!(
                 "https://api.github.com/repos/godotengine/godot-builds/releases?per_page={}&page={}",
                 page_size, page
-            );
-            let resp = client
-                .get(&url)
-                .header("User-Agent", "gdvm")
-                .send()?
-                .error_for_status()?;
-            let releases: serde_json::Value = serde_json::from_str(&resp.text()?)?;
+            ))?;
 
             if let Some(arr) = releases.as_array() {
                 if arr.is_empty() {
@@ -984,15 +1033,9 @@ impl<'a> GodotManager<'a> {
             let mut new_version = None;
 
             if let Err(err) = {
-                let client = reqwest::blocking::Client::new();
-                let url = "https://api.github.com/repos/adalinesimonian/gdvm/releases/latest";
-                let resp = client
-                    .get(url)
-                    .header("User-Agent", "gdvm")
-                    .timeout(Duration::from_secs(3))
-                    .send()?
-                    .error_for_status()?;
-                let release: serde_json::Value = serde_json::from_str(&resp.text()?)?;
+                let release = self.get_github_json(
+                    "https://api.github.com/repos/adalinesimonian/gdvm/releases/latest",
+                )?;
 
                 if let Some(tag_name) = release.get("tag_name").and_then(|t| t.as_str()) {
                     let latest_version = Version::parse(tag_name.trim_start_matches('v'))?;
