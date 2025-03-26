@@ -291,6 +291,35 @@
                         version
                     </li>
                 </ul>
+                <div class="tip-box">
+                    <span class="emoji">ℹ️</span>
+                    <span
+                        >If you encounter GitHub API rate limit errors, you may
+                        need to wait or use a personal access token to increase
+                        your limit. To use a personal access token:
+                        <ol>
+                            <li>
+                                <a
+                                    href="https://github.com/settings/personal-access-tokens/new"
+                                    >Create a fine-grained personal access
+                                    token</a
+                                >
+                                with access to public repositories.
+                            </li>
+                            <li>
+                                Run
+                                <code>gdvm config set github.token</code> and
+                                enter your token when prompted. You can also use
+                                the <code>GITHUB_TOKEN</code> environment
+                                variable to set the token, useful for CI/CD
+                                pipelines.
+                            </li>
+                        </ol>
+                        Note that this will store the token in plain text in the
+                        <code>~/.gdvm/config.toml</code> file, so make sure to
+                        keep it secure.
+                    </span>
+                </div>
                 <p>
                     For more information on how to use <code>gdvm</code>, run
                     <code>gdvm --help</code>.
