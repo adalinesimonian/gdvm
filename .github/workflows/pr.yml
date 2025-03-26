@@ -6,6 +6,7 @@ on:
       - main
     paths-ignore:
       - "gh-pages/**"
+      - "README.md"
 
 concurrency:
   group: pr-${{ github.event.number }}
