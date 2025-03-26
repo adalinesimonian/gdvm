@@ -56,7 +56,7 @@ gdvm upgrade                 # Upgrades gdvm to the latest version
 > 1. [Create a fine-grained personal access token](https://github.com/settings/personal-access-tokens) with access to public repositories.
 > 2. Run `gdvm config set github.token` and enter your token when prompted. You can also use the `GITHUB_TOKEN` environment variable to set the token, useful for CI/CD pipelines.
 >
-> Note that this will store the token in plain text in the `~/.gdvm/config.toml` file, so make sure to keep it secure.
+> Note that running `gdvm config set github.token` will store the token in plain text in the `~/.gdvm/config.toml` file, so make sure to keep it secure.
 
 For more information, run
 
