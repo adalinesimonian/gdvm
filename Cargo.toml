@@ -27,7 +27,7 @@ textwrap = { version = "=0.16.2", features = [
 ] }
 
 # For downloading files:
-reqwest = { version = "=0.12.14", features = [
+reqwest = { version = "=0.12.15", features = [
     "json",
     "gzip",
     "brotli",
@@ -43,7 +43,7 @@ serde = { version = "=1.0.219", features = ["derive"] }
 semver = "=1.0.26"
 
 # For file system operations:
-zip = "=2.2.3"
+zip = "=2.5.0"
 toml = "0.8.20"
 rpassword = "7.3.1"
 
