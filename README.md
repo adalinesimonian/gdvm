@@ -18,6 +18,12 @@ Install on Windows:
 powershell -NoProfile -Command "(iwr -useb 'https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.ps1').Content | iex"
 ```
 
+### Supported Platforms
+
+- Windows (64-bit, 32-bit, and 64-bit ARM)
+- macOS (64-bit Intel and Apple Silicon)
+- Linux (64-bit, 32-bit, and 64-bit ARM)
+
 ## Usage
 
 Once installed, you can use the `gdvm` command to manage your Godot installations. Here are some common commands:
