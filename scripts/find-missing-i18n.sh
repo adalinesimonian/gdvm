@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 # Determine the directory where the script is located
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Extract string names from Rust files
 # shellcheck disable=SC2016
-strings=$(find "$SCRIPT_DIR/../src" -type f -name '*.rs' -print0 | \
+expectedKeys=$(find "$SCRIPT_DIR/../src" -type f -name '*.rs' -print0 | \
     xargs -0 perl -0777 -ne '
         while (/(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
             print "$1\n";
         }
-    ' | sort | uniq)
+    ' | sort -u)
 
 exitCode=0
 
@@ -19,21 +20,18 @@ for ftl in "$SCRIPT_DIR/../i18n/"*.ftl; do
     lang=$(basename "$ftl" .ftl)
     echo "Checking translations for language: ${lang}"
 
-    missing=()
-    # Check for missing strings
-    for string in $strings; do
-        if ! grep -q "^${string}[[:space:]]*=" "$ftl"; then
-            missing+=("$string")
-        fi
-    done
+    # Extract keys from the .ftl file.
+    ftlKeys=$(grep -oE '^[a-zA-Z0-9_-]+\s*=' "$ftl" | sed 's/\s*=$//' | sort -u)
 
-    # Print missing translations
-    if [ ${#missing[@]} -ne 0 ]; then
+    # Check for missing strings
+    missing=$(comm -23 <(echo "$expectedKeys") <(echo "$ftlKeys"))
+
+    if [[ -n "$missing" ]]; then
         exitCode=1
         echo "Missing translations in ${lang}:"
-        for m in "${missing[@]}"; do
-            echo "  - $m"
-        done
+        while IFS= read -r key; do
+            echo "  - $key"
+        done <<< "$missing"
     else
         echo "All translations present for ${lang}."
     fi
