@@ -11,7 +11,7 @@ expectedKeys=$(find "$SCRIPT_DIR/../src" -type f -name '*.rs' -print0 | \
         while (/(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
             print "$1\n";
         }
-    ' | sort -u)
+    ' | LC_ALL=C sort -u)
 
 exitCode=0
 
@@ -21,7 +21,7 @@ for ftl in "$SCRIPT_DIR/../i18n/"*.ftl; do
     echo "Checking translations for language: ${lang}"
 
     # Extract keys from the .ftl file.
-    ftlKeys=$(grep -oE '^[a-zA-Z0-9_-]+\s*=' "$ftl" | sed 's/\s*=$//' | sort -u)
+    ftlKeys=$(grep -oE '^[a-zA-Z0-9_-]+\s*=' "$ftl" | sed 's/\s*=$//' | LC_ALL=C sort -u)
 
     # Check for missing strings
     missing=$(comm -23 <(echo "$expectedKeys") <(echo "$ftlKeys"))
