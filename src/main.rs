@@ -262,13 +262,11 @@ fn main() -> Result<()> {
             Command::new("config")
                 .about(t!(i18n, "help-config"))
                 .subcommand(
-                    Command::new("get")
-                        .about(t!(i18n, "help-config-get"))
-                        .arg(
-                            Arg::new("key")
-                                .required(true)
-                                .help(t!(i18n, "help-config-key")),
-                        ),
+                    Command::new("get").about(t!(i18n, "help-config-get")).arg(
+                        Arg::new("key")
+                            .required(true)
+                            .help(t!(i18n, "help-config-key")),
+                    ),
                 )
                 .subcommand(
                     Command::new("set")
