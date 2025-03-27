@@ -500,7 +500,7 @@ impl<'a> GodotManager<'a> {
                     return Err(anyhow!(t!(
                         self.i18n,
                         "godot-executable-not-found",
-                        &[("version", FluentValue::from(&gv.to_display_str()))]
+                        version = &gv.to_display_str(),
                     )));
                 }
                 if console {
