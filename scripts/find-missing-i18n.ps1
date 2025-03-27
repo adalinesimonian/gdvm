@@ -10,7 +10,7 @@ $rsFiles = Get-ChildItem -Path "$ScriptDir\..\src" -Recurse -Filter *.rs
 $keys = @()
 
 # Define the regex pattern with single-line and multi-line options
-$pattern = '(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|[xe]?println_i18n!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"'
+$pattern = '(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"'
 
 foreach ($file in $rsFiles) {
     # Read the entire file content as a single string

@@ -8,11 +8,11 @@ use std::{
 
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::{eprintln_i18n, i18n::I18n};
+use crate::{eprintln_i18n, i18n::I18n, t};
 
 pub fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
     // Print downloading URL message
-    eprintln_i18n!(i18n, "operation-downloading-url", [("url", url)]);
+    eprintln_i18n!(i18n, "operation-downloading-url", url = url);
 
     let response = reqwest::blocking::get(url)?;
 
@@ -45,18 +45,16 @@ pub fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
                 pb.set_position(downloaded);
             }
 
-            pb.finish_with_message(i18n.t("operation-download-complete"));
+            pb.finish_with_message(t!(i18n, "operation-download-complete"));
         }
         reqwest::StatusCode::NOT_FOUND => {
-            return Err(anyhow!(i18n.t("error-file-not-found")));
+            return Err(anyhow!(t!(i18n, "error-file-not-found")));
         }
         status => {
-            return Err(anyhow!(i18n.t_args(
+            return Err(anyhow!(t!(
+                i18n,
                 "error-download-failed",
-                &[(
-                    "status",
-                    fluent_bundle::FluentValue::from(status.to_string())
-                )]
+                status = status.to_string(),
             )));
         }
     }

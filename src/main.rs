@@ -67,7 +67,7 @@ fn main() -> Result<()> {
     let matches = Command::new("gdvm")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Adaline Simonian <adalinesimonian@gmail.com>")
-        .about(i18n.t("help-about"))
+        .about(t!(i18n, "help-about"))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .disable_help_flag(true)
@@ -80,54 +80,54 @@ fn main() -> Result<()> {
                 .long("help")
                 .action(clap::ArgAction::Help)
                 .global(true)
-                .help(i18n.t("help-help")),
+                .help(t!(i18n, "help-help")),
         )
         .arg(
             Arg::new("version")
                 .short('V')
                 .long("version")
                 .action(clap::ArgAction::Version)
-                .help(i18n.t("help-gdvm-version")),
+                .help(t!(i18n, "help-gdvm-version")),
         )
         .subcommand(
             Command::new("install")
-                .about(i18n.t("help-install"))
+                .about(t!(i18n, "help-install"))
                 .arg(
                     Arg::new("version")
                         .required(true)
                         .value_parser(version_utils::validate_remote_version)
-                        .help(i18n.t("help-version"))
-                        .long_help(i18n.t("help-version-long")),
+                        .help(t!(i18n, "help-version"))
+                        .long_help(t!(i18n, "help-version-long")),
                 )
                 .arg(
                     Arg::new("csharp")
                         .long("csharp")
                         .num_args(0)
-                        .help(i18n.t("help-csharp")),
+                        .help(t!(i18n, "help-csharp")),
                 )
                 .arg(
                     Arg::new("force")
                         .long("force")
                         .short('f')
                         .num_args(0)
-                        .help(i18n.t("help-force")),
+                        .help(t!(i18n, "help-force")),
                 )
                 .arg(
                     Arg::new("redownload")
                         .long("redownload")
                         .num_args(0)
-                        .help(i18n.t("help-redownload")),
+                        .help(t!(i18n, "help-redownload")),
                 ),
         )
-        .subcommand(Command::new("list").about(i18n.t("help-list")))
+        .subcommand(Command::new("list").about(t!(i18n, "help-list")))
         .subcommand(
             Command::new("run")
-                .about(i18n.t("help-run"))
+                .about(t!(i18n, "help-run"))
                 .arg(
                     Arg::new("version")
                         .required(false)
                         .value_parser(version_utils::validate_remote_version)
-                        .help(i18n.t("help-version-installed")),
+                        .help(t!(i18n, "help-version-installed")),
                 )
                 .arg(
                     Arg::new("csharp")
@@ -137,8 +137,8 @@ fn main() -> Result<()> {
                         .default_missing_value("true")
                         .default_value("false")
                         .require_equals(true)
-                        .help(i18n.t("help-csharp"))
-                        .long_help(i18n.t("help-run-csharp-long")),
+                        .help(t!(i18n, "help-csharp"))
+                        .long_help(t!(i18n, "help-run-csharp-long")),
                 )
                 .arg(
                     Arg::new("console")
@@ -154,67 +154,67 @@ fn main() -> Result<()> {
                             "true",
                         )
                         .require_equals(true)
-                        .help(i18n.t("help-console")),
+                        .help(t!(i18n, "help-console")),
                 )
                 .arg(
                     Arg::new("force")
                         .long("force")
                         .short('f')
                         .num_args(0)
-                        .help(i18n.t("help-run-force"))
-                        .long_help(i18n.t("help-run-force-long")),
+                        .help(t!(i18n, "help-run-force"))
+                        .long_help(t!(i18n, "help-run-force-long")),
                 )
                 // Allow any number of command line arguments to be passed to the Godot executable after "--"
                 .arg(
                     Arg::new("args")
                         .num_args(0..)
                         .last(true)
-                        .help(i18n.t("help-run-args")),
+                        .help(t!(i18n, "help-run-args")),
                 ),
         )
         .subcommand(
             Command::new("remove")
-                .about(i18n.t("help-remove"))
+                .about(t!(i18n, "help-remove"))
                 .arg(
                     Arg::new("version")
                         .required(true)
                         .value_parser(version_utils::validate_remote_version)
-                        .help(i18n.t("help-version-installed")),
+                        .help(t!(i18n, "help-version-installed")),
                 )
                 .arg(
                     Arg::new("csharp")
                         .long("csharp")
                         .num_args(0)
-                        .help(i18n.t("help-csharp")),
+                        .help(t!(i18n, "help-csharp")),
                 )
                 .arg(
                     Arg::new("yes")
                         .short('y')
                         .long("yes")
                         .num_args(0)
-                        .help(i18n.t("help-yes")),
+                        .help(t!(i18n, "help-yes")),
                 ),
         )
         .subcommand(
             Command::new("search")
-                .about(i18n.t("help-search"))
+                .about(t!(i18n, "help-search"))
                 .arg(
                     Arg::new("filter")
                         .long("filter")
                         .num_args(1)
-                        .help(i18n.t("help-filter")),
+                        .help(t!(i18n, "help-filter")),
                 )
                 .arg(
                     Arg::new("include-pre")
                         .long("include-pre")
                         .num_args(0)
-                        .help(i18n.t("help-include-pre")),
+                        .help(t!(i18n, "help-include-pre")),
                 )
                 .arg(
                     Arg::new("cache-only")
                         .long("cache-only")
                         .num_args(0)
-                        .help(i18n.t("help-cache-only")),
+                        .help(t!(i18n, "help-cache-only")),
                 )
                 .arg(
                     Arg::new("limit")
@@ -222,90 +222,92 @@ fn main() -> Result<()> {
                         .num_args(1)
                         .default_value("10")
                         .value_parser(clap::value_parser!(usize))
-                        .help(i18n.t("help-limit")),
+                        .help(t!(i18n, "help-limit")),
                 ),
         )
-        .subcommand(Command::new("clear-cache").about(i18n.t("help-clear-cache")))
+        .subcommand(Command::new("clear-cache").about(t!(i18n, "help-clear-cache")))
         .subcommand(
             Command::new("use")
-                .about(i18n.t("help-default"))
+                .about(t!(i18n, "help-default"))
                 .arg(
                     Arg::new("version")
-                        .help(i18n.t("help-default-version"))
+                        .help(t!(i18n, "help-default-version"))
                         .required(false),
                 )
                 .arg(
                     Arg::new("csharp")
                         .long("csharp")
                         .num_args(0)
-                        .help(i18n.t("help-csharp")),
+                        .help(t!(i18n, "help-csharp")),
                 ),
         )
-        .subcommand(Command::new("upgrade").about(i18n.t("help-upgrade")))
+        .subcommand(Command::new("upgrade").about(t!(i18n, "help-upgrade")))
         .subcommand(
             Command::new("pin")
-                .about(i18n.t("help-pin"))
-                .long_about(i18n.t("help-pin-long"))
+                .about(t!(i18n, "help-pin"))
+                .long_about(t!(i18n, "help-pin-long"))
                 .arg(
                     Arg::new("version")
-                        .help(i18n.t("help-pin-version"))
+                        .help(t!(i18n, "help-pin-version"))
                         .required(true),
                 )
                 .arg(
                     Arg::new("csharp")
                         .long("csharp")
                         .num_args(0)
-                        .help(i18n.t("help-csharp")),
+                        .help(t!(i18n, "help-csharp")),
                 ),
         )
         .subcommand(
             Command::new("config")
-                .about(i18n.t("help-config"))
+                .about(t!(i18n, "help-config"))
                 .subcommand(
-                    Command::new("get").about(i18n.t("help-config-get")).arg(
-                        Arg::new("key")
-                            .required(true)
-                            .help(i18n.t("help-config-key")),
-                    ),
-                )
-                .subcommand(
-                    Command::new("set")
-                        .about(i18n.t("help-config-set"))
+                    Command::new("get")
+                        .about(t!(i18n, "help-config-get"))
                         .arg(
                             Arg::new("key")
                                 .required(true)
-                                .help(i18n.t("help-config-key")),
+                                .help(t!(i18n, "help-config-key")),
+                        ),
+                )
+                .subcommand(
+                    Command::new("set")
+                        .about(t!(i18n, "help-config-set"))
+                        .arg(
+                            Arg::new("key")
+                                .required(true)
+                                .help(t!(i18n, "help-config-key")),
                         )
                         .arg(
                             Arg::new("value")
                                 .required(false)
-                                .help(i18n.t("help-config-value")),
+                                .help(t!(i18n, "help-config-value")),
                         ),
                 )
                 .subcommand(
                     Command::new("unset")
-                        .about(i18n.t("help-config-unset"))
+                        .about(t!(i18n, "help-config-unset"))
                         .arg(
                             Arg::new("key")
                                 .required(true)
-                                .help(i18n.t("help-config-unset-key")),
+                                .help(t!(i18n, "help-config-unset-key")),
                         ),
                 )
                 .subcommand(
                     Command::new("list")
-                        .about(i18n.t("help-config-list"))
+                        .about(t!(i18n, "help-config-list"))
                         .arg(
                             Arg::new("show-sensitive")
                                 .long("show-sensitive")
                                 .action(clap::ArgAction::SetTrue)
-                                .help(i18n.t("help-config-show-sensitive")),
+                                .help(t!(i18n, "help-config-show-sensitive")),
                         )
                         .arg(
                             Arg::new("available")
                                 .long("available")
                                 .short('a')
                                 .action(clap::ArgAction::SetTrue)
-                                .help(i18n.t("help-config-available")),
+                                .help(t!(i18n, "help-config-available")),
                         ),
                 ),
         )
@@ -338,7 +340,7 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
     let requested_version = GodotVersion::from_match_str(version_input)?;
     let mut gv = manager
         .resolve_available_version(&requested_version, false)
-        .ok_or_else(|| anyhow!(i18n.t("error-version-not-found")))?;
+        .ok_or_else(|| anyhow!(t!(i18n, "error-version-not-found")))?;
 
     let is_csharp = matches.get_flag("csharp");
     gv.is_csharp = Some(is_csharp);
@@ -347,24 +349,21 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
     println_i18n!(
         i18n,
         "installing-version",
-        [("version", &gv.to_display_str())]
+        //[("version", &gv.to_display_str())]
+        version = &gv.to_display_str()
     );
 
     match manager.install(&gv, force_reinstall, redownload)? {
         InstallOutcome::Installed => {
             // Print a message indicating the successful installation
-            println_i18n!(
-                i18n,
-                "installed-success",
-                [("version", &gv.to_display_str())]
-            );
+            println_i18n!(i18n, "installed-success", version = &gv.to_display_str());
         }
         InstallOutcome::AlreadyInstalled => {
             // Print a message indicating the version is already installed
             println_i18n!(
                 i18n,
                 "version-already-installed",
-                [("version", &gv.to_display_str())]
+                version = &gv.to_display_str()
             );
             return Ok(());
         }
@@ -475,15 +474,14 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
                 eprintln_i18n!(
                     i18n,
                     "warning-project-version-mismatch-force",
-                    [
-                        ("requested_version", requested_version.to_display_str()),
-                        ("pinned", 0)
-                    ]
+                    requested_version = requested_version.to_display_str(),
+                    pinned = 0,
                 );
             } else {
-                return Err(anyhow!(i18n.t_args_w(
+                return Err(anyhow!(t_w!(
+                    i18n,
                     "error-project-version-mismatch",
-                    &[("pinned", fluent_bundle::FluentValue::from(0))]
+                    pinned = 0,
                 )));
             }
         }
@@ -495,15 +493,14 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
                 eprintln_i18n!(
                     i18n,
                     "warning-project-version-mismatch-force",
-                    [
-                        ("requested_version", pinned.to_display_str()),
-                        ("pinned", 1)
-                    ]
+                    requested_version = pinned.to_display_str(),
+                    pinned = 1,
                 );
             } else {
-                return Err(anyhow!(i18n.t_args_w(
+                return Err(anyhow!(t_w!(
+                    i18n,
                     "error-project-version-mismatch",
-                    &[("pinned", fluent_bundle::FluentValue::from(1))]
+                    pinned = 1
                 )));
             }
         }
@@ -516,7 +513,7 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
         eprintln_i18n!(
             i18n,
             "warning-using-project-version",
-            [("version", project_version.to_display_str())]
+            version = project_version.to_display_str()
         );
         manager.auto_install_version(&project_version)?
     } else if let Some(mut default_ver) = manager.get_default()? {
@@ -526,13 +523,13 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
 
         default_ver
     } else {
-        return Err(anyhow!(i18n.t("no-default-set")));
+        return Err(anyhow!(t!(i18n, "no-default-set")));
     };
 
     eprintln_i18n!(
         i18n,
         "running-version",
-        [("version", &resolved_version.to_display_str())]
+        version = &resolved_version.to_display_str()
     );
 
     manager.run(&resolved_version, console, raw_args)?;
@@ -570,11 +567,9 @@ fn warn_project_version_mismatch<P: AsRef<Path>>(
             eprintln_i18n!(
                 i18n,
                 "warning-project-version-mismatch",
-                [
-                    ("project_version", project_version.to_display_str()),
-                    ("requested_version", requested.to_display_str()),
-                    ("pinned", is_pin as i32)
-                ]
+                project_version = project_version.to_display_str(),
+                requested_version = requested.to_display_str(),
+                pinned = is_pin as i32,
             );
             eprintln!();
 
@@ -602,20 +597,20 @@ fn sub_remove(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
         1 => {
             let gv = &resolved_versions[0];
 
-            println_i18n!(i18n, "removing-version", [("version", gv.to_display_str())]);
+            println_i18n!(i18n, "removing-version", version = gv.to_display_str());
 
             if !matches.get_flag("yes") {
                 println_i18n!(i18n, "confirm-remove");
                 io::stdout().flush().unwrap();
                 let mut input = String::new();
                 io::stdin().read_line(&mut input).unwrap();
-                if input.trim().to_lowercase() != i18n.t("confirm-yes") {
+                if input.trim().to_lowercase() != t!(i18n, "confirm-yes") {
                     println_i18n!(i18n, "remove-cancelled");
                     return Ok(());
                 }
             }
             manager.remove(gv)?;
-            println_i18n!(i18n, "removed-version", [("version", gv.to_display_str())]);
+            println_i18n!(i18n, "removed-version", version = gv.to_display_str());
         }
         _ => {
             eprintln_i18n!(i18n, "error-multiple-versions-found");
@@ -697,7 +692,7 @@ fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     println_i18n!(
         i18n,
         "default-set-success",
-        [("version", &resolved_version.to_display_str())]
+        version = &resolved_version.to_display_str(),
     );
 
     Ok(())
@@ -724,12 +719,12 @@ fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         Ok(()) => println_i18n!(
             i18n,
             "pinned-success",
-            [("version", &resolved_version.to_display_str())]
+            version = &resolved_version.to_display_str(),
         ),
         Err(_) => eprintln_i18n!(
             i18n,
             "error-pin-version-not-found",
-            [("version", &resolved_version.to_display_str())]
+            version = &resolved_version.to_display_str(),
         ),
     }
     Ok(())
@@ -744,7 +739,7 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
             if let Some(value) = config.get_value(key) {
                 println!("{}", value);
             } else {
-                println!("{}", i18n.t("config-key-not-set"));
+                println!("{}", t!(i18n, "config-key-not-set"));
             }
         }
         Some(("set", sub_m)) => {
@@ -754,14 +749,14 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
                 v.clone()
             } else {
                 // Build the prompt message from the Fluent bundle.
-                let prompt = i18n.t_args("config-set-prompt", &[("key", key.as_str().into())]);
+                let prompt = t!(i18n, "config-set-prompt", key = key.as_str());
                 eprint!("{} ", prompt);
                 if config.is_sensitive_key(key) {
                     // Mask input for sensitive values.
                     match rpassword::prompt_password("") {
                         Ok(input) => input,
                         Err(err) => {
-                            eprintln!("{}: {}", i18n.t("error-reading-input"), err);
+                            eprintln!("{}: {}", t!(i18n, "error-reading-input"), err);
                             return Ok(());
                         }
                     }
@@ -775,14 +770,14 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
             };
 
             if config.is_sensitive_key(key) {
-                eprintln!("{}", i18n.t("warning-setting-sensitive"));
+                eprintln_i18n!(i18n, "warning-setting-sensitive");
             }
             match config.set_value(key, &value) {
                 Ok(()) => {
                     config.save(i18n)?;
-                    println!("{}", i18n.t("config-set-success"));
+                    println_i18n!(i18n, "config-set-success");
                 }
-                Err(_) => eprintln!("{}", i18n.t("error-unknown-config-key")),
+                Err(_) => eprintln_i18n!(i18n, "error-unknown-config-key"),
             }
         }
         Some(("unset", sub_m)) => {
@@ -790,12 +785,9 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
             match config.unset_value(key) {
                 Ok(()) => {
                     config.save(i18n)?;
-                    println!(
-                        "{}",
-                        i18n.t_args("config-unset-success", &[("key", key.into())])
-                    );
+                    println_i18n!(i18n, "config-unset-success", key = key);
                 }
-                Err(_) => eprintln!("{}", i18n.t("error-unknown-config-key")),
+                Err(_) => eprintln_i18n!(i18n, "error-unknown-config-key"),
             }
         }
         Some(("list", sub_m)) => {
@@ -825,7 +817,7 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
                 }
             }
         }
-        _ => eprintln!("{}", i18n.t("error-invalid-config-subcommand")),
+        _ => eprintln!("{}", t!(i18n, "error-invalid-config-subcommand")),
     }
     Ok(())
 }

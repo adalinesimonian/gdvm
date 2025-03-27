@@ -1,4 +1,4 @@
-use crate::{eprintln_i18n, i18n};
+use crate::{eprintln_i18n, i18n, t_w};
 use anyhow::{Result, anyhow};
 use directories::BaseDirs;
 use i18n::I18n;
@@ -76,7 +76,7 @@ impl ConfigOps for Config {
 impl Config {
     /// Load configuration from ~/.gdvm/config.toml.
     pub fn load(i18n: &I18n) -> Result<Self> {
-        let base_dirs = BaseDirs::new().ok_or(anyhow!(i18n.t_w("error-find-user-dirs")))?;
+        let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
         let home = base_dirs.home_dir();
         let config_path = home.join(".gdvm").join("config.toml");
         if config_path.exists() {
@@ -84,11 +84,7 @@ impl Config {
             match toml::from_str(&contents) {
                 Ok(config) => Ok(config),
                 Err(e) => {
-                    eprintln_i18n!(
-                        i18n,
-                        "error-parse-config",
-                        [("error", fluent_bundle::FluentValue::from(e.to_string()))]
-                    );
+                    eprintln_i18n!(i18n, "error-parse-config", error = e.to_string());
                     eprintln_i18n!(i18n, "error-parse-config-using-default");
                     Ok(Self::default())
                 }
@@ -100,7 +96,7 @@ impl Config {
 
     /// Save configuration to ~/.gdvm/config.toml.
     pub fn save(&self, i18n: &I18n) -> Result<()> {
-        let base_dirs = BaseDirs::new().ok_or(anyhow!(i18n.t_w("error-find-user-dirs")))?;
+        let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
         let home = base_dirs.home_dir();
         let config_dir = home.join(".gdvm");
         fs::create_dir_all(&config_dir)?;

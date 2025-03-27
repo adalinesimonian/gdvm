@@ -167,40 +167,81 @@ impl I18n {
 }
 
 #[macro_export]
-macro_rules! i18n_print {
-    ($print_fn:ident, $i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
-        $print_fn!(
-            "{}",
-            $i18n.t_args_w(
-                $key,
-                &[
-                    $( ($arg_key, fluent_bundle::FluentValue::from($arg_val)) ),*
-                ]
-            ).as_str()
+macro_rules! i18n_generic {
+    ($i18n:expr, $noargs_func:ident, $args_func:ident, $key:expr, $( $arg_key:ident = $arg_val:expr ),* $(,)?) => {
+        $i18n.$args_func(
+            $key,
+            &[
+                $( ( stringify!($arg_key), fluent_bundle::FluentValue::from($arg_val) ) ),*
+            ]
         )
     };
-    ($print_fn:ident, $i18n:expr, $key:expr) => {
-        $print_fn!("{}", $i18n.t_w($key).as_str())
+    ($i18n:expr, $noargs_func:ident, $args_func:ident, $key:expr) => {
+        $i18n.$noargs_func($key)
+    };
+}
+
+#[macro_export]
+macro_rules! t {
+    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+        $crate::i18n_generic!(
+            $i18n,
+            t,
+            t_args,
+            $key
+            $(, $( $arg_key = $arg_val ),* )?
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! t_w {
+    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+        $crate::i18n_generic!(
+            $i18n,
+            t_w,
+            t_args_w,
+            $key
+            $(, $( $arg_key = $arg_val ),* )?
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! i18n_print {
+    ($print_fn:ident, $i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+        $print_fn!(
+            "{}",
+            $crate::t_w!(
+                $i18n,
+                $key
+                $(, $( $arg_key = $arg_val ),* )?
+            )
+        )
     };
 }
 
 #[macro_export]
 macro_rules! println_i18n {
-    ($i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
-        $crate::i18n_print!(println, $i18n, $key, [$( ($arg_key, $arg_val) ),*])
-    };
-    ($i18n:expr, $key:expr) => {
-        $crate::i18n_print!(println, $i18n, $key)
+    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+        $crate::i18n_print!(
+            println,
+            $i18n,
+            $key
+            $(, $( $arg_key = $arg_val ),* )?
+        )
     };
 }
 
 #[macro_export]
 macro_rules! eprintln_i18n {
-    ($i18n:expr, $key:expr, [$( ($arg_key:expr, $arg_val:expr) ),*]) => {
-        $crate::i18n_print!(eprintln, $i18n, $key, [$( ($arg_key, $arg_val) ),*])
-    };
-    ($i18n:expr, $key:expr) => {
-        $crate::i18n_print!(eprintln, $i18n, $key)
+    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+        $crate::i18n_print!(
+            eprintln,
+            $i18n,
+            $key
+            $(, $( $arg_key = $arg_val ),* )?
+        )
     };
 }
 

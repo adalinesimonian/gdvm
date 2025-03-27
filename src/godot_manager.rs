@@ -3,7 +3,6 @@ use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
 use directories::BaseDirs;
-use fluent_bundle::FluentValue;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
 use semver::Version;
@@ -20,7 +19,7 @@ use crate::version_utils;
 use crate::version_utils::GodotVersionDeterminate;
 use crate::zip_utils;
 use crate::{eprintln_i18n, println_i18n};
-use crate::{i18n, project_version_detector};
+use crate::{i18n, project_version_detector, t, t_w};
 
 use version_utils::{GodotVersion, GodotVersionDeterminateVecExt};
 
@@ -87,7 +86,7 @@ fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
                 "windows_arm64.exe"
             }
         } else {
-            unimplemented!("{}", i18n.t_w("unsupported-architecture"))
+            unimplemented!("{}", t_w!(i18n, "unsupported-architecture"))
         }
     } else if cfg!(target_os = "macos") {
         "macos.universal"
@@ -117,10 +116,10 @@ fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
                 "linux.arm64"
             }
         } else {
-            unimplemented!("{}", i18n.t_w("unsupported-architecture"))
+            unimplemented!("{}", t_w!(i18n, "unsupported-architecture"))
         }
     } else {
-        unimplemented!("{}", i18n.t_w("unsupported-platform"))
+        unimplemented!("{}", t_w!(i18n, "unsupported-platform"))
     };
 
     if is_csharp {
@@ -158,7 +157,7 @@ fn verify_sha512(
     let pb = ProgressBar::new_spinner();
     pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
     pb.enable_steady_tick(Duration::from_millis(100));
-    pb.set_message(i18n.t_w("verifying-checksum"));
+    pb.set_message(t_w!(i18n, "verifying-checksum"));
 
     let sums_content = fs::read_to_string(&sum_file)?;
 
@@ -174,7 +173,7 @@ fn verify_sha512(
             if file_part.ends_with(&target_name) && hash_part == local_hash {
                 fs::remove_file(sum_file)?;
 
-                pb.finish_with_message(i18n.t_w("checksum-verified"));
+                pb.finish_with_message(t_w!(i18n, "checksum-verified"));
 
                 return Ok(());
             }
@@ -183,9 +182,10 @@ fn verify_sha512(
 
     pb.finish_and_clear();
 
-    Err(anyhow!(i18n.t_args(
+    Err(anyhow!(t!(
+        i18n,
         "error-checksum-mismatch",
-        &[("file", FluentValue::from(target_name))]
+        file = target_name,
     )))
 }
 
@@ -298,7 +298,7 @@ impl<'a> GodotManager<'a> {
     /// Create a new GodotManager instance and set up the installation and cache paths
     pub fn new(i18n: &'a I18n) -> Result<Self> {
         // For cross-platform user directory management:
-        let base_dirs = BaseDirs::new().ok_or(anyhow!(i18n.t_w("error-find-user-dirs")))?;
+        let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
         let base_path = base_dirs.home_dir().join(".gdvm");
         let install_path = base_path.join("installs");
         let cache_index_path = base_path.join("cache.json");
@@ -348,10 +348,8 @@ impl<'a> GodotManager<'a> {
                     eprintln_i18n!(
                         self.i18n,
                         "error-ensure-godot-binaries-failed",
-                        [
-                            ("error", &err.to_string()),
-                            ("path", &exe_path.to_string_lossy().to_string())
-                        ]
+                        error = &err.to_string(),
+                        path = &exe_path.to_string_lossy().to_string(),
                     );
                     return Err(err);
                 }
@@ -386,7 +384,7 @@ impl<'a> GodotManager<'a> {
                 eprintln_i18n!(
                     self.i18n,
                     "force-reinstalling-version",
-                    [("version", gv.to_display_str())]
+                    version = gv.to_display_str(),
                 );
             } else {
                 return Ok(InstallOutcome::AlreadyInstalled);
@@ -394,11 +392,7 @@ impl<'a> GodotManager<'a> {
         }
 
         if !gv.is_stable() {
-            eprintln_i18n!(
-                self.i18n,
-                "warning-prerelease",
-                [("branch", &gv.release_type)]
-            );
+            eprintln_i18n!(self.i18n, "warning-prerelease", branch = &gv.release_type);
         }
 
         fs::create_dir_all(&self.cache_path)?;
@@ -412,11 +406,7 @@ impl<'a> GodotManager<'a> {
             eprintln_i18n!(self.i18n, "using-cached-zip");
         } else {
             if redownload && cache_zip_path.exists() {
-                eprintln_i18n!(
-                    self.i18n,
-                    "force-redownload",
-                    [("version", gv.to_display_str())]
-                );
+                eprintln_i18n!(self.i18n, "force-redownload", version = gv.to_display_str());
             }
 
             let tmp_file = self
@@ -470,7 +460,7 @@ impl<'a> GodotManager<'a> {
             fs::remove_dir_all(path)?;
             Ok(())
         } else {
-            Err(anyhow!(self.i18n.t_w("error-version-not-found")))
+            Err(anyhow!(t_w!(self.i18n, "error-version-not-found")))
         }
     }
 
@@ -483,9 +473,10 @@ impl<'a> GodotManager<'a> {
     ) -> Result<()> {
         let version_dir = self.install_path.join(gv.to_install_str());
         if !version_dir.exists() {
-            return Err(anyhow!(self.i18n.t_args(
+            return Err(anyhow!(t!(
+                self.i18n,
                 "error-version-not-found",
-                &[("version", FluentValue::from(&gv.to_display_str()))]
+                version = &gv.to_display_str(),
             )));
         }
 
@@ -493,9 +484,10 @@ impl<'a> GodotManager<'a> {
         let godot_executable = find_godot_executable(&version_dir, console)?;
 
         let path = godot_executable.ok_or_else(|| {
-            anyhow!(self.i18n.t_args(
+            anyhow!(t!(
+                self.i18n,
                 "godot-executable-not-found",
-                &[("version", FluentValue::from(&gv.to_display_str()))]
+                version = &gv.to_display_str(),
             ))
         })?;
 
@@ -505,7 +497,8 @@ impl<'a> GodotManager<'a> {
             if path.extension().and_then(|ext| ext.to_str()) == Some("app") {
                 let inner_path = path.join("Contents/MacOS/Godot");
                 if !inner_path.exists() {
-                    return Err(anyhow!(self.i18n.t_args(
+                    return Err(anyhow!(t!(
+                        self.i18n,
                         "godot-executable-not-found",
                         &[("version", FluentValue::from(&gv.to_display_str()))]
                     )));
@@ -534,10 +527,7 @@ impl<'a> GodotManager<'a> {
             #[cfg(target_family = "unix")]
             {
                 Daemonize::new().start().map_err(|e| {
-                    anyhow!(self.i18n.t_args(
-                        "error-starting-godot",
-                        &[("error", FluentValue::from(e.to_string()))]
-                    ))
+                    anyhow!(t!(self.i18n, "error-starting-godot", error = e.to_string(),))
                 })?;
                 std::process::Command::new(&path).args(godot_args).spawn()?;
             }
@@ -643,16 +633,17 @@ impl<'a> GodotManager<'a> {
         if status == reqwest::StatusCode::FORBIDDEN {
             if let Some(message) = json.get("message").and_then(|m| m.as_str()) {
                 if message.starts_with("API rate limit exceeded") {
-                    return Err(anyhow!(self.i18n.t_w("error-github-rate-limit")));
+                    return Err(anyhow!(t_w!(self.i18n, "error-github-rate-limit")));
                 }
             }
         }
 
         let error_message = json.get("message").and_then(|m| m.as_str());
 
-        Err(anyhow!(self.i18n.t_args_w(
+        Err(anyhow!(t_w!(
+            self.i18n,
             "error-github-api",
-            &[("error", FluentValue::from(error_message))]
+            error = error_message,
         )))
     }
 
@@ -668,7 +659,7 @@ impl<'a> GodotManager<'a> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
         pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message(self.i18n.t_w("fetching-releases"));
+        pb.set_message(t_w!(self.i18n, "fetching-releases"));
 
         while !seen_existing_release {
             let releases = self.get_github_json(&format!(
@@ -705,7 +696,7 @@ impl<'a> GodotManager<'a> {
             page += 1;
         }
 
-        pb.finish_with_message(self.i18n.t_w("releases-fetched"));
+        pb.finish_with_message(t_w!(self.i18n, "releases-fetched"));
 
         cache.releases.extend(new_releases);
         cache.last_fetched = SystemTime::now()
@@ -818,7 +809,7 @@ impl<'a> GodotManager<'a> {
             .iter()
             .find(|r| r.release_type == "stable")
             .cloned()
-            .ok_or_else(|| anyhow!(self.i18n.t_w("error-no-stable-releases-found")))
+            .ok_or_else(|| anyhow!(t_w!(self.i18n, "error-no-stable-releases-found")))
     }
 
     /// Resolve the Godot version from a string, for an installed version
@@ -879,7 +870,7 @@ impl<'a> GodotManager<'a> {
         let version_str = gv.to_install_str();
         let version_path = self.install_path.join(&version_str);
         if !version_path.exists() {
-            return Err(anyhow!(self.i18n.t_w("error-version-not-found")));
+            return Err(anyhow!(t_w!(self.i18n, "error-version-not-found")));
         }
 
         // Write version to .gdvm/default
@@ -901,7 +892,7 @@ impl<'a> GodotManager<'a> {
         #[cfg(target_family = "windows")]
         if let Err(e) = std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir) {
             if e.raw_os_error() == Some(1314) {
-                return Err(anyhow!(self.i18n.t_w("error-create-symlink-windows")));
+                return Err(anyhow!(t_w!(self.i18n, "error-create-symlink-windows")));
             }
             return Err(anyhow!(e));
         }
@@ -982,7 +973,7 @@ impl<'a> GodotManager<'a> {
             self.get_latest_stable_version()?
         } else if gv.is_incomplete() {
             self.resolve_available_version(&gv, false)
-                .ok_or_else(|| anyhow!(self.i18n.t_w("error-version-not-found")))?
+                .ok_or_else(|| anyhow!(t_w!(self.i18n, "error-version-not-found")))?
         } else {
             gv.clone().into()
         };
@@ -994,7 +985,7 @@ impl<'a> GodotManager<'a> {
             eprintln_i18n!(
                 self.i18n,
                 "auto-installing-version",
-                [("version", &actual_version.to_display_str())]
+                version = &actual_version.to_display_str(),
             );
             self.install(&actual_version, false, false)?;
         }
@@ -1028,7 +1019,7 @@ impl<'a> GodotManager<'a> {
             progress
                 .set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
             progress.enable_steady_tick(Duration::from_millis(100));
-            progress.set_message(self.i18n.t_w("checking-updates"));
+            progress.set_message(t_w!(self.i18n, "checking-updates"));
 
             let mut new_version = None;
 
@@ -1055,7 +1046,7 @@ impl<'a> GodotManager<'a> {
 
             if let Some(new_version) = new_version {
                 eprint!("\x1b[1;32m"); // Bold and green
-                eprintln_i18n!(self.i18n, "upgrade-available", [("version", &new_version)]);
+                eprintln_i18n!(self.i18n, "upgrade-available", version = &new_version);
                 eprint!("\x1b[0m"); // Reset
                 eprintln!();
 
@@ -1077,7 +1068,7 @@ impl<'a> GodotManager<'a> {
                     eprintln_i18n!(
                         self.i18n,
                         "upgrade-available",
-                        [("version", new_version.to_string())]
+                        version = new_version.to_string(),
                     );
                     eprint!("\x1b[0m"); // Reset
                     eprintln!();
@@ -1105,7 +1096,7 @@ impl<'a> GodotManager<'a> {
         // Define install directory
         let install_dir = self.get_base_path().join("bin");
         std::fs::create_dir_all(&install_dir)
-            .map_err(|_| anyhow!(self.i18n.t_w("upgrade-install-dir-failed")))?;
+            .map_err(|_| anyhow!(t_w!(self.i18n, "upgrade-install-dir-failed")))?;
 
         // Detect architecture
         let arch = if cfg!(target_os = "windows") {
@@ -1116,7 +1107,7 @@ impl<'a> GodotManager<'a> {
             } else if cfg!(target_arch = "x86") {
                 "i686-pc-windows-msvc"
             } else {
-                return Err(anyhow!(self.i18n.t_w("unsupported-architecture")));
+                return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
             }
         } else if cfg!(target_os = "linux") {
             if cfg!(target_arch = "aarch64") {
@@ -1126,7 +1117,7 @@ impl<'a> GodotManager<'a> {
             } else if cfg!(target_arch = "x86") {
                 "i686-unknown-linux-gnu"
             } else {
-                return Err(anyhow!(self.i18n.t_w("unsupported-architecture")));
+                return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
             }
         } else if cfg!(target_os = "macos") {
             if cfg!(target_arch = "aarch64") {
@@ -1134,10 +1125,10 @@ impl<'a> GodotManager<'a> {
             } else if cfg!(target_arch = "x86_64") {
                 "x86_64-apple-darwin"
             } else {
-                return Err(anyhow!(self.i18n.t_w("unsupported-architecture")));
+                return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
             }
         } else {
-            return Err(anyhow!(self.i18n.t_w("unsupported-platform")));
+            return Err(anyhow!(t_w!(self.i18n, "unsupported-platform")));
         };
 
         // Set download URL based on architecture
@@ -1169,9 +1160,9 @@ impl<'a> GodotManager<'a> {
         let backup_exe = current_exe.with_extension("bak");
 
         std::fs::rename(&current_exe, &backup_exe)
-            .map_err(|_| anyhow!(self.i18n.t_w("upgrade-rename-failed")))?;
+            .map_err(|_| anyhow!(t_w!(self.i18n, "upgrade-rename-failed")))?;
         std::fs::rename(&out_file, &current_exe)
-            .map_err(|_| anyhow!(self.i18n.t_w("upgrade-replace-failed")))?;
+            .map_err(|_| anyhow!(t_w!(self.i18n, "upgrade-replace-failed")))?;
 
         // Update gdvm cache
         self.save_gdvm_cache(&GdvmCache {
