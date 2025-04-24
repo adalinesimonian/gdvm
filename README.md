@@ -9,13 +9,13 @@ Whether you're working on multiple projects or need to test features across vari
 Install on \*nix systems (including MacOS):
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.sh | bash
+curl -sSL https://gdvm.io/install.sh | bash
 ```
 
 Install on Windows:
 
 ```powershell
-powershell -NoProfile -Command "(iwr -useb 'https://raw.githubusercontent.com/adalinesimonian/gdvm/main/scripts/install.ps1').Content | iex"
+powershell -NoProfile -Command "(iwr -useb 'https://gdvm.io/install.ps1.txt').Content | iex"
 ```
 
 ### Supported Platforms
