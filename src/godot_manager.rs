@@ -505,10 +505,14 @@ impl<'a> GodotManager<'a> {
                 }
                 if console {
                     // On macOS, running attached is the default behavior
-                    std::process::Command::new(inner_path).spawn()?;
+                    std::process::Command::new(inner_path)
+                        .args(godot_args)
+                        .spawn()?;
                 } else {
                     // Detached process
-                    std::process::Command::new(inner_path).spawn()?;
+                    std::process::Command::new(inner_path)
+                        .args(godot_args)
+                        .spawn()?;
                 }
                 return Ok(());
             }
