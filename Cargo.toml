@@ -19,7 +19,7 @@ directories = "=6.0.0"
 fluent-bundle = "=0.15.3"
 fluent-langneg = "=0.14.1"
 unic-langid = { version = "=0.9.5", features = ["unic-langid-macros"] }
-anyhow = "=1.0.97"
+anyhow = "=1.0.98"
 terminal_size = "=0.4.2"
 textwrap = { version = "=0.16.2", features = [
     "unicode-width",
