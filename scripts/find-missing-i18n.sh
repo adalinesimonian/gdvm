@@ -21,10 +21,10 @@ for ftl in "$SCRIPT_DIR/../i18n/"*.ftl; do
     echo "Checking translations for language: ${lang}"
 
     # Extract keys from the .ftl file.
-    ftlKeys=$(grep -oE '^[a-zA-Z0-9_-]+\s*=' "$ftl" | sed 's/\s*=$//' | LC_ALL=C sort -u)
+    ftlKeys=$(grep -oE '^[a-zA-Z0-9_-]+\s*=' "$ftl" | sed -E 's/[[:space:]]*=$//' | LC_ALL=C sort -u)
 
     # Check for missing strings
-    missing=$(comm -23 <(echo "$expectedKeys") <(echo "$ftlKeys"))
+    missing=$(LC_ALL=C comm -23 <(echo "$expectedKeys") <(echo "$ftlKeys"))
 
     if [[ -n "$missing" ]]; then
         exitCode=1
