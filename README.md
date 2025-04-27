@@ -29,46 +29,30 @@ powershell -NoProfile -Command "(iwr -useb 'https://gdvm.io/install.ps1.txt').Co
 Once installed, you can use the `gdvm` command to manage your Godot installations. Here are some common commands:
 
 ```bash
-gdvm use stable              # Sets the system-wide default version of Godot to
-                             # the latest stable version
+gdvm use stable              # Set the global default to the latest stable.
 
-gdvm pin stable --csharp     # Pins the default version for the current folder
-                             # to the latest stable version with C# support,
-                             # using a .gdvmrc file in the current folder
+gdvm pin stable --csharp     # Pin the current folder to latest stable with C#,
+                             # using a .gdvmrc file.
 ```
 
 > [!TIP]
-> If you pin or use a global system version, you can associate `.godot` files in your OS with `~/.gdvm/bin/godot.exe` to automatically use either the system-wide version of Godot or the pinned version for the project directory to open that project file.
->
-> gdvm will also try to detect the Godot version from the `project.godot` file and use the appropriate version if it's installed, for projects that don't have a pinned version.
+> Associate `.godot` files with `~/.gdvm/bin/godot.exe` to auto-use the correct version. gdvm can also detect the required version from `project.godot`.
 
 ```bash
-gdvm run                     # Runs the default version of Godot for the current
-                             # folder or the system-wide default version if the
-                             # current folder is not pinned
-godot                        # Equivalent to `gdvm run`
-godot_console                # (Windows only) Same as `gdvm run`, but with the
-                             # console window open
-gdvm run 3.5 --csharp        # Runs Godot version 3.5 with C# support
-gdvm remove 3.5              # Removes Godot version 3.5 without C# support
-gdvm list                    # Lists all installed Godot versions
-gdvm search 4                # Searches for all 4.x versions of Godot
-gdvm upgrade                 # Upgrades gdvm to the latest version
+gdvm run                     # Run the default Godot for the folder.
+godot                        # Alias for `gdvm run`.
+godot_console                # Windows variant keeping the console open.
+gdvm run 3.5 --csharp        # Run Godot 3.5 with C#.
+gdvm remove 3.5              # Removes Godot 3.5 without C#.
+gdvm list                    # List installed versions.
+gdvm search 4                # Search available 4.x versions.
+gdvm upgrade                 # Upgrade gdvm.
 ```
 
 > [!NOTE]
-> If you encounter GitHub API rate limit errors, you may need to wait or use a personal access token to increase your limit. To use a personal access token:
->
-> 1. [Create a fine-grained personal access token](https://github.com/settings/personal-access-tokens) with access to public repositories.
-> 2. Run `gdvm config set github.token` and enter your token when prompted. You can also use the `GITHUB_TOKEN` environment variable to set the token, useful for CI/CD pipelines.
->
-> Note that running `gdvm config set github.token` will store the token in plain text in the `~/.gdvm/config.toml` file, so make sure to keep it secure.
+> Hitting GitHub rate limits? Create a fine-grained token with access to public repositories, and run `gdvm config set github.token` (stored plaintext in `~/.gdvm/config.toml`).
 
-For more information, run
-
-```bash
-gdvm --help
-```
+For more information, run `gdvm --help`.
 
 ## Contributing
 

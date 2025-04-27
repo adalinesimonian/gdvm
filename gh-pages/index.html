@@ -4,9 +4,9 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Godot Version Manager</title>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
-            rel="stylesheet"
+        <meta
+            name="description"
+            content="Manage and switch between different Godot Engine versions effortlessly with gdvm."
         />
         <meta property="og:title" content="Godot Version Manager" />
         <meta
@@ -15,218 +15,315 @@
         />
         <meta property="og:url" content="https://gdvm.io" />
         <meta property="og:type" content="website" />
-        <meta
-            name="description"
-            content="Godot Version Manager (gdvm) lets you easily manage and switch between Godot engine versions."
+        <meta name="theme-color" content="#8b5cf6" />
+        <meta name="color-scheme" content="light dark" />
+
+        <link
+            href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap"
+            rel="stylesheet"
         />
-        <meta
-            name="keywords"
-            content="Godot, gdvm, version manager, game development, engine, C#, rust, open source"
-        />
-        <meta name="author" content="Adaline Simonian" />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://gdvm.io" />
+
         <style>
+            :root {
+                --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+                    "Helvetica Neue", sans-serif;
+                --font-mono: "Fira Code", monospace;
+
+                --bg: #f6f7fb;
+                --fg: #111;
+                --surface: #fff;
+                --surface-muted: #f0f0f3;
+                --accent: #8b5cf6;
+                --accent-strong: #7c3aed;
+                --radius: 12px;
+                --shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            }
+
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #141414;
+                    --fg: #e3e3e3;
+                    --surface: #1e1e1e;
+                    --surface-muted: #262626;
+                    --accent: #8b5cf6;
+                    --accent-strong: #7c3aed;
+                    --shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+                }
+            }
+
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+            }
             body {
-                font-family: Arial, sans-serif;
                 margin: 0;
-                padding: 0;
-                background-color: #f4f4f4;
-                color: #000;
+                font-family: var(--font-body);
+                color: var(--fg);
+                background: var(--bg);
+                line-height: 1.55;
+                -webkit-font-smoothing: antialiased;
             }
-            .container {
-                width: 90%;
-                max-width: 800px;
-                margin: auto;
-                padding: 20px;
-                background-color: #fff;
-                margin-top: 50px;
-                margin-bottom: 50px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            a {
+                color: var(--accent);
+                text-decoration: none;
+                transition: color 0.3s;
             }
-            h1 {
+            a:hover {
+                color: var(--accent-strong);
+            }
+
+            header {
+                padding: 4rem 1rem 2.5rem;
+                background: linear-gradient(
+                    135deg,
+                    var(--accent) 0%,
+                    var(--accent-strong) 100%
+                );
+                color: #fff;
                 text-align: center;
             }
+            header h1 {
+                margin: 0 0 0.5rem;
+                font-weight: 600;
+                font-size: clamp(2rem, 5vw + 1rem, 3.25rem);
+            }
+            header p {
+                margin: 0 auto 1.5rem;
+                max-width: 40ch;
+                font-size: clamp(1rem, 1vw + 0.9rem, 1.25rem);
+                opacity: 0.9;
+            }
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.65rem 1.25rem;
+                background: #fff;
+                color: var(--accent-strong);
+                border-radius: var(--radius);
+                font-weight: 600;
+                box-shadow: var(--shadow);
+                transition: transform 0.2s, box-shadow 0.3s;
+                position: relative;
+                z-index: 2;
+            }
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            }
+
+            main {
+                max-width: 840px;
+                margin: -3rem auto 4rem;
+                background: var(--surface);
+                border-radius: calc(var(--radius) * 1.25);
+                box-shadow: var(--shadow);
+                padding: 2.5rem 1.5rem 3rem;
+                position: relative;
+                z-index: 1;
+            }
+            @media (min-width: 600px) {
+                main {
+                    padding: 3rem 3.5rem 4rem;
+                }
+            }
+
+            h2 {
+                margin: 2.5rem 0 1rem;
+                font-size: 1.6rem;
+            }
+            h3 {
+                margin: 2rem 0 1rem;
+                font-size: 1.25rem;
+            }
+
             .tabs {
-                display: flex;
-                margin-top: 20px;
-                border-bottom: 1px solid #ccc;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 0.5rem;
+                margin-bottom: 1rem;
             }
-            .tab {
-                padding: 10px 20px;
+            .tab-btn {
+                border: 0;
                 cursor: pointer;
-                border: 1px solid #ccc;
-                border-bottom: none;
-                background-color: #eaeaea;
-                margin-right: 5px;
-                border-top-left-radius: 5px;
-                border-top-right-radius: 5px;
+                border-radius: var(--radius);
+                padding: 0.75rem 1rem;
+                background: var(--surface-muted);
+                font-weight: 600;
+                transition: background 0.3s;
             }
-            .tab.active {
-                background-color: #fff;
-                font-weight: bold;
+            .tab-btn[aria-selected="true"] {
+                background: var(--accent);
+                color: #fff;
             }
-            .tab-content {
+
+            .tab-panel {
                 display: none;
-                padding: 20px;
-                border: 1px solid #ccc;
             }
-            .tab-content.active {
+            .tab-panel[data-active="true"] {
                 display: block;
             }
+
             .command-box {
-                background-color: #f0f0f0;
-                padding: 15px;
-                border-radius: 5px;
+                font-family: var(--font-mono);
+                background: var(--surface-muted);
+                padding: 1rem;
+                border-radius: var(--radius);
                 cursor: pointer;
-                user-select: all;
+                overflow-x: auto;
+                transition: background 0.2s;
             }
             .command-box:hover {
-                background-color: #e0e0e0;
+                background: rgb(0 0 0 / 0.05);
             }
-            .command-box,
-            code {
-                font-family: "Fira Code", monospace;
-            }
-            code {
-                background-color: #f0f0f0;
-                padding: 2px 5px;
-                border-radius: 3px;
-            }
-            .footer {
-                text-align: center;
-                margin-top: 40px;
-                font-size: 0.9em;
-                color: #666;
-            }
-            .github-link {
-                display: block;
-                text-align: center;
-                margin-top: 20px;
-                text-decoration: none;
-                color: #0366d6;
-            }
-            .popover {
-                position: absolute;
-                background-color: #333;
-                color: #fff;
-                padding: 5px 10px;
-                border-radius: 3px;
-                font-size: 0.9em;
-                opacity: 0;
-                transition: opacity 0.3s;
-            }
-            .popover.show {
-                opacity: 1;
-            }
-            ul li {
-                margin-bottom: 10px;
-            }
-            ul li:last-child {
-                margin-bottom: 0;
-            }
-            body {
-                line-height: 1.3;
-            }
-            .tip-box {
-                background-color: #e7f3fe;
-                border-left: 6px solid #2196f3;
-                padding: 10px;
-                margin-top: 20px;
-                border-radius: 5px;
+
+            .info {
                 display: flex;
-                align-items: center;
+                gap: 0.75rem;
+                padding: 1rem 1rem;
+                margin: 1.5rem 0;
+                background: var(--surface-muted);
+                border-left: 4px solid var(--accent);
+                border-radius: var(--radius);
             }
-            .tip-box .emoji {
+            .info .emoji {
                 font-size: 1.5em;
-                margin-right: 10px;
             }
-            @media (prefers-color-scheme: dark) {
-                body {
-                    background-color: #121212;
-                    color: #e0e0e0;
-                }
-                .container {
-                    background-color: #1e1e1e;
-                    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-                }
-                .tab {
-                    background-color: #333;
-                    border-color: #555;
-                }
-                .tab.active {
-                    background-color: #1e1e1e;
-                }
-                .tab-content {
-                    border-color: #555;
-                }
-                .command-box {
-                    background-color: #333;
-                }
-                .command-box:hover {
-                    background-color: #444;
-                }
-                code {
-                    background-color: #333;
-                }
-                .footer {
-                    color: #999;
-                }
-                .github-link {
-                    color: #58a6ff;
-                }
-                .popover {
-                    background-color: #555;
-                }
-                .tip-box {
-                    background-color: #2a3b4d;
-                    border-left-color: #2196f3;
-                }
+
+            footer {
+                text-align: center;
+                font-size: 0.85rem;
+                color: rgb(100 100 100 / 0.9);
+                margin-bottom: 3rem;
+            }
+
+            ul {
+                padding-left: 1.25rem;
+            }
+            li + li {
+                margin-top: 0.6rem;
+            }
+            code {
+                font-family: var(--font-mono);
+                background: var(--surface-muted);
+                padding: 0.15rem 0.35rem;
+                border-radius: 6px;
+            }
+
+            .wave {
+                position: relative;
+                width: 100%;
+                height: 60px;
+                margin-top: -60px;
+                overflow: hidden;
+            }
+            .wave svg {
+                display: block;
+                width: 100%;
+                height: 100%;
             }
         </style>
     </head>
     <body>
-        <div class="container">
+        <header>
             <h1>Godot Version Manager</h1>
-            <p>
-                Godot Version Manager (gdvm) is a powerful tool that allows
-                developers to easily install, manage, and switch between
-                different versions of the Godot Engine.
-            </p>
-            <p>
-                Whether you're working on multiple projects or need to test
-                features across various Godot versions, you'll never need to
-                manually fuss with Godot installations again.
-            </p>
+            <p>Easily install, manage, and switch between Godot versions.</p>
             <a
+                class="btn"
                 href="https://github.com/adalinesimonian/gdvm"
-                class="github-link"
+                target="_blank"
+                rel="noopener"
                 >View on GitHub</a
             >
-            <h2>Installation</h2>
-            <p>To install gdvm, run the following command in your terminal:</p>
-            <div class="tabs">
-                <div class="tab" id="nix-tab">macOS, Linux</div>
-                <div class="tab" id="windows-tab">Windows</div>
-            </div>
-            <div class="tab-content" id="nix-content">
-                <div class="command-box" id="nix-command">
-                    curl -sSL https://gdvm.io/install.sh | bash
+        </header>
+
+        <div class="wave">
+            <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+                <path
+                    d="M0,128L48,122.7C96,117,192,107,288,122.7C384,139,480,181,576,176C672,171,768,117,864,96C960,75,1056,85,1152,112C1248,139,1344,181,1392,202.7L1440,224V320H0Z"
+                    fill="var(--bg)"
+                ></path>
+            </svg>
+        </div>
+
+        <main>
+            <section>
+                <p>
+                    Godot Version Manager (gdvm) is a tool designed to simplify
+                    the installation, management, and switching between
+                    different versions of the Godot Engine.
+                </p>
+                <p>
+                    Whether you're working on multiple projects or need to test
+                    features across various Godot versions, you'll never need to
+                    manually fuss with Godot installations again.
+                </p>
+            </section>
+
+            <section>
+                <h2>Installation</h2>
+                <p>
+                    To install gdvm, run the following command in your terminal:
+                </p>
+
+                <div class="tabs" role="tablist">
+                    <button
+                        class="tab-btn"
+                        id="tab-nix"
+                        role="tab"
+                        aria-controls="panel-nix"
+                        aria-selected="false"
+                    >
+                        macOS / Linux
+                    </button>
+                    <button
+                        class="tab-btn"
+                        id="tab-win"
+                        role="tab"
+                        aria-controls="panel-win"
+                        aria-selected="false"
+                    >
+                        Windows
+                    </button>
                 </div>
-            </div>
-            <div class="tab-content" id="windows-content">
-                <div class="command-box" id="windows-command">
-                    powershell -NoProfile -Command "(iwr -useb
-                    'https://gdvm.io/install.ps1.txt').Content | iex"
+
+                <div
+                    id="panel-nix"
+                    class="tab-panel"
+                    data-active="false"
+                    role="tabpanel"
+                    aria-labelledby="tab-nix"
+                >
+                    <div class="command-box" data-copy>
+                        curl -sSL https://gdvm.io/install.sh | bash
+                    </div>
                 </div>
-            </div>
-            <h3>Supported Platforms</h3>
-            <ul>
-                <li>Windows (64-bit, 32-bit, and 64-bit ARM)</li>
-                <li>macOS (64-bit Intel and Apple Silicon)</li>
-                <li>Linux (64-bit, 32-bit, and 64-bit ARM)</li>
-            </ul>
-            <div class="getting-started">
+                <div
+                    id="panel-win"
+                    class="tab-panel"
+                    data-active="false"
+                    role="tabpanel"
+                    aria-labelledby="tab-win"
+                >
+                    <div class="command-box" data-copy>
+                        powershell -NoProfile -Command "(iwr -useb
+                        'https://gdvm.io/install.ps1.txt').Content | iex"
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3>Supported Platforms</h3>
+                <ul>
+                    <li>Windows (64-bit, 32-bit, and 64-bit ARM)</li>
+                    <li>macOS (64-bit Intel and Apple Silicon)</li>
+                    <li>Linux (64-bit, 32-bit, and 64-bit ARM)</li>
+                </ul>
+            </section>
+
+            <section>
                 <h2>Getting Started</h2>
                 <p>
                     Once installed, you can use the <code>gdvm</code> command to
@@ -235,170 +332,143 @@
                 </p>
                 <ul>
                     <li>
-                        <code>gdvm use stable</code> — Sets the system-wide
-                        default version of Godot to the latest stable version
+                        <code>gdvm use stable</code> — Set the global default to
+                        the latest stable.
                     </li>
                     <li>
-                        <code>gdvm pin stable --csharp</code> — Pins the default
-                        version for the current folder to the latest stable
-                        version with C# support, using a
-                        <code>.gdvmrc</code> file in the current folder
+                        <code>gdvm pin stable --csharp</code> — Pin the current
+                        folder to latest stable with C#, using a
+                        <code>.gdvmrc</code> file.
                     </li>
                 </ul>
-                <div class="tip-box">
+
+                <div class="info">
                     <span class="emoji">💡</span>
-                    <span
-                        >If you pin or use a global system version, you can
-                        associate <code>.godot</code> files in your OS with
-                        <code>~/.gdvm/bin/godot.exe</code> to automatically use
-                        either the system-wide version of Godot or the pinned
-                        version for the project directory to open that project
-                        file.<br /><br />
-                        gdvm will also try to detect the Godot version from the
-                        <code>project.godot</code> file and use the appropriate
-                        version if it's installed, for projects that don't have
-                        a pinned version.</span
-                    >
+                    <div>
+                        Associate <code>.godot</code> files with
+                        <code>~/.gdvm/bin/godot.exe</code> to auto-use the
+                        correct version. gdvm can also detect the required
+                        version from <code>project.godot</code>.
+                    </div>
                 </div>
+
                 <ul>
                     <li>
-                        <code>gdvm run</code> — Runs the default version of
-                        Godot for the current folder or the system-wide default
-                        version if the current folder is not pinned
+                        <code>gdvm run</code> — Run the default Godot for the
+                        folder.
                     </li>
                     <li>
-                        <code>godot</code> — Equivalent to <code>gdvm run</code>
+                        <code>godot</code> — Alias for <code>gdvm run</code>.
                     </li>
                     <li>
-                        <code>godot_console</code> — For Windows users, same as
-                        <code>gdvm run</code>, but with the console window open
+                        <code>godot_console</code> — Windows variant keeping the
+                        console open.
                     </li>
                     <li>
-                        <code>gdvm run 3.5 --csharp</code> — Runs Godot version
-                        3.5 with C# support
+                        <code>gdvm run 3.5 --csharp</code> — Run Godot 3.5 with
+                        C#.
                     </li>
                     <li>
-                        <code>gdvm remove 3.5</code> — Removes Godot version 3.5
-                        without C# support
+                        <code>gdvm remove 3.5</code> — Remove Godot 3.5 without
+                        C#.
                     </li>
+                    <li><code>gdvm list</code> — List installed versions.</li>
                     <li>
-                        <code>gdvm list</code> — Lists all installed Godot
-                        versions
+                        <code>gdvm search 4</code> — Search available 4.x
+                        versions.
                     </li>
-                    <li>
-                        <code>gdvm search 4</code> — Searches for all 4.x
-                        versions of Godot
-                    </li>
-                    <li>
-                        <code>gdvm upgrade</code> — Upgrades gdvm to the latest
-                        version
-                    </li>
+                    <li><code>gdvm upgrade</code> — Upgrade gdvm.</li>
                 </ul>
-                <div class="tip-box">
+
+                <div class="info">
                     <span class="emoji">ℹ️</span>
-                    <span
-                        >If you encounter GitHub API rate limit errors, you may
-                        need to wait or use a personal access token to increase
-                        your limit. To use a personal access token:
-                        <ol>
-                            <li>
-                                <a
-                                    href="https://github.com/settings/personal-access-tokens/new"
-                                    >Create a fine-grained personal access
-                                    token</a
-                                >
-                                with access to public repositories.
-                            </li>
-                            <li>
-                                Run
-                                <code>gdvm config set github.token</code> and
-                                enter your token when prompted. You can also use
-                                the <code>GITHUB_TOKEN</code> environment
-                                variable to set the token, useful for CI/CD
-                                pipelines.
-                            </li>
-                        </ol>
-                        Note that running
-                        <code>gdvm config set github.token</code> will store the
-                        token in plain text in the
-                        <code>~/.gdvm/config.toml</code> file, so make sure to
-                        keep it secure.
-                    </span>
+                    <div>
+                        Hitting GitHub rate limits? Create a
+                        <a
+                            href="https://github.com/settings/personal-access-tokens/new"
+                            target="_blank"
+                            >fine-grained token</a
+                        >
+                        with access to public repositories, and run
+                        <code>gdvm config set github.token</code> (stored
+                        plaintext in <code>~/.gdvm/config.toml</code>).
+                    </div>
                 </div>
-                <p>
-                    For more information on how to use <code>gdvm</code>, run
-                    <code>gdvm --help</code>.
-                </p>
-            </div>
-            <div class="footer">
-                &copy; 2024 Adaline Simonian. All rights reserved.
-            </div>
-        </div>
+                <p>For more information, run <code>gdvm --help</code>.</p>
+            </section>
+        </main>
+
+        <footer>&copy; 2024 Adaline Simonian. All rights reserved.</footer>
 
         <script>
-            const tabs = document.querySelectorAll(".tab");
-            const contents = document.querySelectorAll(".tab-content");
+            const isWindows = /windows|win32|win64/i.test(navigator.userAgent);
+            const tabNix = document.getElementById("tab-nix");
+            const tabWin = document.getElementById("tab-win");
+            const panelNix = document.getElementById("panel-nix");
+            const panelWin = document.getElementById("panel-win");
 
-            function activateTab(index) {
-                tabs.forEach((tab, i) => {
-                    if (i === index) {
-                        tab.classList.add("active");
-                        contents[i].classList.add("active");
-                    } else {
-                        tab.classList.remove("active");
-                        contents[i].classList.remove("active");
+            function activate(tabBtn, panel) {
+                [tabNix, tabWin].forEach((btn) =>
+                    btn.setAttribute("aria-selected", false)
+                );
+                [panelNix, panelWin].forEach(
+                    (p) => (p.dataset.active = "false")
+                );
+
+                tabBtn.setAttribute("aria-selected", true);
+                panel.dataset.active = "true";
+            }
+            activate(
+                isWindows ? tabWin : tabNix,
+                isWindows ? panelWin : panelNix
+            );
+
+            tabNix.addEventListener("click", () => activate(tabNix, panelNix));
+            tabWin.addEventListener("click", () => activate(tabWin, panelWin));
+
+            document.querySelectorAll("[data-copy]").forEach((box) => {
+                box.addEventListener("click", async () => {
+                    const text = box.textContent.trim().replace(/\s+/g, " ");
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        toast("Copied!");
+                    } catch {
+                        toast("Failed to copy");
                     }
                 });
+            });
+
+            function toast(msg) {
+                const el = document.createElement("div");
+                el.textContent = msg;
+                Object.assign(el.style, {
+                    position: "fixed",
+                    bottom: "1.5rem",
+                    left: "50%",
+                    padding: "0.6rem 1.25rem",
+                    transform: "translateX(-50%)",
+                    background: "var(--accent)",
+                    color: "#fff",
+                    borderRadius: "9999px",
+                    fontWeight: "600",
+                    boxShadow: "var(--shadow)",
+                    opacity: "0",
+                    transition: "opacity 0.3s, transform 0.3s",
+                    zIndex: "9999",
+                });
+                document.body.appendChild(el);
+                requestAnimationFrame(() => {
+                    el.style.opacity = "1";
+                    el.style.transform = "translateX(-50%) translateY(-8px)";
+                });
+                setTimeout(() => {
+                    el.style.opacity = "0";
+                    el.style.transform = "translateX(-50%)";
+                    el.addEventListener("transitionend", () => el.remove(), {
+                        once: true,
+                    });
+                }, 2400);
             }
-
-            tabs.forEach((tab, index) => {
-                tab.addEventListener("click", () => {
-                    activateTab(index);
-                });
-            });
-
-            // Detect user platform and activate the corresponding tab
-            window.addEventListener("DOMContentLoaded", () => {
-                const platform = navigator.platform.toLowerCase();
-                if (platform.includes("win")) {
-                    activateTab(1); // Windows tab
-                } else {
-                    activateTab(0); // *nix tab
-                }
-            });
-
-            // Add click event to command boxes to select text
-            const commandBoxes = document.querySelectorAll(".command-box");
-            commandBoxes.forEach((box) => {
-                box.addEventListener("click", () => {
-                    const command = box.textContent.trim().replace(/\s+/g, " ");
-                    navigator.clipboard.writeText(command);
-
-                    // Create popover
-                    let popover = document.createElement("div");
-                    popover.className = "popover";
-                    popover.textContent = "Copied!";
-                    document.body.appendChild(popover);
-
-                    // Position popover
-                    const rect = box.getBoundingClientRect();
-                    popover.style.top = `${rect.top - 30}px`;
-                    popover.style.left = `${rect.left}px`;
-
-                    // Show popover
-                    setTimeout(() => {
-                        popover.classList.add("show");
-                    }, 0);
-
-                    // Hide and remove popover after 2 seconds
-                    setTimeout(() => {
-                        popover.classList.remove("show");
-                        setTimeout(() => {
-                            popover.remove();
-                        }, 300);
-                    }, 2000);
-                });
-            });
         </script>
     </body>
 </html>
