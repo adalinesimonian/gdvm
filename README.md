@@ -1,4 +1,6 @@
-# Godot Version Manager
+# gdvm — Godot Version Manager
+
+![Project banner](https://gdvm.io/gdvm-banner.png)
 
 Godot Version Manager (gdvm) is a tool designed to simplify the installation, management, and switching between different versions of the Godot Engine.
 

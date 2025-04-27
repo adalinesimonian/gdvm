@@ -3,7 +3,22 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Godot Version Manager</title>
+        <title>gdvm | Godot Version Manager</title>
+        <link
+            rel="icon"
+            type="image/png"
+            href="/favicon-96x96.png"
+            sizes="96x96"
+        />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link
+            rel="apple-touch-icon"
+            sizes="180x180"
+            href="/apple-touch-icon.png"
+        />
+        <meta name="apple-mobile-web-app-title" content="gdvm" />
+        <link rel="manifest" href="/site.webmanifest" />
         <meta
             name="description"
             content="Manage and switch between different Godot Engine versions effortlessly with gdvm."
@@ -13,6 +28,10 @@
             property="og:description"
             content="Manage and switch between different versions of the Godot Engine effortlessly with gdvm."
         />
+        <meta property="og:image" content="https://gdvm.io/gdvm-banner.png" />
+        <meta property="og:image:alt" content="gdvm logo" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:url" content="https://gdvm.io" />
         <meta property="og:type" content="website" />
         <meta name="theme-color" content="#8b5cf6" />
@@ -94,6 +113,10 @@
                 max-width: 40ch;
                 font-size: clamp(1rem, 1vw + 0.9rem, 1.25rem);
                 opacity: 0.9;
+            }
+            header .logo {
+                max-width: 100%;
+                height: auto;
             }
             .btn {
                 display: inline-flex;
@@ -228,7 +251,13 @@
     </head>
     <body>
         <header>
-            <h1>Godot Version Manager</h1>
+            <img
+                class="logo"
+                src="logo.svg"
+                alt="gdvm logo"
+                height="400"
+                width="400"
+            />
             <p>Easily install, manage, and switch between Godot versions.</p>
             <a
                 class="btn"
