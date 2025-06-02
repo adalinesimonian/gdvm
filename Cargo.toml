@@ -27,7 +27,7 @@ textwrap = { version = "=0.16.2", features = [
 ] }
 
 # For downloading files:
-reqwest = { version = "=0.12.18", features = [
+reqwest = { version = "=0.12.19", features = [
     "json",
     "gzip",
     "brotli",
