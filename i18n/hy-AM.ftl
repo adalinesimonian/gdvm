@@ -88,6 +88,8 @@ error-find-user-dirs = Չհաջողվեց գտնել օգտագործողի պա
 
 fetching-releases = Թողարկումները բերվում են...
 releases-fetched = Թողարկումները բերվել են։
+error-fetching-releases = Սխալ թողարկումների ստացման ժամանակ՝ { $error }
+warning-fetching-releases-using-cache = Սխալ թողարկումների ստացման ժամանակ՝ { $error }։ Օգտագործվում են պահված թողարկումները։
 
 error-starting-godot = Չհաջողվեց գործարկել Godot-ը՝ { $error }
 

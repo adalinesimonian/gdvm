@@ -66,6 +66,8 @@ error-find-user-dirs = Klarte ikke å finne brukermappene.
 
 fetching-releases = Henter utgivelser...
 releases-fetched = Utgivelser henta.
+error-fetching-releases = Feil ved henting av utgivelser: { $error }
+warning-fetching-releases-using-cache = Feil ved henting av utgivelser: { $error }. Bruker hurtigbuffer i stedet.
 
 warning-prerelease = Advarsel: Du installerer en forhåndsversjon ({$branch}).
 

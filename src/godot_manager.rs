@@ -569,8 +569,24 @@ impl<'a> GodotManager<'a> {
         let is_time_to_refresh_index = cache_age > cache_duration.as_secs();
 
         if is_time_to_refresh_index && !use_cache_only {
-            // Fetch from GitHub and update cache
-            self.update_cache(&mut cache)?;
+            // Fetch from GitHub and update cache.
+            if let Err(error) = self.update_cache(&mut cache) {
+                if cache.releases.is_empty() {
+                    eprintln_i18n!(
+                        self.i18n,
+                        "error-fetching-releases",
+                        error = error.to_string()
+                    );
+                    return Err(error);
+                } else {
+                    // If we have cached releases, just reference them.
+                    eprintln_i18n!(
+                        self.i18n,
+                        "warning-fetching-releases-using-cache",
+                        error = error.to_string()
+                    );
+                }
+            }
         }
 
         // Filter releases
@@ -625,7 +641,12 @@ impl<'a> GodotManager<'a> {
         // Rate limits are 403s with a JSON object that has a "message" key that
         // starts with "API rate limit exceeded".
 
-        let resp = self.client.get(url).header("User-Agent", "gdvm").send()?;
+        let resp = self
+            .client
+            .get(url)
+            .header("User-Agent", "gdvm")
+            .timeout(Duration::from_secs(3))
+            .send()?;
 
         if resp.status().is_success() {
             let json: serde_json::Value = resp.json()?;

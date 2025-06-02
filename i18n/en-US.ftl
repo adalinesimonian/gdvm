@@ -80,6 +80,8 @@ error-find-user-dirs = Failed to find user directories.
 
 fetching-releases = Fetching releases...
 releases-fetched = Releases fetched.
+error-fetching-releases = Error fetching releases: { $error }
+warning-fetching-releases-using-cache = Error fetching releases: { $error }. Using cached releases instead.
 
 error-version-not-found = Version not found.
 error-multiple-versions-found = Multiple versions match your request:

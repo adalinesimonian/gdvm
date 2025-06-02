@@ -106,6 +106,8 @@ error-find-user-dirs = Не удалось найти пользовательс
 
 fetching-releases = Получение релизов...
 releases-fetched = Релизы получены.
+error-fetching-releases = Ошибка при получении релизов: { $error }
+warning-fetching-releases-using-cache = Ошибка при получении релизов: { $error }. Используются кэшированные релизы.
 
 error-starting-godot = Не удалось запустить Godot: { $error }
 
