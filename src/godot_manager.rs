@@ -202,7 +202,7 @@ fn verify_sha512(
 /// - `Ok(None)` if no executable is found.
 /// - `Err(io::Error)` if there is an error reading the directory.
 #[allow(unused_variables)]
-fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<PathBuf>> {
+pub fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option<PathBuf>> {
     // Collect all entries (files/folders) under version_dir
     let entries: Vec<_> = fs::read_dir(version_dir)?
         .filter_map(|entry| entry.ok())
@@ -1203,5 +1203,27 @@ impl<'a> GodotManager<'a> {
         println_i18n!(self.i18n, "upgrade-complete");
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_download_url_and_archive_name() {
+        let i18n = I18n::new(80).unwrap();
+        let gv = GodotVersion::from_remote_str("4.1-stable", Some(false))
+            .unwrap()
+            .to_determinate();
+        let name = super::get_archive_name(&gv, &i18n);
+        #[cfg(target_os = "linux")]
+        assert_eq!(name, "Godot_v4.1-stable_linux.x86_64.zip");
+        #[cfg(target_os = "windows")]
+        assert_eq!(name, "Godot_v4.1-stable_win64.exe.zip");
+        #[cfg(target_os = "macos")]
+        assert_eq!(name, "Godot_v4.1-stable_macos.universal.zip");
+        let url = super::get_download_url(&gv.to_remote_str(), &name);
+        assert!(url.ends_with(&name));
     }
 }

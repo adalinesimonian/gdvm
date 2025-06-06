@@ -239,3 +239,44 @@ fn parse_config_version(contents: &str) -> Option<u32> {
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_is_version_format() {
+        assert!(super::is_version_format("4.1"));
+        assert!(super::is_version_format("3.5.2"));
+        assert!(!super::is_version_format("foo"));
+        assert!(!super::is_version_format("1"));
+    }
+
+    #[test]
+    fn test_parse_version_string() {
+        let gv = super::parse_version_string("4.3").unwrap();
+        assert_eq!(gv.major, Some(4));
+        assert_eq!(gv.minor, Some(3));
+        assert_eq!(gv.patch, None);
+    }
+
+    #[test]
+    fn test_extract_application_section_and_parse() {
+        let contents = r#"
+[application]
+config/features=PackedStringArray("4.3", "Forward Plus")
+
+[other]
+foo=bar
+"#;
+        let section = super::extract_application_section(contents).unwrap();
+        assert!(section.iter().any(|l| l.contains("config/features")));
+        let line = &section[0];
+        let vers = super::parse_packed_string_array_for_version(line).unwrap();
+        assert_eq!(vers, "4.3");
+    }
+
+    #[test]
+    fn test_parse_config_version() {
+        let contents = "config_version=4\n";
+        assert_eq!(super::parse_config_version(contents), Some(4));
+    }
+}
