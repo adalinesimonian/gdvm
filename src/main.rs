@@ -1,22 +1,15 @@
-mod config;
-mod download_utils;
-mod godot_manager;
-mod i18n;
-mod project_version_detector;
-mod version_utils;
-mod zip_utils;
+use gdvm::config::{self, ConfigOps};
+use gdvm::godot_manager::{GodotManager, InstallOutcome};
+use gdvm::i18n::I18n;
+use gdvm::version_utils::{self, GodotVersion};
+use gdvm::{eprintln_i18n, println_i18n, t, t_w};
 
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgMatches, Command, value_parser};
-use config::ConfigOps;
-use godot_manager::{GodotManager, InstallOutcome};
-use i18n::I18n;
 use std::{
     io::{self, Write},
     path::Path,
 };
-
-use version_utils::GodotVersion;
 
 fn main() -> Result<()> {
     let i18n = I18n::new(100)?;

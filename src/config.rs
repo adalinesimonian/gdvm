@@ -20,10 +20,10 @@ pub trait ConfigOps {
     fn get_value(&self, key: &str) -> Option<String>;
 
     /// Set a configuration key to the provided value.
-    fn set_value(&mut self, key: &str, value: &str) -> Result<(), ()>;
+    fn set_value(&mut self, key: &str, value: &str) -> Result<()>;
 
     /// Unset (remove) a configuration key's value.
-    fn unset_value(&mut self, key: &str) -> Result<(), ()>;
+    fn unset_value(&mut self, key: &str) -> Result<()>;
 
     /// Return true if the key is considered sensitive.
     fn is_sensitive_key(&self, key: &str) -> bool;
@@ -40,23 +40,23 @@ impl ConfigOps for Config {
         }
     }
 
-    fn set_value(&mut self, key: &str, value: &str) -> Result<(), ()> {
+    fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
             "github.token" => {
                 self.github_token = Some(value.to_string());
                 Ok(())
             }
-            _ => Err(()),
+            _ => Err(anyhow!("Unknown configuration key: {}", key)),
         }
     }
 
-    fn unset_value(&mut self, key: &str) -> Result<(), ()> {
+    fn unset_value(&mut self, key: &str) -> Result<()> {
         match key {
             "github.token" => {
                 self.github_token = None;
                 Ok(())
             }
-            _ => Err(()),
+            _ => Err(anyhow!("Unknown configuration key: {}", key)),
         }
     }
 
@@ -104,5 +104,28 @@ impl Config {
         let toml_str = toml::to_string(self).expect("Failed to serialize config");
         fs::write(config_path, toml_str)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_set_unset_list() {
+        let mut cfg = Config::default();
+        assert!(cfg.get_value("github.token").is_none());
+        assert!(cfg.set_value("github.token", "abc").is_ok());
+        assert_eq!(cfg.get_value("github.token"), Some("abc".to_string()));
+        assert!(cfg.is_sensitive_key("github.token"));
+        let listed = cfg.list_set_keys();
+        assert_eq!(
+            listed,
+            vec![("github.token".to_string(), "abc".to_string(), true)]
+        );
+        assert!(cfg.unset_value("github.token").is_ok());
+        assert!(cfg.get_value("github.token").is_none());
+        assert!(cfg.set_value("unknown", "val").is_err());
+        assert!(cfg.unset_value("unknown").is_err());
     }
 }
