@@ -1,12 +1,22 @@
-name: Main Branch
+name: Build and Test
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "gh-pages/**"
+      - "README.md"
   push:
     branches:
       - main
     paths-ignore:
       - "gh-pages/**"
       - "README.md"
+
+concurrency:
+  group: ${{ github.event.number }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-and-test:
