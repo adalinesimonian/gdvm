@@ -63,7 +63,7 @@ jobs:
         run: |
           git add v1
           git status
-          ls -hlaF
+          ls -hlaF v1
 
       - name: Detect changes
         id: changes
