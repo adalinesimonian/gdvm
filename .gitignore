@@ -11,3 +11,4 @@
 # Other
 .DS_Store
 *.log
+**/*.github_token

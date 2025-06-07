@@ -1,0 +1,98 @@
+name: Update Registry (v1)
+
+on:
+  schedule:
+    - cron: "*/30 * * * *" # Run every 30 minutes.
+  workflow_dispatch: # Allow running manually from the Actions tab.
+    inputs:
+      rebuild:
+        description: "Rebuild entire registry. Without this, only incremental updates are made for releases not yet included in the registry."
+        required: false
+        type: boolean
+      clean:
+        description: "Clean the registry before updating. This will remove all files and directories in the registry directory."
+        required: false
+        type: boolean
+
+concurrency:
+  group: "update-registry-v1"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout registry
+        uses: actions/checkout@v4
+        with:
+          ref: registry
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "v1/package.json"
+
+      - name: Clean registry
+        if: ${{ github.event.inputs.clean }}
+        run: |
+          echo "Cleaning registry..."
+          rm -rf v1/releases/*
+          rm -rf v1/index.json
+          echo "Registry cleaned."
+
+      - name: Update registry (incremental)
+        run: node ./update-registry.mjs
+        working-directory: v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update registry (full rebuild)
+        if: ${{ github.event.inputs.rebuild }}
+        run: node ./update-registry.mjs --rebuild
+        working-directory: v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Git info
+        run: |
+          git add v1
+          git status
+          ls -hlaF
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true"  >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate registry
+        if: steps.changes.outputs.changed == 'true'
+        run: node ./validate.mjs
+        working-directory: v1
+
+      - name: Generate commit message
+        if: steps.changes.outputs.changed == 'true'
+        id: commitmsg
+        run: |
+          echo 'message<<EOF' >> $GITHUB_OUTPUT
+          node ./generate-commit-msg.mjs >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+        working-directory: v1
+
+      - name: Commit and push changes
+        if: steps.changes.outputs.changed == 'true'
+        uses: planetscale/ghcommit-action@v0.2.15
+        with:
+          commit_message: ${{ steps.commitmsg.outputs.message }}
+          repo: ${{ github.repository }}
+          branch: registry
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
