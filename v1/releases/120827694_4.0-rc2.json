@@ -1,0 +1,79 @@
+{
+	"id": 120827694,
+	"name": "4.0-rc2",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/4.0-rc2",
+	"binaries": {
+		"linux": {
+			"x86": {
+				"sha512": "0cbddeddae2686c373c738d7dd3d3a29e23c741fa1527770b2f56205d6bd527a9596222bafe0598d95c18934b5dc094168c36c3e256e8729a5038e07411d1888",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_linux.x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "e97fda1e44ed30ad14607731ad096a91da8bf803ff193466dce6493cb5acb796754455140d31b20315994f724f9dc8e7985d9901933cf8742209eb35744a6fb3",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_linux.x86_64.zip"
+				]
+			}
+		},
+		"linux-csharp": {
+			"x86": {
+				"sha512": "ac31662e2da23b8d49bfd787cf62d6876929a2a9c7a5e54023b116aeb3caff9b4bcc3c0b5fd110ab8a21323ead3eb55d7005d3ad4c01ad102d7a7f2c59f0deb7",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_mono_linux_x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "59bb3a035178c89a04d6b010a4fb6dbe8a1977ebe4716f354e3efa36459dc44d6f5fa45831d32402e87a6dec2e6e0aa012df1d33ffe4039599e2ddcaafc2527c",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_mono_linux_x86_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "7fd987c41f41c9d28304cb255e31d65ae482d3fca3fa5aa064c7a8f4fb471b37a41bb58bc2ef814243d7349d8590843845f7a0438f05bc61fb40e5ed2ac6e0cc",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_macos.universal.zip"
+				]
+			}
+		},
+		"macos-csharp": {
+			"universal": {
+				"sha512": "5be83b222df435060385e2f290033f88628dcfb2b10fe8709cd642cf75f5aeff11181622bc3c146e2bc815fbaf4a4052a5367d68788112a6e437445f5951ab8f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_mono_macos.universal.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "4767a2e408fd4fcb1a704e36dd7add566c41c9b803a129204d6b52f7ea0aa94a7f9ff36ecf2c4e4545fac285dd145b7308c82ad6f679c2c4349ce040c98eb872",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "5e84908a90ed493d6bdc50ba275c6af16f05dac449dceb3e167bb79d6e29086a1e0ca4f1f94ac105cbe1fa75eb2ce5f78779020f08f9d6d4dfe7c68d5b100886",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_win64.exe.zip"
+				]
+			}
+		},
+		"windows-csharp": {
+			"x86": {
+				"sha512": "1735c65720b0859aaadc9cc176048f38d28eacb9397d64a7c74a2101df379e7161b68e4a845f6b14f0f4d00f82c72a7b02283bffa129e75ea186ac3026db003a",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_mono_win32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "6ed6ccc65a693f579a80b3ad397eddb022fabb801f6e11935f86c55a213de00a5a588ad99355a5d461a5d7fcd7b3f10a35d8568768dc56e1f167c3b735cdd503",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-rc2/Godot_v4.0-rc2_mono_win64.zip"
+				]
+			}
+		}
+	}
+}

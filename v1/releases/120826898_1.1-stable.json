@@ -1,0 +1,43 @@
+{
+	"id": 120826898,
+	"name": "1.1-stable",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/1.1-stable",
+	"binaries": {
+		"linux": {
+			"x86": {
+				"sha512": "c47816d14570148c75e4746dbe600b170e567f91dc434a8b6b1eb38a89a943fb787c088c30a552c18393c9dd67e833ad0a38aeda45a73191c4e0ec5161a3e3c7",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/1.1-stable/Godot_v1.1_stable_x11.32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "ac04e4e6e66dd855b9ff5133cea1e59fff63494317c1ff122da7fe91b39e9e1adf3d115efdd2fb0fe11b71dc4c8aebb1e0ca68dd3c988f791d9d4024014fb8a0",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/1.1-stable/Godot_v1.1_stable_x11.64.zip"
+				]
+			}
+		},
+		"macos": {
+			"x86": {
+				"sha512": "cd1a3bb372c19209d3262d0c3ddb0abef7b0b7e248b2d4b885167b8665d8367a13b8c68d88a8fcdebf2a54c0f4280ff46ca93b25217e564e3e33a79b295bc041",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/1.1-stable/Godot_v1.1_stable_osx32.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "50f7f9e81b45f86a6ed09af474feeb1643d6533af11555af30ef7ca92ce361b45a30ce002f0b066b0940047b128ac2ff80b6dbf1ffb9d96c72be15d5a4c80aa3",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/1.1-stable/Godot_v1.1_stable_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "96916673f206c62da0a9c169eb8ae2e52a6a7b9f4321eb50cc00c82878e7c56a009a8d4576b2aadbd77a55385df946656694034a39ba3dd11ef128e3d05d1705",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/1.1-stable/Godot_v1.1_stable_win64.exe.zip"
+				]
+			}
+		}
+	}
+}

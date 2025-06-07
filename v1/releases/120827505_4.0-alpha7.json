@@ -1,0 +1,43 @@
+{
+	"id": 120827505,
+	"name": "4.0-alpha7",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/4.0-alpha7",
+	"binaries": {
+		"linux": {
+			"x86": {
+				"sha512": "4f72c498124a49fadf4caf28c7d2c2a33543a2d15a2df1b2d294ccd72e718ef86800c763fa7770160c6222352e9d61ff408102056da347156fb81419663e79af",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-alpha7/Godot_v4.0-alpha7_linux.32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "cb0290dedd3847567f471df441a58b8f5e422b3668cee73d5bf936b79a60df3f052197a4cfbe7b8dbc4e2500c803a54d767b00c19f5f9fbf44ee2a885137f324",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-alpha7/Godot_v4.0-alpha7_linux.64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "6f2da4e7cfffcf0bfb8e398b4d669f93f2726119544f5eccedd0884b86f5534e97f65ca63004db76fd378737fc3131a9b305e859224de931b865874809dc2386",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-alpha7/Godot_v4.0-alpha7_osx.universal.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "a89af203dd608a6d014c6969307887cc9c8b1eb4de5817eaca4a3985259f2776aa05490cae2d2f86391b6429398d15f947483b3e583807d2539aa8be8573e127",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-alpha7/Godot_v4.0-alpha7_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "4b21618703cec3742778c9ad734642e8a412f605ed8f05e3934c953f7dc68e8a7d0f0542ed94789d74ef732402d13be9680430d9dea34c22bb5de27054bfd72c",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.0-alpha7/Godot_v4.0-alpha7_win64.exe.zip"
+				]
+			}
+		}
+	}
+}

@@ -1,0 +1,79 @@
+{
+	"id": 120827393,
+	"name": "3.3.3-rc2",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/3.3.3-rc2",
+	"binaries": {
+		"linux": {
+			"x86": {
+				"sha512": "c66a03b64fe3de38a87ab979e24a6ee156571b7659de8cb073de37e399430eec7ca1e5777d1728e7271e725d910f61a74b96925a93c05fd805d0466af8e8b18d",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_x11.32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "ec6c2a2a305704bc729a78e3225c917a1d2f3c61487e45617c4a3227f3856fdff86da3cacd621008914954c1aa6a0a7ae6a1c71d9fc36d2b82e0089a2eab7c1b",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_x11.64.zip"
+				]
+			}
+		},
+		"linux-csharp": {
+			"x86": {
+				"sha512": "01cd61929236a6decdb65e0f673d498bb97e97c7a3c361bc59b663759bdabc32397d8baee4aefc23ffd742eecdb7e676c058f2b4319c20b5cd3c382b62dbd78f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_mono_x11_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "5454c3ab063bc428ec64bd1171cd49116f39a68267fe9711231706ef6eef8625b555d19c65534595e7476cf5a2e0a4ee866289d791f8d4ae65e2d7fea892e193",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_mono_x11_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "b45d54bcc862c0e050e2b188d5db8854faf77a93da44b5778010931498de3cb3cadbc129c03686b255c04d3099f94f21d35f7f07297d8b42de28d49d067e2255",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_osx.universal.zip"
+				]
+			}
+		},
+		"macos-csharp": {
+			"x86_64": {
+				"sha512": "84b33b404498adceda4f9997ff42d4f40b93e3c3f9c1bbfd733e9d7a7872f492771b1b566d75fae1d2c362aacf2cb249748f6c2db00afe918d3cd94eef8bc9bd",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_mono_osx.64.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "0f8409b58f6daf4ef9bcec340e621c9a8bc54c84987dccb7e29fed9cd13efe513097e366119774ec5c6e5808a1e955fbdf0dbd0d804f30257f5c2c8166f9744c",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "833a308894208eda45f2e1b807601803bcfd8be81345339818a36c47611c2fa0e2ab0d930a2554c9bdba76ed1b6ccfe9da19f8ee1325c186a28bac70725a8445",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_win64.exe.zip"
+				]
+			}
+		},
+		"windows-csharp": {
+			"x86": {
+				"sha512": "f74dd1b5633217bde5b968e7373c8adc39c30580f8499d8a609ac3070be3384a40f1fcc776084938bd73e9b0ee286a71dc5d8011c44d3ae8b7fc1c14bd5041cb",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_mono_win32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "e1200f49fdfb5fe48ec83d20987d66907be0c54c2212b6788f9f0b256ba9253d01f9766d934673d43c0b858e1ced01b008144b982a6afcbf9ef9d9ba55c56e2d",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-rc2/Godot_v3.3.3-rc2_mono_win64.zip"
+				]
+			}
+		}
+	}
+}

@@ -1,0 +1,49 @@
+{
+	"id": 120826912,
+	"name": "2.0.3-stable",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/2.0.3-stable",
+	"binaries": {
+		"linux": {
+			"x86": {
+				"sha512": "754a4b968b5dc72cfbcd76ce21d71fba4dd45b126a9e7180a690407d3edf4a44d012aaaa08f127368251a7c8757ec13b1187e4a9d11fe7a12233439207d09c18",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.0.3-stable/Godot_v2.0.3_stable_x11.32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "f1a398013c7fab744f5fb8637ac24ff5623221a17026cc0d5f387086cded1fe6f3f02fcd373e3253ad5a509d4728f6cfdba6917c876eb5249d11b04629770b11",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.0.3-stable/Godot_v2.0.3_stable_x11.64.zip"
+				]
+			}
+		},
+		"macos": {
+			"x86": {
+				"sha512": "b1519dbd540542bb4d26cef74386e142d9540f6e68b594b679633fa0a26fe00c40f81cfe1c253d89e9524f9a19b11bee2b2abffca249dc8f1e9ece9902c59966",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.0.3-stable/Godot_v2.0.3_stable_osx32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "0dc5a63ba0f2d0948d60fab181088a62c3d83de44fa8a0dde229c65e90bb402d01de997b1d2c9f2f4ea55b04c10a5591b8f69bee393214247b94e8596c330117",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.0.3-stable/Godot_v2.0.3_stable_osx64.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "6d2e14235eb58d503e0b73f6a7629b3ccac3d99e191d1cbd5c5ee26614d0bc72ae30e8560f4b2ee6a75cc74d00c9cde440315d08f32a1d216ed892272b0561c9",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.0.3-stable/Godot_v2.0.3_stable_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "05c538ec2f0f2988e6a96bf7c26166c8e5e52b28fbd5c6736a816eaef5ac76630c4c49103a55878444060a682de181301e27b0364f91074d261192ef33a60103",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.0.3-stable/Godot_v2.0.3_stable_win64.exe.zip"
+				]
+			}
+		}
+	}
+}

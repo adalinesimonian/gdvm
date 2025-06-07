@@ -1,0 +1,91 @@
+{
+	"id": 144193656,
+	"name": "4.3-dev4",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/4.3-dev4",
+	"binaries": {
+		"linux": {
+			"arm64": {
+				"sha512": "1688085d5a4adb49bf83b90831a954e08b1bffa1c82e1f0be1c9ac4a1172e83ac974f04229568ea8086819a17afe8fc9f4b251df4df1cefdbcf0804793245c0f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_linux.arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "f8005f33c460f9ca5979004cbf7467270d7c1309e4fe824d9b7698ca1ba55097b3bd2e1ec47204b42a0c19861888327bdcaa68740aef12708a3b0138256d155a",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_linux.x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "08d1cf2627908586fdf1e72a4414fe209beb9c23985e19e741dbe2fe1621863f454b9882a85a8cd067365b7cc05566720da50f118fb20d9336feb502b7acfdf7",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_linux.x86_64.zip"
+				]
+			}
+		},
+		"linux-csharp": {
+			"arm64": {
+				"sha512": "46bb8af1f7dc002eb0ff317b755cc17c5411e2f68418f773c2f4c46da3abb55a2709b4dcd7619409524d974c36ad525387bb6733dd55ba8c8956fb5db5f82e1d",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_mono_linux_arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "60562cf8ea14fb105cfe75f0bf098558124c744fa07c956cf8b3077a2189b028266990a954c7a0729126c4eb5bd46d1b875153ff7e6d11b86e7ff08252980a76",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_mono_linux_x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "a7754429d7c3af81fb8c8eae5aa575d0eab9ea5e82877a1b9b3c8db009f92d6b4e10ac7d05c8989345e000638bdc695d59f879a4556a7a79a2a8d7f9d3ca59d2",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_mono_linux_x86_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "bd7aa9eed24c6c573e7e83a0b5849d26dba12fa27e0ab488e84bd7fb3141fd0475f26d69b84571394e06647cf10b9fb1c20447c7e681628c083716e5a093fcc8",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_macos.universal.zip"
+				]
+			}
+		},
+		"macos-csharp": {
+			"universal": {
+				"sha512": "1dac6ba3ac59a5e0ebcbf89f5c662f1f5b48527656482107da00217fa6e64abbf4fecc3399491ae3b7627b56979e3d9101f480432950f5467585db1ef5eb95fd",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_mono_macos.universal.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "f1db96364cf724aeae18fedc1ff66a1887d9b230f26026586f90c86aca79cc49d0579847309a09b1b9c91e12678b9fa357a5b910746430de64162b20410df24d",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "ca54636be755133be2cb82596eb9a3524bb06faf24cffb069f420710c9b178f1eecdc6597a5e9ab1e59800b923a3c454bd4130cf23a60f9ae30a6d5ede79859d",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_win64.exe.zip"
+				]
+			}
+		},
+		"windows-csharp": {
+			"x86": {
+				"sha512": "d6346f01b34bcfab56ef29746dde12cae8665dfdf938c9bfe3b68839c89775ef40670472f36192b7972dbf3199bbd341717ea86bce53d3f1accb813f066b9160",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_mono_win32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "15d857e8f038ebc4ef472fd14564fca94abccba864a1173705266214afb4dc6468a71e1f45e435f46fc03ddc66234a23114b159b47f0504d215e5060541cc691",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.3-dev4/Godot_v4.3-dev4_mono_win64.zip"
+				]
+			}
+		}
+	}
+}

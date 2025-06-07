@@ -1,0 +1,79 @@
+{
+	"id": 120827398,
+	"name": "3.3.3-stable",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/3.3.3-stable",
+	"binaries": {
+		"linux": {
+			"x86": {
+				"sha512": "92e693db4f23aee66651a2c8333c162d3bbe2d0fcc848fe0fc2bb7a5ab23f93cf889bab5ec29d177f80074e2e9c008255f554992ff73e0a8b97676713eddd32f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_x11.32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "d0e9824ad5b57ba52b1fab7ca5ddc2a905b0ff10f01e89e84ef67ef9f15debaaa3d3cc443180d6e521ddbcd4a3e708c0946497f55797f141611fa0ddf6bf92ab",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_x11.64.zip"
+				]
+			}
+		},
+		"linux-csharp": {
+			"x86": {
+				"sha512": "17285ade9e13fd0103847af4d100a0e5cceadd88c31e4265d9d32909962ce5b601685dcfa9a710e6b93b9a18b1df03bf2deff3b5a1ebc4e9926f37539caa7c5a",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_mono_x11_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "f8ca0e018f4777d382b573d48293ba0cb1caf8fe5731db9c122d0c3f799aa5e12d9f61535d53da681f93443d9772945d9879585ecc38db2dd29e6216ab179663",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_mono_x11_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "13ec758d504b13ab32b6457a0120b1c30be867e56ea0d188205f3abdf56ffd48767ba9924a16f5428d8182d01b29a5cf76a2d292c51872eb8eeedc5e0c01bd45",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_osx.universal.zip"
+				]
+			}
+		},
+		"macos-csharp": {
+			"x86_64": {
+				"sha512": "c957c70619d28ff3d7b45d558ba542de6c9e1775bed2b71d329396b9312030e1c42a73a59a8a433a148c62152074d1e6d0383292c1d0144976f6d47b5a983002",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_mono_osx.64.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "8f93a3f2f4f348306b0f150bed0621cc234f79b0929a23fd44c3ad0d908802a06e245f37cdca4e2d03484842604d1d725d227fed49e4b94fd28d870e00d48752",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "8794aebb739a1e3289ec750fbea4e855126dcb0b94283ed5e4218472706d8519d18b94c8ded7eb40d302d9ce576f10ef517fd6c32707640c3c2bb5c43b023ffe",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_win64.exe.zip"
+				]
+			}
+		},
+		"windows-csharp": {
+			"x86": {
+				"sha512": "607ab64074c67cef2a84e42ce379dd0d1d13019838ba96b6aa14887ac2d63db1f156a939c24e72221199d4f9e51bb572e8141181fc741ac812fe5dec1153b773",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_mono_win32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "31d41b00f62d9581ecaf23ea5f7ea76f39b9438b059741e8d1ae93add3073a8d9c05e616b972b314c66355a6734c24e10a971eda92ae9a6905328cf52e333c92",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.3.3-stable/Godot_v3.3.3-stable_mono_win64.zip"
+				]
+			}
+		}
+	}
+}

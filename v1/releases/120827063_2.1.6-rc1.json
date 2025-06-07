@@ -1,0 +1,43 @@
+{
+	"id": 120827063,
+	"name": "2.1.6-rc1",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/2.1.6-rc1",
+	"binaries": {
+		"linux": {
+			"x86": {
+				"sha512": "f715e3a3bb12324a422d448bcdfc931a1e870f0d7427b0dc7fd64c96ad6195767928920ca3e3e165d0869af0f205632bf4f3a7ab08d8039c4a814f3e34fea69b",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.1.6-rc1/Godot_v2.1.6-rc1_x11.32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "9f2d99777a03471ef5342f1409b633e464a8082b215282f348b60dcd85fb38c8395684beb4d22b73316eae20c20e6e348ae636223b81e364b396c2f46b02c8f9",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.1.6-rc1/Godot_v2.1.6-rc1_x11.64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "c485ce741cba14ba1b0e5a783897b4f32e198acccd492969e51b3bb01e0e6bf517943a648cfa309b4327b23ea60a870e0f42f543059815659726fd1619ee6c41",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.1.6-rc1/Godot_v2.1.6-rc1_osx.fat.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "fe98eef6b380ee41c80753cfab8280765b75de75fcabe0e00831bffc7bb03ef5903afbb62ef0fcbf26cad76415e9e3a0d7409a5d19bb3119e33ae2c1f408e192",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.1.6-rc1/Godot_v2.1.6-rc1_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "42dfe6afa228f8ed8ba725c8be769d6d45c3c91fcca897b4dcbcbdf821c7ca1d22a7ef69a7ba8b0eb11931fe2555e22e8927ff60fb8649bf5026736249c1e8ef",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/2.1.6-rc1/Godot_v2.1.6-rc1_win64.exe.zip"
+				]
+			}
+		}
+	}
+}
