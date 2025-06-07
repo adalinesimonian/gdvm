@@ -115,13 +115,15 @@ if (single.length === 1 && !otherLines.length) {
   const names = items.map((r) => r.name);
   const oneliner = names.join(", ");
 
-  first = `chore: ${verb} release${names.length > 1 ? "s" : ""} ${oneliner}`;
+  first = `chore(v1): ${verb} release${
+    names.length > 1 ? "s" : ""
+  } ${oneliner}`;
 
   if (first.length > 50) {
-    first = `chore: ${verb} releases`;
+    first = `chore(v1): ${verb} releases`;
   }
 } else {
-  first = "chore: Update registry";
+  first = "chore(v1): Update registry";
 }
 
 const commitMessage = `${first}\n\n${body}`.trim();
