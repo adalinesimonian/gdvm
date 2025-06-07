@@ -38,7 +38,7 @@ jobs:
           node-version-file: "v1/package.json"
 
       - name: Clean registry
-        if: ${{ github.event.inputs.clean }}
+        if: ${{ github.event.inputs.clean == 'true' }}
         run: |
           echo "Cleaning registry..."
           rm -rf v1/releases/*
@@ -46,13 +46,14 @@ jobs:
           echo "Registry cleaned."
 
       - name: Update registry (incremental)
+        if: ${{ github.event.inputs.rebuild != 'true' }}
         run: node ./update-registry.mjs
         working-directory: v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update registry (full rebuild)
-        if: ${{ github.event.inputs.rebuild }}
+        if: ${{ github.event.inputs.rebuild == 'true' }}
         run: node ./update-registry.mjs --rebuild
         working-directory: v1
         env:
