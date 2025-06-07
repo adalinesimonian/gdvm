@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /*
-  build-repo.js - Builds a JSON-based repository index for Godot releases
+  update-registry.mjs - Builds a JSON-based registry for Godot releases
   ───────────────────────────────────────────────────────────────────────
   Copyright © 2025 Adaline Simonian <adalinesimonian@pm.me>
   ───────────────────────────────────────────────────────────────────────

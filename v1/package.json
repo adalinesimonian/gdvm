@@ -1,8 +1,8 @@
 {
-	"name": "gdvm-repo-v1",
+	"name": "gdvm-registry-v1",
 	"private": true,
 	"version": "1.0.0",
-	"description": "Repository for Godot release versions",
+	"description": "Registry for Godot release versions",
 	"type": "module",
 	"volta": {
 		"node": "24.1.0"
