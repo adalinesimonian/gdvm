@@ -19,7 +19,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build-and-test:
+  build-test:
+    name: Build, Lint, and Test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -71,13 +72,16 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Check i18n
+        if: success() || failure()
         shell: bash
         run: scripts/find-missing-i18n.sh
 
       - name: Check formatting
+        if: success() || failure()
         run: cargo fmt -- --check
 
       - name: Check clippy
+        if: success() || failure()
         shell: bash
         run: |
           cargo clippy --release --all-targets --all-features -- \
@@ -85,6 +89,121 @@ jobs:
             -D clippy::perf -D clippy::dbg_macro -D clippy::todo \
             -D clippy::unimplemented -D warnings
 
-      - name: Test
-        if: always() && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
+      - name: Run unit and integration tests
+        if: (success() || failure()) && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
         run: cargo test --release --target ${{ matrix.target }}
+
+      - name: Archive binary (*nix)
+        if: (success() || failure()) && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
+        working-directory: ./target/${{ matrix.target }}/release
+        run: tar -cvf binary.tar gdvm && mv binary.tar ../../..
+
+      - name: Archive binary (Windows)
+        shell: bash
+        if: (success() || failure()) && matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc'
+        working-directory: ./target/${{ matrix.target }}/release
+        run: tar -cvf binary.tar gdvm.exe && mv binary.tar ../../..
+
+      - name: Upload binary artifact
+        if: (success() || failure()) && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}-${{ matrix.target }}
+          path: binary.tar
+
+  e2e:
+    name: End-to-End Tests
+    runs-on: ${{ matrix.os }}
+    needs: build-test
+    if: success() || failure()
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: x86_64-apple-darwin
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}-${{ matrix.target }}
+
+      - name: Extract binary artifact
+        run: tar -xvf binary.tar
+
+      - name: Install gdvm (*nix)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        run: |
+          mkdir -p ~/.gdvm/bin
+          cp ./gdvm ~/.gdvm/bin/gdvm
+          echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
+          ~/.gdvm/bin/gdvm --version
+
+      - name: Install gdvm (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p ~/.gdvm/bin
+          cp ./gdvm.exe ~/.gdvm/bin/gdvm.exe
+          echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
+          ~/.gdvm/bin/gdvm.exe --version
+
+      - name: Set up GitHub token
+        if: success() || failure()
+        shell: bash
+        run: gdvm config set github.token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Search for 4.x releases of Godot
+        if: success() || failure()
+        shell: bash
+        run: gdvm search --filter 4 | grep 4.3-stable
+
+      - name: Install Godot 4.3
+        if: success() || failure()
+        shell: bash
+        run: gdvm install 4.3
+
+      - name: Install Godot 3.6.0
+        if: success() || failure()
+        shell: bash
+        run: gdvm install 3.6.0
+
+      - name: Use Godot 3.6.0 globally
+        if: success() || failure()
+        shell: bash
+        run: gdvm use 3.6.0
+
+      - name: Pin Godot 4.3.0 to current directory
+        if: success() || failure()
+        shell: bash
+        run: gdvm pin 4.3.0
+
+      - name: Running Godot in current directory should use 4.3.0
+        if: success() || failure()
+        shell: bash
+        run: gdvm run --console=true -- --version | grep 4.3.stable.official
+
+      - name: Running Godot 3.5 explicitly should use latest 3.5
+        if: success() || failure()
+        shell: bash
+        run: gdvm run 3.5 --console=true -- --version | grep 3.5.3.stable.official
+
+  delete-artifacts:
+    name: Delete Artifacts
+    runs-on: ubuntu-latest
+    if: always()
+    needs: e2e
+    steps:
+      - name: Delete binary artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: binary-*
