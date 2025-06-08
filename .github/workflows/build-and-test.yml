@@ -97,18 +97,18 @@ jobs:
         run: cargo test --release --target ${{ matrix.target }}
 
       - name: Archive binary (*nix)
-        if: (success() || failure()) && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
+        if: success() || failure()
         working-directory: ./target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm && mv binary.tar ../../..
 
       - name: Archive binary (Windows)
         shell: bash
-        if: (success() || failure()) && matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc'
+        if: success() || failure()
         working-directory: ./target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm.exe && mv binary.tar ../../..
 
       - name: Upload binary artifact
-        if: (success() || failure()) && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
+        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.os }}-${{ matrix.target }}
