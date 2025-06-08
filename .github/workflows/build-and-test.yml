@@ -234,7 +234,7 @@ jobs:
           mkdir -p dist
 
           while IFS= read -r target; do
-            dir="${target}"
+            dir="binary-${target}"
             if [[ ! -d "$dir" ]]; then
               echo "::error::artifact for $target not found"
               exit 1
