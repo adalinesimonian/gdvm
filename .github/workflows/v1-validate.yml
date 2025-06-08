@@ -1,0 +1,26 @@
+name: Validate Registry (v1)
+
+on:
+  push:
+    branches:
+      - registry
+  pull_request:
+    branches:
+      - registry
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout registry
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "v1/package.json"
+
+      - name: Validate registry
+        run: node ./validate.mjs
+        working-directory: v1
