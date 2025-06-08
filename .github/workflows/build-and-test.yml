@@ -111,7 +111,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: binary-${{ matrix.os }}-${{ matrix.target }}
+          name: binary-${{ matrix.target }}
           path: binary.tar
 
   e2e:
@@ -138,7 +138,7 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v4
         with:
-          name: binary-${{ matrix.os }}-${{ matrix.target }}
+          name: binary-${{ matrix.target }}
 
       - name: Extract binary artifact
         run: tar -xvf binary.tar
@@ -226,8 +226,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: binary-*
-          merge-multiple: true
-          path: artifacts
 
       - name: Extract & rename binaries
         shell: bash
@@ -236,8 +234,8 @@ jobs:
           mkdir -p dist
 
           while IFS= read -r target; do
-            dir=$(find artifacts -maxdepth 1 -type d -name "binary-*-${target}" | head -n1 || true)
-            if [[ -z "$dir" ]]; then
+            dir="${target}"
+            if [[ ! -d "$dir" ]]; then
               echo "::error::artifact for $target not found"
               exit 1
             fi
