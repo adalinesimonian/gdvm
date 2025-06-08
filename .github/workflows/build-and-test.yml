@@ -97,13 +97,13 @@ jobs:
         run: cargo test --release --target ${{ matrix.target }}
 
       - name: Archive binary (*nix)
-        if: success() || failure()
+        if: (success() || failure()) && matrix.os != 'windows-latest'
         working-directory: ./target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm && mv binary.tar ../../..
 
       - name: Archive binary (Windows)
         shell: bash
-        if: success() || failure()
+        if: (success() || failure()) && matrix.os == 'windows-latest'
         working-directory: ./target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm.exe && mv binary.tar ../../..
 
