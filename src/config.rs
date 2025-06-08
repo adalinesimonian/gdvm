@@ -4,6 +4,7 @@ use directories::BaseDirs;
 use i18n::I18n;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::PathBuf;
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &["github.token"];
@@ -73,11 +74,23 @@ impl ConfigOps for Config {
     }
 }
 
+fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
+    #[cfg(feature = "integration-tests")]
+    {
+        // Override home directory for testing purposes.
+        if let Ok(override_dir) = std::env::var("GDVM_TEST_HOME") {
+            return Ok(PathBuf::from(override_dir));
+        }
+    }
+
+    let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
+    Ok(base_dirs.home_dir().to_path_buf())
+}
+
 impl Config {
     /// Load configuration from ~/.gdvm/config.toml.
     pub fn load(i18n: &I18n) -> Result<Self> {
-        let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
-        let home = base_dirs.home_dir();
+        let home = get_home_dir(i18n)?;
         let config_path = home.join(".gdvm").join("config.toml");
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
@@ -96,8 +109,7 @@ impl Config {
 
     /// Save configuration to ~/.gdvm/config.toml.
     pub fn save(&self, i18n: &I18n) -> Result<()> {
-        let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
-        let home = base_dirs.home_dir();
+        let home = get_home_dir(i18n)?;
         let config_dir = home.join(".gdvm");
         fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("config.toml");

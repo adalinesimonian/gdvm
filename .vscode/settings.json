@@ -36,5 +36,6 @@
     "clippy::unimplemented",
     "-D",
     "warnings"
-  ]
+  ],
+  "rust-analyzer.runnables.extraArgs": ["--features", "integration-tests"]
 }
