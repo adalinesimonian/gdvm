@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::registry::{Registry, ReleaseMetadata};
 use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
@@ -30,7 +31,7 @@ struct ReleaseCache {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct GithubReleasesCache {
+struct RegistryReleasesCache {
     /// Unix timestamp in seconds
     last_fetched: u64,
     releases: Vec<ReleaseCache>,
@@ -44,8 +45,10 @@ struct GdvmCache {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct FullCache {
+    /// Cache for GDVM metadata
     gdvm: GdvmCache,
-    godot_github: GithubReleasesCache,
+    /// Cache for Godot releases
+    godot_registry: RegistryReleasesCache,
 }
 
 #[derive(Debug)]
@@ -66,127 +69,37 @@ pub struct GodotManager<'a> {
     cache_path: PathBuf,
     /// Client for GitHub API requests
     client: reqwest::blocking::Client,
+    /// Registry instance for fetching Godot releases
+    registry: Registry,
     i18n: &'a I18n,
 }
 
-#[allow(clippy::unimplemented)]
-fn get_archive_name(version: &GodotVersionDeterminate, i18n: &I18n) -> String {
-    let is_csharp = version.is_csharp == Some(true);
-    let tag = version.to_remote_str();
-
-    let platform = if cfg!(target_os = "windows") {
-        if cfg!(target_arch = "x86_64") {
-            if is_csharp { "win64" } else { "win64.exe" }
-        } else if cfg!(target_arch = "x86") {
-            if is_csharp { "win32" } else { "win32.exe" }
-        } else if cfg!(target_arch = "aarch64") {
-            if is_csharp {
-                "windows_arm64"
-            } else {
-                "windows_arm64.exe"
-            }
-        } else {
-            unimplemented!("{}", t_w!(i18n, "unsupported-architecture"))
-        }
-    } else if cfg!(target_os = "macos") {
-        "macos.universal"
-    } else if cfg!(target_os = "linux") {
-        if cfg!(target_arch = "x86_64") {
-            if is_csharp {
-                "linux_x86_64"
-            } else {
-                "linux.x86_64"
-            }
-        } else if cfg!(target_arch = "x86") {
-            if is_csharp {
-                "linux_x86_32"
-            } else {
-                "linux.x86_32"
-            }
-        } else if cfg!(target_arch = "arm") {
-            if is_csharp {
-                "linux_arm32"
-            } else {
-                "linux.arm32"
-            }
-        } else if cfg!(target_arch = "aarch64") {
-            if is_csharp {
-                "linux_arm64"
-            } else {
-                "linux.arm64"
-            }
-        } else {
-            unimplemented!("{}", t_w!(i18n, "unsupported-architecture"))
-        }
-    } else {
-        unimplemented!("{}", t_w!(i18n, "unsupported-platform"))
-    };
-
-    if is_csharp {
-        format!("Godot_v{}_mono_{}.zip", tag, platform)
-    } else {
-        format!("Godot_v{}_{}.zip", tag, platform)
-    }
-}
-
-fn get_download_url(tag: &str, archive_name: &str) -> String {
-    format!(
-        "https://github.com/godotengine/godot-builds/releases/download/{}/{}",
-        tag, archive_name
-    )
-}
-
-fn verify_sha512(
-    file_path: &Path,
-    target_name: &str,
-    release_tag: &str,
-    i18n: &I18n,
-) -> Result<()> {
-    let sha_url = format!(
-        "https://github.com/godotengine/godot-builds/releases/download/{}/SHA512-SUMS.txt",
-        release_tag
-    );
-    let sum_file = file_path.with_extension("SHA512-SUMS");
-
-    if download_file(&sha_url, &sum_file, i18n).is_err() {
-        eprintln_i18n!(i18n, "warning-sha-sums-missing");
-        return Ok(());
-    }
-
-    // Initialize indeterminate progress bar
+fn verify_sha512(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
     let pb = ProgressBar::new_spinner();
     pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_message(t_w!(i18n, "verifying-checksum"));
 
-    let sums_content = fs::read_to_string(&sum_file)?;
-
-    // Compute sha512 hash
     let mut hasher = sha2::Sha512::new();
     let mut f = fs::File::open(file_path)?;
     std::io::copy(&mut f, &mut hasher)?;
     let local_hash = format!("{:x}", hasher.finalize());
 
-    // Check sums file
-    for line in sums_content.lines() {
-        if let Some((hash_part, file_part)) = line.split_once("  ") {
-            if file_part.ends_with(&target_name) && hash_part == local_hash {
-                fs::remove_file(sum_file)?;
-
-                pb.finish_with_message(t_w!(i18n, "checksum-verified"));
-
-                return Ok(());
-            }
-        }
+    if local_hash == expected.to_lowercase() {
+        pb.finish_with_message(t_w!(i18n, "checksum-verified"));
+        Ok(())
+    } else {
+        pb.finish_and_clear();
+        Err(anyhow!(t!(
+            i18n,
+            "error-checksum-mismatch",
+            file = file_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        )))
     }
-
-    pb.finish_and_clear();
-
-    Err(anyhow!(t!(
-        i18n,
-        "error-checksum-mismatch",
-        file = target_name,
-    )))
 }
 
 /// Searches for the Godot executable within the given directory.
@@ -308,6 +221,7 @@ impl<'a> GodotManager<'a> {
         fs::create_dir_all(&cache_path)?;
 
         let client = GodotManager::get_github_client(i18n)?;
+        let registry = Registry::new()?;
 
         let manager = GodotManager {
             base_path,
@@ -315,6 +229,7 @@ impl<'a> GodotManager<'a> {
             cache_index_path,
             cache_path,
             client,
+            registry,
             i18n,
         };
 
@@ -397,10 +312,53 @@ impl<'a> GodotManager<'a> {
 
         fs::create_dir_all(&self.cache_path)?;
 
-        let release_tag = gv.to_remote_str();
-        let archive_name = get_archive_name(gv, self.i18n);
-        let download_url = get_download_url(&release_tag, &archive_name);
-        let cache_zip_path = self.cache_path.join(&archive_name);
+        let meta = self.get_release_metadata(gv)?;
+        let is_csharp = gv.is_csharp.unwrap_or(false);
+        let platform_key = if cfg!(target_os = "windows") {
+            if is_csharp {
+                "windows-csharp"
+            } else {
+                "windows"
+            }
+        } else if cfg!(target_os = "macos") {
+            if is_csharp { "macos-csharp" } else { "macos" }
+        } else if cfg!(target_os = "linux") {
+            if is_csharp { "linux-csharp" } else { "linux" }
+        } else {
+            return Err(anyhow!(t_w!(self.i18n, "unsupported-platform")));
+        };
+
+        let arch_key = if cfg!(target_arch = "x86_64") {
+            "x86_64"
+        } else if cfg!(target_arch = "x86") {
+            "x86"
+        } else if cfg!(target_arch = "aarch64") {
+            "arm64"
+        } else {
+            return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
+        };
+
+        let platform_map = meta
+            .binaries
+            .get(platform_key)
+            .ok_or_else(|| anyhow!(t_w!(self.i18n, "unsupported-platform")))?;
+
+        let arch_choice = if cfg!(target_os = "macos") && platform_map.contains_key("universal") {
+            "universal"
+        } else {
+            arch_key
+        };
+
+        let binary = platform_map
+            .get(arch_choice)
+            .ok_or_else(|| anyhow!(t_w!(self.i18n, "unsupported-architecture")))?;
+
+        let download_url = binary
+            .urls
+            .first()
+            .ok_or_else(|| anyhow!(t_w!(self.i18n, "error-file-not-found")))?;
+        let archive_name = download_url.split('/').next_back().unwrap_or("godot.zip");
+        let cache_zip_path = self.cache_path.join(archive_name);
 
         if !redownload && cache_zip_path.exists() {
             eprintln_i18n!(self.i18n, "using-cached-zip");
@@ -414,8 +372,8 @@ impl<'a> GodotManager<'a> {
                 .join(format!("{}.zip", gv.to_install_str()));
 
             // Download the archive
-            download_file(&download_url, &tmp_file, self.i18n)?;
-            verify_sha512(&tmp_file, &archive_name, &release_tag, self.i18n)?;
+            download_file(download_url, &tmp_file, self.i18n)?;
+            verify_sha512(&tmp_file, &binary.sha512, self.i18n)?;
 
             // Move the verified zip to cache_dir
             fs::rename(&tmp_file, &cache_zip_path)?;
@@ -672,66 +630,47 @@ impl<'a> GodotManager<'a> {
         )))
     }
 
-    /// Update the cache by fetching from GitHub and updating `last_fetched`
-    fn update_cache(&self, cache: &mut GithubReleasesCache) -> Result<()> {
-        let mut page = 1;
-        let page_size = if cache.releases.is_empty() { 100 } else { 10 };
-
-        let mut new_releases = Vec::new();
-        let mut seen_existing_release = false;
-
-        // Initialize indeterminate progress bar
+    /// Update the cache by fetching from the registry and updating `last_fetched`
+    fn update_cache(&self, cache: &mut RegistryReleasesCache) -> Result<()> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
         pb.enable_steady_tick(Duration::from_millis(100));
         pb.set_message(t_w!(self.i18n, "fetching-releases"));
 
-        while !seen_existing_release {
-            let releases = self.get_github_json(&format!(
-                "https://api.github.com/repos/godotengine/godot-builds/releases?per_page={}&page={}",
-                page_size, page
-            ))?;
-
-            if let Some(arr) = releases.as_array() {
-                if arr.is_empty() {
-                    break;
-                }
-                for r in arr {
-                    if let Some(id) = r.get("id").and_then(|i| i.as_u64()) {
-                        if let Some(tag_name) = r.get("tag_name").and_then(|t| t.as_str()) {
-                            if cache.releases.iter().any(|c| c.id == id) {
-                                seen_existing_release = true;
-                                continue;
-                            }
-                            new_releases.push(ReleaseCache {
-                                id,
-                                tag_name: tag_name.to_string(),
-                            });
-                        }
-                    }
-                }
-
-                if arr.len() < page_size {
-                    break;
-                }
-            } else {
-                break;
-            }
-
-            page += 1;
-        }
+        let index = self.registry.fetch_index()?;
 
         pb.finish_with_message(t_w!(self.i18n, "releases-fetched"));
 
-        cache.releases.extend(new_releases);
+        cache.releases = index
+            .into_iter()
+            .map(|r| ReleaseCache {
+                id: r.id,
+                tag_name: r.name,
+            })
+            .collect();
         cache.last_fetched = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
             .as_secs();
 
-        self.save_github_cache(cache)?;
+        self.save_registry_cache(cache)?;
 
         Ok(())
+    }
+
+    fn get_release_metadata(&self, gv: &GodotVersionDeterminate) -> Result<ReleaseMetadata> {
+        let tag = gv.to_remote_str();
+        let mut cache = self.load_cache()?;
+        if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
+            return self.registry.fetch_release(entry.id, &entry.tag_name);
+        }
+
+        self.update_cache(&mut cache)?;
+        if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
+            return self.registry.fetch_release(entry.id, &entry.tag_name);
+        }
+
+        Err(anyhow!(t_w!(self.i18n, "error-version-not-found")))
     }
 
     fn load_full_cache(&self) -> Result<FullCache> {
@@ -746,7 +685,7 @@ impl<'a> GodotManager<'a> {
                             last_update_check: 0,
                             new_version: None,
                         },
-                        godot_github: GithubReleasesCache {
+                        godot_registry: RegistryReleasesCache {
                             last_fetched: 0,
                             releases: vec![],
                         },
@@ -761,7 +700,7 @@ impl<'a> GodotManager<'a> {
                     last_update_check: 0,
                     new_version: None,
                 },
-                godot_github: GithubReleasesCache {
+                godot_registry: RegistryReleasesCache {
                     last_fetched: 0,
                     releases: vec![],
                 },
@@ -776,14 +715,14 @@ impl<'a> GodotManager<'a> {
     }
 
     // Load the release cache from cache.json
-    fn load_cache(&self) -> Result<GithubReleasesCache> {
+    fn load_cache(&self) -> Result<RegistryReleasesCache> {
         let full = self.load_full_cache()?;
-        Ok(full.godot_github)
+        Ok(full.godot_registry)
     }
 
-    fn save_github_cache(&self, cache: &GithubReleasesCache) -> Result<()> {
+    fn save_registry_cache(&self, cache: &RegistryReleasesCache) -> Result<()> {
         let mut full = self.load_full_cache()?;
-        full.godot_github = cache.clone();
+        full.godot_registry = cache.clone();
         self.save_full_cache(&full)
     }
 
@@ -1203,27 +1142,5 @@ impl<'a> GodotManager<'a> {
         println_i18n!(self.i18n, "upgrade-complete");
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_download_url_and_archive_name() {
-        let i18n = I18n::new(80).unwrap();
-        let gv = GodotVersion::from_remote_str("4.1-stable", Some(false))
-            .unwrap()
-            .to_determinate();
-        let name = super::get_archive_name(&gv, &i18n);
-        #[cfg(target_os = "linux")]
-        assert_eq!(name, "Godot_v4.1-stable_linux.x86_64.zip");
-        #[cfg(target_os = "windows")]
-        assert_eq!(name, "Godot_v4.1-stable_win64.exe.zip");
-        #[cfg(target_os = "macos")]
-        assert_eq!(name, "Godot_v4.1-stable_macos.universal.zip");
-        let url = super::get_download_url(&gv.to_remote_str(), &name);
-        assert!(url.ends_with(&name));
     }
 }
