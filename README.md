@@ -51,6 +51,9 @@ gdvm search 4                # Search available 4.x versions.
 gdvm upgrade                 # Upgrade gdvm.
 ```
 
+> [!NOTE]
+> Hitting GitHub rate limits? Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with access to public repositories, and run `gdvm config set github.token` (stored plaintext in `~/.gdvm/config.toml`).
+
 For more information, run `gdvm --help`.
 
 ## Contributing
