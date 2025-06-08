@@ -13,6 +13,9 @@ on:
     paths-ignore:
       - "gh-pages/**"
       - "README.md"
+  release:
+    types:
+      - published
 
 concurrency:
   group: ${{ github.event_name }}-${{ github.event.number || github.run_id }}
@@ -197,11 +200,68 @@ jobs:
         shell: bash
         run: gdvm run 3.5 --console=true -- --version | grep 3.5.3.stable.official
 
+  publish:
+    name: Publish binaries
+    if: github.event_name == 'release'
+    needs: e2e
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+
+    env:
+      EXPECTED_TARGETS: |
+        x86_64-unknown-linux-gnu
+        i686-unknown-linux-gnu
+        aarch64-unknown-linux-gnu
+        x86_64-pc-windows-msvc
+        i686-pc-windows-msvc
+        aarch64-pc-windows-msvc
+        x86_64-apple-darwin
+        aarch64-apple-darwin
+
+    steps:
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          merge-multiple: true
+          path: artifacts
+
+      - name: Extract & rename binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          while IFS= read -r target; do
+            dir=$(find artifacts -maxdepth 1 -type d -name "binary-*-${target}" | head -n1 || true)
+            if [[ -z "$dir" ]]; then
+              echo "::error::artifact for $target not found"
+              exit 1
+            fi
+
+            tar -xf "$dir/binary.tar" -C "$dir"
+
+            if [[ "$target" == *windows-msvc ]]; then
+              mv "$dir/gdvm.exe" "dist/gdvm-${target}.exe"
+            else
+              mv "$dir/gdvm" "dist/gdvm-${target}"
+              chmod +x "dist/gdvm-${target}"
+            fi
+          done <<< "$EXPECTED_TARGETS"
+
+      - name: Publish binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+
   delete-artifacts:
     name: Delete Artifacts
     runs-on: ubuntu-latest
     if: always()
-    needs: e2e
+    needs: [e2e, publish]
     steps:
       - name: Delete binary artifacts
         uses: geekyeggo/delete-artifact@v5
