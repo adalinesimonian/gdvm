@@ -57,6 +57,31 @@ pub enum InstallOutcome {
     AlreadyInstalled,
 }
 
+#[derive(Debug)]
+enum GithubJsonError {
+    Network(reqwest::Error),
+    Api(anyhow::Error),
+    Other(anyhow::Error),
+}
+
+impl std::fmt::Display for GithubJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Network(e) => write!(f, "{}", e),
+            Self::Api(e) | Self::Other(e) => write!(f, "{}", e),
+        }
+    }
+}
+
+impl std::error::Error for GithubJsonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Network(e) => Some(e),
+            Self::Api(e) | Self::Other(e) => Some(e.root_cause()),
+        }
+    }
+}
+
 /// GodotManager is a struct that manages the installation and running of Godot versions.
 pub struct GodotManager<'a> {
     /// Path to GDVM base directory
@@ -595,7 +620,7 @@ impl<'a> GodotManager<'a> {
 
     /// Tries to query the GitHub API with a GET at a given URL. If it fails due
     /// to a rate-limit, it will return an error after printing a message.
-    fn get_github_json(&self, url: &str) -> Result<serde_json::Value> {
+    fn get_github_json(&self, url: &str) -> Result<serde_json::Value, GithubJsonError> {
         // Rate limits are 403s with a JSON object that has a "message" key that
         // starts with "API rate limit exceeded".
 
@@ -604,30 +629,35 @@ impl<'a> GodotManager<'a> {
             .get(url)
             .header("User-Agent", "gdvm")
             .timeout(Duration::from_secs(3))
-            .send()?;
+            .send()
+            .map_err(GithubJsonError::Network)?;
 
         if resp.status().is_success() {
-            let json: serde_json::Value = resp.json()?;
+            let json: serde_json::Value =
+                resp.json().map_err(|e| GithubJsonError::Other(e.into()))?;
             return Ok(json);
         }
 
         let status = resp.status();
-        let json: serde_json::Value = resp.json()?;
+        let json: serde_json::Value = resp.json().map_err(|e| GithubJsonError::Other(e.into()))?;
         if status == reqwest::StatusCode::FORBIDDEN {
             if let Some(message) = json.get("message").and_then(|m| m.as_str()) {
                 if message.starts_with("API rate limit exceeded") {
-                    return Err(anyhow!(t_w!(self.i18n, "error-github-rate-limit")));
+                    return Err(GithubJsonError::Api(anyhow!(t_w!(
+                        self.i18n,
+                        "error-github-rate-limit"
+                    ))));
                 }
             }
         }
 
         let error_message = json.get("message").and_then(|m| m.as_str());
 
-        Err(anyhow!(t_w!(
+        Err(GithubJsonError::Api(anyhow!(t_w!(
             self.i18n,
             "error-github-api",
             error = error_message,
-        )))
+        ))))
     }
 
     /// Update the cache by fetching from the registry and updating `last_fetched`
@@ -987,23 +1017,30 @@ impl<'a> GodotManager<'a> {
 
             let mut new_version = None;
 
-            if let Err(err) = {
-                let release = self.get_github_json(
-                    "https://api.github.com/repos/adalinesimonian/gdvm/releases/latest",
-                )?;
-
-                if let Some(tag_name) = release.get("tag_name").and_then(|t| t.as_str()) {
-                    let latest_version = Version::parse(tag_name.trim_start_matches('v'))?;
-                    let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-                    if latest_version > current_version {
-                        new_version = Some(tag_name.to_string());
+            let release = match self.get_github_json(
+                "https://api.github.com/repos/adalinesimonian/gdvm/releases/latest",
+            ) {
+                Ok(json) => json,
+                Err(e) => {
+                    progress.finish_and_clear();
+                    if matches!(e, GithubJsonError::Api(_)) {
+                        eprintln!("{}", e);
+                    } else {
+                        self.save_gdvm_cache(&GdvmCache {
+                            last_update_check: now,
+                            new_version: None,
+                        })?;
                     }
+                    return Err(e.into());
                 }
+            };
 
-                Ok(())
-            } {
-                progress.finish_and_clear();
-                return Err(err);
+            if let Some(tag_name) = release.get("tag_name").and_then(|t| t.as_str()) {
+                let latest_version = Version::parse(tag_name.trim_start_matches('v'))?;
+                let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+                if latest_version > current_version {
+                    new_version = Some(tag_name.to_string());
+                }
             }
 
             progress.finish_and_clear();
