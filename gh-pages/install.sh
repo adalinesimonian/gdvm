@@ -315,12 +315,16 @@ exitCode=$?
 
 if [ $exitCode -ne 0 ]; then
     # Strip ANSI color codes from the output
-    output=$(echo "$output" | sed 's/\x1B\[[0-9;]*[JKmsu]//g')
+    output="${output//\x1B\[[0-9;]*[JKmsu]/}"
 
-    zenity --error --text="$output" || \
-    kdialog --error "$output" || \
-    Xdialog --msgbox "$output" 0 0 || \
-    notify-send "gdvm Error" "$output" || \
+    # Escape < and > characters for safe display with XML-based dialogs
+    escaped="${output//</\&lt;}"
+    escaped="${escaped//>/\&gt;}"
+
+    zenity --error --text="$escaped" || \
+    kdialog --error "$escaped" || \
+    Xdialog --msgbox "$escaped" 0 0 || \
+    notify-send "gdvm Error" "$escaped" || \
     echo "$output"
 fi
 
@@ -338,6 +342,9 @@ Exec="$wrapperScript" %f
 Type=Application
 MimeType=application/x-godot-project;
 Comment=Launch Godot projects via gdvm
+Hidden=false
+Categories=Development;Game;
+Terminal=false
 EOF
 
     # Download the Godot icon
