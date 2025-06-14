@@ -111,6 +111,9 @@ fn write_data_version(path: &Path, version: u32) -> Result<()> {
 }
 
 fn write_bytes_if_different(bytes: &[u8], dest: &Path, perm: Option<u32>) -> Result<()> {
+    #[cfg(not(target_family = "unix"))]
+    let _ = perm;
+
     let write_bytes = || -> Result<()> {
         fs::write(dest, bytes)?;
 
