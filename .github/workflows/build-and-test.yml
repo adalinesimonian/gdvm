@@ -52,12 +52,33 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Set up Dev Drive (Windows)
+        if: matrix.os == 'windows-latest'
+        # This step is necessary because otherwise I/O performance on Windows
+        # runners is very poor, especially for disk-intensive tasks like
+        # building Rust projects.
+        # See https://github.com/actions/runner-images/issues/7320
+        uses: samypr100/setup-dev-drive@v3
+        with:
+          drive-size: 4GB
+          workspace-copy: true
+          env-mapping: |
+            CWD,{{ DEV_DRIVE_WORKSPACE }}
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
+      - name: Set environment variables
+        if: matrix.os != 'windows-latest'
+        run: |
+          echo "CWD=$(pwd)" >> $GITHUB_ENV
+
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
           rustflags: ""
-          cache-key: ${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          cache-key: ${{ matrix.target }}-${{ hashFiles(format('{0}/**/Cargo.lock', env.CWD)) }}
+          cache-workspaces: "${{ env.CWD }} -> target"
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -72,20 +93,24 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build
+        working-directory: ${{ env.CWD }}
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Check i18n
         if: success() || failure()
         shell: bash
+        working-directory: ${{ env.CWD }}
         run: scripts/find-missing-i18n.sh
 
       - name: Check formatting
         if: success() || failure()
+        working-directory: ${{ env.CWD }}
         run: cargo fmt -- --check
 
       - name: Check clippy
         if: success() || failure()
         shell: bash
+        working-directory: ${{ env.CWD }}
         run: |
           cargo clippy --release --all-targets --all-features -- \
             -D clippy::suspicious -D clippy::style -D clippy::complexity \
@@ -94,17 +119,18 @@ jobs:
 
       - name: Run unit and integration tests
         if: (success() || failure()) && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
+        working-directory: ${{ env.CWD }}
         run: cargo test --release --features integration-tests --target ${{ matrix.target }}
 
       - name: Archive binary (*nix)
         if: (success() || failure()) && matrix.os != 'windows-latest'
-        working-directory: ./target/${{ matrix.target }}/release
+        working-directory: ${{ env.CWD }}/target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm && mv binary.tar ../../..
 
       - name: Archive binary (Windows)
         shell: bash
         if: (success() || failure()) && matrix.os == 'windows-latest'
-        working-directory: ./target/${{ matrix.target }}/release
+        working-directory: ${{ env.CWD }}/target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm.exe && mv binary.tar ../../..
 
       - name: Upload binary artifact
@@ -112,7 +138,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
-          path: binary.tar
+          path: ${{ env.CWD }}/binary.tar
 
   e2e:
     name: End-to-End Tests
