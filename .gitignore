@@ -1,5 +1,6 @@
 # Rust build
 /target/
+/intermediate/
 
 # Rust/Cargo
 **/*.rs.bk

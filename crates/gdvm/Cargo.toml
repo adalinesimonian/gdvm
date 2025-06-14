@@ -1,0 +1,70 @@
+[package]
+name = "gdvm"
+version = "0.7.1"
+edition = "2024"
+build = "build.rs"
+description = "Godot Version Manager"
+license = "ISC"
+repository = "https://github.com/adalinesimonian/gdvm"
+
+[dependencies]
+
+# For command-line argument parsing:
+clap = { version = "=4.5.40", features = ["derive", "wrap_help"] }
+regex = "=1.11.1"
+
+# For cross-platform paths:
+directories = "=6.0.0"
+
+# For i18n:
+fluent-bundle = "=0.16.0"
+fluent-langneg = "=0.14.1"
+unic-langid = { version = "=0.9.6", features = ["unic-langid-macros"] }
+anyhow = "=1.0.98"
+terminal_size = "=0.4.2"
+textwrap = { version = "=0.16.2", features = [
+    "unicode-width",
+    "unicode-linebreak",
+] }
+
+# For downloading files:
+reqwest = { version = "=0.12.20", features = [
+    "json",
+    "gzip",
+    "brotli",
+    "deflate",
+    "rustls-tls",
+    "blocking",
+] }
+futures-io = "=0.3.31"
+indicatif = "=0.17.11"
+sha2 = "=0.10.9"
+serde_json = "=1.0.140"
+serde = { version = "=1.0.219", features = ["derive"] }
+semver = "=1.0.26"
+
+# For file system operations:
+zip = "=4.0.0"
+toml = "0.8.20"
+rpassword = "7.3.1"
+
+# For starting Godot:
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "=0.3.9", features = ["winbase"] }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+daemonize = "=0.5.0"
+
+# OpenSSL for cross-compiling:
+[target.i686-unknown-linux-gnu.dependencies]
+openssl = { version = "=0.10.73", features = ["vendored"] }
+
+[target.aarch64-unknown-linux-gnu.dependencies]
+openssl = { version = "=0.10.73", features = ["vendored"] }
+
+[dev-dependencies]
+tempfile = "3.20.0"
+serial_test = "3.2.0"
+
+[features]
+integration-tests = []

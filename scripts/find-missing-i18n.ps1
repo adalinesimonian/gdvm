@@ -4,7 +4,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 # Extract string names from Rust files
 
 # Get all .rs files recursively
-$rsFiles = Get-ChildItem -Path "$ScriptDir\..\src" -Recurse -Filter *.rs
+$rsFiles = Get-ChildItem -Path "$ScriptDir\..\crates\gdvm\src" -Recurse -Filter *.rs
 
 # Initialize an empty array to store keys
 $keys = @()
@@ -31,7 +31,7 @@ $uniqueKeys = $keys | Sort-Object -Unique
 $script:exitCode = 0
 
 # Iterate through each .ftl file in the i18n directory
-Get-ChildItem -Path "$ScriptDir/../i18n" -Filter *.ftl | ForEach-Object {
+Get-ChildItem -Path "$ScriptDir/../crates/gdvm/i18n" -Filter *.ftl | ForEach-Object {
     $ftl = $_.FullName
     $lang = $_.BaseName
     Write-Output "Checking translations for language: ${lang}"
