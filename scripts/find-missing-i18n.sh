@@ -6,7 +6,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Extract string names from Rust files
 # shellcheck disable=SC2016
-expectedKeys=$(find "$SCRIPT_DIR/../src" -type f -name '*.rs' -print0 | \
+expectedKeys=$(find "$SCRIPT_DIR/../crates/gdvm/src" -type f -name '*.rs' -print0 | \
     xargs -0 perl -0777 -ne '
         while (/(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
             print "$1\n";
@@ -16,7 +16,7 @@ expectedKeys=$(find "$SCRIPT_DIR/../src" -type f -name '*.rs' -print0 | \
 exitCode=0
 
 # Iterate through each .ftl file in the i18n directory
-for ftl in "$SCRIPT_DIR/../i18n/"*.ftl; do
+for ftl in "$SCRIPT_DIR/../crates/gdvm/i18n/"*.ftl; do
     lang=$(basename "$ftl" .ftl)
     echo "Checking translations for language: ${lang}"
 

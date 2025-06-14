@@ -15,12 +15,14 @@ fn main() -> Result<()> {
     let i18n = I18n::new(100)?;
     let manager = GodotManager::new(&i18n)?;
 
-    // Detect if running through "godot" or "godot_console" symlink
-    let exe_name = std::env::current_exe()?
-        .file_stem()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_lowercase();
+    // Detect if running through "godot" or "godot_console" shim.
+    let exe_name = std::env::var("GDVM_ALIAS").ok().unwrap_or_else(|| {
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
+            .unwrap_or_default()
+            .to_lowercase()
+    });
 
     if exe_name.contains("godot") {
         // Forward all args (skip clap) and treat it like "gdvm run"

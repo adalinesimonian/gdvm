@@ -195,6 +195,16 @@ jobs:
         shell: bash
         run: gdvm run --console=true -- --version | grep 4.3.stable.official
 
+      - name: Running Godot in current directory with godot alias should use 4.3.0
+        if: (success() || failure()) && matrix.os != 'windows-latest'
+        shell: bash
+        run: godot --version | grep 4.3.stable.official
+
+      - name: Running Godot in current directory with godot_console alias should use 4.3.0
+        if: (success() || failure()) && matrix.os == 'windows-latest'
+        shell: bash
+        run: godot_console --version | grep 4.3.stable.official
+
       - name: Running Godot 3.5 explicitly should use latest 3.5
         if: success() || failure()
         shell: bash

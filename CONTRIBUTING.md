@@ -35,7 +35,7 @@ To build the project, you need to have Rust installed. You can install Rust from
    ```
 2. **Build and run the project**:
    ```sh
-   cargo run
+   cargo run --bin gdvm
    ```
 
 ## Building GDVM for Release

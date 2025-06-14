@@ -22,6 +22,12 @@ use crate::zip_utils;
 use crate::{eprintln_i18n, println_i18n};
 use crate::{i18n, project_version_detector, t, t_w};
 
+// Include the prebuilt shim binary.
+#[cfg(target_os = "windows")]
+const GDVM_SHIM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/shim.exe"));
+#[cfg(not(target_os = "windows"))]
+const GDVM_SHIM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/shim"));
+
 use version_utils::{GodotVersion, GodotVersionDeterminateVecExt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -214,21 +220,44 @@ pub fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option
     }
 }
 
-fn copy_over_binary_if_different(source: &Path, dest: &Path) -> Result<()> {
-    if let Ok(metadata) = fs::symlink_metadata(dest) {
-        if metadata.file_type().is_symlink() {
-            fs::remove_file(dest)?;
-        }
-    }
-    if dest.exists() {
-        let source_content = fs::read(source)?;
-        let dest_content = fs::read(dest)?;
-        if source_content != dest_content {
-            fs::copy(source, dest)?;
+fn write_bytes_if_different(bytes: &[u8], dest: &Path) -> Result<()> {
+    let write_bytes = || -> Result<()> {
+        fs::write(dest, bytes)?;
+        #[cfg(target_family = "unix")]
+        fs::set_permissions(dest, fs::Permissions::from_mode(0o755))?;
+        Ok(())
+    };
+
+    // Check if file exists and sizes differ.
+    if let Ok(metadata) = fs::metadata(dest) {
+        if metadata.len() != bytes.len() as u64 {
+            // If sizes differ, write the new bytes.
+            write_bytes()?;
         }
     } else {
-        fs::copy(source, dest)?;
+        // If file doesn't exist, write it.
+        write_bytes()?;
     }
+
+    // Compare file contents and exit early on any difference.
+    let file = fs::File::open(dest)?;
+    let mut reader = std::io::BufReader::new(file);
+    let mut idx = 0;
+    let mut buffer = [0u8; 8192];
+    loop {
+        let read = std::io::Read::read(&mut reader, &mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        if buffer[..read] != bytes[idx..idx + read] {
+            // If any part of the file differs, write the new bytes.
+            write_bytes()?;
+            return Ok(());
+        }
+        idx += read;
+    }
+
+    // No differences detected.
     Ok(())
 }
 
@@ -268,12 +297,6 @@ impl<'a> GodotManager<'a> {
 
     fn ensure_godot_binaries(&self) -> Result<()> {
         let bin_path = self.base_path.join("bin");
-        let gdvm_exe_source = if cfg!(target_os = "windows") {
-            bin_path.join("gdvm.exe")
-        } else {
-            bin_path.join("gdvm")
-        };
-
         let targets: &[&str] = if cfg!(target_os = "windows") {
             &["godot.exe", "godot_console.exe"]
         } else {
@@ -282,17 +305,14 @@ impl<'a> GodotManager<'a> {
 
         for exe in targets.iter() {
             let exe_path = bin_path.join(exe);
-
-            if std::env::current_exe().ok() != Some(exe_path.clone()) {
-                if let Err(err) = copy_over_binary_if_different(&gdvm_exe_source, &exe_path) {
-                    eprintln_i18n!(
-                        self.i18n,
-                        "error-ensure-godot-binaries-failed",
-                        error = &err.to_string(),
-                        path = &exe_path.to_string_lossy().to_string(),
-                    );
-                    return Err(err);
-                }
+            if let Err(err) = write_bytes_if_different(GDVM_SHIM, &exe_path) {
+                eprintln_i18n!(
+                    self.i18n,
+                    "error-ensure-godot-binaries-failed",
+                    error = &err.to_string(),
+                    path = &exe_path.to_string_lossy().to_string(),
+                );
+                return Err(err);
             }
         }
 
