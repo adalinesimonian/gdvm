@@ -397,6 +397,20 @@ async function runParent() {
 
   const knownIds = new Set(currentIndex.map((entry) => entry.id));
 
+  // When doing incremental updates, always refetch the last 3 builds to fill in
+  // any missing assets that may have been added after initial indexing.
+  let refetchIds = new Set();
+
+  if (!rebuild && currentIndex.length > 0) {
+    const lastBuilds = currentIndex.slice(0, 3);
+    refetchIds = new Set(lastBuilds.map((entry) => entry.id));
+    console.log(
+      `Will refetch data for the last ${lastBuilds.length} builds: ${lastBuilds
+        .map((b) => b.name)
+        .join(", ")}`
+    );
+  }
+
   // Fetch releases page by page until we hit the first known ID.
   const releases = [];
   const perPage = 100;
@@ -411,21 +425,26 @@ async function runParent() {
     }
 
     for (const release of pageReleases) {
-      if (!rebuild && knownIds.has(release.id)) {
+      // Include release if:
+      // 1. We're rebuilding the index.
+      // 2. The release is new, not in the current index.
+      // 3. It's one of the last 3 releases, to refetch any missing assets.
+      if (rebuild || !knownIds.has(release.id) || refetchIds.has(release.id)) {
+        releases.push({
+          id: release.id,
+          tag_name: release.tag_name,
+          assets: release.assets.map((a) => ({
+            name: a.name,
+            url: a.browser_download_url,
+          })),
+        });
+      } else {
         console.log(
           `Found known release ID ${release.id} (${release.tag_name}) on page ${page}. Stopping.`
         );
         page = Infinity; // Stop outer loop.
         break;
       }
-      releases.push({
-        id: release.id,
-        tag_name: release.tag_name,
-        assets: release.assets.map((a) => ({
-          name: a.name,
-          url: a.browser_download_url,
-        })),
-      });
     }
 
     if (pageReleases.length < perPage) {
@@ -534,11 +553,20 @@ async function runParent() {
   console.log("[████████████████████████████████] 100.0%  finished");
 
   // Write index.json with the release index.
+  const indexMap = new Map();
 
-  const newEntries = releases.map((r) => ({ id: r.id, name: r.tag_name }));
-  const finalIndex = rebuild
-    ? newEntries
-    : [...newEntries, ...currentIndex].sort((a, b) => b.id - a.id);
+  if (rebuild) {
+    // For rebuild, just use the fetched releases.
+    releases.forEach((r) => indexMap.set(r.id, { id: r.id, name: r.tag_name }));
+  } else {
+    // For incremental, start with existing index, then overlay new releases to
+    // update refetched ones and add new ones.
+    currentIndex.forEach((entry) => indexMap.set(entry.id, entry));
+    releases.forEach((r) => indexMap.set(r.id, { id: r.id, name: r.tag_name }));
+  }
+
+  // Sort by ID descending, newest first.
+  const finalIndex = Array.from(indexMap.values()).sort((a, b) => b.id - a.id);
 
   await fs.writeFile(indexFile, JSON.stringify(finalIndex, null, "\t") + "\n");
   console.log("index.json updated.");
