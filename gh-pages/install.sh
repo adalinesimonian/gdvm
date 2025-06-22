@@ -3,6 +3,7 @@ set -e
 
 repoUrl="https://github.com/adalinesimonian/gdvm"
 latestUrl="$repoUrl/releases/latest/download"
+apiUrl="https://api.github.com/repos/adalinesimonian/gdvm/releases/latest"
 
 # Create a local bin directory if it doesn't exist
 installDir="$HOME/.gdvm/bin"
@@ -42,6 +43,49 @@ outPath="$installDir/$outFile"
 # Download the binary
 echo -e "\e[32m🔄 Downloading gdvm from $binUrl...\e[0m"
 curl -sL "$binUrl" -o "$outPath"
+
+echo -e "\e[32m🔄 Fetching checksum from GitHub API...\e[0m"
+if [ -n "$GITHUB_TOKEN" ]; then
+    apiResponse=$(curl -sL -H "Authorization: token $GITHUB_TOKEN" "$apiUrl")
+else
+    apiResponse=$(curl -sL "$apiUrl")
+fi
+
+# Display any error messages from the API response.
+if echo "$apiResponse" | grep -q '"message"'; then
+    echo -e "\e[33m⚠️ GitHub API response:\e[0m"
+    echo -e "\e[33m$apiResponse\e[0m"
+fi
+
+expectedChecksum=$(echo "$apiResponse" | grep -A 30 "\"name\": \"$file\"" | grep '"digest"' | head -1 | cut -d'"' -f4 | cut -d':' -f2)
+
+if [ -z "$expectedChecksum" ]; then
+    echo -e "\e[33m⚠️ Warning: Could not fetch checksum from GitHub API. Skipping verification.\e[0m"
+else
+    echo -e "\e[32m🔍 Verifying checksum...\e[0m"
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        actualChecksum=$(sha256sum "$outPath" | cut -d' ' -f1)
+    elif command -v shasum >/dev/null 2>&1; then
+        actualChecksum=$(shasum -a 256 "$outPath" | cut -d' ' -f1)
+    else
+        echo -e "\e[33m⚠️ Warning: Neither sha256sum nor shasum found. Skipping checksum verification.\e[0m"
+        actualChecksum=""
+    fi
+
+    if [ -n "$actualChecksum" ]; then
+        if [ "$actualChecksum" = "$expectedChecksum" ]; then
+            echo -e "\e[32m✅ Checksum verified successfully.\e[0m"
+        else
+            echo -e "\e[31m❌ Checksum verification failed!\e[0m"
+            echo -e "\e[31mExpected: $expectedChecksum\e[0m"
+            echo -e "\e[31mActual:   $actualChecksum\e[0m"
+            rm -f "$outPath"
+            exit 1
+        fi
+    fi
+fi
+
 chmod +x "$outPath"
 
 echo -e "\e[32m✅ gdvm was installed to $outPath\e[0m"

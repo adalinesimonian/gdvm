@@ -15,12 +15,47 @@ if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
 
 $repoUrl   = 'https://github.com/adalinesimonian/gdvm'
 $latestUrl = "$repoUrl/releases/latest/download"
+$apiUrl    = 'https://api.github.com/repos/adalinesimonian/gdvm/releases/latest'
 $file      = "gdvm-$arch.exe"
 $binUrl    = "$latestUrl/$file"
 $outFile   = Join-Path $installDir "gdvm.exe"
 
 Write-Host "🔄 Downloading gdvm from $binUrl..." -ForegroundColor Green
 Invoke-WebRequest -Uri $binUrl -OutFile $outFile -UseBasicParsing
+
+Write-Host "🔄 Fetching checksum from GitHub API..." -ForegroundColor Green
+try {
+    $headers = @{}
+    if ($env:GITHUB_TOKEN) {
+        $headers["Authorization"] = "token $($env:GITHUB_TOKEN)"
+    }
+    $apiResponse = Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing
+
+    $asset = $apiResponse.assets | Where-Object { $_.name -eq $file }
+
+    if ($asset -and $asset.digest) {
+        $expectedChecksum = $asset.digest -replace 'sha256:', ''
+
+        Write-Host "🔍 Verifying checksum..." -ForegroundColor Green
+
+        $actualChecksum = (Get-FileHash -Path $outFile -Algorithm SHA256).Hash.ToLower()
+
+        if ($actualChecksum -eq $expectedChecksum) {
+            Write-Host "✅ Checksum verified successfully." -ForegroundColor Green
+        } else {
+            Write-Host "❌ Checksum verification failed!" -ForegroundColor Red
+            Write-Host "Expected: $expectedChecksum" -ForegroundColor Red
+            Write-Host "Actual:   $actualChecksum" -ForegroundColor Red
+            Remove-Item -Path $outFile -Force
+            exit 1
+        }
+    } else {
+        Write-Host "⚠️ Warning: Could not fetch checksum from GitHub API. Skipping verification." -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "⚠️ Warning: Error fetching checksum from GitHub API. Skipping verification." -ForegroundColor Yellow
+    Write-Host "Error: $_" -ForegroundColor Yellow
+}
 
 # Grant execution rights
 & icacls $outFile /grant Everyone:F > $null
