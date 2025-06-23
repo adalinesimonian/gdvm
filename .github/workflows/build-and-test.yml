@@ -33,14 +33,14 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: windows-latest
             target: i686-pc-windows-msvc
-          - os: windows-latest
+          - os: windows-11-arm
             target: aarch64-pc-windows-msvc
 
           - os: macos-latest
@@ -58,6 +58,7 @@ jobs:
           target: ${{ matrix.target }}
           rustflags: ""
           cache-key: ${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          components: rustc, rust-src, rust-std, rust-docs, cargo, rustfmt, clippy
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -66,10 +67,6 @@ jobs:
       - name: Install dependencies (Linux x86_32)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'i686-unknown-linux-gnu'
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib
-
-      - name: Install dependencies (Linux aarch64)
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -93,17 +90,17 @@ jobs:
             -D clippy::unimplemented -D warnings
 
       - name: Run unit and integration tests
-        if: (success() || failure()) && (matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu') || (matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-msvc') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-apple-darwin')
+        if: (success() || failure()) && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64'))
         run: cargo test --release --features integration-tests --target ${{ matrix.target }}
 
       - name: Archive binary (*nix)
-        if: (success() || failure()) && matrix.os != 'windows-latest'
+        if: (success() || failure()) && !contains(matrix.os, 'windows')
         working-directory: ./target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm && mv binary.tar ../../..
 
       - name: Archive binary (Windows)
         shell: bash
-        if: (success() || failure()) && matrix.os == 'windows-latest'
+        if: (success() || failure()) && contains(matrix.os, 'windows')
         working-directory: ./target/${{ matrix.target }}/release
         run: tar -cvf binary.tar gdvm.exe && mv binary.tar ../../..
 
@@ -125,10 +122,18 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+
           - os: macos-latest
             target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
 
     permissions:
       contents: read
@@ -144,7 +149,7 @@ jobs:
         run: tar -xvf binary.tar
 
       - name: Install gdvm (*nix)
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'macos')
         run: |
           mkdir -p ~/.gdvm/bin
           cp ./gdvm ~/.gdvm/bin/gdvm
@@ -152,7 +157,7 @@ jobs:
           ~/.gdvm/bin/gdvm --version
 
       - name: Install gdvm (Windows)
-        if: matrix.os == 'windows-latest'
+        if: contains(matrix.os, 'windows')
         shell: bash
         run: |
           mkdir -p ~/.gdvm/bin
@@ -176,14 +181,24 @@ jobs:
         run: gdvm install 4.3
 
       - name: Install Godot 3.6.0
-        if: success() || failure()
+        if: (success() || failure()) && matrix.os != 'windows-11-arm'
         shell: bash
         run: gdvm install 3.6.0
 
       - name: Use Godot 3.6.0 globally
-        if: success() || failure()
+        if: (success() || failure()) && matrix.os != 'windows-11-arm'
         shell: bash
         run: gdvm use 3.6.0
+
+      - name: Install Godot 4.4.0
+        if: (success() || failure()) && matrix.os == 'windows-11-arm'
+        shell: bash
+        run: gdvm install 4.4.0
+
+      - name: Use Godot 4.4.0 globally
+        if: (success() || failure()) && matrix.os == 'windows-11-arm'
+        shell: bash
+        run: gdvm use 4.4.0
 
       - name: Pin Godot 4.3.0 to current directory
         if: success() || failure()
@@ -196,19 +211,28 @@ jobs:
         run: gdvm run --console=true -- --version | grep 4.3.stable.official
 
       - name: Running Godot in current directory with godot alias should use 4.3.0
-        if: (success() || failure()) && matrix.os != 'windows-latest'
+        if: (success() || failure()) && !contains(matrix.os, 'windows')
         shell: bash
         run: godot --version | grep 4.3.stable.official
 
       - name: Running Godot in current directory with godot_console alias should use 4.3.0
-        if: (success() || failure()) && matrix.os == 'windows-latest'
+        if: (success() || failure()) && contains(matrix.os, 'windows')
         shell: bash
         run: godot_console --version | grep 4.3.stable.official
 
       - name: Running Godot 3.5 explicitly should use latest 3.5
-        if: success() || failure()
+        if: (success() || failure()) && !contains(matrix.target, 'aarch64')
         shell: bash
         run: gdvm run 3.5 --console=true -- --version | grep 3.5.3.stable.official
+
+      - name: Running Godot 4.4 explicitly should use latest 4.4
+        if: (success() || failure()) && contains(matrix.target, 'aarch64')
+        shell: bash
+        run: gdvm run 4.4 --console=true -- --version | grep 4.4.1.stable.official
+
+      - name: Running latest stable Godot should work
+        shell: bash
+        run: gdvm run stable --console=true -- --version | grep stable.official
 
   publish:
     name: Publish binaries
