@@ -100,6 +100,7 @@ unsupported-architecture = Неподдерживаемая архитектур
 
 verifying-checksum = Проверка контрольной суммы...
 checksum-verified = Контрольная сумма проверена.
+error-invalid-sha-length = Неверная длина SHA { $length }
 error-checksum-mismatch = Несоответствие контрольной суммы для файла { $file }
 
 error-find-user-dirs = Не удалось найти пользовательские каталоги.

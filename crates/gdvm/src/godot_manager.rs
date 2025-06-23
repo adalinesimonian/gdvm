@@ -8,7 +8,7 @@ use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use sha2::Digest;
+use sha2::{Digest, Sha256, Sha512};
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -83,6 +83,24 @@ impl std::error::Error for GithubJsonError {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum ShaType {
+    Sha256,
+    Sha512,
+}
+
+impl ShaType {
+    /// Attempts to detect the SHA type based on the expected hash length.
+    /// SHA256 produces 64 hex characters, SHA512 produces 128 hex characters.
+    fn from_hash_length(hash: &str) -> Option<Self> {
+        match hash.len() {
+            64 => Some(ShaType::Sha256),
+            128 => Some(ShaType::Sha512),
+            _ => None,
+        }
+    }
+}
+
 /// GodotManager is a struct that manages the installation and running of Godot versions.
 pub struct GodotManager<'a> {
     /// Path to GDVM base directory
@@ -100,16 +118,35 @@ pub struct GodotManager<'a> {
     i18n: &'a I18n,
 }
 
-fn verify_sha512(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
+/// Verifies the SHA of a file against an expected hash.
+fn verify_sha(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
+    let sha_type = ShaType::from_hash_length(expected).ok_or_else(|| {
+        anyhow!(t_w!(
+            i18n,
+            "error-invalid-sha-length",
+            length = expected.len()
+        ))
+    })?;
+
     let pb = ProgressBar::new_spinner();
     pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_message(t_w!(i18n, "verifying-checksum"));
 
-    let mut hasher = sha2::Sha512::new();
     let mut f = fs::File::open(file_path)?;
-    std::io::copy(&mut f, &mut hasher)?;
-    let local_hash = format!("{:x}", hasher.finalize());
+
+    let local_hash = match sha_type {
+        ShaType::Sha256 => {
+            let mut hasher = Sha256::new();
+            std::io::copy(&mut f, &mut hasher)?;
+            format!("{:x}", hasher.finalize())
+        }
+        ShaType::Sha512 => {
+            let mut hasher = Sha512::new();
+            std::io::copy(&mut f, &mut hasher)?;
+            format!("{:x}", hasher.finalize())
+        }
+    };
 
     if local_hash == expected.to_lowercase() {
         pb.finish_with_message(t_w!(i18n, "checksum-verified"));
@@ -348,7 +385,7 @@ impl<'a> GodotManager<'a> {
 
             // Download the archive
             download_file(download_url, &tmp_file, self.i18n)?;
-            verify_sha512(&tmp_file, &binary.sha512, self.i18n)?;
+            verify_sha(&tmp_file, &binary.sha512, self.i18n)?;
 
             // Move the verified zip to cache_dir
             fs::rename(&tmp_file, &cache_zip_path)?;
@@ -577,7 +614,6 @@ impl<'a> GodotManager<'a> {
         let resp = self
             .client
             .get(url)
-            .header("User-Agent", "gdvm")
             .timeout(Duration::from_secs(3))
             .send()
             .map_err(GithubJsonError::Network)?;
@@ -1096,6 +1132,37 @@ impl<'a> GodotManager<'a> {
         if let Err(err) = download_file(&bin_url, &out_file, self.i18n) {
             eprintln_i18n!(self.i18n, "upgrade-download-failed");
             return Err(err);
+        }
+
+        // Fetch the release JSON to get the digest.
+        let response = self
+            .get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases/latest")?;
+        let mut found_digest = None;
+
+        let assets = response.get("assets").and_then(|a| a.as_array());
+
+        if let Some(assets) = assets {
+            found_digest = assets.iter().find_map(|asset| {
+                let name = asset.get("name").and_then(|n| n.as_str());
+                let digest = asset.get("digest").and_then(|d| d.as_str());
+
+                if name == Some(&file) {
+                    digest
+                        .and_then(|d| d.strip_prefix("sha256:"))
+                        .map(|d| d.to_string())
+                } else {
+                    None
+                }
+            });
+        }
+
+        if let Some(digest) = found_digest {
+            if let Err(e) = verify_sha(&out_file, &digest, self.i18n) {
+                let _ = std::fs::remove_file(&out_file);
+                return Err(e);
+            }
+        } else {
+            eprintln_i18n!(self.i18n, "warning-sha-sums-missing");
         }
 
         #[cfg(target_family = "unix")]

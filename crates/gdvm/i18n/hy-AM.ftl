@@ -82,6 +82,7 @@ unsupported-architecture = Չաջակցվող ստեղծածություն
 
 verifying-checksum = Ստուգվում է ստորակետը...
 checksum-verified = Ստորակետը ստուգված է:
+error-invalid-sha-length = Անվավեր SHA երկարություն { $length }
 error-checksum-mismatch = Ստորակետի չափազանելը չհամընկեց ֆայլի { $file }
 
 error-find-user-dirs = Չհաջողվեց գտնել օգտագործողի պանակները։

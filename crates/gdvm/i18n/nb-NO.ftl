@@ -60,6 +60,7 @@ unsupported-architecture = Arkitekturen støttes ikke
 verifying-checksum = Verifiserer sjekksum...
 checksum-verified = Sjekksum verifisert.
 error-checksum-mismatch = Sjekksumfeil for filen { $file }
+error-invalid-sha-length = Ugyldig SHA-lengde { $length }
 warning-sha-sums-missing = Sjekksumfiler ble ikke funnet for denne utgivelsen. Hopper over verifisering.
 
 error-find-user-dirs = Klarte ikke å finne brukermappene.

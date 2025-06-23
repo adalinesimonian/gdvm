@@ -74,6 +74,7 @@ unsupported-architecture = Unsupported architecture
 verifying-checksum = Verifying checksum...
 checksum-verified = Checksum verified.
 error-checksum-mismatch = Checksum mismatch for file { $file }
+error-invalid-sha-length = Invalid SHA length { $length }
 warning-sha-sums-missing = Checksum files not found for this release. Skipping verification.
 
 error-find-user-dirs = Failed to find user directories.
