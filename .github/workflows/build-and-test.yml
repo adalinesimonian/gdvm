@@ -57,7 +57,6 @@ jobs:
         with:
           target: ${{ matrix.target }}
           rustflags: ""
-          cache-key: ${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
           components: rustc, rust-src, rust-std, rust-docs, cargo, rustfmt, clippy
 
       - name: Install dependencies (macOS)
