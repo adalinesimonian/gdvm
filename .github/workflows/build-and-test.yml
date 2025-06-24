@@ -58,7 +58,7 @@ jobs:
           target: ${{ matrix.target }}
           rustflags: ""
           cache-key: ${{ matrix.target }}
-          components: rustc, rust-src, rust-std, rust-docs, cargo, rustfmt, clippy
+          components: rustc, rust-std, cargo, rustfmt, clippy
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
