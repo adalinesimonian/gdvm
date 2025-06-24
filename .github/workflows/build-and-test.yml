@@ -6,13 +6,13 @@ on:
       - main
     paths-ignore:
       - "gh-pages/**"
-      - "README.md"
+      - "*.md"
   push:
     branches:
       - main
     paths-ignore:
       - "gh-pages/**"
-      - "README.md"
+      - "*.md"
   release:
     types:
       - published
