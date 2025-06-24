@@ -2,6 +2,7 @@ hello = Hei, Verda!
 
 help-about = Godot-versjonsbehandlaren
 help-help = Vis hjelp (se et sammendrag med '-h')
+help-help-command = Vis denne meldingen eller hjelpa for de gitte underkommandoene
 help-gdvm-version = Vis versjonen av Godot-versjonsbehandleren
 
 help-install = Installer en ny Godot-versjon
@@ -30,7 +31,6 @@ help-clear-cache = Tøm gdvm-utgivelseshurtigbufferet
 
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
 help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i hurtigbufferet.
-
 help-yes = Hopp over bekreftelsesprompt for fjerning
 
 cached-zip-stored = Lagra Godot-utgivelsesarkivet i hurtigbufferet.
@@ -46,13 +46,27 @@ help-console = Kjør Godot med konsoll tilkobla. Standard er false på Windows, 
 
 help-default = Administrer standardversjonen
 help-default-version = Versjonen som skal settes som standard (f.eks. 4.2 eller 4.2-stable).
-
-help-upgrade = Oppgrader gdvm til nyeste versjon
-
-help-help-command = Vis denne meldingen eller hjelpa for de gitte underkommandoene
+no-default-set = Ingen standardversjon er satt. Kjør «gdvm use <version>» for å sette en standardversjon systemomfattende, eller «gdvm pin <version>» for å sette en standardversjon for den gjeldende mappa.
 
 installing-version = Installerer versjon {$version}
 installed-success = Installerte {$version} vellykka.
+
+warning-prerelease = Advarsel: Du installerer en forhåndsversjon ({$branch}).
+
+force-reinstalling-version = Tvinger installasjon av versjon {$version} på nytt.
+
+auto-installing-version = Automatisk installasjon av versjon { $version }
+
+no-versions-installed = Ingen versjoner installert.
+installed-versions = Installerte Godot-versjoner:
+removed-version = Fjerna versjonen {$version}
+removing-version = Fjerner versjon {$version}
+
+force-redownload = Tvinger nedlasting av versjon {$version} på nytt.
+operation-downloading-url = Laster ned {$url}...
+operation-download-complete = Nedlasting fullført.
+operation-extracting = Pakker ut...
+operation-extract-complete = Pakking fullført.
 
 unsupported-platform = Plattforma støttes ikke
 unsupported-architecture = Arkitekturen støttes ikke
@@ -70,21 +84,6 @@ releases-fetched = Utgivelser henta.
 error-fetching-releases = Feil ved henting av utgivelser: { $error }
 warning-fetching-releases-using-cache = Feil ved henting av utgivelser: { $error }. Bruker hurtigbuffer i stedet.
 
-warning-prerelease = Advarsel: Du installerer en forhåndsversjon ({$branch}).
-
-no-versions-installed = Ingen versjoner installert.
-installed-versions = Installerte Godot-versjoner:
-removed-version = Fjerna versjonen {$version}
-removing-version = Fjerner versjon {$version}
-
-force-reinstalling-version = Tvinger installasjon av versjon {$version} på nytt.
-
-force-redownload = Tvinger nedlasting av versjon {$version} på nytt.
-operation-downloading-url = Laster ned {$url}...
-operation-download-complete = Nedlasting fullført.
-operation-extracting = Pakker ut...
-operation-extract-complete = Pakking fullført.
-
 error-version-not-found = Versjonen ble ikke funnet.
 error-multiple-versions-found = Flere versjoner samsvarer med forespørselen:
 
@@ -93,12 +92,15 @@ error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventede fo
 
 running-version = Kjører versjon {$version}
 no-matching-releases = Ingen samsvarende utgivelser funna.
-error-no-stable-releases-found = Ingen stabile versjoner funnet.
 available-releases = Tilgjengelige utgivelser:
 cache-cleared = Hurtigbufferen ble tømt.
 
 version-already-installed = Versjon {$version} er allerede installert.
 godot-executable-not-found = Godot-kjørbar fil ble ikke funnet for versjon {$version}.
+
+error-no-stable-releases-found = Ingen stabile versjoner funnet.
+
+error-starting-godot = Kunne ikke starte Godot: { $error }
 
 confirm-remove = Er du sikker på at du vil fjerne denne versjonen? (ja/nei):
 confirm-yes = ja
@@ -107,9 +109,6 @@ remove-cancelled = Fjerning avbrutt.
 default-set-success = Standardversjon {$version} er satt.
 default-unset-success = Standardversjonen er fjerna.
 provide-version-or-unset = Vennligst oppgi en versjon for å sette som standard eller «unset» for å fjerne standardversjonen.
-no-default-set = Ingen standardversjon er satt. Kjør «gdvm use <version>» for å sette en standardversjon systemomfattende, eller «gdvm pin <version>» for å sette en standardversjon for den gjeldende mappa.
-
-error-starting-godot = Kunne ikke starte Godot: { $error }
 
 error-open-zip = Kunne ikke åpne ZIP-fila { $path }: { $error }
 error-read-zip = Kunne ikke lese ZIP-arkivet { $path }: { $error }
@@ -124,8 +123,7 @@ error-strip-prefix = Kunne ikke fjerne prefiks: { $error }
 error-set-permissions = Kunne ikke sette tillatelser for { $path }: { $error }
 error-create-symlink-windows = Kunne ikke opprette symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklermodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller kjør som administrator.
 
-auto-installing-version = Automatisk installasjon av versjon { $version }
-
+help-upgrade = Oppgrader gdvm til nyeste versjon
 upgrade-starting = Starter oppgradering av gdvm...
 upgrade-downloading-latest = Laster ned nyeste gdvm...
 upgrade-complete = gdvm ble oppgradert!
@@ -136,7 +134,7 @@ upgrade-file-write-failed = Klarte ikke å skrive til oppgraderingsfilen: { $err
 upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $error }
 upgrade-rename-failed = Klarte ikke å endre navn på den nåværende kjørbare filen: { $error }
 upgrade-replace-failed = Klarte ikke å erstatte den kjørbare filen med den nye: { $error }
-
+checking-updates = Sjekker etter oppdateringer til gdvm...
 upgrade-available = 💡 En ny versjon av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade» for å oppgradere.
 
 help-pin = Fest en versjon av Godot til gjeldende mappe.
@@ -145,7 +143,6 @@ help-pin-long = { help-pin }
     Dette vil opprette en .gdvmrc-fil i gjeldende mappe med den festede versjonen. Når du kjører «gdvm run» i denne katalogen eller noen av underkatalogene, vil den festede versjonen bli brukt i stedet for standardversjonen.
 
     Dette er nyttig når du vil bruke en spesifikk versjon av Godot for et prosjekt uten å endre standardversjonen systemomfattende.
-
 help-pin-version = Versjonen som skal festes
 pinned-success = Versjon {$version} ble festet i .gdvmrc
 error-pin-version-not-found = Kan ikke feste versjon {$version}
@@ -153,9 +150,6 @@ pin-subcommand-description = Setter eller oppdaterer .gdvmrc med forespurt versj
 
 error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren.
 error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }
-
-checking-updates = Sjekker etter oppdateringer til gdvm...
-
 error-ensure-godot-binaries-failed = Kunne ikke forsikre Godot-kjørbare filer.
     Feil: { $error }.
     Prøv å slette { $path } og kjør gdvm på nytt.
@@ -183,7 +177,6 @@ error-project-version-mismatch = {"\u001b"}[31m{ $pinned ->
         [1] Hvis du er sikker på at du vil kjøre prosjektet med den festede versjonen, kjør {"\u001b"}[0mgdvm run --force{"\u001b"}[31m. Ellers, oppdater den festede versjonen i .gdvmrc for å samsvare med prosjektversjonen, eller fjern .gdvmrc-fila for å bruke prosjektversjonen.
         *[0] Hvis du er sikker på at du vil kjøre prosjektet med den forespurte versjonen, kjør {"\u001b"}[0mgdvm run --force <version>{"\u001b"}[31m.
     }{"\u001b"}[0m
-
 warning-project-version-mismatch-force = {"\u001b"}[33mHopper over bekreftelsesprompt og fortsetter med den { $pinned ->
         [1] festede
         *[0] forespurte
@@ -210,7 +203,6 @@ help-config-available = List alle tilgjengelige konfigurasjonsnøkler og verdier
 warning-setting-sensitive = {"\u001b"}[33mAdvarsel: Du setter en sensitiv verdi som vil bli lagra i klartekst i hjemmekatalogen din.{"\u001b"}[0m
 config-set-prompt = Vennligst skriv inn verdien for { $key }:
 error-reading-input = Feil ved lesing av inndata
-config-set-prompt-sensitive = Vennligst skriv inn den sensitive verdien for { $key }:
 config-set-success = Konfigurasjonen ble oppdatert.
 config-unset-success = Konfigurasjonsnøkkelen { $key } ble fjernet vellykket.
 config-key-not-set = Konfigurasjonsnøkkel ikke satt.
@@ -229,3 +221,5 @@ error-github-rate-limit = GitHub API-ratebegrensning overskredet.
 
   Merk: Tokenet vil bli lagret i klartekst i hjemmekatalogen din. Vennligst sørg for at du holder det sikkert.
   Det anbefales å regelmessig gjennomgå og rotere tokenene dine for sikkerhetsformål.
+
+config-set-prompt-sensitive = Vennligst skriv inn den sensitive verdien for { $key }:

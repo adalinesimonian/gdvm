@@ -71,10 +71,15 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Check i18n
+      - name: Check i18n bundles for missing keys
         if: success() || failure()
         shell: bash
         run: scripts/find-missing-i18n.sh
+
+      - name: Check i18n bundles for formatting
+        if: success() || failure()
+        shell: pwsh
+        run: scripts/sort-i18n.ps1
 
       - name: Check formatting
         if: success() || failure()
