@@ -87,6 +87,15 @@ GDVM supports multiple languages using the [Fluent](https://projectfluent.org/) 
    .\scripts\find-missing-i18n.ps1
    ```
 
+4. **Format and sort translations**: This script will help you format and sort the translations in the Fluent files using the `en-US.ftl` file as a reference. It requires that the [pwsh](https://github.com/PowerShell/PowerShell) command is available in your PATH.
+
+   ```sh
+   # For PowerShell
+   ./scripts/sort-i18n.ps1          # Checks the Fluent bundles for sort/format issues
+   ./scripts/sort-i18n.ps1 --format # Formats/sorts the Fluent bundles
+   ./scripts/sort-i18n.sh           # Alias for *nix systems, calls the PowerShell script
+   ```
+
 ## Testing
 
 GDVM has two types of tests: unit tests and integration tests.
