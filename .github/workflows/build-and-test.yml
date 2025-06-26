@@ -97,7 +97,7 @@ jobs:
         run: |
           set -euo pipefail
           crate_version="${{ github.ref_name }}"
-          expected_version=$(grep -oPm 1 'version\s*=\s*"\K[^"]+' crates/gdvm/Cargo.toml)
+          expected_version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' crates/gdvm/Cargo.toml | head -1)
 
           if [[ "$crate_version" != "v$expected_version" ]]; then
             echo "::error::Release version $crate_version does not match Cargo.toml version $expected_version."
@@ -106,9 +106,9 @@ jobs:
           fi
 
           # Read the first version header underneath the unreleased section in CHANGELOG.md
-          changelog_version=$(grep -oPm 1 '## \Kv[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md)
+          changelog_version=$(sed -n 's/^## \(v[0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p' CHANGELOG.md | head -1)
 
-          if [[ "$crate_version" != "v$changelog_version" ]]; then
+          if [[ "$crate_version" != "$changelog_version" ]]; then
             echo "::error::Release version $crate_version does not match CHANGELOG.md version $changelog_version."
             echo "::error::Please update the CHANGELOG.md version to match the release tag."
             exit 1
