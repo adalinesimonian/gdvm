@@ -15,7 +15,7 @@ on:
       - "*.md"
   release:
     types:
-      - published
+      - created
 
 concurrency:
   group: ${{ github.event_name }}-${{ github.event.number || github.run_id }}
@@ -318,10 +318,23 @@ jobs:
             fi
           done <<< "$EXPECTED_TARGETS"
 
-      - name: Publish binaries
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
+          draft: true
+
+      - name: Publish release
+        if: github.event.release.draft == true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: context.payload.release.id,
+              draft: false
+            });
 
   delete-artifacts:
     name: Delete Artifacts
