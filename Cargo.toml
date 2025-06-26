@@ -1,3 +1,4 @@
 [workspace]
 members = ["crates/gdvm", "crates/shim"]
 resolver = "2"
+default-members = ["crates/gdvm"]
