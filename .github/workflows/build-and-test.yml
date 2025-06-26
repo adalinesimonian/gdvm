@@ -52,12 +52,32 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Setup Dev Drive (Windows)
+        if: runner.os == 'Windows'
+        id: devdrive
+        uses: samypr100/setup-dev-drive@v3
+        with:
+          drive-size: 4GB
+          drive-format: ReFS
+          drive-type: Fixed
+          workspace-copy: true
+          native-dev-drive: true
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
+      - name: Configure Windows environment for Dev Drive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: echo "CARGO_TARGET_DIR=${{ env.DEV_DRIVE_WORKSPACE }}/target" >> $env:GITHUB_ENV
+
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
           rustflags: ""
           cache-key: ${{ matrix.target }}
+          cache-workspaces: ${{ env.DEV_DRIVE_WORKSPACE || github.workspace }}
           components: rustc, rust-std, cargo, rustfmt, clippy
 
       - name: Install dependencies (macOS)
@@ -69,24 +89,29 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib
 
       - name: Build
+        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Check i18n bundles for missing keys
         if: success() || failure()
+        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
         shell: bash
         run: scripts/find-missing-i18n.sh
 
       - name: Check i18n bundles for formatting
         if: success() || failure()
+        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
         shell: pwsh
         run: scripts/sort-i18n.ps1
 
       - name: Check formatting
         if: success() || failure()
+        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
         run: cargo fmt -- --check
 
       - name: Check clippy
         if: success() || failure()
+        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
         shell: bash
         run: |
           cargo clippy --release --all-targets --all-features -- \
@@ -96,6 +121,7 @@ jobs:
 
       - name: Run unit and integration tests
         if: (success() || failure()) && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64'))
+        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
         run: cargo test --release --features integration-tests --target ${{ matrix.target }}
 
       - name: Archive binary (*nix)
@@ -106,8 +132,10 @@ jobs:
       - name: Archive binary (Windows)
         shell: bash
         if: (success() || failure()) && contains(matrix.os, 'windows')
-        working-directory: ./target/${{ matrix.target }}/release
-        run: tar -cvf binary.tar gdvm.exe && mv binary.tar ../../..
+        run: |
+          cd "${{ env.DEV_DRIVE_WORKSPACE }}/target/${{ matrix.target }}/release"
+          tar -cvf binary.tar gdvm.exe
+          cp binary.tar "$GITHUB_WORKSPACE/"
 
       - name: Upload binary artifact
         if: success() || failure()
