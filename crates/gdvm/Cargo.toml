@@ -1,6 +1,6 @@
 [package]
 name = "gdvm"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2024"
 build = "build.rs"
 description = "Godot Version Manager"
