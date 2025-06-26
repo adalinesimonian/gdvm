@@ -2,7 +2,14 @@
 
 ## Unreleased
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.8.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.8.1...main
+
+## v0.8.1
+
+### Fixed
+- `gdvm upgrade` will no longer automatically upgrade across major version boundaries. This should prevent gdvm from automatically upgrading to a release with breaking changes. The new `-m/--major` flag can be used to explicitly allow major version upgrades.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.8.0...v0.8.1
 
 ## v0.8.0
 
