@@ -138,13 +138,25 @@ Write-Host "Updating CHANGELOG.md..." -ForegroundColor Yellow
 $UnreleasedLines = $UnreleasedContent -split '\n' | Where-Object { $_ -notmatch '^\*\*Full Changelog\*\*:' }
 $UnreleasedText = ($UnreleasedLines | Where-Object { $_.Trim() }) -join "`n"
 
+# Find the previous version from the changelog.
+$PreviousVersionMatch = [regex]::Match($ChangelogContent, '## v(\d+\.\d+\.\d+)\s')
+if ($PreviousVersionMatch.Success) {
+    $PreviousVersion = $PreviousVersionMatch.Groups[1].Value
+} elseif ($UpdateCargoFiles) {
+    # Use the version from Cargo.toml if no previous version found.
+    $PreviousVersion = $CurrentVersion
+} else {
+    # Should never happen.
+    Exit-WithError "Could not determine previous version from CHANGELOG.md or Cargo.toml."
+}
+
 # Create new version section.
 $NewVersionSection = @"
 ## v$Version
 
 $UnreleasedText
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v$CurrentVersion...v$Version
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v$PreviousVersion...v$Version
 "@
 
 # Create new unreleased section.
@@ -174,7 +186,7 @@ if ($UpdateCargoFiles) {
 }
 
 # Replace the changelog content.
-$NewChangelogContent = $ChangelogContent -replace '(?s)## Unreleased.*?(?=\n## )', "$NewUnreleasedSection`n`n$NewVersionSection`n"
+$NewChangelogContent = $ChangelogContent -replace '(?s)## Unreleased\s*\n.*?(?=\n## v|\z)', "$NewUnreleasedSection`n`n$NewVersionSection`n"
 Set-Content -Path "CHANGELOG.md" -Value $NewChangelogContent -NoNewline
 
 # Stage changes and show diff.
