@@ -92,7 +92,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Validate release version against Cargo.toml and CHANGELOG.md
-        if: github.event_name == 'tag' && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           set -euo pipefail
@@ -291,7 +291,7 @@ jobs:
 
   publish:
     name: Publish binaries
-    if: github.event_name == 'tag' && startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: e2e
     runs-on: ubuntu-latest
 
