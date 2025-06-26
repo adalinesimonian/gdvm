@@ -236,7 +236,15 @@ fn main() -> Result<()> {
                         .help(t!(i18n, "help-csharp")),
                 ),
         )
-        .subcommand(Command::new("upgrade").about(t!(i18n, "help-upgrade")))
+        .subcommand(
+            Command::new("upgrade").about(t!(i18n, "help-upgrade")).arg(
+                Arg::new("major")
+                    .long("major")
+                    .short('m')
+                    .num_args(0)
+                    .help(t!(i18n, "help-upgrade-major")),
+            ),
+        )
         .subcommand(
             Command::new("pin")
                 .about(t!(i18n, "help-pin"))
@@ -315,7 +323,7 @@ fn main() -> Result<()> {
         Some(("search", sub_m)) => sub_search(&i18n, &manager, sub_m)?,
         Some(("clear-cache", _)) => sub_clear_cache(&i18n, &manager)?,
         Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m)?,
-        Some(("upgrade", _)) => sub_upgrade(&manager)?,
+        Some(("upgrade", sub_m)) => sub_upgrade(&manager, sub_m)?,
         Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m)?,
         Some(("config", sub_m)) => sub_config(&i18n, sub_m)?,
         _ => {}
@@ -692,8 +700,9 @@ fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
 }
 
 /// Handle the 'upgrade' subcommand
-fn sub_upgrade(manager: &GodotManager) -> Result<()> {
-    manager.upgrade()
+fn sub_upgrade(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+    let allow_major = matches.get_flag("major");
+    manager.upgrade(allow_major)
 }
 
 /// Handle the 'pin' subcommand

@@ -124,6 +124,7 @@ error-set-permissions = Kunne ikke sette tillatelser for { $path }: { $error }
 error-create-symlink-windows = Kunne ikke opprette symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklermodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller kjør som administrator.
 
 help-upgrade = Oppgrader gdvm til nyeste versjon
+help-upgrade-major = Tillat oppgradering på tvers av hovedversjoner
 upgrade-starting = Starter oppgradering av gdvm...
 upgrade-downloading-latest = Laster ned nyeste gdvm...
 upgrade-complete = gdvm ble oppgradert!
@@ -137,7 +138,9 @@ upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $
 upgrade-rename-failed = Klarte ikke å endre navn på den nåværende kjørbare filen: { $error }
 upgrade-replace-failed = Klarte ikke å erstatte den kjørbare filen med den nye: { $error }
 checking-updates = Sjekker etter oppdateringer til gdvm...
-upgrade-available = 💡 En ny versjon av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade» for å oppgradere.
+upgrade-available = 💡 En ny versjon av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade» for å oppdatere.
+upgrade-available-major = 💡 En hovedversjonsoppdatering av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade -m» for å oppdatere.
+upgrade-available-both = 💡 En ny versjon av gdvm er tilgjengelig: {$minor_version}. En hovedversjonsoppdatering er også tilgjengelig: {$major_version}. Kjør «gdvm upgrade» for å oppdatere innen gjeldende hovedversjon, eller «gdvm upgrade -m» for å oppgradere til siste versjon.
 
 help-pin = Fest en versjon av Godot til gjeldende mappe.
 help-pin-long = { help-pin }
@@ -223,5 +226,3 @@ error-github-rate-limit = GitHub API-ratebegrensning overskredet.
 
   Merk: Tokenet vil bli lagret i klartekst i hjemmekatalogen din. Vennligst sørg for at du holder det sikkert.
   Det anbefales å regelmessig gjennomgå og rotere tokenene dine for sikkerhetsformål.
-
-config-set-prompt-sensitive = Vennligst skriv inn den sensitive verdien for { $key }:

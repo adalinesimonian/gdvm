@@ -124,6 +124,7 @@ error-set-permissions = Failed to set permissions for { $path }: { $error }
 error-create-symlink-windows = Could not create symlink. Please ensure {"\u001b"}]8;;ms-settings:developers{"\u001b"}\Developer Mode{"\u001b"}]8;;{"\u001b"}\ is enabled or run as admin.
 
 help-upgrade = Upgrade gdvm to the latest version
+help-upgrade-major = Allow upgrading across major versions
 upgrade-starting = Starting gdvm upgrade...
 upgrade-downloading-latest = Downloading the latest gdvm version...
 upgrade-complete = gdvm was successfully upgraded!
@@ -138,6 +139,8 @@ upgrade-rename-failed = Failed to rename the current executable: { $error }
 upgrade-replace-failed = Failed to replace the executable with the new one: { $error }
 checking-updates = Checking for updates to gdvm...
 upgrade-available = 💡 A new version of gdvm is available: {$version}. Run "gdvm upgrade" to update.
+upgrade-available-major = 💡 A major version update of gdvm is available: {$version}. Run "gdvm upgrade -m" to update.
+upgrade-available-both = 💡 A new version of gdvm is available: {$minor_version}. A major version update is also available: {$major_version}. Run "gdvm upgrade" to update within the current major version, or "gdvm upgrade -m" to upgrade to the latest version.
 
 help-pin = Pin a version of Godot to the current directory.
 help-pin-long = { help-pin }

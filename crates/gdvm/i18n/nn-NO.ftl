@@ -124,6 +124,7 @@ error-set-permissions = Kunne ikkje setje tillatingar for { $path }: { $error }
 error-create-symlink-windows = Kunne ikkje laga symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklarmodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller kør som administrator.
 
 help-upgrade = Oppgrader gdvm til nyaste versjon
+help-upgrade-major = Tillat oppgradering på tvers av hovudversjonar
 upgrade-starting = Startar oppgradering av gdvm...
 upgrade-downloading-latest = Lastar ned nyaste gdvm...
 upgrade-complete = gdvm vart oppgradert!
@@ -137,7 +138,9 @@ upgrade-install-dir-failed = Klarte ikkje å opprette installasjonskatalogen: { 
 upgrade-rename-failed = Klarte ikkje å endre namn på den noverande køyrberre fila: { $error }
 upgrade-replace-failed = Klarte ikkje å erstatte den køyrberre fila med den nye: { $error }
 checking-updates = Sjekkar etter oppdateringar til gdvm...
-upgrade-available = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade» for å oppgradere.
+upgrade-available = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade» for å oppdatere.
+upgrade-available-major = 💡 Ei hovudversjonsoppdatering av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade -m» for å oppdatere.
+upgrade-available-both = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$minor_version}. Ei hovudversjonsoppdatering er òg tilgjengeleg: {$major_version}. Køyr «gdvm upgrade» for å oppdatere innan gjeldande hovudversjon, eller «gdvm upgrade -m» for å oppgradere til siste versjon.
 
 help-pin = Fest ein versjon av Godot til gjeldande katalog.
 help-pin-long = { help-pin }
@@ -216,7 +219,7 @@ error-parse-config-using-default = {"\u001b"}[33mBrukar standard konfigurasjonsv
 error-github-api = GitHub API-feil: { $error }
 error-github-rate-limit = GitHub API-rategrense overskriden.
 
-  For å løyse dette, ver venleg og opprett ein personleg tilgangstoken på GitHub ved å besøkje https://github.com/settings/tokens.
+  For å løyse dette, ver venleg og opprett ein personleg tilgangstoken på GitHub ved å vitja https://github.com/settings/tokens.
 
   Klikk på «Generate new token», vel berre dei minimale løyva som krevst (t.d. public_repo), og set deretter tokenet via miljøvariabelen GITHUB_TOKEN eller ved å køyre:
 

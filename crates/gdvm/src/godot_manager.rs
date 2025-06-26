@@ -42,6 +42,7 @@ struct RegistryReleasesCache {
 struct GdvmCache {
     last_update_check: u64,
     new_version: Option<String>,
+    new_major_version: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -700,6 +701,7 @@ impl<'a> GodotManager<'a> {
                         gdvm: GdvmCache {
                             last_update_check: 0,
                             new_version: None,
+                            new_major_version: None,
                         },
                         godot_registry: RegistryReleasesCache {
                             last_fetched: 0,
@@ -715,6 +717,7 @@ impl<'a> GodotManager<'a> {
                 gdvm: GdvmCache {
                     last_update_check: 0,
                     new_version: None,
+                    new_major_version: None,
                 },
                 godot_registry: RegistryReleasesCache {
                     last_fetched: 0,
@@ -1050,6 +1053,7 @@ impl<'a> GodotManager<'a> {
             progress.set_message(t_w!(self.i18n, "checking-updates"));
 
             let mut new_version = None;
+            let mut new_major_version = None;
 
             let releases = match self
                 .get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases")
@@ -1063,6 +1067,7 @@ impl<'a> GodotManager<'a> {
                         self.save_gdvm_cache(&GdvmCache {
                             last_update_check: now,
                             new_version: None,
+                            new_major_version: None,
                         })?;
                     }
                     return Err(e.into());
@@ -1072,8 +1077,9 @@ impl<'a> GodotManager<'a> {
             // Get current version and determine major version for upgrade compatibility.
             let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
             let major_version = current_version.major;
-            let version_req = format!("^{}", major_version);
 
+            // Check for updates within current major version.
+            let version_req = format!("^{}", major_version);
             if let Some(latest_stable_tag) =
                 self.find_latest_stable_release(&releases, &version_req)?
             {
@@ -1083,24 +1089,48 @@ impl<'a> GodotManager<'a> {
                 }
             }
 
+            // Check for updates across all versions.
+            if let Some(latest_major_tag) = self.find_latest_stable_release(&releases, "*")? {
+                let latest_major_version =
+                    Version::parse(latest_major_tag.trim_start_matches('v'))?;
+                if latest_major_version > current_version {
+                    // Only set new_major_version if it's different from new_version.
+                    if new_version.as_ref() != Some(&latest_major_tag) {
+                        new_major_version = Some(latest_major_tag);
+                    }
+                }
+            }
+
             progress.finish_and_clear();
 
-            if let Some(new_version) = new_version {
+            // Display appropriate message based on available updates.
+            if let (Some(minor_ver), Some(major_ver)) = (&new_version, &new_major_version) {
                 eprint!("\x1b[1;32m"); // Bold and green
-                eprintln_i18n!(self.i18n, "upgrade-available", version = &new_version);
+                eprintln_i18n!(
+                    self.i18n,
+                    "upgrade-available-both",
+                    minor_version = minor_ver,
+                    major_version = major_ver
+                );
                 eprint!("\x1b[0m"); // Reset
                 eprintln!();
-
-                self.save_gdvm_cache(&GdvmCache {
-                    last_update_check: now,
-                    new_version: Some(new_version),
-                })?;
-            } else {
-                self.save_gdvm_cache(&GdvmCache {
-                    last_update_check: now,
-                    new_version: None,
-                })?;
+            } else if let Some(new_ver) = &new_version {
+                eprint!("\x1b[1;32m"); // Bold and green
+                eprintln_i18n!(self.i18n, "upgrade-available", version = new_ver);
+                eprint!("\x1b[0m"); // Reset
+                eprintln!();
+            } else if let Some(major_ver) = &new_major_version {
+                eprint!("\x1b[1;32m"); // Bold and green
+                eprintln_i18n!(self.i18n, "upgrade-available-major", version = major_ver);
+                eprint!("\x1b[0m"); // Reset
+                eprintln!();
             }
+
+            self.save_gdvm_cache(&GdvmCache {
+                last_update_check: now,
+                new_version,
+                new_major_version,
+            })?;
         } else if let Some(new_version) = &gdvm_cache.new_version {
             if let Ok(new_version) = Version::parse(new_version.trim_start_matches('v')) {
                 let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
@@ -1114,15 +1144,75 @@ impl<'a> GodotManager<'a> {
                     eprint!("\x1b[0m"); // Reset
                     eprintln!();
                 } else {
-                    self.save_gdvm_cache(&GdvmCache {
-                        last_update_check: now,
-                        new_version: None,
-                    })?;
+                    // Check cached versions.
+                    let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+                    let mut should_clear_cache = false;
+
+                    // Parse cached versions.
+                    let cached_minor = gdvm_cache
+                        .new_version
+                        .as_ref()
+                        .and_then(|v| Version::parse(v.trim_start_matches('v')).ok());
+                    let cached_major = gdvm_cache
+                        .new_major_version
+                        .as_ref()
+                        .and_then(|v| Version::parse(v.trim_start_matches('v')).ok());
+
+                    // Check if cached versions are still newer than current.
+                    let valid_minor = cached_minor
+                        .as_ref()
+                        .map(|v| v > &current_version)
+                        .unwrap_or(false);
+                    let valid_major = cached_major
+                        .as_ref()
+                        .map(|v| v > &current_version)
+                        .unwrap_or(false);
+
+                    if valid_minor && valid_major && cached_minor != cached_major {
+                        eprint!("\x1b[1;32m"); // Bold and green
+                        eprintln_i18n!(
+                            self.i18n,
+                            "upgrade-available-both",
+                            minor_version = gdvm_cache.new_version.as_ref().unwrap(),
+                            major_version = gdvm_cache.new_major_version.as_ref().unwrap()
+                        );
+                        eprint!("\x1b[0m"); // Reset
+                        eprintln!();
+                    } else if valid_minor {
+                        eprint!("\x1b[1;32m"); // Bold and green
+                        eprintln_i18n!(
+                            self.i18n,
+                            "upgrade-available",
+                            version = gdvm_cache.new_version.as_ref().unwrap()
+                        );
+                        eprint!("\x1b[0m"); // Reset
+                        eprintln!();
+                    } else if valid_major {
+                        eprint!("\x1b[1;32m"); // Bold and green
+                        eprintln_i18n!(
+                            self.i18n,
+                            "upgrade-available-major",
+                            version = gdvm_cache.new_major_version.as_ref().unwrap()
+                        );
+                        eprint!("\x1b[0m"); // Reset
+                        eprintln!();
+                    } else {
+                        should_clear_cache = true;
+                    }
+
+                    if should_clear_cache {
+                        self.save_gdvm_cache(&GdvmCache {
+                            last_update_check: now,
+                            new_version: None,
+                            new_major_version: None,
+                        })?;
+                    }
                 }
             } else {
                 self.save_gdvm_cache(&GdvmCache {
                     last_update_check: now,
                     new_version: None,
+                    new_major_version: None,
                 })?;
             }
         }
@@ -1130,22 +1220,31 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    pub fn upgrade(&self) -> Result<()> {
+    pub fn upgrade(&self, allow_major: bool) -> Result<()> {
         println_i18n!(self.i18n, "upgrade-starting");
         println_i18n!(self.i18n, "upgrade-downloading-latest");
 
-        // Get current version and determine major version for upgrade compatibility
         let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-        let major_version = current_version.major;
 
-        // Get all releases and find the latest stable release within the current major version.
         let releases =
             self.get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases")?;
 
-        let version_req = format!("^{}", major_version);
+        // Determine version requirement based on allow_major flag.
+        let version_req = if allow_major {
+            "*".to_string() // Allow any version.
+        } else {
+            format!("^{}", current_version.major) // Stay within current major version.
+        };
+
         let latest_stable_tag = self
             .find_latest_stable_release(&releases, &version_req)?
-            .ok_or_else(|| anyhow!("No stable {}.x.x releases found", major_version))?; // Shouldn't happen.
+            .ok_or_else(|| {
+                if allow_major {
+                    anyhow!("No stable releases found")
+                } else {
+                    anyhow!("No stable {}.x.x releases found", current_version.major)
+                }
+            })?;
 
         // Check if upgrade is necessary.
         let latest_version = Version::parse(latest_stable_tag.trim_start_matches('v'))?;
@@ -1283,6 +1382,7 @@ impl<'a> GodotManager<'a> {
                 .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
                 .as_secs(),
             new_version: None,
+            new_major_version: None,
         })?;
 
         migrations::run_migrations(&self.base_path, self.i18n)?;
