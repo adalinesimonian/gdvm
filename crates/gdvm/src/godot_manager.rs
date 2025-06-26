@@ -6,7 +6,7 @@ use daemonize::Daemonize;
 use directories::BaseDirs;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 #[cfg(target_family = "unix")]
@@ -982,6 +982,54 @@ impl<'a> GodotManager<'a> {
         Ok(installed_versions.iter().any(|v| gv.matches(v)))
     }
 
+    /// Find the latest stable release matching a semver requirement from a list of GitHub releases
+    fn find_latest_stable_release(
+        &self,
+        releases: &serde_json::Value,
+        version_req: &str,
+    ) -> Result<Option<String>> {
+        let req = VersionReq::parse(version_req)
+            .map_err(|e| anyhow!("Invalid version requirement '{}': {}", version_req, e))?; // Should never fail.
+
+        let releases_array = releases
+            .as_array()
+            .ok_or_else(|| anyhow!("Expected releases to be an array"))?; // Should never fail.
+
+        let mut matching_versions = Vec::new();
+
+        for release in releases_array {
+            // Skip drafts and prereleases.
+            if release
+                .get("draft")
+                .and_then(|d| d.as_bool())
+                .unwrap_or(false)
+                || release
+                    .get("prerelease")
+                    .and_then(|p| p.as_bool())
+                    .unwrap_or(false)
+            {
+                continue;
+            }
+
+            let tag_name = release
+                .get("tag_name")
+                .and_then(|t| t.as_str())
+                .ok_or_else(|| anyhow!("Release missing tag_name"))?; // Should never fail.
+
+            // Parse version, expecting "vM.m.p" format.
+            if let Ok(version) = Version::parse(tag_name.trim_start_matches('v')) {
+                // Only consider stable versions that match the requirement.
+                if version.pre.is_empty() && req.matches(&version) {
+                    matching_versions.push((version, tag_name.to_string()));
+                }
+            }
+        }
+
+        // Sort by version, newest first, and return the tag name of the latest match.
+        matching_versions.sort_by(|a, b| b.0.cmp(&a.0));
+        Ok(matching_versions.first().map(|(_, tag)| tag.clone()))
+    }
+
     pub fn check_for_upgrades(&self) -> Result<()> {
         // Load or initialize gdvm cache
         let gdvm_cache = self.load_gdvm_cache()?;
@@ -989,7 +1037,7 @@ impl<'a> GodotManager<'a> {
         // Check for updates
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
+            .map_err(|_| anyhow!("System time before UNIX EPOCH"))? // Should never fail.
             .as_secs();
         let cache_duration = Duration::from_secs(48 * 3600); // 48 hours
         let cache_age = now - gdvm_cache.last_update_check;
@@ -1003,9 +1051,9 @@ impl<'a> GodotManager<'a> {
 
             let mut new_version = None;
 
-            let release = match self.get_github_json(
-                "https://api.github.com/repos/adalinesimonian/gdvm/releases/latest",
-            ) {
+            let releases = match self
+                .get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases")
+            {
                 Ok(json) => json,
                 Err(e) => {
                     progress.finish_and_clear();
@@ -1021,11 +1069,17 @@ impl<'a> GodotManager<'a> {
                 }
             };
 
-            if let Some(tag_name) = release.get("tag_name").and_then(|t| t.as_str()) {
-                let latest_version = Version::parse(tag_name.trim_start_matches('v'))?;
-                let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+            // Get current version and determine major version for upgrade compatibility.
+            let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+            let major_version = current_version.major;
+            let version_req = format!("^{}", major_version);
+
+            if let Some(latest_stable_tag) =
+                self.find_latest_stable_release(&releases, &version_req)?
+            {
+                let latest_version = Version::parse(latest_stable_tag.trim_start_matches('v'))?;
                 if latest_version > current_version {
-                    new_version = Some(tag_name.to_string());
+                    new_version = Some(latest_stable_tag);
                 }
             }
 
@@ -1080,6 +1134,44 @@ impl<'a> GodotManager<'a> {
         println_i18n!(self.i18n, "upgrade-starting");
         println_i18n!(self.i18n, "upgrade-downloading-latest");
 
+        // Get current version and determine major version for upgrade compatibility
+        let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+        let major_version = current_version.major;
+
+        // Get all releases and find the latest stable release within the current major version.
+        let releases =
+            self.get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases")?;
+
+        let version_req = format!("^{}", major_version);
+        let latest_stable_tag = self
+            .find_latest_stable_release(&releases, &version_req)?
+            .ok_or_else(|| anyhow!("No stable {}.x.x releases found", major_version))?; // Shouldn't happen.
+
+        // Check if upgrade is necessary.
+        let latest_version = Version::parse(latest_stable_tag.trim_start_matches('v'))?;
+        let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+
+        match latest_version.cmp(&current_version) {
+            std::cmp::Ordering::Equal => {
+                println_i18n!(
+                    self.i18n,
+                    "upgrade-not-needed",
+                    version = latest_version.to_string()
+                );
+                return Ok(());
+            }
+            std::cmp::Ordering::Less => {
+                println_i18n!(
+                    self.i18n,
+                    "upgrade-current-version-newer",
+                    current = current_version.to_string(),
+                    latest = latest_version.to_string()
+                );
+                return Ok(());
+            }
+            std::cmp::Ordering::Greater => {}
+        }
+
         // Define install directory
         let install_dir = self.get_base_path().join("bin");
         std::fs::create_dir_all(&install_dir)
@@ -1118,42 +1210,44 @@ impl<'a> GodotManager<'a> {
             return Err(anyhow!(t_w!(self.i18n, "unsupported-platform")));
         };
 
-        // Set download URL based on architecture
+        // Set download URL based on architecture.
         let repo_url = "https://github.com/adalinesimonian/gdvm";
-        let latest_url = format!("{}/releases/latest/download", repo_url);
+        let release_url = format!("{}/releases/download/{}", repo_url, latest_stable_tag);
         #[cfg(target_os = "windows")]
         let file = format!("gdvm-{}.exe", arch);
         #[cfg(not(target_os = "windows"))]
         let file = format!("gdvm-{}", arch);
-        let bin_url = format!("{}/{}", latest_url, file);
+        let bin_url = format!("{}/{}", release_url, file);
         let out_file = install_dir.join("gdvm.new");
 
-        // Download the new binary
+        // Download the new binary.
         if let Err(err) = download_file(&bin_url, &out_file, self.i18n) {
             eprintln_i18n!(self.i18n, "upgrade-download-failed");
             return Err(err);
         }
 
-        // Fetch the release JSON to get the digest.
-        let response = self
-            .get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases/latest")?;
+        // Find the specific release to get the digest.
         let mut found_digest = None;
+        if let Some(releases_array) = releases.as_array() {
+            for release in releases_array {
+                if release.get("tag_name").and_then(|t| t.as_str()) == Some(&latest_stable_tag) {
+                    if let Some(assets) = release.get("assets").and_then(|a| a.as_array()) {
+                        found_digest = assets.iter().find_map(|asset| {
+                            let name = asset.get("name").and_then(|n| n.as_str());
+                            let digest = asset.get("digest").and_then(|d| d.as_str());
 
-        let assets = response.get("assets").and_then(|a| a.as_array());
-
-        if let Some(assets) = assets {
-            found_digest = assets.iter().find_map(|asset| {
-                let name = asset.get("name").and_then(|n| n.as_str());
-                let digest = asset.get("digest").and_then(|d| d.as_str());
-
-                if name == Some(&file) {
-                    digest
-                        .and_then(|d| d.strip_prefix("sha256:"))
-                        .map(|d| d.to_string())
-                } else {
-                    None
+                            if name == Some(&file) {
+                                digest
+                                    .and_then(|d| d.strip_prefix("sha256:"))
+                                    .map(|d| d.to_string())
+                            } else {
+                                None
+                            }
+                        });
+                    }
+                    break;
                 }
-            });
+            }
         }
 
         if let Some(digest) = found_digest {
@@ -1196,5 +1290,137 @@ impl<'a> GodotManager<'a> {
         println_i18n!(self.i18n, "upgrade-complete");
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_find_latest_stable_release() {
+        let i18n = I18n::new(100).unwrap();
+        let manager = GodotManager::new(&i18n).unwrap();
+
+        // Mock release data based on GitHub API response.
+        let releases = json!([
+            {
+                "tag_name": "v1.0.0",
+                "draft": false,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v0.9.0",
+                "draft": false,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v0.8.1",
+                "draft": false,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v0.8.0",
+                "draft": false,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v0.7.0",
+                "draft": false,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v0.8.0-beta.1",
+                "draft": false,
+                "prerelease": true
+            },
+            {
+                "tag_name": "v0.9.0-rc.1",
+                "draft": false,
+                "prerelease": false
+            }
+        ]);
+
+        let result = manager.find_latest_stable_release(&releases, "^0").unwrap();
+
+        assert_eq!(result, Some("v0.9.0".to_string()));
+
+        let result = manager
+            .find_latest_stable_release(&releases, "^0.8")
+            .unwrap();
+
+        assert_eq!(result, Some("v0.8.1".to_string()));
+
+        let result = manager
+            .find_latest_stable_release(&releases, "=0.8.0")
+            .unwrap();
+
+        assert_eq!(result, Some("v0.8.0".to_string()));
+    }
+
+    #[test]
+    fn test_find_latest_stable_release_no_matches() {
+        let i18n = I18n::new(100).unwrap();
+        let manager = GodotManager::new(&i18n).unwrap();
+
+        // Mock releases with no stable 0.x.x versions.
+        let releases = json!([
+            {
+                "tag_name": "v1.0.0",
+                "draft": false,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v1.1.0",
+                "draft": false,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v0.8.0-beta.1",
+                "draft": false,
+                "prerelease": true
+            }
+        ]);
+
+        let result = manager.find_latest_stable_release(&releases, "^0").unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_find_latest_stable_release_skips_drafts() {
+        let i18n = I18n::new(100).unwrap();
+        let manager = GodotManager::new(&i18n).unwrap();
+
+        // Mock releases with drafts.
+        let releases = json!([
+            {
+                "tag_name": "v0.9.0",
+                "draft": true,
+                "prerelease": false
+            },
+            {
+                "tag_name": "v0.8.0",
+                "draft": false,
+                "prerelease": false
+            }
+        ]);
+
+        let result = manager.find_latest_stable_release(&releases, "^0").unwrap();
+
+        assert_eq!(result, Some("v0.8.0".to_string()));
+    }
+
+    #[test]
+    fn test_find_latest_stable_release_invalid_requirement() {
+        let i18n = I18n::new(100).unwrap();
+        let manager = GodotManager::new(&i18n).unwrap();
+
+        let releases = json!([]);
+
+        let result = manager.find_latest_stable_release(&releases, "invalid-version-req");
+
+        assert!(result.is_err());
     }
 }
