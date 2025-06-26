@@ -1,0 +1,211 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build GDVM (Debug)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["build", "-p", "gdvm"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Build GDVM (Release)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["build", "-p", "gdvm", "--release"],
+      "group": "build",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Run GDVM (Debug)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run", "-p", "gdvm"],
+      "group": "build",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Run GDVM (Release)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run", "-p", "gdvm", "--release"],
+      "group": "build",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Run All Tests (Debug)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "--features", "integration-tests"],
+      "group": "test",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Run All Tests (Release)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "--features", "integration-tests", "--release"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Run Unit Tests Only (Debug)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "--lib"],
+      "group": "test",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Run Unit Tests Only (Release)",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "--lib", "--release"],
+      "group": "test",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Format Code",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["fmt"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Check Code Formatting",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["fmt", "--", "--check"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Clippy (Debug)",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "clippy",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "clippy::suspicious",
+        "-D",
+        "clippy::style",
+        "-D",
+        "clippy::complexity",
+        "-D",
+        "clippy::perf",
+        "-D",
+        "clippy::dbg_macro",
+        "-D",
+        "clippy::todo",
+        "-D",
+        "clippy::unimplemented",
+        "-D",
+        "warnings"
+      ],
+      "group": "test",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Run Clippy (Release)",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "clippy",
+        "--release",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "clippy::suspicious",
+        "-D",
+        "clippy::style",
+        "-D",
+        "clippy::complexity",
+        "-D",
+        "clippy::perf",
+        "-D",
+        "clippy::dbg_macro",
+        "-D",
+        "clippy::todo",
+        "-D",
+        "clippy::unimplemented",
+        "-D",
+        "warnings"
+      ],
+      "group": "test",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Check i18n Missing Keys",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "scripts/find-missing-i18n.ps1"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Check i18n Formatting",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "scripts/sort-i18n.ps1"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Format i18n Files",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "scripts/sort-i18n.ps1", "--format"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Full Check (Debug)",
+      "dependsOn": [
+        "Build GDVM (Debug)",
+        "Check i18n Missing Keys",
+        "Check i18n Formatting",
+        "Format Code",
+        "Run Clippy (Debug)",
+        "Run All Tests (Debug)"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Full Check (Release)",
+      "dependsOn": [
+        "Build GDVM (Release)",
+        "Check i18n Missing Keys",
+        "Check i18n Formatting",
+        "Format Code",
+        "Run Clippy (Release)",
+        "Run All Tests (Release)"
+      ],
+      "group": "test",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Clean Build",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["clean"],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
