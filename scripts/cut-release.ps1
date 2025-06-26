@@ -111,21 +111,38 @@ if (-not $CurrentVersionMatch.Success) {
 }
 
 $CurrentVersion = $CurrentVersionMatch.Groups[1].Value
-if ((Compare-SemanticVersion $Version $CurrentVersion) -le 0) {
-    Exit-WithError "New version '$Version' must be higher than current version '$CurrentVersion'."
+$VersionComparison = Compare-SemanticVersion $Version $CurrentVersion
+$UpdateCargoFiles = $true
+
+if ($VersionComparison -lt 0) {
+    Exit-WithError "New version '$Version' cannot be lower than current version '$CurrentVersion'."
+}
+elseif ($VersionComparison -eq 0) {
+    # Same version, check if it already exists in the changelog.
+    $ExistingVersionPattern = "## v$([regex]::Escape($Version))\s"
+    if ($ChangelogContent -match $ExistingVersionPattern) {
+        Exit-WithError "Version '$Version' already exists in CHANGELOG.md. This version appears to have been released already."
+    }
+
+    Write-Host "Version '$Version' matches current Cargo.toml version. Assuming manual version bump - skipping Cargo file updates." -ForegroundColor Yellow
+    $UpdateCargoFiles = $false
+}
+else {
+    Write-Host "Version validation passed. Current: $CurrentVersion, New: $Version" -ForegroundColor Green
 }
 
-Write-Host "Version validation passed. Current: $CurrentVersion, New: $Version" -ForegroundColor Green
+# Update Cargo.toml and Cargo.lock if needed.
+if ($UpdateCargoFiles) {
+    # Update Cargo.toml with the new version.
+    $NewCargoContent = $CargoContent -replace 'version\s*=\s*"[^"]+"', "version = `"$Version`""
+    Set-Content -Path $CargoTomlPath -Value $NewCargoContent -NoNewline
 
-# Update Cargo.toml with the new version.
-$NewCargoContent = $CargoContent -replace 'version\s*=\s*"[^"]+"', "version = `"$Version`""
-Set-Content -Path $CargoTomlPath -Value $NewCargoContent -NoNewline
-
-# Update Cargo.lock.
-Write-Host "Updating Cargo.lock..." -ForegroundColor Yellow
-$CargoUpdateResult = cargo update -p gdvm 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Exit-WithError "Failed to update Cargo.lock: $CargoUpdateResult"
+    # Update Cargo.lock.
+    Write-Host "Updating Cargo.lock..." -ForegroundColor Yellow
+    $CargoUpdateResult = cargo update -p gdvm 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "Failed to update Cargo.lock: $CargoUpdateResult"
+    }
 }
 
 # Update CHANGELOG.md.
@@ -162,7 +179,11 @@ $StashResult = git stash push -u -m "$StashName" 2>&1
 $HasStash = $LASTEXITCODE -eq 0 -and $StashResult -notmatch "No local changes to save"
 
 # Stage changes and show diff.
-git add $CargoTomlPath "Cargo.lock" "CHANGELOG.md"
+if ($UpdateCargoFiles) {
+    git add $CargoTomlPath "Cargo.lock" "CHANGELOG.md"
+} else {
+    git add "CHANGELOG.md"
+}
 
 Write-Host "`nHere are the changes that will be committed:" -ForegroundColor Yellow
 git diff --cached
@@ -175,8 +196,13 @@ if ($UserInput -notmatch '^[Yy]$') {
     Write-Host "Release cancelled. Restoring previous state..." -ForegroundColor Yellow
 
     # Reset the staged changes.
-    git reset HEAD $CargoTomlPath "Cargo.lock" "CHANGELOG.md" 2>&1 | Out-Null
-    git checkout HEAD -- $CargoTomlPath "Cargo.lock" "CHANGELOG.md" 2>&1 | Out-Null
+    if ($UpdateCargoFiles) {
+        git reset HEAD $CargoTomlPath "Cargo.lock" "CHANGELOG.md" 2>&1 | Out-Null
+        git checkout HEAD -- $CargoTomlPath "Cargo.lock" "CHANGELOG.md" 2>&1 | Out-Null
+    } else {
+        git reset HEAD "CHANGELOG.md" 2>&1 | Out-Null
+        git checkout HEAD -- "CHANGELOG.md" 2>&1 | Out-Null
+    }
 
     # Restore the stash if one was created.
     if ($HasStash) {
