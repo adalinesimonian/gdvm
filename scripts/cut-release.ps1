@@ -131,20 +131,6 @@ else {
     Write-Host "Version validation passed. Current: $CurrentVersion, New: $Version" -ForegroundColor Green
 }
 
-# Update Cargo.toml and Cargo.lock if needed.
-if ($UpdateCargoFiles) {
-    # Update Cargo.toml with the new version.
-    $NewCargoContent = $CargoContent -replace 'version\s*=\s*"[^"]+"', "version = `"$Version`""
-    Set-Content -Path $CargoTomlPath -Value $NewCargoContent -NoNewline
-
-    # Update Cargo.lock.
-    Write-Host "Updating Cargo.lock..." -ForegroundColor Yellow
-    $CargoUpdateResult = cargo update -p gdvm 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Exit-WithError "Failed to update Cargo.lock: $CargoUpdateResult"
-    }
-}
-
 # Update CHANGELOG.md.
 Write-Host "Updating CHANGELOG.md..." -ForegroundColor Yellow
 
@@ -168,15 +154,28 @@ $NewUnreleasedSection = @"
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v$Version...main
 "@
 
-# Replace the changelog content.
-$NewChangelogContent = $ChangelogContent -replace '(?s)## Unreleased.*?(?=\n## )', "$NewUnreleasedSection`n`n$NewVersionSection`n"
-Set-Content -Path "CHANGELOG.md" -Value $NewChangelogContent -NoNewline
-
 # Create a stash to save the current state before making changes.
 Write-Host "Saving current git state..." -ForegroundColor Yellow
 $StashName = "gdvm-release-script-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $StashResult = git stash push -u -m "$StashName" 2>&1
 $HasStash = $LASTEXITCODE -eq 0 -and $StashResult -notmatch "No local changes to save"
+
+if ($UpdateCargoFiles) {
+    # Update Cargo.toml with the new version.
+    $NewCargoContent = $CargoContent -replace 'version\s*=\s*"[^"]+"', "version = `"$Version`""
+    Set-Content -Path $CargoTomlPath -Value $NewCargoContent -NoNewline
+
+    # Update Cargo.lock.
+    Write-Host "Updating Cargo.lock..." -ForegroundColor Yellow
+    $CargoUpdateResult = cargo update -p gdvm 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "Failed to update Cargo.lock: $CargoUpdateResult"
+    }
+}
+
+# Replace the changelog content.
+$NewChangelogContent = $ChangelogContent -replace '(?s)## Unreleased.*?(?=\n## )', "$NewUnreleasedSection`n`n$NewVersionSection`n"
+Set-Content -Path "CHANGELOG.md" -Value $NewChangelogContent -NoNewline
 
 # Stage changes and show diff.
 if ($UpdateCargoFiles) {
