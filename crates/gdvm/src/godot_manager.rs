@@ -69,8 +69,8 @@ enum GithubJsonError {
 impl std::fmt::Display for GithubJsonError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Network(e) => write!(f, "{}", e),
-            Self::Api(e) | Self::Other(e) => write!(f, "{}", e),
+            Self::Network(e) => write!(f, "{e}"),
+            Self::Api(e) | Self::Other(e) => write!(f, "{e}"),
         }
     }
 }
@@ -597,7 +597,7 @@ impl<'a> GodotManager<'a> {
         if let Some(token) = token {
             headers.insert(
                 reqwest::header::AUTHORIZATION,
-                format!("token {}", token).parse()?,
+                format!("token {token}").parse()?,
             );
         }
         Ok(reqwest::blocking::ClientBuilder::new()
@@ -1062,7 +1062,7 @@ impl<'a> GodotManager<'a> {
                 Err(e) => {
                     progress.finish_and_clear();
                     if matches!(e, GithubJsonError::Api(_)) {
-                        eprintln!("{}", e);
+                        eprintln!("{e}");
                     } else {
                         self.save_gdvm_cache(&GdvmCache {
                             last_update_check: now,
@@ -1079,7 +1079,7 @@ impl<'a> GodotManager<'a> {
             let major_version = current_version.major;
 
             // Check for updates within current major version.
-            let version_req = format!("^{}", major_version);
+            let version_req = format!("^{major_version}");
             if let Some(latest_stable_tag) =
                 self.find_latest_stable_release(&releases, &version_req)?
             {
@@ -1311,12 +1311,12 @@ impl<'a> GodotManager<'a> {
 
         // Set download URL based on architecture.
         let repo_url = "https://github.com/adalinesimonian/gdvm";
-        let release_url = format!("{}/releases/download/{}", repo_url, latest_stable_tag);
+        let release_url = format!("{repo_url}/releases/download/{latest_stable_tag}");
         #[cfg(target_os = "windows")]
-        let file = format!("gdvm-{}.exe", arch);
+        let file = format!("gdvm-{arch}.exe");
         #[cfg(not(target_os = "windows"))]
-        let file = format!("gdvm-{}", arch);
-        let bin_url = format!("{}/{}", release_url, file);
+        let file = format!("gdvm-{arch}");
+        let bin_url = format!("{release_url}/{file}");
         let out_file = install_dir.join("gdvm.new");
 
         // Download the new binary.
