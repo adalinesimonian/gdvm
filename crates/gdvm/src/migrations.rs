@@ -103,7 +103,7 @@ fn read_data_version(path: &Path) -> Result<u32> {
 }
 
 fn write_data_version(path: &Path, version: u32) -> Result<()> {
-    let content = format!("{}{}\n", HEADER, version);
+    let content = format!("{HEADER}{version}\n");
 
     fs::write(path, content)?;
 

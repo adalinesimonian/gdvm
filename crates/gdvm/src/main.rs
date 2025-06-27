@@ -46,7 +46,7 @@ fn main() -> Result<()> {
             raw_args: &args,
             force_on_mismatch: false,
         }) {
-            eprintln!("{}", err);
+            eprintln!("{err}");
 
             // Wait for 5 seconds before exiting on Windows to allow the user to read the error.
             // On other platforms, the wrapper script will display the error message in a dialog.
@@ -381,7 +381,7 @@ fn sub_list(i18n: &I18n, manager: &GodotManager) -> Result<()> {
     } else {
         println_i18n!(i18n, "installed-versions");
         for v in versions {
-            println!("- {}", v);
+            println!("- {v}");
         }
     }
     Ok(())
@@ -652,7 +652,7 @@ fn sub_search(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
     } else {
         println_i18n!(i18n, "available-releases");
         for r in releases {
-            println!("- {}", r);
+            println!("- {r}");
         }
     }
     Ok(())
@@ -739,7 +739,7 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
         Some(("get", sub_m)) => {
             let key = sub_m.get_one::<String>("key").unwrap();
             if let Some(value) = config.get_value(key) {
-                println!("{}", value);
+                println!("{value}");
             } else {
                 println!("{}", t!(i18n, "config-key-not-set"));
             }
@@ -752,7 +752,7 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
             } else {
                 // Build the prompt message from the Fluent bundle.
                 let prompt = t!(i18n, "config-set-prompt", key = key.as_str());
-                eprint!("{} ", prompt);
+                eprint!("{prompt} ");
                 if config.is_sensitive_key(key) {
                     // Mask input for sensitive values.
                     match rpassword::prompt_password("") {
@@ -805,7 +805,7 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
                             (Some(val), _, _) => val,
                             (None, _, _) => "<not set>".to_string(),
                         };
-                    println!("{} = {}", key, display_value);
+                    println!("{key} = {display_value}");
                 }
             } else {
                 // List only keys that are set.
@@ -815,7 +815,7 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
                     } else {
                         value
                     };
-                    println!("{} = {}", key, display_value);
+                    println!("{key} = {display_value}");
                 }
             }
         }

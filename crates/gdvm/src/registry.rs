@@ -39,7 +39,7 @@ impl Registry {
     }
 
     pub fn fetch_index(&self) -> Result<Vec<IndexEntry>> {
-        let url = format!("{}/index.json", BASE_URL);
+        let url = format!("{BASE_URL}/index.json");
         let resp = self.client.get(&url).send()?;
         if resp.status().is_success() {
             Ok(resp.json()?)
@@ -49,7 +49,7 @@ impl Registry {
     }
 
     pub fn fetch_release(&self, id: u64, name: &str) -> Result<ReleaseMetadata> {
-        let url = format!("{}/releases/{}_{}.json", BASE_URL, id, name);
+        let url = format!("{BASE_URL}/releases/{id}_{name}.json");
         let resp = self.client.get(&url).send()?;
         if resp.status().is_success() {
             Ok(resp.json()?)
