@@ -362,6 +362,35 @@ jobs:
           draft: false
           prerelease: false
 
+  social-update:
+    name: Update Social Media
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish
+
+    environment:
+      name: socials
+
+    steps:
+      - name: Create release update post text
+        id: post_text
+        run: |
+          echo 'text<<EOF' >> $GITHUB_OUTPUT
+          echo "${{ github.ref_name }} of gdvm is now out!" >> $GITHUB_OUTPUT
+          echo '' >> $GITHUB_OUTPUT
+          echo "Upgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo '' >> $GITHUB_OUTPUT
+          echo 'Report any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!' >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Post release update to BlueSky
+        uses: myConsciousness/bluesky-post@v5
+        with:
+          text: "${{ steps.post_text.outputs.text }}"
+          link-preview-url: "https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.ref_name }}"
+          identifier: gdvm.io
+          password: ${{ secrets.BLUESKY_PASSWORD }}
+
   delete-artifacts:
     name: Delete Artifacts
     runs-on: ubuntu-latest
