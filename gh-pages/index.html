@@ -88,6 +88,7 @@
                 box-sizing: border-box;
             }
             body {
+                font-size: 16px;
                 margin: 0;
                 font-family: var(--font-body);
                 color: var(--fg);
@@ -137,20 +138,32 @@
                 font-family: var(--font-body);
                 display: inline-flex;
                 align-items: center;
-                gap: 0.5rem;
-                padding: 0.65rem 1.25rem;
+                gap: 0.5em;
+                padding: 0.65em 1.25em;
                 background: #fff;
                 color: var(--accent-strong);
                 border-radius: var(--radius);
                 font-weight: 600;
                 box-shadow: var(--shadow);
-                transition: transform 0.2s, box-shadow 0.3s;
+                transition: transform 0.2s, box-shadow 0.3s, font-size 0.2s;
                 position: relative;
                 z-index: 2;
             }
             .btn:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            }
+
+            .btn img {
+                width: 1.5em;
+                height: 1.5em;
+                vertical-align: middle;
+                margin-right: 0.25em;
+            }
+            @media (max-width: 600px) {
+                .btn {
+                    font-size: 0.85rem;
+                }
             }
 
             main {
@@ -295,13 +308,31 @@
                 height="75"
             />
             <p>Easily install, manage, and switch between Godot versions.</p>
-            <a
-                class="btn"
-                href="https://github.com/adalinesimonian/gdvm"
-                target="_blank"
-                rel="noopener"
-                >View on GitHub</a
+            <div
+                style="
+                    display: flex;
+                    gap: 1rem;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                "
             >
+                <a
+                    class="btn"
+                    href="https://github.com/adalinesimonian/gdvm"
+                    target="_blank"
+                    rel="noopener"
+                    ><img alt="GitHub logo" src="./github-logo.svg" /> View on
+                    GitHub</a
+                >
+                <a
+                    class="btn"
+                    href="https://bsky.app/profile/gdvm.io"
+                    target="_blank"
+                    rel="noopener"
+                    ><img alt="Bluesky logo" src="./bluesky-logo.svg" />Follow
+                    on Bluesky</a
+                >
+            </div>
         </header>
 
         <div class="wave">

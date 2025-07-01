@@ -2,6 +2,10 @@
 
 ![Project banner](https://gdvm.io/gdvm-github-banner.png)
 
+<!--[Follow on Bluesky](https://bsky.app/profile/gdvm.io)-->
+
+[![GitHub Release](https://img.shields.io/github/v/release/adalinesimonian/gdvm)](https://github.com/adalinesimonian/gdvm/releases/latest) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/adalinesimonian/gdvm/build-and-test.yml?branch=main)](https://github.com/adalinesimonian/gdvm/actions/workflows/build-and-test.yml) [![License](https://img.shields.io/github/license/adalinesimonian/gdvm)](https://github.com/adalinesimonian/gdvm/blob/main/LICENCE) [![Bluesky](https://img.shields.io/badge/Bluesky-follow-blue?logo=bluesky&style=social)](https://bsky.app/profile/gdvm.io) [![GitHub Stargazers](https://img.shields.io/github/stars/adalinesimonian/gdvm?style=social)](https://github.com/adalinesimonian/gdvm/stargazers)
+
 Godot Version Manager (gdvm) is a tool designed to simplify the installation, management, and switching between different versions of the Godot Engine.
 
 Whether you're working on multiple projects or need to test features across various Godot versions, you'll never need to manually fuss with Godot installations again.
