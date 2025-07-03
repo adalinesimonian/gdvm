@@ -204,6 +204,33 @@ async function runWorker() {
     const safeName = release.tag_name.replace(/[^\w.-]+/g, "_");
     const filePath = path.join(outDir, `${release.id}_${safeName}.json`);
 
+    // If this is a re-release, find and delete the old file.
+    if (release.isRerelease) {
+      try {
+        const files = await fs.readdir(outDir);
+        const oldFilePattern = new RegExp(
+          `^\\d+_${safeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.json$`
+        );
+
+        for (const file of files) {
+          if (oldFilePattern.test(file) && !file.startsWith(`${release.id}_`)) {
+            const oldFilePath = path.join(outDir, file);
+            await fs.unlink(oldFilePath);
+            parentPort.postMessage({
+              type: "log",
+              msg: `[deleted]      ${tagNameCol}  Removed old release file: ${file}`,
+            });
+            break; // Should only be one old file with this tag name.
+          }
+        }
+      } catch (error) {
+        parentPort.postMessage({
+          type: "log",
+          msg: `[error]        ${tagNameCol}  Failed to delete old release file: ${error.message}`,
+        });
+      }
+    }
+
     let oldBinaries = {};
 
     try {
@@ -227,7 +254,7 @@ async function runWorker() {
     if (sumsFile) {
       parentPort.postMessage({
         type: "log",
-        msg: `[download]    ${tagNameCol}  Downloading SHA512-SUMS file…`,
+        msg: `[download]     ${tagNameCol}  Downloading SHA512-SUMS file…`,
       });
 
       const sumsData = await retryOperation(
@@ -236,13 +263,13 @@ async function runWorker() {
         (attempt, error) => {
           parentPort.postMessage({
             type: "log",
-            msg: `[error]       ${tagNameCol}  Downloading SHA512-SUMS file failed on attempt ${attempt}.\nError: ${
+            msg: `[error]        ${tagNameCol}  Downloading SHA512-SUMS file failed on attempt ${attempt}.\nError: ${
               error?.message || String(error)
             }`,
           });
           parentPort.postMessage({
             type: "log",
-            msg: `[dl try ${attempt}]    ${tagNameCol}  Downloading SHA512-SUMS file…`,
+            msg: `[dl try ${attempt}]     ${tagNameCol}  Downloading SHA512-SUMS file…`,
           });
         }
       );
@@ -263,7 +290,7 @@ async function runWorker() {
         parentPort.postMessage({
           type: "log",
           msg:
-            `[skip-unkwn]  ${release.tag_name.padEnd(21)}  ` +
+            `[skip-unkwn]   ${release.tag_name.padEnd(21)}  ` +
             `${" ".repeat(24)}  ` +
             `${fileNameForUrl(asset.url)}`,
         });
@@ -275,7 +302,7 @@ async function runWorker() {
         parentPort.postMessage({
           type: "log",
           msg:
-            `[skip-extra]  ${release.tag_name.padEnd(21)}  ` +
+            `[skip-extra]   ${release.tag_name.padEnd(21)}  ` +
             `${`${slot.os}/${slot.arch}`.padEnd(24)}  ` +
             `${fileNameForUrl(asset.url)}`,
         });
@@ -296,7 +323,7 @@ async function runWorker() {
         binaries[slot.os][slot.arch] = prev;
         parentPort.postMessage({
           type: "log",
-          msg: `[unchanged]   ${tagNameCol}  ${osArchCol}  ${fileNameCol}  ${prev.sha512.slice(
+          msg: `[unchanged]    ${tagNameCol}  ${osArchCol}  ${fileNameCol}  ${prev.sha512.slice(
             0,
             8
           )}…`,
@@ -320,7 +347,7 @@ async function runWorker() {
       } else {
         parentPort.postMessage({
           type: "log",
-          msg: `[download]    ${tagNameCol}  ${osArchCol}  ${fileNameCol}`,
+          msg: `[download]     ${tagNameCol}  ${osArchCol}  ${fileNameCol}`,
         });
 
         sha = await retryOperation(
@@ -329,20 +356,20 @@ async function runWorker() {
           (attempt, error) => {
             parentPort.postMessage({
               type: "log",
-              msg: `[error]       ${tagNameCol}  ${osArchCol}  ${fileNameCol}\nError: ${
+              msg: `[error]        ${tagNameCol}  ${osArchCol}  ${fileNameCol}\nError: ${
                 error?.message || String(error)
               }`,
             });
             parentPort.postMessage({
               type: "log",
-              msg: `[dl try ${attempt}]    ${tagNameCol}  ${osArchCol}  ${fileNameCol}`,
+              msg: `[dl try ${attempt}]     ${tagNameCol}  ${osArchCol}  ${fileNameCol}`,
             });
           }
         );
 
         parentPort.postMessage({
           type: "log",
-          msg: `[sha512]      ${tagNameCol}  ${osArchCol}  ${fileNameCol}  ${sha.slice(
+          msg: `[sha512]       ${tagNameCol}  ${osArchCol}  ${fileNameCol}  ${sha.slice(
             0,
             8
           )}…`,
@@ -363,7 +390,7 @@ async function runWorker() {
 
     parentPort.postMessage({
       type: "log",
-      msg: `[saved]       ${release.tag_name}`,
+      msg: `[saved]        ${release.tag_name}`,
     });
     parentPort.postMessage({ type: "done", tag: release.tag_name });
   }
@@ -396,6 +423,7 @@ async function runParent() {
   }
 
   const knownIds = new Set(currentIndex.map((entry) => entry.id));
+  const knownTagNames = new Set(currentIndex.map((entry) => entry.name));
 
   // When doing incremental updates, always refetch the last 3 builds to fill in
   // any missing assets that may have been added after initial indexing.
@@ -429,7 +457,16 @@ async function runParent() {
       // 1. We're rebuilding the index.
       // 2. The release is new, not in the current index.
       // 3. It's one of the last 3 releases, to refetch any missing assets.
-      if (rebuild || !knownIds.has(release.id) || refetchIds.has(release.id)) {
+      // 4. It's a re-release, i.e. it has the same tag name but a different ID.
+      const isRerelease =
+        knownTagNames.has(release.tag_name) && !knownIds.has(release.id);
+
+      if (
+        rebuild ||
+        !knownIds.has(release.id) ||
+        refetchIds.has(release.id) ||
+        isRerelease
+      ) {
         releases.push({
           id: release.id,
           tag_name: release.tag_name,
@@ -437,7 +474,14 @@ async function runParent() {
             name: a.name,
             url: a.browser_download_url,
           })),
+          isRerelease: isRerelease,
         });
+
+        if (isRerelease) {
+          console.log(
+            `Found re-release: ${release.tag_name} (new ID: ${release.id})`
+          );
+        }
       } else {
         console.log(
           `Found known release ID ${release.id} (${release.tag_name}) on page ${page}. Stopping.`
@@ -554,15 +598,37 @@ async function runParent() {
 
   // Write index.json with the release index.
   const indexMap = new Map();
+  const tagNameToIdMap = new Map();
 
   if (rebuild) {
     // For rebuild, just use the fetched releases.
-    releases.forEach((r) => indexMap.set(r.id, { id: r.id, name: r.tag_name }));
+    releases.forEach((r) => {
+      indexMap.set(r.id, { id: r.id, name: r.tag_name });
+      tagNameToIdMap.set(r.tag_name, r.id);
+    });
   } else {
     // For incremental, start with existing index, then overlay new releases to
     // update refetched ones and add new ones.
-    currentIndex.forEach((entry) => indexMap.set(entry.id, entry));
-    releases.forEach((r) => indexMap.set(r.id, { id: r.id, name: r.tag_name }));
+    currentIndex.forEach((entry) => {
+      indexMap.set(entry.id, entry);
+      tagNameToIdMap.set(entry.name, entry.id);
+    });
+    releases.forEach((r) => {
+      if (r.isRerelease) {
+        // Remove the old entry with the same tag name.
+        const oldId = tagNameToIdMap.get(r.tag_name);
+        if (oldId) {
+          indexMap.delete(oldId);
+          console.log(
+            `Removed old index entry for re-release: ${r.tag_name} (old ID: ${oldId})`
+          );
+        }
+      }
+
+      // Add the new entry.
+      indexMap.set(r.id, { id: r.id, name: r.tag_name });
+      tagNameToIdMap.set(r.tag_name, r.id);
+    });
   }
 
   // Sort by ID descending, newest first.
