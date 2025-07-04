@@ -190,6 +190,21 @@ if ($UpdateCargoFiles) {
 $NewChangelogContent = $ChangelogContent -replace '(?s)## Unreleased\s*\n.*?(?=\n## v|\z)', "$NewUnreleasedSection`n`n$NewVersionSection`n"
 Set-Content -Path "CHANGELOG.md" -Value $NewChangelogContent -NoNewline
 
+Write-Host "Formatting CHANGELOG.md with Prettier..." -ForegroundColor Yellow
+
+$YarnExists = Get-Command yarn -ErrorAction SilentlyContinue
+if ($YarnExists) {
+    $PrettierResult = yarn dlx prettier --write CHANGELOG.md 2>&1
+    $PrettierExitCode = $LASTEXITCODE
+} else {
+    $PrettierResult = npx prettier --write CHANGELOG.md 2>&1
+    $PrettierExitCode = $LASTEXITCODE
+}
+
+if ($PrettierExitCode -ne 0) {
+    Exit-WithError "Failed to format CHANGELOG.md with Prettier: $PrettierResult"
+}
+
 # Stage changes and show diff.
 if ($UpdateCargoFiles) {
     git add $CargoTomlPath "Cargo.lock" "CHANGELOG.md"
