@@ -384,12 +384,147 @@ jobs:
           echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Post release update to BlueSky
-        uses: myConsciousness/bluesky-post@v5
-        with:
-          text: "${{ steps.post_text.outputs.text }}"
-          link-preview-url: "https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.ref_name }}"
-          identifier: gdvm.io
-          password: ${{ secrets.BLUESKY_PASSWORD }}
+        continue-on-error: true
+        run: |
+          echo "Authenticating with Bluesky..."
+          # Create session with Bluesky.
+          session_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.server.createSession" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "identifier": "gdvm.io",
+              "password": "${{ secrets.BLUESKY_PASSWORD }}"
+            }')
+
+          # Extract access token and DID from response.
+          access_token=$(echo "$session_response" | jq -r '.accessJwt')
+          did=$(echo "$session_response" | jq -r '.did')
+
+          if [ "$access_token" = "null" ] || [ "$did" = "null" ]; then
+            echo "❌ Failed to authenticate with Bluesky"
+            echo "Response: $session_response"
+            exit 1
+          fi
+          echo "Successfully authenticated with Bluesky."
+
+          # Create timestamp.
+          timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+
+          # Prepare post text.
+          post_text=$(cat << 'EOF' | jq -R -s '.'
+          ${{ steps.post_text.outputs.text }}
+          EOF
+          )
+
+          echo "Fetching OpenGraph metadata from GitHub release..."
+
+          # Fetch OpenGraph metadata from the release URL.
+          release_url="https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.ref_name }}"
+
+          # Fetch the HTML and extract OpenGraph metadata.
+          html_content=$(curl -s "$release_url")
+
+          # Extract og:title.
+          og_title=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:title"[^>]*content="\K[^"]*' | head -1)
+          if [ -z "$og_title" ]; then
+            og_title="gdvm ${{ github.ref_name }} Release"
+          fi
+
+          # Extract og:description.
+          og_description=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:description"[^>]*content="\K[^"]*' | head -1)
+          if [ -z "$og_description" ]; then
+            og_description="Latest release of gdvm - Godot Version Manager"
+          fi
+
+          # Extract og:image.
+          og_image=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:image"[^>]*content="\K[^"]*' | head -1)
+
+          echo "Title: $og_title"
+          echo "Description: $og_description"
+
+          # Prepare embed external object.
+          embed_external="{
+            \"uri\": \"$release_url\",
+            \"title\": $(echo "$og_title" | jq -R '.'),
+            \"description\": $(echo "$og_description" | jq -R '.')
+          }"
+
+          # If there's an og:image, fetch and upload it.
+          if [ -n "$og_image" ]; then
+            echo "Found OpenGraph image, downloading and uploading..."
+            # Handle relative URLs
+            if [[ "$og_image" != http* ]]; then
+              og_image="https://github.com$og_image"
+            fi
+
+            # Download the image to a temporary file.
+            temp_image="/tmp/og_image"
+            curl -s "$og_image" -o "$temp_image"
+            image_content_type=$(curl -s -I "$og_image" | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r\n')
+
+            # Upload the image as a blob.
+            blob_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.uploadBlob" \
+              -H "Authorization: Bearer $access_token" \
+              -H "Content-Type: $image_content_type" \
+              --data-binary "@$temp_image")
+
+            # Clean up temp file.
+            rm -f "$temp_image"
+
+            # Extract the blob reference.
+            blob_ref=$(echo "$blob_response" | jq '.blob')
+
+            if [ "$blob_ref" != "null" ]; then
+              # Add thumb to embed external
+              embed_external=$(echo "$embed_external" | jq --argjson thumb "$blob_ref" '. + {"thumb": $thumb}')
+              echo "✅ Image uploaded successfully."
+            else
+              echo "⚠️ Image upload failed, continuing without thumbnail."
+            fi
+          else
+            echo "⚠️ No OpenGraph image found, continuing without thumbnail."
+          fi
+
+          echo "Posting to Bluesky..."
+          # Create the post payload and send it.
+          jq -n \
+            --arg repo "$did" \
+            --arg collection "app.bsky.feed.post" \
+            --arg type "app.bsky.feed.post" \
+            --argjson text "$post_text" \
+            --arg createdAt "$timestamp" \
+            --arg embed_type "app.bsky.embed.external" \
+            --argjson external "$embed_external" \
+            '{
+              repo: $repo,
+              collection: $collection,
+              record: {
+                "$type": $type,
+                text: $text,
+                createdAt: $createdAt,
+                embed: {
+                  "$type": $embed_type,
+                  external: $external
+                }
+              }
+            }' > /tmp/post_payload.json
+
+          post_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.createRecord" \
+            -H "Authorization: Bearer $access_token" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data-binary "@/tmp/post_payload.json")
+
+          # Clean up.
+          rm -f /tmp/post_payload.json
+
+          if echo "$post_response" | jq -e '.uri' > /dev/null; then
+            post_uri=$(echo "$post_response" | jq -r '.uri')
+            echo "✅ Successfully posted to Bluesky!"
+            echo "Post URI: $post_uri"
+          else
+            echo "❌ Failed to post to Bluesky"
+            echo "Response: $post_response"
+            exit 1
+          fi
 
   delete-artifacts:
     name: Delete Artifacts
