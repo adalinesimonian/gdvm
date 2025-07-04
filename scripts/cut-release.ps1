@@ -105,7 +105,7 @@ if (-not $NonEmptyLines) {
 # Check that new version is higher than current version.
 $CargoTomlPath = "crates/gdvm/Cargo.toml"
 $CargoContent = Get-Content $CargoTomlPath -Raw
-$CurrentVersionMatch = [regex]::Match($CargoContent, 'version\s*=\s*"([^"]+)"')
+$CurrentVersionMatch = [regex]::Match($CargoContent, '(?s)\[package\](?:(?!\[).)*?version\s*=\s*"([^"]+)"')
 if (-not $CurrentVersionMatch.Success) {
     Exit-WithError "Could not find version in '$CargoTomlPath'."
 }
@@ -174,7 +174,8 @@ $HasStash = $LASTEXITCODE -eq 0 -and $StashResult -notmatch "No local changes to
 
 if ($UpdateCargoFiles) {
     # Update Cargo.toml with the new version.
-    $NewCargoContent = $CargoContent -replace 'version\s*=\s*"[^"]+"', "version = `"$Version`""
+    $PackageVersionRegex = '(?s)(\[package\](?:(?!\[).)*?version\s*=\s*")[^"]+(")'
+    $NewCargoContent = $CargoContent -replace $PackageVersionRegex, ('${1}' + $Version + '${2}')
     Set-Content -Path $CargoTomlPath -Value $NewCargoContent -NoNewline
 
     # Update Cargo.lock.
