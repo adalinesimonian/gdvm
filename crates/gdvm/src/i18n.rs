@@ -7,6 +7,7 @@ use unic_langid::langid;
 
 // Include the Fluent translation files as static strings
 static EN_US_FTL: &str = include_str!("../i18n/en-US.ftl");
+static FR_FR_FTL: &str = include_str!("../i18n/fr-FR.ftl");
 static HY_AM_FTL: &str = include_str!("../i18n/hy-AM.ftl");
 static NB_NO_FTL: &str = include_str!("../i18n/nb-NO.ftl");
 static NN_NO_FTL: &str = include_str!("../i18n/nn-NO.ftl");
@@ -26,6 +27,7 @@ impl I18n {
     pub fn new(max_length: usize) -> Result<Self> {
         let resources = [
             (langid!("en-US"), EN_US_FTL),
+            (langid!("fr-FR"), FR_FR_FTL),
             (langid!("hy-AM"), HY_AM_FTL),
             (langid!("nb-NO"), NB_NO_FTL),
             (langid!("nn-NO"), NN_NO_FTL),
