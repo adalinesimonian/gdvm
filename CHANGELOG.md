@@ -2,11 +2,21 @@
 
 ## Unreleased
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.8.1...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.9.0...main
+
+## v0.9.0
+
+### New Features
+
+- gdvm now supports a new `gdvm refresh` command to update the local version cache from the registry. This is useful if you want to ensure you have the latest versions available without waiting for the automatic cache refresh interval, or for cases where a build has been re-released with a different checksum. (Looking at you, [Godot 4.5-beta2](https://github.com/godotengine/godot/issues/108190))
+- Not enough French in your life? Tu as de la chance ! gdvm now has a French translation thanks to Raphael Astier (@abclive). If you want to contribute a translation, please see the [i18n section in CONTRIBUTING.md](CONTRIBUTING.md#internationalization-i18n).
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.8.1...v0.9.0
 
 ## v0.8.1
 
 ### Fixed
+
 - `gdvm upgrade` will no longer automatically upgrade across major version boundaries. This should prevent gdvm from automatically upgrading to a release with breaking changes. The new `-m/--major` flag can be used to explicitly allow major version upgrades.
 
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.8.0...v0.8.1
