@@ -28,6 +28,7 @@ help-include-pre = Включить предварительные версии 
 help-cache-only = Использовать только кэшированную информацию о релизах без запроса к GitHub API
 help-limit = Количество релизов для отображения, по умолчанию 10. Используйте 0, чтобы отобразить все
 help-clear-cache = Очистить кэш релизов gdvm
+help-refresh = Обновить кэш релизов gdvm из реестра
 
 help-force = Принудительная переустановка, даже если версия уже установлена.
 help-redownload = Повторно загрузить версию, даже если она уже загружена в кэше.
@@ -96,6 +97,7 @@ running-version = Запуск версии {$version}
 no-matching-releases = Соответствующие релизы не найдены.
 available-releases = Доступные релизы:
 cache-cleared = Кэш успешно очищен.
+cache-refreshed = Кэш успешно обновлен.
 
 version-already-installed = Версия {$version} уже установлена.
 godot-executable-not-found = Исполняемый файл Godot не найден для версии {$version}.

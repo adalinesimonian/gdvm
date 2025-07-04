@@ -221,6 +221,7 @@ fn main() -> Result<()> {
                 ),
         )
         .subcommand(Command::new("clear-cache").about(t!(i18n, "help-clear-cache")))
+        .subcommand(Command::new("refresh").about(t!(i18n, "help-refresh")))
         .subcommand(
             Command::new("use")
                 .about(t!(i18n, "help-default"))
@@ -322,6 +323,7 @@ fn main() -> Result<()> {
         Some(("remove", sub_m)) => sub_remove(&i18n, &manager, sub_m)?,
         Some(("search", sub_m)) => sub_search(&i18n, &manager, sub_m)?,
         Some(("clear-cache", _)) => sub_clear_cache(&i18n, &manager)?,
+        Some(("refresh", _)) => sub_refresh(&i18n, &manager)?,
         Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m)?,
         Some(("upgrade", sub_m)) => sub_upgrade(&manager, sub_m)?,
         Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m)?,
@@ -662,6 +664,13 @@ fn sub_search(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
 fn sub_clear_cache(i18n: &I18n, manager: &GodotManager) -> Result<()> {
     manager.clear_cache()?;
     println_i18n!(i18n, "cache-cleared");
+    Ok(())
+}
+
+/// Handle the 'refresh' subcommand
+fn sub_refresh(i18n: &I18n, manager: &GodotManager) -> Result<()> {
+    manager.refresh_cache()?;
+    println_i18n!(i18n, "cache-refreshed");
     Ok(())
 }
 

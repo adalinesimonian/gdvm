@@ -780,6 +780,15 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
+    /// Refresh the gdvm release cache by re-downloading the registry index.
+    pub fn refresh_cache(&self) -> Result<()> {
+        let mut cache = self.load_cache()?;
+
+        self.update_cache(&mut cache)?;
+
+        Ok(())
+    }
+
     /// Fetch the latest stable Godot version
     pub fn get_latest_stable_version(&self) -> Result<GodotVersionDeterminate> {
         let stable_version = GodotVersion {

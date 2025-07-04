@@ -28,6 +28,7 @@ help-include-pre = Inkluder forhåndsversjoner (rc, beta, dev)
 help-cache-only = Bruk kun hurtigbufret utgivelsesinformasjon uten å spørre GitHub-APIet
 help-limit = Antall utgivelser som skal vises, standard er 10. Bruk 0 for å vise alle
 help-clear-cache = Tøm gdvm-utgivelseshurtigbufferet
+help-refresh = Oppdater gdvm-utgivelseshurtigbufferet fra registeret
 
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
 help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i hurtigbufferet.
@@ -94,6 +95,7 @@ running-version = Kjører versjon {$version}
 no-matching-releases = Ingen samsvarende utgivelser funna.
 available-releases = Tilgjengelige utgivelser:
 cache-cleared = Hurtigbufferen ble tømt.
+cache-refreshed = Hurtigbufferen ble oppdatert.
 
 version-already-installed = Versjon {$version} er allerede installert.
 godot-executable-not-found = Godot-kjørbar fil ble ikke funnet for versjon {$version}.

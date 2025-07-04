@@ -28,6 +28,7 @@ help-include-pre = Include pre-release versions (rc, beta, dev)
 help-cache-only = Use only cached release information without querying the GitHub API
 help-limit = Number of releases to list, default is 10. Use 0 to list all
 help-clear-cache = Clears the gdvm release cache
+help-refresh = Refresh the gdvm release cache from the registry
 
 help-force = Force reinstall even if the version is already installed.
 help-redownload = Redownload the version even if it's already downloaded in the cache.
@@ -94,6 +95,7 @@ running-version = Running version {$version}
 no-matching-releases = No matching releases found.
 available-releases = Available releases:
 cache-cleared = Cache cleared successfully.
+cache-refreshed = Cache refreshed successfully.
 
 version-already-installed = Version {$version} already installed.
 godot-executable-not-found = Godot executable not found for version {$version}.
