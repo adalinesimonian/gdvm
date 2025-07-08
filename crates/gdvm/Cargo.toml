@@ -45,7 +45,7 @@ semver = "=1.0.26"
 
 # For file system operations:
 zip = "=4.2.0"
-toml = "0.8.20"
+toml = "0.9.0"
 rpassword = "7.3.1"
 
 # For starting Godot:
