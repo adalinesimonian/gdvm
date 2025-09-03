@@ -5,6 +5,6 @@
 	"description": "Registry for Godot release versions",
 	"type": "module",
 	"volta": {
-		"node": "24.4.1"
+		"node": "24.7.0"
 	}
 }
