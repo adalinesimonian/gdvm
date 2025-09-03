@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Dev Drive (Windows)
         if: runner.os == 'Windows'
@@ -312,7 +312,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           sparse-checkout: |
             CHANGELOG.md
