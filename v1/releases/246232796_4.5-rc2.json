@@ -1,0 +1,55 @@
+{
+	"id": 246232796,
+	"name": "4.5-rc2",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/4.5-rc2",
+	"binaries": {
+		"linux": {
+			"arm64": {
+				"sha512": "15b8c5286accf3794f67879d6655fb594ab736ee11df15bb64eea101af50c38833419dfb82b5241ee52bf5bfd6c3eefdd5cfccaf0abf3b3b45696b3852860e2f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_linux.arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "71fc3c282777f7c314d1e1ed65dc66e91448225040ad4361072b4951ef4901c1a9c0b8137873a940620abee5a4fade13c142997924cacf33367b885d4cd6ef79",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_linux.x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "05518e85821f929a94b8d3f1751ce12b3a29750a02a697c657c2b563ced61fbb4ada979ec8f137a7dc53a024751e0c6e1996ddcfbeaae0120947b5aa105e4b90",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_linux.x86_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "280c97c297b53d8d79433733103ada027c2762be4e6885cb4b35ed19554f4af154b4b103ded0d280f6f41dc1092ba7dcca0a3f5cab7101ca3d418563b7fe17e6",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_macos.universal.zip"
+				]
+			}
+		},
+		"windows": {
+			"arm64": {
+				"sha512": "5f0134c6757d66454406622e999a6bc673a8f58621c0a58e1f102b407c7b33d6ca4731da3366f1a2537b533832d83b26dd2fd6f24f2d7f46e05818e33d1da215",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_windows_arm64.exe.zip"
+				]
+			},
+			"x86": {
+				"sha512": "f01a75464aa850e5556ee7cb221e8474f69dc73f0445315a540f9049ed25eaf950ce308ef755da5e48a11d4b688a7bb681ac2889c2f916565dfa56ac6dad408f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "ab086e0fe97c0e9cd41a70ae66a2d32501a86674a24c9f2f5ff707ae8c7028c784d09c0bdc9f1f97e361ae7538750a1d0c58d35433dfd499c0d87a80051174c1",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_win64.exe.zip"
+				]
+			}
+		}
+	}
+}
