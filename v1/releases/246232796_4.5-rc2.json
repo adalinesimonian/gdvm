@@ -23,11 +23,39 @@
 				]
 			}
 		},
+		"linux-csharp": {
+			"arm64": {
+				"sha512": "c23feff879e717816360f16288089db66bc99386618e04bbd2e0afc0ad1c1a140c1dc6859672ee1f8b3cdda1c2eafdacb2db54a93e27698cb234e100d81c0c4e",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_mono_linux_arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "b21116dca8b3c287d78cf266c81334008fefe3cf70239aab716e8a92bc74a8bb94218c2775c26e570165792c65c080c9aa1206ddf0993989ae4514f107c90991",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_mono_linux_x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "0fde1e46446d90dd6c2c09b60017602136321dd2d941f35ff6ad45dd513b6c2fc1de3af43e6bb8c6ef3782e48c0cb54ec6be275cd808d62df0c1c3db0c4c37c3",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_mono_linux_x86_64.zip"
+				]
+			}
+		},
 		"macos": {
 			"universal": {
 				"sha512": "280c97c297b53d8d79433733103ada027c2762be4e6885cb4b35ed19554f4af154b4b103ded0d280f6f41dc1092ba7dcca0a3f5cab7101ca3d418563b7fe17e6",
 				"urls": [
 					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_macos.universal.zip"
+				]
+			}
+		},
+		"macos-csharp": {
+			"universal": {
+				"sha512": "97f89d05007e6bf507f61b03f571106ec53c8c3a5f5cd9412425e56ec2fbc0173b43ab7e52eb4260647a2de3cc37f2e94ad5a60d897f2eb184276a5dce3eb0ab",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_mono_macos.universal.zip"
 				]
 			}
 		},
@@ -48,6 +76,26 @@
 				"sha512": "ab086e0fe97c0e9cd41a70ae66a2d32501a86674a24c9f2f5ff707ae8c7028c784d09c0bdc9f1f97e361ae7538750a1d0c58d35433dfd499c0d87a80051174c1",
 				"urls": [
 					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_win64.exe.zip"
+				]
+			}
+		},
+		"windows-csharp": {
+			"arm64": {
+				"sha512": "bd10b658ba3cbc323d374795c170b3cb9dbec8cb46dcd93a28e9e3f48458f418a58bbba0f19fb2e755fbe0b9bacdfef61642745df884624dad1312e26ff6185a",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_mono_windows_arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "2fae137c1b6a0cd9a79abc7697a4747c0309a36664cc9123e59cc2f143314f2dbf40a09bd0306e38b1d504f86c2b1b37bc33a6fe51784cc6c49be82155b3b9fb",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_mono_win32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "7053d06d0b5ec275935e0637ac3ada020143163fae96da4fc78e8dedbcdd06283b62f7d2835aeab93d4855f47643d9dac67a2041b79cbee73541a9327ece7e24",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5-rc2/Godot_v4.5-rc2_mono_win64.zip"
 				]
 			}
 		}
