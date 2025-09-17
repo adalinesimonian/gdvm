@@ -41,7 +41,7 @@ indicatif = "=0.18.0"
 sha2 = "=0.10.9"
 serde_json = "=1.0.143"
 serde = { version = "=1.0.220", features = ["derive"] }
-semver = "=1.0.26"
+semver = "=1.0.27"
 
 # For file system operations:
 zip = "=5.1.1"
