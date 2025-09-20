@@ -10,7 +10,7 @@ repository = "https://github.com/adalinesimonian/gdvm"
 [dependencies]
 
 # For command-line argument parsing:
-clap = { version = "=4.5.47", features = ["derive", "wrap_help"] }
+clap = { version = "=4.5.48", features = ["derive", "wrap_help"] }
 regex = "=1.11.2"
 
 # For cross-platform paths:
