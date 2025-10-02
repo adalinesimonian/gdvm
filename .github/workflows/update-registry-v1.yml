@@ -90,7 +90,7 @@ jobs:
 
       - name: Commit and push changes
         if: steps.changes.outputs.changed == 'true'
-        uses: planetscale/ghcommit-action@v0.2.17
+        uses: planetscale/ghcommit-action@v0.2.18
         with:
           commit_message: ${{ steps.commitmsg.outputs.message }}
           repo: ${{ github.repository }}
