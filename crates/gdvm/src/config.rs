@@ -47,7 +47,7 @@ impl ConfigOps for Config {
                 self.github_token = Some(value.to_string());
                 Ok(())
             }
-            _ => Err(anyhow!("Unknown configuration key: {}", key)),
+            _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
 
@@ -57,7 +57,7 @@ impl ConfigOps for Config {
                 self.github_token = None;
                 Ok(())
             }
-            _ => Err(anyhow!("Unknown configuration key: {}", key)),
+            _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
 

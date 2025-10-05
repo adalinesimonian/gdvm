@@ -1001,7 +1001,7 @@ impl<'a> GodotManager<'a> {
         version_req: &str,
     ) -> Result<Option<String>> {
         let req = VersionReq::parse(version_req)
-            .map_err(|e| anyhow!("Invalid version requirement '{}': {}", version_req, e))?; // Should never fail.
+            .map_err(|e| anyhow!("Invalid version requirement '{version_req}': {e}"))?; // Should never fail.
 
         let releases_array = releases
             .as_array()
