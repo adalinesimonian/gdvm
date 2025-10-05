@@ -38,10 +38,10 @@ impl I18n {
         for (locale, ftl_code) in resources.iter() {
             let mut bundle = FluentBundle::new(vec![locale.clone()]);
             let res = FluentResource::try_new(ftl_code.to_string())
-                .map_err(|e| anyhow::anyhow!("Failed to parse resource for {}: {:?}", locale, e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to parse resource for {locale}: {e:?}"))?;
             bundle
                 .add_resource(res)
-                .map_err(|e| anyhow::anyhow!("Failed to add resource for {}: {:?}", locale, e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to add resource for {locale}: {e:?}"))?;
             bundles.insert(locale.to_string(), bundle);
         }
 

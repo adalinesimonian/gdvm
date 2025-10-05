@@ -222,7 +222,7 @@ impl GodotVersion {
                 Some(pieces[2].parse()?),
                 Some(pieces[3].parse()?),
             ),
-            _ => return Err(anyhow::anyhow!("Unrecognized version format: {}", raw)),
+            _ => return Err(anyhow::anyhow!("Unrecognized version format: {raw}")),
         };
 
         Ok(GodotVersion {
