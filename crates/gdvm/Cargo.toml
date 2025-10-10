@@ -44,7 +44,7 @@ serde = { version = "=1.0.228", features = ["derive"] }
 semver = "=1.0.27"
 
 # For file system operations:
-zip = "=5.1.1"
+zip = "=6.0.0"
 toml = "0.9.0"
 rpassword = "7.3.1"
 
