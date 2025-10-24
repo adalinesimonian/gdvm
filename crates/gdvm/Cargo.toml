@@ -18,7 +18,7 @@ directories = "=6.0.0"
 
 # For i18n:
 fluent-bundle = "=0.16.0"
-fluent-langneg = "=0.14.1"
+fluent-langneg = "=0.14.2"
 unic-langid = { version = "=0.9.6", features = ["unic-langid-macros"] }
 anyhow = "=1.0.100"
 terminal_size = "=0.4.3"
