@@ -161,7 +161,7 @@ jobs:
 
       - name: Upload binary artifact
         if: success() || failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: binary-${{ matrix.target }}
           path: binary.tar
@@ -196,7 +196,7 @@ jobs:
 
     steps:
       - name: Download binary artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: binary-${{ matrix.target }}
 
@@ -319,7 +319,7 @@ jobs:
             scripts/get-release-description.ps1
 
       - name: Download binary artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: binary-*
 
