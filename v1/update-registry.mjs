@@ -191,6 +191,50 @@ const retryOperation = async (fn, attempts, onRetry) => {
 const sameUrls = (a = [], b = []) =>
   a.length === b.length && a.every((u) => b.includes(u));
 
+const Status = Object.freeze({
+  Download: "download",
+  Retry: "retry",
+  Start: "start",
+  Saved: "saved",
+  SkipUnknown: "skip-unknown",
+  SkipExtra: "skip-extra",
+  Ok: "ok",
+  Updated: "updated",
+  Unchanged: "unchanged",
+  Changed: "changed",
+  Verified: "verified",
+  SumsMismatch: "sums-mismatch",
+  Inconsistent: "inconsistent",
+  Error: "error",
+});
+
+const statusWidth = Math.max(...Object.values(Status).map((s) => s.length));
+function statusCell(s) {
+  return `[${s}]` + " ".repeat(statusWidth - s.length + 1);
+}
+
+function formatLog({ status, tag, osArch, file, sha, note }) {
+  const cols = [
+    statusCell(status),
+    tag ? tag.padEnd(21) : "".padEnd(21),
+    osArch ? osArch.padEnd(24) : "".padEnd(24),
+    file ? file.padEnd(50) : "",
+  ];
+
+  if (sha) {
+    cols.push(sha.slice(0, 8) + "…");
+  }
+  if (note) {
+    cols.push(note);
+  }
+
+  return cols.filter(Boolean).join("  ");
+}
+
+function workerLog(payload) {
+  parentPort.postMessage({ type: "log", msg: formatLog(payload) });
+}
+
 // Worker thread code.
 
 async function runWorker() {
@@ -198,8 +242,6 @@ async function runWorker() {
 
   for (const release of releases) {
     parentPort.postMessage({ type: "start", tag: release.tag_name });
-
-    const tagNameCol = release.tag_name.padEnd(21);
 
     const safeName = release.tag_name.replace(/[^\w.-]+/g, "_");
     const filePath = path.join(outDir, `${release.id}_${safeName}.json`);
@@ -216,17 +258,19 @@ async function runWorker() {
           if (oldFilePattern.test(file) && !file.startsWith(`${release.id}_`)) {
             const oldFilePath = path.join(outDir, file);
             await fs.unlink(oldFilePath);
-            parentPort.postMessage({
-              type: "log",
-              msg: `[deleted]      ${tagNameCol}  Removed old release file: ${file}`,
+            workerLog({
+              status: Status.Updated,
+              tag: release.tag_name,
+              note: `removed old file ${file}`,
             });
             break; // Should only be one old file with this tag name.
           }
         }
       } catch (error) {
-        parentPort.postMessage({
-          type: "log",
-          msg: `[error]        ${tagNameCol}  Failed to delete old release file: ${error.message}`,
+        workerLog({
+          status: Status.Error,
+          tag: release.tag_name,
+          note: `failed to delete old file: ${error.message}`,
         });
       }
     }
@@ -248,28 +292,31 @@ async function runWorker() {
     // Pull SHA512-SUMS once.
     let sums = {};
     const sumsFile = Object.keys(byName).find((name) =>
-      /sha512.*\.txt$/i.test(name)
+      /^sha512-sums.txt$/i.test(name)
     );
 
     if (sumsFile) {
-      parentPort.postMessage({
-        type: "log",
-        msg: `[download]     ${tagNameCol}  Downloading SHA512-SUMS file…`,
+      workerLog({
+        status: Status.Download,
+        tag: release.tag_name,
+        note: "sha512-sums",
       });
 
       const sumsData = await retryOperation(
         () => fetchText(byName[sumsFile]),
         3,
         (attempt, error) => {
-          parentPort.postMessage({
-            type: "log",
-            msg: `[error]        ${tagNameCol}  Downloading SHA512-SUMS file failed on attempt ${attempt}.\nError: ${
+          workerLog({
+            status: Status.Error,
+            tag: release.tag_name,
+            note: `failed to download sums, attempt ${attempt}: ${
               error?.message || String(error)
             }`,
           });
-          parentPort.postMessage({
-            type: "log",
-            msg: `[dl try ${attempt}]     ${tagNameCol}  Downloading SHA512-SUMS file…`,
+          workerLog({
+            status: Status.Retry,
+            tag: release.tag_name,
+            note: `downloading sums, attempt ${attempt}`,
           });
         }
       );
@@ -283,30 +330,121 @@ async function runWorker() {
       }
     }
 
+    async function verifyAndRecord({
+      prev,
+      recordedSha,
+      asset,
+      slot,
+      fileName,
+    }) {
+      // Always download at least once for verification.
+      const downloadOnce = async (purpose) => {
+        workerLog({
+          status: Status.Download,
+          tag: release.tag_name,
+          osArch: `${slot.os}/${slot.arch}`,
+          file: fileName,
+          note: purpose,
+        });
+        return retryOperation(
+          () => sha512ForUrl(asset.url),
+          3,
+          (attempt, error) => {
+            workerLog({
+              status: Status.Error,
+              tag: release.tag_name,
+              osArch: `${slot.os}/${slot.arch}`,
+              file: fileName,
+              note: `${purpose || "download"} attempt ${attempt}: ${
+                error?.message || String(error)
+              }`,
+            });
+            workerLog({
+              status: Status.Retry,
+              tag: release.tag_name,
+              osArch: `${slot.os}/${slot.arch}`,
+              file: fileName,
+              note: `${purpose || "download"} attempt ${attempt}`,
+            });
+          }
+        );
+      };
+
+      const sha1 = await downloadOnce("verify");
+      let finalSha = sha1;
+      let status = Status.Ok;
+      let note = "";
+
+      if (recordedSha) {
+        if (sha1 === recordedSha) {
+          // Matches sums file. Warn if previous sum mismatched.
+          if (prev && prev.sha512 !== recordedSha) {
+            status = Status.Updated;
+            note = `replaced previous ${prev.sha512.slice(0, 8)}…`;
+          }
+          finalSha = recordedSha;
+        } else {
+          // Mismatch. Download again to rule out network corruption.
+          const sha2 = await downloadOnce("recheck");
+          if (sha2 === recordedSha) {
+            status = Status.Verified;
+            finalSha = recordedSha;
+          } else if (sha2 === sha1) {
+            status = Status.SumsMismatch;
+            note = `sums.txt=${recordedSha.slice(0, 8)}… dl=${sha1.slice(
+              0,
+              8
+            )}…`; // Keep downloaded consistent SHA.
+            finalSha = sha1;
+          } else {
+            status = Status.Inconsistent;
+            note = `sums.txt=${recordedSha.slice(0, 8)}… dl1=${sha1.slice(
+              0,
+              8
+            )}… dl2=${sha2.slice(0, 8)}…`;
+            // For security, do not trust either mismatching SHA. Instead,
+            // use the recorded SHA from sums.txt.
+            finalSha = recordedSha;
+          }
+        }
+      } else if (prev && prev.sha512 === sha1) {
+        status = Status.Unchanged;
+      } else if (prev && prev.sha512 !== sha1) {
+        status = Status.Changed;
+        note = `prev ${prev.sha512.slice(0, 8)}… -> ${sha1.slice(0, 8)}…`;
+      }
+
+      binaries[slot.os][slot.arch] = { sha512: finalSha, urls: [asset.url] };
+      workerLog({
+        status,
+        tag: release.tag_name,
+        osArch: `${slot.os}/${slot.arch}`,
+        file: fileName,
+        sha: finalSha,
+        note,
+      });
+    }
+
     for (const asset of sortAssets(release.assets)) {
       const slot = slotFor(asset.name);
 
       if (!slot) {
-        parentPort.postMessage({
-          type: "log",
-          msg:
-            `[skip-unkwn]   ${release.tag_name.padEnd(21)}  ` +
-            `${" ".repeat(24)}  ` +
-            `${fileNameForUrl(asset.url)}`,
+        workerLog({
+          status: Status.SkipUnknown,
+          tag: release.tag_name,
+          file: fileNameForUrl(asset.url),
         });
         continue;
       }
 
       // If a binary has already been picked, skip.
       if (binaries[slot.os]?.[slot.arch]) {
-        parentPort.postMessage({
-          type: "log",
-          msg:
-            `[skip-extra]   ${release.tag_name.padEnd(21)}  ` +
-            `${`${slot.os}/${slot.arch}`.padEnd(24)}  ` +
-            `${fileNameForUrl(asset.url)}`,
+        workerLog({
+          status: Status.SkipExtra,
+          tag: release.tag_name,
+          osArch: `${slot.os}/${slot.arch}`,
+          file: fileNameForUrl(asset.url),
         });
-
         continue;
       }
 
@@ -315,68 +453,28 @@ async function runWorker() {
       const prev = oldBinaries?.[slot.os]?.[slot.arch];
       const urls = [asset.url];
 
-      const osArchCol = `${slot.os}/${slot.arch}`.padEnd(24);
-      const fileNameCol = fileNameForUrl(asset.url).padEnd(50);
+      const fileName = fileNameForUrl(asset.url);
 
-      // Copy and skip if unchanged.
+      // Verify even if unchanged to catch bad sums.
       if (prev && sameUrls(prev.urls, urls)) {
-        binaries[slot.os][slot.arch] = prev;
-        parentPort.postMessage({
-          type: "log",
-          msg: `[unchanged]    ${tagNameCol}  ${osArchCol}  ${fileNameCol}  ${prev.sha512.slice(
-            0,
-            8
-          )}…`,
+        await verifyAndRecord({
+          prev,
+          recordedSha: sums[asset.name],
+          asset,
+          slot,
+          fileName,
         });
-
         continue;
       }
 
       // Need new SHA.
-      let sha;
-      if (sums[asset.name]) {
-        sha = sums[asset.name];
-
-        parentPort.postMessage({
-          type: "log",
-          msg: `[cached-sha]   ${tagNameCol}  ${osArchCol}  ${fileNameCol}  ${sha.slice(
-            0,
-            8
-          )}…`,
-        });
-      } else {
-        parentPort.postMessage({
-          type: "log",
-          msg: `[download]     ${tagNameCol}  ${osArchCol}  ${fileNameCol}`,
-        });
-
-        sha = await retryOperation(
-          () => sha512ForUrl(asset.url),
-          3,
-          (attempt, error) => {
-            parentPort.postMessage({
-              type: "log",
-              msg: `[error]        ${tagNameCol}  ${osArchCol}  ${fileNameCol}\nError: ${
-                error?.message || String(error)
-              }`,
-            });
-            parentPort.postMessage({
-              type: "log",
-              msg: `[dl try ${attempt}]     ${tagNameCol}  ${osArchCol}  ${fileNameCol}`,
-            });
-          }
-        );
-
-        parentPort.postMessage({
-          type: "log",
-          msg: `[sha512]       ${tagNameCol}  ${osArchCol}  ${fileNameCol}  ${sha.slice(
-            0,
-            8
-          )}…`,
-        });
-      }
-
-      binaries[slot.os][slot.arch] = { sha512: sha, urls };
+      await verifyAndRecord({
+        prev: null,
+        recordedSha: sums[asset.name],
+        asset,
+        slot,
+        fileName,
+      });
     }
 
     const outJson = {
@@ -388,10 +486,7 @@ async function runWorker() {
 
     await fs.writeFile(filePath, JSON.stringify(outJson, null, "\t") + "\n");
 
-    parentPort.postMessage({
-      type: "log",
-      msg: `[saved]        ${release.tag_name}`,
-    });
+    workerLog({ status: Status.Saved, tag: release.tag_name });
     parentPort.postMessage({ type: "done", tag: release.tag_name });
   }
   parentPort.close();
@@ -514,6 +609,8 @@ async function runParent() {
     os.availableParallelism?.() ||
     os.cpus().length;
   const chunkSize = Math.ceil(total / workers);
+
+  console.log(`Using ${workers} worker threads with chunk size ${chunkSize}.`);
 
   let completed = 0;
   const active = new Set();
@@ -639,6 +736,18 @@ async function runParent() {
 }
 
 // Entry point.
+
+const handlePipeError = (stream) => {
+  stream?.on?.("error", (err) => {
+    if (err.code === "EPIPE") {
+      try {
+        process.exit(0);
+      } catch {}
+    }
+  });
+};
+handlePipeError(process.stdout);
+handlePipeError(process.stderr);
 
 if (isMainThread) {
   runParent().catch((err) => console.error(err));
