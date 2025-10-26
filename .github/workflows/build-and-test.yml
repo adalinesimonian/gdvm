@@ -235,15 +235,15 @@ jobs:
         shell: bash
         run: gdvm install 4.3
 
-      - name: Install Godot 3.6.0
+      - name: Install Godot 3.6.2
         if: (success() || failure()) && matrix.os != 'windows-11-arm'
         shell: bash
-        run: gdvm install 3.6.0
+        run: gdvm install 3.6.2
 
-      - name: Use Godot 3.6.0 globally
+      - name: Use Godot 3.6.2 globally
         if: (success() || failure()) && matrix.os != 'windows-11-arm'
         shell: bash
-        run: gdvm use 3.6.0
+        run: gdvm use 3.6.2
 
       - name: Install Godot 4.4.0
         if: (success() || failure()) && matrix.os == 'windows-11-arm'
