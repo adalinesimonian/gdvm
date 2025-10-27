@@ -37,7 +37,7 @@ reqwest = { version = "=0.12.24", features = [
     "blocking",
 ] }
 futures-io = "=0.3.31"
-indicatif = "=0.18.1"
+indicatif = "=0.18.2"
 sha2 = "=0.10.9"
 serde_json = "=1.0.145"
 serde = { version = "=1.0.228", features = ["derive"] }
