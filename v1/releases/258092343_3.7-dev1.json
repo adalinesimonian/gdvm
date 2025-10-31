@@ -1,0 +1,85 @@
+{
+	"id": 258092343,
+	"name": "3.7-dev1",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/3.7-dev1",
+	"binaries": {
+		"linux": {
+			"arm64": {
+				"sha512": "3445cda5659579e1263579182449efaabc9fef68424777dfea488d2ce81b6026b758357b25599567493fdb69fecbdaab8447ccdfdfc2a9edcb023fe89fa44cc2",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_linux.arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "f5134a481f5160c5d59d3150522ff7bc0381076c76d34a8f435c7ce0722e1ea2216cd8f277a8d952509e9efd7b73478d356978328d1fbeecc5763878edb3a6fb",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_x11.32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "d995c7f40d55bc7ce1192b4075429d978eac6f747518fc747d0c748d42a3cef671589663f74d87a46746db2b56ef49ec1baab8a9e79b2143af60a6e0d34eacfb",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_x11.64.zip"
+				]
+			}
+		},
+		"linux-csharp": {
+			"x86": {
+				"sha512": "31931070a97b9d7faa65ff6c1b7963b6177950943feed92c93912fa18a7d59fddfc4d75ca5bb325efa5da23241c5d553365c391f33f5080603494c20c0906797",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_mono_x11_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "654302243ba46e257e8fdf0bfa5f285a06571b88a0d7851ef8f14c2237de2e2c7ebaba093f01c31252854778f6f43e545bcbada90f71a09f229c2542951dd8de",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_mono_x11_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "a5af2b0ee156d51a259dfcd25d10c0dcd51a285bd0570425fa29ddd0961b95ebcbdf724bdd3d12922497e78143b6c5be51e1ab5f5e16510ba06c65f68033cca6",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_osx.universal.zip"
+				]
+			}
+		},
+		"macos-csharp": {
+			"universal": {
+				"sha512": "ca370b42e9d7199f50d55fac27c06d350ca65076b185ab7672560e99e439c7e908b644bd37a8eb5b127ce9481821dc5e9478797ab645277fcda01bab7aded760",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_mono_osx.universal.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "e793991400ddad8d313b0d569b47d6ec5d1fa86a06798f78e496798d83951dda1168785a2d280fcd2f946ba3d99b366ea7731e01fda65a50ff79219c5256b221",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "4a573d9024bd577b315310badba0488fd51c296eb7770d71a77020fb62015e6dd18bae2d02ef44800e1259bc0e553022392c4b06601b7890dc4806d86b9a7fff",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_win64.exe.zip"
+				]
+			}
+		},
+		"windows-csharp": {
+			"x86": {
+				"sha512": "b083df748399e0be7175b93a8359cf329123e296cbf481891efe7e6bbefcd2257d2d453b094cb4511e5c6a83140601b811bb9ed212ffd5b94ba675bf9a1683c0",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_mono_win32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "71a96fe289a3447f47d3bc5d39b2606b1f8e2561bdc9dee5adc118d50316fb016f109c3572e2dce89f5edb031d20cf1af331e59eb9768d748326ffbdc01762ee",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/3.7-dev1/Godot_v3.7-dev1_mono_win64.zip"
+				]
+			}
+		}
+	}
+}
