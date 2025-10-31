@@ -54,7 +54,7 @@ jobs:
       - name: Setup Dev Drive (Windows)
         if: runner.os == 'Windows'
         id: devdrive
-        uses: samypr100/setup-dev-drive@v3
+        uses: samypr100/setup-dev-drive@v4
         with:
           drive-size: 4GB
           drive-format: ReFS
