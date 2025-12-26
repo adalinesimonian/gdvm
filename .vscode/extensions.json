@@ -1,10 +1,12 @@
 {
   "recommendations": [
-    "rust-lang.rust-analyzer",
-    "tamasfe.even-better-toml",
-    "vadimcn.vscode-lldb",
     "fill-labs.dependi",
     "macabeus.vscode-fluent",
-    "prettier.prettier-vscode"
+    "mkhl.shfmt",
+    "ms-azuretools.vscode-containers",
+    "prettier.prettier-vscode",
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml",
+    "vadimcn.vscode-lldb"
   ]
 }

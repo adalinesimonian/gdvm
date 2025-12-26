@@ -13,6 +13,12 @@
     "editor.rulers": [80, 84, 120],
     "editor.wordWrap": "on"
   },
+  "[shellscript]": {
+    "editor.defaultFormatter": "mkhl.shfmt"
+  },
+  "[dockerfile]": {
+    "editor.defaultFormatter": "ms-azuretools.vscode-containers"
+  },
   "search.exclude": {
     "**/target": true
   },
