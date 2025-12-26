@@ -1,5 +1,6 @@
 use crate::config::Config;
-use crate::registry::{Registry, ReleaseMetadata};
+use crate::host::detect_host;
+use crate::registry::{self, Registry, ReleaseMetadata};
 use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
@@ -344,29 +345,9 @@ impl<'a> GodotManager<'a> {
 
         let meta = self.get_release_metadata(gv)?;
         let is_csharp = gv.is_csharp.unwrap_or(false);
-        let platform_key = if cfg!(target_os = "windows") {
-            if is_csharp {
-                "windows-csharp"
-            } else {
-                "windows"
-            }
-        } else if cfg!(target_os = "macos") {
-            if is_csharp { "macos-csharp" } else { "macos" }
-        } else if cfg!(target_os = "linux") {
-            if is_csharp { "linux-csharp" } else { "linux" }
-        } else {
-            return Err(anyhow!(t_w!(self.i18n, "unsupported-platform")));
-        };
-
-        let arch_key = if cfg!(target_arch = "x86_64") {
-            "x86_64"
-        } else if cfg!(target_arch = "x86") {
-            "x86"
-        } else if cfg!(target_arch = "aarch64") {
-            "arm64"
-        } else {
-            return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
-        };
+        let host = detect_host(self.i18n)?;
+        let platform_key = registry::registry_platform_key(host, is_csharp);
+        let arch_key = registry::registry_arch_key(host);
 
         let platform_map = meta
             .binaries
@@ -1279,37 +1260,7 @@ impl<'a> GodotManager<'a> {
             .map_err(|_| anyhow!(t_w!(self.i18n, "upgrade-install-dir-failed")))?;
 
         // Detect architecture
-        let arch = if cfg!(target_os = "windows") {
-            if cfg!(target_arch = "aarch64") {
-                "aarch64-pc-windows-msvc"
-            } else if cfg!(target_arch = "x86_64") {
-                "x86_64-pc-windows-msvc"
-            } else if cfg!(target_arch = "x86") {
-                "i686-pc-windows-msvc"
-            } else {
-                return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
-            }
-        } else if cfg!(target_os = "linux") {
-            if cfg!(target_arch = "aarch64") {
-                "aarch64-unknown-linux-gnu"
-            } else if cfg!(target_arch = "x86_64") {
-                "x86_64-unknown-linux-gnu"
-            } else if cfg!(target_arch = "x86") {
-                "i686-unknown-linux-gnu"
-            } else {
-                return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
-            }
-        } else if cfg!(target_os = "macos") {
-            if cfg!(target_arch = "aarch64") {
-                "aarch64-apple-darwin"
-            } else if cfg!(target_arch = "x86_64") {
-                "x86_64-apple-darwin"
-            } else {
-                return Err(anyhow!(t_w!(self.i18n, "unsupported-architecture")));
-            }
-        } else {
-            return Err(anyhow!(t_w!(self.i18n, "unsupported-platform")));
-        };
+        let arch = detect_host(self.i18n)?.gdvm_target_triple(self.i18n)?;
 
         // Set download URL based on architecture.
         let repo_url = "https://github.com/adalinesimonian/gdvm";

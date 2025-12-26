@@ -1,6 +1,7 @@
 pub mod config;
 pub mod download_utils;
 pub mod godot_manager;
+pub mod host;
 pub mod i18n;
 pub mod migrations;
 pub mod project_version_detector;

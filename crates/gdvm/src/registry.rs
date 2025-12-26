@@ -2,6 +2,8 @@ use anyhow::{Result, anyhow};
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use crate::host::{HostArch, HostOs, HostPlatform};
+
 const BASE_URL: &str =
     "https://raw.githubusercontent.com/adalinesimonian/gdvm/refs/heads/registry/v1";
 
@@ -27,6 +29,40 @@ pub struct ReleaseMetadata {
 
 pub struct Registry {
     client: reqwest::blocking::Client,
+}
+
+pub fn registry_platform_key(host: HostPlatform, is_csharp: bool) -> &'static str {
+    match host.os {
+        HostOs::Windows => {
+            if is_csharp {
+                "windows-csharp"
+            } else {
+                "windows"
+            }
+        }
+        HostOs::Macos => {
+            if is_csharp {
+                "macos-csharp"
+            } else {
+                "macos"
+            }
+        }
+        HostOs::Linux => {
+            if is_csharp {
+                "linux-csharp"
+            } else {
+                "linux"
+            }
+        }
+    }
+}
+
+pub fn registry_arch_key(host: HostPlatform) -> &'static str {
+    match host.arch {
+        HostArch::X86_64 => "x86_64",
+        HostArch::X86 => "x86",
+        HostArch::Aarch64 => "arm64",
+    }
 }
 
 impl Registry {
