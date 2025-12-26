@@ -4,7 +4,7 @@ use crate::host::detect_host;
 use crate::metadata_cache::{
     CacheStore, GdvmCache, RegistryReleasesCache, ReleaseCache, filter_cached_releases,
 };
-use crate::registry::{self, Registry, ReleaseMetadata};
+use crate::registry::{self, BinarySelectionError, Registry, ReleaseMetadata};
 use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
@@ -301,28 +301,20 @@ impl<'a> GodotManager<'a> {
         let meta = self.get_release_metadata(gv)?;
         let is_csharp = gv.is_csharp.unwrap_or(false);
         let host = detect_host(self.i18n)?;
-        let platform_key = registry::registry_platform_key(host, is_csharp);
-        let arch_key = registry::registry_arch_key(host);
 
-        let platform_map = meta
-            .binaries
-            .get(platform_key)
-            .ok_or_else(|| anyhow!(t_w!(self.i18n, "unsupported-platform")))?;
+        let binary = registry::select_binary(&meta, host, is_csharp).map_err(|err| match err {
+            BinarySelectionError::UnsupportedPlatform => {
+                anyhow!(t_w!(self.i18n, "unsupported-platform"))
+            }
+            BinarySelectionError::UnsupportedArch => {
+                anyhow!(t_w!(self.i18n, "unsupported-architecture"))
+            }
+            BinarySelectionError::MissingUrl => {
+                anyhow!(t_w!(self.i18n, "error-file-not-found"))
+            }
+        })?;
 
-        let arch_choice = if cfg!(target_os = "macos") && platform_map.contains_key("universal") {
-            "universal"
-        } else {
-            arch_key
-        };
-
-        let binary = platform_map
-            .get(arch_choice)
-            .ok_or_else(|| anyhow!(t_w!(self.i18n, "unsupported-architecture")))?;
-
-        let download_url = binary
-            .urls
-            .first()
-            .ok_or_else(|| anyhow!(t_w!(self.i18n, "error-file-not-found")))?;
+        let download_url = binary.urls.first().unwrap();
         let archive_name = download_url.split('/').next_back().unwrap_or("godot.zip");
         let cache_zip_path = self.artifact_cache.cached_zip_path(archive_name);
 
