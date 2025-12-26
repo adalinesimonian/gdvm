@@ -74,7 +74,7 @@ impl ConfigOps for Config {
     }
 }
 
-fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
+pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
     #[cfg(feature = "integration-tests")]
     {
         // Override home directory for testing purposes.

@@ -1,14 +1,16 @@
-use crate::config::Config;
+use crate::artifact_cache::ArtifactCache;
+use crate::config::{Config, get_home_dir};
 use crate::host::detect_host;
+use crate::metadata_cache::{
+    CacheStore, GdvmCache, RegistryReleasesCache, ReleaseCache, filter_cached_releases,
+};
 use crate::registry::{self, Registry, ReleaseMetadata};
 use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
-use directories::BaseDirs;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
 use semver::{Version, VersionReq};
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
@@ -18,58 +20,12 @@ use std::{env, fs};
 
 use crate::download_utils::download_file;
 use crate::migrations;
-use crate::version_utils;
-use crate::version_utils::GodotVersionDeterminate;
+use crate::version_utils::GodotVersion;
 use crate::zip_utils;
 use crate::{eprintln_i18n, println_i18n};
 use crate::{i18n, project_version_detector, t, t_w};
 
-use version_utils::{GodotVersion, GodotVersionDeterminateVecExt};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct ReleaseCache {
-    id: u64,
-    tag_name: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct RegistryReleasesCache {
-    /// Unix timestamp in seconds
-    last_fetched: u64,
-    releases: Vec<ReleaseCache>,
-}
-
-fn filter_cached_releases(
-    cache: &RegistryReleasesCache,
-    filter: Option<&GodotVersion>,
-) -> Vec<GodotVersionDeterminate> {
-    let mut releases: Vec<GodotVersionDeterminate> = cache
-        .releases
-        .iter()
-        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
-        .map(|gv| gv.to_determinate())
-        .filter(|r| filter.is_none_or(|f| f.matches(r)))
-        .collect();
-
-    releases.sort_by_version();
-
-    releases
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct GdvmCache {
-    last_update_check: u64,
-    new_version: Option<String>,
-    new_major_version: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct FullCache {
-    /// Cache for GDVM metadata
-    gdvm: GdvmCache,
-    /// Cache for Godot releases
-    godot_registry: RegistryReleasesCache,
-}
+use crate::version_utils::{GodotVersionDeterminate, GodotVersionDeterminateVecExt};
 
 #[derive(Debug)]
 pub enum InstallOutcome {
@@ -126,10 +82,10 @@ pub struct GodotManager<'a> {
     base_path: PathBuf,
     /// Path to directory to store installed Godot versions
     install_path: PathBuf,
-    /// Path to cache.json
-    cache_index_path: PathBuf,
-    /// Path to directory to store cached zip files
-    cache_path: PathBuf,
+    /// Cache for downloaded artifacts
+    artifact_cache: ArtifactCache,
+    /// Registry metadata cache
+    cache_store: CacheStore,
     /// Client for GitHub API requests
     client: reqwest::blocking::Client,
     /// Registry instance for fetching Godot releases
@@ -275,14 +231,13 @@ impl<'a> GodotManager<'a> {
     /// Create a new GodotManager instance and set up the installation and cache paths
     pub fn new(i18n: &'a I18n) -> Result<Self> {
         // For cross-platform user directory management:
-        let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
-        let base_path = base_dirs.home_dir().join(".gdvm");
+        let base_path = get_home_dir(i18n)?.join(".gdvm");
         let install_path = base_path.join("installs");
-        let cache_index_path = base_path.join("cache.json");
-        let cache_path = base_path.join("cache");
+        let artifact_cache = ArtifactCache::new(base_path.join("cache"));
+        let cache_store = CacheStore::new(base_path.join("cache.json"));
 
         fs::create_dir_all(&install_path)?;
-        fs::create_dir_all(&cache_path)?;
+        artifact_cache.ensure_dir()?;
 
         let client = GodotManager::get_github_client(i18n)?;
         let registry = Registry::new()?;
@@ -290,8 +245,8 @@ impl<'a> GodotManager<'a> {
         let manager = GodotManager {
             base_path,
             install_path,
-            cache_index_path,
-            cache_path,
+            artifact_cache,
+            cache_store,
             client,
             registry,
             i18n,
@@ -341,7 +296,7 @@ impl<'a> GodotManager<'a> {
             eprintln_i18n!(self.i18n, "warning-prerelease", branch = &gv.release_type);
         }
 
-        fs::create_dir_all(&self.cache_path)?;
+        self.artifact_cache.ensure_dir()?;
 
         let meta = self.get_release_metadata(gv)?;
         let is_csharp = gv.is_csharp.unwrap_or(false);
@@ -369,7 +324,7 @@ impl<'a> GodotManager<'a> {
             .first()
             .ok_or_else(|| anyhow!(t_w!(self.i18n, "error-file-not-found")))?;
         let archive_name = download_url.split('/').next_back().unwrap_or("godot.zip");
-        let cache_zip_path = self.cache_path.join(archive_name);
+        let cache_zip_path = self.artifact_cache.cached_zip_path(archive_name);
 
         if !redownload && cache_zip_path.exists() {
             eprintln_i18n!(self.i18n, "using-cached-zip");
@@ -528,7 +483,7 @@ impl<'a> GodotManager<'a> {
         let cache_duration = Duration::from_secs(48 * 3600); // 48 hours
         let filter = filter.as_ref();
 
-        let mut cache = self.load_cache()?;
+        let mut cache = self.cache_store.load_registry_cache()?;
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
@@ -644,14 +599,14 @@ impl<'a> GodotManager<'a> {
             .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
             .as_secs();
 
-        self.save_registry_cache(cache)?;
+        self.cache_store.save_registry_cache(cache)?;
 
         Ok(())
     }
 
     fn get_release_metadata(&self, gv: &GodotVersionDeterminate) -> Result<ReleaseMetadata> {
         let tag = gv.to_remote_str();
-        let mut cache = self.load_cache()?;
+        let mut cache = self.cache_store.load_registry_cache()?;
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
             return self.registry.fetch_release(entry.id, &entry.tag_name);
         }
@@ -664,89 +619,17 @@ impl<'a> GodotManager<'a> {
         Err(anyhow!(t_w!(self.i18n, "error-version-not-found")))
     }
 
-    fn load_full_cache(&self) -> Result<FullCache> {
-        if self.cache_index_path.exists() {
-            let data = fs::read_to_string(&self.cache_index_path)?;
-            match serde_json::from_str::<FullCache>(&data) {
-                Ok(full) => Ok(full),
-                Err(_) => {
-                    // Overwrite with a default FullCache if corrupted
-                    let empty_full = FullCache {
-                        gdvm: GdvmCache {
-                            last_update_check: 0,
-                            new_version: None,
-                            new_major_version: None,
-                        },
-                        godot_registry: RegistryReleasesCache {
-                            last_fetched: 0,
-                            releases: vec![],
-                        },
-                    };
-                    self.save_full_cache(&empty_full)?;
-                    Ok(empty_full)
-                }
-            }
-        } else {
-            Ok(FullCache {
-                gdvm: GdvmCache {
-                    last_update_check: 0,
-                    new_version: None,
-                    new_major_version: None,
-                },
-                godot_registry: RegistryReleasesCache {
-                    last_fetched: 0,
-                    releases: vec![],
-                },
-            })
-        }
-    }
-
-    fn save_full_cache(&self, full: &FullCache) -> Result<()> {
-        let data = serde_json::to_string(full)?;
-        fs::write(&self.cache_index_path, data)?;
-        Ok(())
-    }
-
-    // Load the release cache from cache.json
-    fn load_cache(&self) -> Result<RegistryReleasesCache> {
-        let full = self.load_full_cache()?;
-        Ok(full.godot_registry)
-    }
-
-    fn save_registry_cache(&self, cache: &RegistryReleasesCache) -> Result<()> {
-        let mut full = self.load_full_cache()?;
-        full.godot_registry = cache.clone();
-        self.save_full_cache(&full)
-    }
-
-    fn load_gdvm_cache(&self) -> Result<GdvmCache> {
-        let full = self.load_full_cache()?;
-        Ok(full.gdvm)
-    }
-
-    fn save_gdvm_cache(&self, cache: &GdvmCache) -> Result<()> {
-        let mut full = self.load_full_cache()?;
-        full.gdvm = cache.clone();
-        self.save_full_cache(&full)
-    }
-
     /// Clears the release cache by deleting the cache file and all cached zip files
     pub fn clear_cache(&self) -> Result<()> {
-        if self.cache_index_path.exists() {
-            fs::remove_file(&self.cache_index_path)?;
+        if self.cache_store.index_path().exists() {
+            fs::remove_file(self.cache_store.index_path())?;
             println_i18n!(self.i18n, "cache-metadata-removed");
         } else {
             println_i18n!(self.i18n, "no-cache-metadata-found");
         }
 
-        if self.cache_path.exists() {
-            for entry in fs::read_dir(&self.cache_path)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path.is_file() {
-                    fs::remove_file(&path)?;
-                }
-            }
+        if self.artifact_cache.exists() {
+            self.artifact_cache.clear_files()?;
             println_i18n!(self.i18n, "cache-files-removed");
         } else {
             println_i18n!(self.i18n, "no-cache-files-found");
@@ -756,7 +639,7 @@ impl<'a> GodotManager<'a> {
 
     /// Refresh the gdvm release cache by re-downloading the registry index.
     pub fn refresh_cache(&self) -> Result<()> {
-        let mut cache = self.load_cache()?;
+        let mut cache = self.cache_store.load_registry_cache()?;
 
         self.update_cache(&mut cache)?;
 
@@ -1018,7 +901,7 @@ impl<'a> GodotManager<'a> {
 
     pub fn check_for_upgrades(&self) -> Result<()> {
         // Load or initialize gdvm cache
-        let gdvm_cache = self.load_gdvm_cache()?;
+        let gdvm_cache = self.cache_store.load_gdvm_cache()?;
 
         // Check for updates
         let now = SystemTime::now()
@@ -1047,7 +930,7 @@ impl<'a> GodotManager<'a> {
                     if matches!(e, GithubJsonError::Api(_)) {
                         eprintln!("{e}");
                     } else {
-                        self.save_gdvm_cache(&GdvmCache {
+                        self.cache_store.save_gdvm_cache(&GdvmCache {
                             last_update_check: now,
                             new_version: None,
                             new_major_version: None,
@@ -1109,7 +992,7 @@ impl<'a> GodotManager<'a> {
                 eprintln!();
             }
 
-            self.save_gdvm_cache(&GdvmCache {
+            self.cache_store.save_gdvm_cache(&GdvmCache {
                 last_update_check: now,
                 new_version,
                 new_major_version,
@@ -1184,7 +1067,7 @@ impl<'a> GodotManager<'a> {
                     }
 
                     if should_clear_cache {
-                        self.save_gdvm_cache(&GdvmCache {
+                        self.cache_store.save_gdvm_cache(&GdvmCache {
                             last_update_check: now,
                             new_version: None,
                             new_major_version: None,
@@ -1192,7 +1075,7 @@ impl<'a> GodotManager<'a> {
                     }
                 }
             } else {
-                self.save_gdvm_cache(&GdvmCache {
+                self.cache_store.save_gdvm_cache(&GdvmCache {
                     last_update_check: now,
                     new_version: None,
                     new_major_version: None,
@@ -1329,7 +1212,7 @@ impl<'a> GodotManager<'a> {
             .map_err(|_| anyhow!(t_w!(self.i18n, "upgrade-replace-failed")))?;
 
         // Update gdvm cache
-        self.save_gdvm_cache(&GdvmCache {
+        self.cache_store.save_gdvm_cache(&GdvmCache {
             last_update_check: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
