@@ -417,6 +417,28 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     })
 }
 
+/// Extract possible project paths from raw arguments passed after "--". If a --path flag is present
+/// with a following argument, that single value wins. Otherwise, collect arguments that do not look
+/// like flags, i.e. those that do not start with "-".
+fn collect_possible_paths(raw_args: &[String]) -> Vec<&str> {
+    if let Some(index) = raw_args.iter().position(|arg| arg == "--path") {
+        if let Some(path_arg) = raw_args.get(index + 1) {
+            return vec![path_arg.as_str()];
+        }
+    }
+
+    raw_args
+        .iter()
+        .filter_map(|arg| {
+            if arg.starts_with('-') {
+                None
+            } else {
+                Some(arg.as_str())
+            }
+        })
+        .collect()
+}
+
 /// Configuration for the `sub_run_inner` function
 struct RunConfig<'a> {
     i18n: &'a I18n,
@@ -445,21 +467,7 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
     // Try to see if a path was given in raw_args. First, by checking if the --path flag was given
     // and then by checking if the first argument is a path. Prefer the --path flag if both are
     // given.
-    let mut possible_paths: Vec<&str> = Vec::new();
-    for arg in raw_args.iter() {
-        if arg == "--path" {
-            if let Some(p) = raw_args.get(raw_args.iter().position(|x| x == "--path").unwrap() + 1)
-            {
-                possible_paths.clear();
-                possible_paths.push(p);
-                break;
-            }
-        } else if arg.starts_with('-') {
-            continue;
-        } else {
-            possible_paths.push(arg);
-        }
-    }
+    let possible_paths = collect_possible_paths(raw_args);
 
     let resolved_version = if let Some(v) = version_input {
         let mut requested_version = GodotVersion::from_match_str(v)?;
@@ -557,16 +565,7 @@ fn warn_project_version_mismatch<P: AsRef<Path>>(
     };
 
     if let Some(project_version) = determined_version {
-        // Check if they don't match (project versions at most specify major.minor or
-        // major.minor.patch, and if .patch is not specified, it's assumed to allow any patch)
-        if project_version.major.is_some() && requested.major.is_some() && project_version.major != requested.major // Check major if both are Some
-            || project_version.minor.is_some() && requested.minor.is_some() && project_version.minor != requested.minor // Check minor if both are Some
-            // Allow either both to be None or both to be Some, but if both are Some, they must match
-            || (project_version.patch.is_some() && requested.patch.is_some()
-                && project_version.patch != requested.patch)
-            // If the project version is C#, the pinned version must also be C#, and vice versa
-            || project_version.is_csharp.unwrap_or(false) != requested.is_csharp.unwrap_or(false)
-        {
+        if project_version.conflicts_with(requested) {
             eprintln_i18n!(
                 i18n,
                 "warning-project-version-mismatch",
@@ -831,4 +830,31 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
         _ => eprintln!("{}", t!(i18n, "error-invalid-config-subcommand")),
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::collect_possible_paths;
+
+    fn to_vec(args: &[&str]) -> Vec<String> {
+        args.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn collects_non_flag_arguments() {
+        let args = to_vec(&["--verbose", "project", "another"]);
+        assert_eq!(collect_possible_paths(&args), vec!["project", "another"]);
+    }
+
+    #[test]
+    fn prefers_explicit_path_flag() {
+        let args = to_vec(&["foo", "--path", "explicit", "bar"]);
+        assert_eq!(collect_possible_paths(&args), vec!["explicit"]);
+    }
+
+    #[test]
+    fn missing_path_value_keeps_existing_candidates() {
+        let args = to_vec(&["project", "--path"]);
+        assert_eq!(collect_possible_paths(&args), vec!["project"]);
+    }
 }

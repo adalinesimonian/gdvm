@@ -319,6 +319,22 @@ impl GodotVersion {
         }
         true
     }
+
+    /// Returns true when all specified project constraints conflict with the requested version.
+    /// Missing components in either version act as wildcards.
+    pub fn conflicts_with(&self, requested: &GodotVersion) -> bool {
+        fn differs(lhs: Option<u32>, rhs: Option<u32>) -> bool {
+            lhs.is_some() && rhs.is_some() && lhs != rhs
+        }
+
+        // Check if they don't match (project versions at most specify major.minor or
+        // major.minor.patch, and if .patch is not specified, it's assumed to allow any patch)
+        differs(self.major, requested.major)
+            || differs(self.minor, requested.minor)
+            || differs(self.patch, requested.patch)
+            // If the project version is C#, the pinned version must also be C#, and vice versa
+            || self.is_csharp.unwrap_or(false) != requested.is_csharp.unwrap_or(false)
+    }
 }
 
 impl GodotVersionDeterminate {
@@ -653,5 +669,42 @@ mod tests {
         test_matches_case_inst!("4.1.1-rc1-csharp", "4.1.1-rc1-csharp", true);
         test_matches_case_rem!("4.1.1-rc2", "4.1.1-rc1", false);
         test_matches_case!("stable", "4.1.1-stable", true);
+    }
+
+    #[test]
+    fn test_conflicts_with_components() {
+        let project = GodotVersion {
+            major: Some(4),
+            minor: Some(1),
+            patch: None,
+            subpatch: None,
+            release_type: None,
+            is_csharp: Some(false),
+        };
+
+        let mut requested = GodotVersion::from_match_str("3.2").unwrap();
+        requested.is_csharp = Some(false);
+        assert!(project.conflicts_with(&requested));
+
+        let mut compatible = GodotVersion::from_match_str("4.1.3").unwrap();
+        compatible.is_csharp = Some(false);
+        assert!(!project.conflicts_with(&compatible));
+    }
+
+    #[test]
+    fn test_conflicts_with_csharp_difference() {
+        let project = GodotVersion {
+            major: Some(4),
+            minor: Some(1),
+            patch: Some(0),
+            subpatch: None,
+            release_type: Some("stable".to_string()),
+            is_csharp: Some(false),
+        };
+
+        let mut requested = GodotVersion::from_match_str("4.1").unwrap();
+        requested.is_csharp = Some(true);
+
+        assert!(project.conflicts_with(&requested));
     }
 }
