@@ -38,6 +38,23 @@ struct RegistryReleasesCache {
     releases: Vec<ReleaseCache>,
 }
 
+fn filter_cached_releases(
+    cache: &RegistryReleasesCache,
+    filter: Option<&GodotVersion>,
+) -> Vec<GodotVersionDeterminate> {
+    let mut releases: Vec<GodotVersionDeterminate> = cache
+        .releases
+        .iter()
+        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
+        .map(|gv| gv.to_determinate())
+        .filter(|r| filter.is_none_or(|f| f.matches(r)))
+        .collect();
+
+    releases.sort_by_version();
+
+    releases
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct GdvmCache {
     last_update_check: u64,
@@ -560,31 +577,7 @@ impl<'a> GodotManager<'a> {
             }
         }
 
-        // Filter releases
-        let mut filtered_releases: Vec<GodotVersionDeterminate> = cache
-            .releases
-            .iter()
-            .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
-            .map(|gv| gv.to_determinate())
-            .filter(|r| filter.is_none_or(|f| f.matches(r)))
-            .collect();
-
-        // If no releases found and not using cache only, try fetching if we haven't already
-        if filtered_releases.is_empty() && !use_cache_only && !is_time_to_refresh_index {
-            // self.update_cache(&mut cache)?;
-            filtered_releases = cache
-                .releases
-                .iter()
-                .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
-                .map(|gv| gv.to_determinate())
-                .filter(|r| filter.is_none_or(|f| f.matches(r)))
-                .collect();
-        }
-
-        // Sort releases
-        filtered_releases.sort_by_version();
-
-        Ok(filtered_releases)
+        Ok(filter_cached_releases(&cache, filter))
     }
 
     /// Gets a reqwest client with the GitHub token if available
@@ -1406,6 +1399,41 @@ impl<'a> GodotManager<'a> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn cache_with_tags(tags: &[&str]) -> RegistryReleasesCache {
+        RegistryReleasesCache {
+            last_fetched: 0,
+            releases: tags
+                .iter()
+                .enumerate()
+                .map(|(idx, tag)| ReleaseCache {
+                    id: idx as u64,
+                    tag_name: (*tag).to_string(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn filter_cached_releases_sorts_by_version_desc() {
+        let cache = cache_with_tags(&["4.1.1-rc1", "3.5-stable", "4.1.1-stable"]);
+
+        let releases = filter_cached_releases(&cache, None);
+        let tags: Vec<String> = releases.into_iter().map(|r| r.to_remote_str()).collect();
+
+        assert_eq!(tags, vec!["4.1.1-stable", "4.1.1-rc1", "3.5-stable"]);
+    }
+
+    #[test]
+    fn filter_cached_releases_applies_filter() {
+        let cache = cache_with_tags(&["4.1.1-rc1", "3.5-stable", "4.1.1-stable"]);
+
+        let filter = GodotVersion::from_match_str("4.1.1-stable").unwrap();
+        let releases = filter_cached_releases(&cache, Some(&filter));
+        let tags: Vec<String> = releases.into_iter().map(|r| r.to_remote_str()).collect();
+
+        assert_eq!(tags, vec!["4.1.1-stable"]);
+    }
 
     #[test]
     fn test_find_latest_stable_release() {
