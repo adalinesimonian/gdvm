@@ -5,6 +5,6 @@
     "vadimcn.vscode-lldb",
     "fill-labs.dependi",
     "macabeus.vscode-fluent",
-    "esbenp.prettier-vscode"
+    "prettier.prettier-vscode"
   ]
 }
