@@ -18,18 +18,26 @@ pub fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
 
     match response.status() {
         reqwest::StatusCode::OK => {
-            let total_size = response
-                .content_length()
-                .ok_or_else(|| anyhow!("Failed to get content length"))?;
-            let pb = ProgressBar::new(total_size);
-            pb.set_style(
-                ProgressStyle::default_bar()
-                    .template(
-                        "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
-                    )?
-                    .progress_chars("#>-"),
-            );
+            let total_size = response.content_length();
+            let pb = if let Some(size) = total_size {
+                let pb = ProgressBar::new(size);
+                pb.set_style(
+                    ProgressStyle::default_bar()
+                        .template(
+                            "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+                        )?
+                        .progress_chars("#>-"),
+                );
+                pb
+            } else {
+                let pb = ProgressBar::new_spinner();
+                pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
+                pb.set_message(t!(i18n, "operation-downloading-url", url = url));
+                pb
+            };
+
             pb.enable_steady_tick(Duration::from_millis(100));
+
             let mut file = fs::File::create(dest)?;
             let mut downloaded: u64 = 0;
             let mut buffer = [0; 8192]; // 8 KB buffer
@@ -42,7 +50,9 @@ pub fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
                 }
                 file.write_all(&buffer[..bytes_read])?;
                 downloaded += bytes_read as u64;
-                pb.set_position(downloaded);
+                if total_size.is_some() {
+                    pb.set_position(downloaded);
+                }
             }
 
             pb.finish_with_message(t!(i18n, "operation-download-complete"));
