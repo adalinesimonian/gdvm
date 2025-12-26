@@ -1,0 +1,7 @@
+*
+!.cargo
+!crates
+!Cargo.toml
+!Cargo.lock
+!rust-toolchain.toml
+!scripts/run-e2e-linux.sh

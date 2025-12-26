@@ -1,0 +1,69 @@
+FROM rust:1-trixie AS builder
+WORKDIR /workspace
+
+COPY rust-toolchain.toml ./
+
+RUN rustup show
+
+COPY .cargo Cargo.toml Cargo.lock ./
+COPY crates/gdvm/Cargo.toml crates/gdvm/
+COPY crates/gdvm/build.rs crates/gdvm/
+COPY crates/shim/Cargo.toml crates/shim/
+
+# Placeholder sources so dependency build works.
+RUN mkdir -p crates/gdvm/src crates/shim/src
+RUN printf '%s\n' '// placeholder' > crates/gdvm/src/lib.rs \
+    && printf '%s\n' 'fn main() {}' > crates/gdvm/src/main.rs \
+    && printf '%s\n' 'fn main() {}' > crates/shim/src/main.rs
+
+RUN cargo fetch --locked
+
+# Build dependencies.
+RUN cargo build --locked --release -p gdvm --bin gdvm
+
+# Clean up placeholder binaries to avoid reusing them.
+RUN find target -maxdepth 2 -type f -name 'gdvm*' -delete \
+    && find target -maxdepth 2 -type f -name 'shim*' -delete \
+    && find target -maxdepth 3 -type f -name 'libgdvm*' -delete \
+    && find target -type f -path '*/.fingerprint/gdvm-*' -delete \
+    && find target -type f -path '*/.fingerprint/shim-*' -delete \
+    && find intermediate -type f -name 'shim*' -delete \
+    && find intermediate -type f -path '*/.fingerprint/shim-*' -delete
+
+COPY crates crates
+
+RUN cargo build --release -p gdvm
+RUN cargo run --release -p gdvm -- --version
+
+COPY scripts scripts
+
+FROM debian:trixie-slim AS runtime
+WORKDIR /app
+
+# Runtime libs needed to launch Godot headless.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    bash \
+    grep \
+    coreutils \
+    libfontconfig1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxkbcommon0 \
+    libxrender1 \
+    libxrandr2 \
+    libxi6 \
+    libxcursor1 \
+    libxinerama1 \
+    libgl1 \
+    libglib2.0-0 \
+    libglu1-mesa \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /workspace/target/release/gdvm /root/.gdvm/bin/gdvm
+COPY scripts/run-e2e-linux.sh /app/run-e2e-linux.sh
+
+ENV PATH="/root/.gdvm/bin:/root/.gdvm/bin/current_godot:/usr/local/bin:${PATH}"
+
+ENTRYPOINT ["/app/run-e2e-linux.sh"]
