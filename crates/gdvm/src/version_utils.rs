@@ -287,35 +287,35 @@ impl GodotVersion {
     {
         let other: GodotVersion = other.clone().into();
 
-        if let Some(major) = self.major {
-            if other.major.is_some_and(|x| x != major) {
-                return false;
-            }
+        if let Some(major) = self.major
+            && other.major.is_some_and(|x| x != major)
+        {
+            return false;
         }
-        if let Some(minor) = self.minor {
-            if other.minor.is_some_and(|x| x != minor) {
-                return false;
-            }
+        if let Some(minor) = self.minor
+            && other.minor.is_some_and(|x| x != minor)
+        {
+            return false;
         }
-        if let Some(patch) = self.patch {
-            if other.patch.is_some_and(|x| x != patch) {
-                return false;
-            }
+        if let Some(patch) = self.patch
+            && other.patch.is_some_and(|x| x != patch)
+        {
+            return false;
         }
-        if let Some(subpatch) = self.subpatch {
-            if other.subpatch.is_some_and(|x| x != subpatch) {
-                return false;
-            }
+        if let Some(subpatch) = self.subpatch
+            && other.subpatch.is_some_and(|x| x != subpatch)
+        {
+            return false;
         }
-        if let Some(release_type) = &self.release_type {
-            if other.release_type.is_some_and(|x| &x != release_type) {
-                return false;
-            }
+        if let Some(release_type) = &self.release_type
+            && other.release_type.is_some_and(|x| &x != release_type)
+        {
+            return false;
         }
-        if let Some(is_csharp) = self.is_csharp {
-            if other.is_csharp.is_some_and(|x| x != is_csharp) {
-                return false;
-            }
+        if let Some(is_csharp) = self.is_csharp
+            && other.is_csharp.is_some_and(|x| x != is_csharp)
+        {
+            return false;
         }
         true
     }

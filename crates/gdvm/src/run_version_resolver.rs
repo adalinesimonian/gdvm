@@ -126,19 +126,19 @@ pub fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path>>(
         None => source.determine_version::<&Path>(None),
     };
 
-    if let Some(project_version) = determined_version {
-        if project_version.conflicts_with(requested) {
-            eprintln_i18n!(
-                i18n,
-                "warning-project-version-mismatch",
-                project_version = project_version.to_display_str(),
-                requested_version = requested.to_display_str(),
-                pinned = is_pin as i32,
-            );
-            eprintln!();
+    if let Some(project_version) = determined_version
+        && project_version.conflicts_with(requested)
+    {
+        eprintln_i18n!(
+            i18n,
+            "warning-project-version-mismatch",
+            project_version = project_version.to_display_str(),
+            requested_version = requested.to_display_str(),
+            pinned = is_pin as i32,
+        );
+        eprintln!();
 
-            return true;
-        }
+        return true;
     }
 
     false

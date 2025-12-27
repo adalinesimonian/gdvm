@@ -368,10 +368,10 @@ impl<'a> GodotManager<'a> {
 
         if path.exists() {
             // If this version is the default, unset it
-            if let Some(def) = self.get_default()? {
-                if def.to_install_str() == path.file_name().unwrap().to_string_lossy() {
-                    self.unset_default()?;
-                }
+            if let Some(def) = self.get_default()?
+                && def.to_install_str() == path.file_name().unwrap().to_string_lossy()
+            {
+                self.unset_default()?;
             }
             fs::remove_dir_all(path)?;
             Ok(())
@@ -516,15 +516,14 @@ impl<'a> GodotManager<'a> {
 
         let status = resp.status();
         let json: serde_json::Value = resp.json().map_err(|e| GithubJsonError::Other(e.into()))?;
-        if status == reqwest::StatusCode::FORBIDDEN {
-            if let Some(message) = json.get("message").and_then(|m| m.as_str()) {
-                if message.starts_with("API rate limit exceeded") {
-                    return Err(GithubJsonError::Api(anyhow!(t_w!(
-                        self.i18n,
-                        "error-github-rate-limit"
-                    ))));
-                }
-            }
+        if status == reqwest::StatusCode::FORBIDDEN
+            && let Some(message) = json.get("message").and_then(|m| m.as_str())
+            && message.starts_with("API rate limit exceeded")
+        {
+            return Err(GithubJsonError::Api(anyhow!(t_w!(
+                self.i18n,
+                "error-github-rate-limit"
+            ))));
         }
 
         let error_message = json.get("message").and_then(|m| m.as_str());
@@ -660,10 +659,10 @@ impl<'a> GodotManager<'a> {
         let mut current = std::env::current_dir().ok()?;
         loop {
             let candidate = current.join(".gdvmrc");
-            if candidate.is_file() {
-                if let Ok(contents) = fs::read_to_string(&candidate) {
-                    return GodotVersion::from_install_str(contents.trim()).ok();
-                }
+            if candidate.is_file()
+                && let Ok(contents) = fs::read_to_string(&candidate)
+            {
+                return GodotVersion::from_install_str(contents.trim()).ok();
             }
             if !current.pop() {
                 break;
