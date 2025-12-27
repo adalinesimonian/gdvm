@@ -16,6 +16,22 @@ pub struct ReleaseCache {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+/// Cached capability info for a single release.
+pub struct ReleaseCapabilitiesEntry {
+    pub tag_name: String,
+    pub has_csharp: bool,
+    pub platforms: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+/// Cache for per-release capability lookups.
+pub struct ReleaseCapabilitiesCache {
+    /// Unix timestamp aligned to the registry index fetch that these entries depend on.
+    pub last_fetched: u64,
+    pub entries: Vec<ReleaseCapabilitiesEntry>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 /// Cached list of Godot releases fetched from the remote registry.
 pub struct RegistryReleasesCache {
     /// Unix timestamp in seconds
@@ -38,6 +54,8 @@ pub struct FullCache {
     pub gdvm: GdvmCache,
     /// Cache for Godot releases
     pub godot_registry: RegistryReleasesCache,
+    /// Cache for per-release capabilities
+    pub release_capabilities: ReleaseCapabilitiesCache,
 }
 
 impl Default for FullCache {
@@ -52,6 +70,7 @@ impl Default for FullCache {
                 last_fetched: 0,
                 releases: vec![],
             },
+            release_capabilities: ReleaseCapabilitiesCache::default(),
         }
     }
 }
@@ -119,6 +138,32 @@ impl CacheStore {
     pub fn save_gdvm_cache(&self, cache: &GdvmCache) -> Result<()> {
         self.update_full_cache(|full| {
             full.gdvm = cache.clone();
+        })
+    }
+
+    pub fn clear_gdvm_cache(&self, last_update_check: u64) -> Result<()> {
+        self.save_gdvm_cache(&GdvmCache {
+            last_update_check,
+            new_version: None,
+            new_major_version: None,
+        })
+    }
+
+    pub fn load_capabilities_cache(&self) -> Result<ReleaseCapabilitiesCache> {
+        let full = self.load_full_cache()?;
+        Ok(full.release_capabilities)
+    }
+
+    pub fn save_capabilities_cache(&self, cache: &ReleaseCapabilitiesCache) -> Result<()> {
+        self.update_full_cache(|full| {
+            full.release_capabilities = cache.clone();
+        })
+    }
+
+    pub fn clear_capabilities_cache(&self, last_fetched: u64) -> Result<()> {
+        self.save_capabilities_cache(&ReleaseCapabilitiesCache {
+            last_fetched,
+            entries: Vec::new(),
         })
     }
 }

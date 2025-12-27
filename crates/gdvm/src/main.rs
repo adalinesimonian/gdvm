@@ -342,7 +342,7 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
 
     let requested_version = GodotVersion::from_match_str(version_input)?;
     let mut gv = manager
-        .resolve_available_version(&requested_version, false)
+        .resolve_available_version(&requested_version, false)?
         .ok_or_else(|| anyhow!(t!(i18n, "error-version-not-found")))?;
 
     let is_csharp = matches.get_flag("csharp");
