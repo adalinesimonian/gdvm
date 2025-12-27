@@ -1,0 +1,152 @@
+name: End-to-End Target
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: "Runner OS for this end-to-end test"
+        required: true
+        type: string
+      target:
+        description: "Rust target triple under test"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  e2e:
+    name: End-to-End Tests (${{ inputs.os }}, ${{ inputs.target }})
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Download binary artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: binary-${{ inputs.target }}
+
+      - name: Extract binary artifact
+        run: tar -xvf binary.tar
+
+      - name: Install gdvm (*nix)
+        if: contains(inputs.os, 'ubuntu') || contains(inputs.os, 'macos')
+        run: |
+          mkdir -p ~/.gdvm/bin
+          cp ./gdvm ~/.gdvm/bin/gdvm
+          echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
+          ~/.gdvm/bin/gdvm --version
+
+      - name: Install gdvm (Windows)
+        if: contains(inputs.os, 'windows')
+        shell: bash
+        run: |
+          mkdir -p ~/.gdvm/bin
+          cp ./gdvm.exe ~/.gdvm/bin/gdvm.exe
+          echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
+          ~/.gdvm/bin/gdvm.exe --version
+
+      - name: Set up GitHub token
+        if: success() || failure()
+        shell: bash
+        run: gdvm config set github.token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Search for 4.x releases of Godot
+        if: success() || failure()
+        shell: bash
+        run: gdvm search --filter 4 | grep 4.3-stable
+
+      - name: Refresh flag repopulates registry cache
+        if: success() || failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache="$HOME/.gdvm/cache.json"
+          backup="$cache.bak.refresh"
+
+          if [[ -f "$cache" ]]; then
+              cp "$cache" "$backup"
+          fi
+
+          printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"godot_registry":{"last_fetched":0,"releases":[]},"release_capabilities":{"last_fetched":0,"entries":[]}}' > "$cache"
+
+          if gdvm search --cache-only --filter 4 | grep -q 4.3-stable; then
+              echo "cache-only search unexpectedly found releases with empty cache"
+              [[ -f "$backup" ]] && mv "$backup" "$cache"
+              exit 1
+          fi
+
+          gdvm search --refresh --filter 4 | grep 4.3-stable
+
+          if ! grep -q '"tag_name"' "$cache"; then
+              echo "cache was not repopulated with releases"
+              cat "$cache"
+              [[ -f "$backup" ]] && mv "$backup" "$cache"
+              exit 1
+          fi
+
+          [[ -f "$backup" ]] && mv "$backup" "$cache"
+
+      - name: Install Godot 4.3
+        if: success() || failure()
+        shell: bash
+        run: gdvm install 4.3
+
+      - name: Install Godot 3.6.2
+        if: (success() || failure()) && inputs.os != 'windows-11-arm'
+        shell: bash
+        run: gdvm install 3.6.2
+
+      - name: Use Godot 3.6.2 globally
+        if: (success() || failure()) && inputs.os != 'windows-11-arm'
+        shell: bash
+        run: gdvm use 3.6.2
+
+      - name: Install Godot 4.4.0
+        if: (success() || failure()) && inputs.os == 'windows-11-arm'
+        shell: bash
+        run: gdvm install 4.4.0
+
+      - name: Use Godot 4.4.0 globally
+        if: (success() || failure()) && inputs.os == 'windows-11-arm'
+        shell: bash
+        run: gdvm use 4.4.0
+
+      - name: Pin Godot 4.3.0 to current directory
+        if: success() || failure()
+        shell: bash
+        run: gdvm pin 4.3.0
+
+      - name: Running Godot in current directory should use 4.3.0
+        if: success() || failure()
+        shell: bash
+        run: gdvm run --console=true -- --version | grep 4.3.stable.official
+
+      - name: Running Godot in current directory with godot alias should use 4.3.0
+        if: (success() || failure()) && !contains(inputs.os, 'windows')
+        shell: bash
+        run: godot --version | grep 4.3.stable.official
+
+      - name: Running Godot in current directory with godot_console alias should use 4.3.0
+        if: (success() || failure()) && contains(inputs.os, 'windows')
+        shell: bash
+        run: godot_console --version | grep 4.3.stable.official
+
+      - name: Running Godot 3.5 explicitly should use latest 3.5
+        if: (success() || failure()) && !contains(inputs.target, 'aarch64')
+        shell: bash
+        run: gdvm run 3.5 --console=true -- --version | grep 3.5.3.stable.official
+
+      - name: Running Godot 4.4 explicitly should use latest 4.4
+        if: (success() || failure()) && contains(inputs.target, 'aarch64')
+        shell: bash
+        run: gdvm run 4.4 --console=true -- --version | grep 4.4.1.stable.official
+
+      - name: Running Godot 4.4 with C# support should use Mono build
+        if: success() || failure()
+        shell: bash
+        run: gdvm run 4.4 --csharp --console=true -- --version | grep 4.4.1.stable.mono.official
+
+      - name: Running latest stable Godot should work
+        shell: bash
+        run: gdvm run stable --console=true -- --version | grep stable.official

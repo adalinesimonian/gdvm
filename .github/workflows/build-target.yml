@@ -1,0 +1,130 @@
+name: Build Target
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Ref to check out and build. Defaults to the triggering ref."
+        required: false
+        type: string
+        default: ""
+      os:
+        description: "Runner OS for this build"
+        required: true
+        type: string
+      target:
+        description: "Rust target triple to build"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build, Lint, and Test (${{ inputs.os }}, ${{ inputs.target }})
+    runs-on: ${{ inputs.os }}
+    env:
+      WORKSPACE_DIR: ${{ github.workspace }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup Dev Drive (Windows)
+        if: runner.os == 'Windows'
+        id: devdrive
+        uses: samypr100/setup-dev-drive@v4
+        with:
+          drive-size: 4GB
+          drive-format: ReFS
+          drive-type: Fixed
+          workspace-copy: true
+          native-dev-drive: true
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
+      - name: Configure Windows environment for Dev Drive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "CARGO_TARGET_DIR=$($env:DEV_DRIVE_WORKSPACE)/target" >> $env:GITHUB_ENV
+
+      - name: Determine workspace root
+        shell: pwsh
+        run: |
+          $workspace = "${{ github.workspace }}"
+          if ($env:DEV_DRIVE_WORKSPACE) { $workspace = $env:DEV_DRIVE_WORKSPACE }
+          "WORKSPACE_DIR=$workspace" >> $env:GITHUB_ENV
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ inputs.target }}
+          rustflags: ""
+          cache-key: ${{ inputs.target }}
+          cache-workspaces: ${{ env.WORKSPACE_DIR }}
+          components: rustc, rust-std, cargo, rustfmt, clippy
+
+      - name: Install dependencies (Linux x86_32)
+        if: inputs.os == 'ubuntu-latest' && inputs.target == 'i686-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+
+      - name: Build
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        run: cargo build --release --target ${{ inputs.target }}
+
+      - name: Check i18n bundles for missing keys
+        if: success() || failure()
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        shell: bash
+        run: scripts/find-missing-i18n.sh
+
+      - name: Check i18n bundles for formatting
+        if: success() || failure()
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        shell: pwsh
+        run: scripts/sort-i18n.ps1
+
+      - name: Check formatting
+        if: success() || failure()
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        run: cargo fmt -- --check
+
+      - name: Check clippy
+        if: success() || failure()
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        shell: bash
+        run: |
+          cargo clippy --release --all-targets --all-features -- \
+            -D clippy::suspicious -D clippy::style -D clippy::complexity \
+            -D clippy::perf -D clippy::dbg_macro -D clippy::todo \
+            -D clippy::unimplemented -D warnings
+
+      - name: Run unit and integration tests
+        if: (success() || failure()) && (contains(inputs.target, 'x86_64') || contains(inputs.target, 'aarch64'))
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        run: cargo test --release --features integration-tests --target ${{ inputs.target }}
+
+      - name: Archive binary (*nix)
+        if: (success() || failure()) && !contains(inputs.os, 'windows')
+        working-directory: ${{ env.WORKSPACE_DIR }}/target/${{ inputs.target }}/release
+        run: tar -cvf binary.tar gdvm && mv binary.tar ../../..
+
+      - name: Archive binary (Windows)
+        shell: bash
+        if: (success() || failure()) && contains(inputs.os, 'windows')
+        run: |
+          cd "${{ env.WORKSPACE_DIR }}/target/${{ inputs.target }}/release"
+          tar -cvf binary.tar gdvm.exe
+          cp binary.tar "$GITHUB_WORKSPACE/"
+
+      - name: Upload binary artifact
+        if: success() || failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: binary-${{ inputs.target }}
+          path: binary.tar
+          retention-days: 1
