@@ -52,6 +52,10 @@ jobs:
   build-and-test:
     name: Build, Lint, Test
     needs: validate
+    permissions:
+      contents: read
+      actions: write
+      id-token: write
     uses: ./.github/workflows/build-and-test.yml
     with: {}
     secrets: inherit
