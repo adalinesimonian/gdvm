@@ -28,294 +28,146 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build-test:
-    name: Build, Lint, and Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: i686-unknown-linux-gnu
-          - os: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
+  build-linux-x86_64:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: ubuntu-latest
+      target: x86_64-unknown-linux-gnu
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: windows-latest
-            target: i686-pc-windows-msvc
-          - os: windows-11-arm
-            target: aarch64-pc-windows-msvc
+  build-linux-i686:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: ubuntu-latest
+      target: i686-unknown-linux-gnu
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
+  build-linux-aarch64:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: ubuntu-24.04-arm
+      target: aarch64-unknown-linux-gnu
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+  build-windows-x86_64:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: windows-latest
+      target: x86_64-pc-windows-msvc
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-      - name: Setup Dev Drive (Windows)
-        if: runner.os == 'Windows'
-        id: devdrive
-        uses: samypr100/setup-dev-drive@v4
-        with:
-          drive-size: 4GB
-          drive-format: ReFS
-          drive-type: Fixed
-          workspace-copy: true
-          native-dev-drive: true
-          env-mapping: |
-            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
-            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+  build-windows-i686:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: windows-latest
+      target: i686-pc-windows-msvc
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-      - name: Configure Windows environment for Dev Drive
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: echo "CARGO_TARGET_DIR=${{ env.DEV_DRIVE_WORKSPACE }}/target" >> $env:GITHUB_ENV
+  build-windows-arm64:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: windows-11-arm
+      target: aarch64-pc-windows-msvc
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-      - name: Set up Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          target: ${{ matrix.target }}
-          rustflags: ""
-          cache-key: ${{ matrix.target }}
-          cache-workspaces: ${{ env.DEV_DRIVE_WORKSPACE || github.workspace }}
-          components: rustc, rust-std, cargo, rustfmt, clippy
+  build-macos-x86_64:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: macos-latest
+      target: x86_64-apple-darwin
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-      - name: Install dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install openssl
+  build-macos-arm64:
+    uses: ./.github/workflows/build-target.yml
+    with:
+      os: macos-latest
+      target: aarch64-apple-darwin
+      ref: ${{ inputs.ref }}
+    secrets: inherit
 
-      - name: Install dependencies (Linux x86_32)
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'i686-unknown-linux-gnu'
-        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
-
-      - name: Build
-        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Check i18n bundles for missing keys
-        if: success() || failure()
-        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
-        shell: bash
-        run: scripts/find-missing-i18n.sh
-
-      - name: Check i18n bundles for formatting
-        if: success() || failure()
-        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
-        shell: pwsh
-        run: scripts/sort-i18n.ps1
-
-      - name: Check formatting
-        if: success() || failure()
-        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
-        run: cargo fmt -- --check
-
-      - name: Check clippy
-        if: success() || failure()
-        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
-        shell: bash
-        run: |
-          cargo clippy --release --all-targets --all-features -- \
-            -D clippy::suspicious -D clippy::style -D clippy::complexity \
-            -D clippy::perf -D clippy::dbg_macro -D clippy::todo \
-            -D clippy::unimplemented -D warnings
-
-      - name: Run unit and integration tests
-        if: (success() || failure()) && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64'))
-        working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
-        run: cargo test --release --features integration-tests --target ${{ matrix.target }}
-
-      - name: Archive binary (*nix)
-        if: (success() || failure()) && !contains(matrix.os, 'windows')
-        working-directory: ./target/${{ matrix.target }}/release
-        run: tar -cvf binary.tar gdvm && mv binary.tar ../../..
-
-      - name: Archive binary (Windows)
-        shell: bash
-        if: (success() || failure()) && contains(matrix.os, 'windows')
-        run: |
-          cd "${{ env.DEV_DRIVE_WORKSPACE }}/target/${{ matrix.target }}/release"
-          tar -cvf binary.tar gdvm.exe
-          cp binary.tar "$GITHUB_WORKSPACE/"
-
-      - name: Upload binary artifact
-        if: success() || failure()
-        uses: actions/upload-artifact@v6
-        with:
-          name: binary-${{ matrix.target }}
-          path: binary.tar
-          retention-days: 1
-
-  e2e:
-    name: End-to-End Tests
-    runs-on: ${{ matrix.os }}
-    needs: build-test
-    if: success() || failure()
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
-
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: windows-11-arm
-            target: aarch64-pc-windows-msvc
-
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
-
+  e2e-linux-x86_64:
+    needs: build-linux-x86_64
+    uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
       id-token: write
+    with:
+      os: ubuntu-latest
+      target: x86_64-unknown-linux-gnu
+    secrets: inherit
 
-    steps:
-      - name: Download binary artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: binary-${{ matrix.target }}
+  e2e-linux-aarch64:
+    needs: build-linux-aarch64
+    uses: ./.github/workflows/e2e-target.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      os: ubuntu-24.04-arm
+      target: aarch64-unknown-linux-gnu
+    secrets: inherit
 
-      - name: Extract binary artifact
-        run: tar -xvf binary.tar
+  e2e-windows-x86_64:
+    needs: build-windows-x86_64
+    uses: ./.github/workflows/e2e-target.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      os: windows-latest
+      target: x86_64-pc-windows-msvc
+    secrets: inherit
 
-      - name: Install gdvm (*nix)
-        if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'macos')
-        run: |
-          mkdir -p ~/.gdvm/bin
-          cp ./gdvm ~/.gdvm/bin/gdvm
-          echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
-          ~/.gdvm/bin/gdvm --version
+  e2e-windows-arm64:
+    needs: build-windows-arm64
+    uses: ./.github/workflows/e2e-target.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      os: windows-11-arm
+      target: aarch64-pc-windows-msvc
+    secrets: inherit
 
-      - name: Install gdvm (Windows)
-        if: contains(matrix.os, 'windows')
-        shell: bash
-        run: |
-          mkdir -p ~/.gdvm/bin
-          cp ./gdvm.exe ~/.gdvm/bin/gdvm.exe
-          echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
-          ~/.gdvm/bin/gdvm.exe --version
+  e2e-macos-x86_64:
+    needs: build-macos-x86_64
+    uses: ./.github/workflows/e2e-target.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      os: macos-latest
+      target: x86_64-apple-darwin
+    secrets: inherit
 
-      - name: Set up GitHub token
-        if: success() || failure()
-        shell: bash
-        run: gdvm config set github.token ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Search for 4.x releases of Godot
-        if: success() || failure()
-        shell: bash
-        run: gdvm search --filter 4 | grep 4.3-stable
-
-      - name: Refresh flag repopulates registry cache
-        if: success() || failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          cache="$HOME/.gdvm/cache.json"
-          backup="$cache.bak.refresh"
-
-          if [[ -f "$cache" ]]; then
-              cp "$cache" "$backup"
-          fi
-
-          printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"godot_registry":{"last_fetched":0,"releases":[]},"release_capabilities":{"last_fetched":0,"entries":[]}}' > "$cache"
-
-          if gdvm search --cache-only --filter 4 | grep -q 4.3-stable; then
-              echo "cache-only search unexpectedly found releases with empty cache"
-              [[ -f "$backup" ]] && mv "$backup" "$cache"
-              exit 1
-          fi
-
-          gdvm search --refresh --filter 4 | grep 4.3-stable
-
-          if ! grep -q '"tag_name"' "$cache"; then
-              echo "cache was not repopulated with releases"
-              cat "$cache"
-              [[ -f "$backup" ]] && mv "$backup" "$cache"
-              exit 1
-          fi
-
-          [[ -f "$backup" ]] && mv "$backup" "$cache"
-
-      - name: Install Godot 4.3
-        if: success() || failure()
-        shell: bash
-        run: gdvm install 4.3
-
-      - name: Install Godot 3.6.2
-        if: (success() || failure()) && matrix.os != 'windows-11-arm'
-        shell: bash
-        run: gdvm install 3.6.2
-
-      - name: Use Godot 3.6.2 globally
-        if: (success() || failure()) && matrix.os != 'windows-11-arm'
-        shell: bash
-        run: gdvm use 3.6.2
-
-      - name: Install Godot 4.4.0
-        if: (success() || failure()) && matrix.os == 'windows-11-arm'
-        shell: bash
-        run: gdvm install 4.4.0
-
-      - name: Use Godot 4.4.0 globally
-        if: (success() || failure()) && matrix.os == 'windows-11-arm'
-        shell: bash
-        run: gdvm use 4.4.0
-
-      - name: Pin Godot 4.3.0 to current directory
-        if: success() || failure()
-        shell: bash
-        run: gdvm pin 4.3.0
-
-      - name: Running Godot in current directory should use 4.3.0
-        if: success() || failure()
-        shell: bash
-        run: gdvm run --console=true -- --version | grep 4.3.stable.official
-
-      - name: Running Godot in current directory with godot alias should use 4.3.0
-        if: (success() || failure()) && !contains(matrix.os, 'windows')
-        shell: bash
-        run: godot --version | grep 4.3.stable.official
-
-      - name: Running Godot in current directory with godot_console alias should use 4.3.0
-        if: (success() || failure()) && contains(matrix.os, 'windows')
-        shell: bash
-        run: godot_console --version | grep 4.3.stable.official
-
-      - name: Running Godot 3.5 explicitly should use latest 3.5
-        if: (success() || failure()) && !contains(matrix.target, 'aarch64')
-        shell: bash
-        run: gdvm run 3.5 --console=true -- --version | grep 3.5.3.stable.official
-
-      - name: Running Godot 4.4 explicitly should use latest 4.4
-        if: (success() || failure()) && contains(matrix.target, 'aarch64')
-        shell: bash
-        run: gdvm run 4.4 --console=true -- --version | grep 4.4.1.stable.official
-
-      - name: Running Godot 4.4 with C# support should use Mono build
-        if: success() || failure()
-        shell: bash
-        run: gdvm run 4.4 --csharp --console=true -- --version | grep 4.4.1.stable.mono.official
-
-      - name: Running latest stable Godot should work
-        shell: bash
-        run: gdvm run stable --console=true -- --version | grep stable.official
+  e2e-macos-arm64:
+    needs: build-macos-arm64
+    uses: ./.github/workflows/e2e-target.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      os: macos-latest
+      target: aarch64-apple-darwin
+    secrets: inherit
 
   delete-artifacts:
     name: Delete Artifacts (standalone runs)
     if: always() && (github.event_name == 'push' || github.event_name == 'pull_request')
-    needs: [e2e]
+    needs:
+      - e2e-linux-x86_64
+      - e2e-linux-aarch64
+      - e2e-windows-x86_64
+      - e2e-windows-arm64
+      - e2e-macos-x86_64
+      - e2e-macos-arm64
     permissions:
       contents: read
       actions: write
