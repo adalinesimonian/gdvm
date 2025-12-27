@@ -160,6 +160,34 @@ function Assert-SocialPostLength {
     }
 }
 
+function Show-ReleasePlan {
+    param(
+        [bool]$IsDryRun,
+        [string[]]$Items,
+        [string]$SocialPostContent = ""
+    )
+
+    Write-Host "" -ForegroundColor Gray
+
+    if ($IsDryRun) {
+        Write-Host "DRY RUN: Planned actions:" -ForegroundColor Green
+    }
+    else {
+        Write-Host "Planned actions:" -ForegroundColor Green
+    }
+
+    foreach ($item in $Items) {
+        Write-Host "- $item" -ForegroundColor Gray
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($SocialPostContent)) {
+        Write-Host "  social_post (length $($SocialPostContent.Length)): $SocialPostContent" -ForegroundColor Gray
+    }
+    else {
+        Write-Host "  social_post: (empty)" -ForegroundColor Gray
+    }
+}
+
 # Validate version format.
 if (-not (Test-SemanticVersion $Version)) {
     Exit-WithError "Version must be in the format Major.Minor.Patch (e.g., 1.2.3)"
@@ -198,10 +226,20 @@ if ($IsRerelease) {
 
     $PostFlag = if ($PostToBluesky) { "true" } else { "false" }
 
+    $RereleasePlan = @(
+        "Trigger workflow release.yml with release_tag=$ReleaseTag",
+        "post_to_bsky flag: $PostFlag"
+    )
+
+    Show-ReleasePlan -IsDryRun $IsDryRun -Items $RereleasePlan -SocialPostContent $SocialPostContent
+
     if ($IsDryRun) {
-        Write-Host "DRY RUN: Would re-trigger release workflow for $ReleaseTag with social post below:" -ForegroundColor Green
-        Write-Host $SocialPostContent -ForegroundColor Gray
-        Write-Host "Command: gh workflow run release.yml -f release_tag=$ReleaseTag -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
+        if ($HasBlockingIssues) {
+            Write-Host "`nDry run completed with warnings above. Resolve them before running for real." -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "`nDry run completed with no blocking issues detected." -ForegroundColor Green
+        }
         exit 0
     }
 
@@ -304,6 +342,10 @@ if (-not [string]::IsNullOrWhiteSpace($SocialPostContent)) {
     Assert-SocialPostLength -Text $SocialPostContent -MaxLength $SocialPostMaxLength -FilePath $SocialPostFilePath
 }
 $SocialPostJson = ConvertTo-Json $SocialPostContent -Compress
+$PostFlag = if ($PostToBluesky) { "true" } else { "false" }
+
+$CommitMessage = "chore: bump gdvm version to $Version"
+$TagName = "v$Version"
 
 # Update CHANGELOG.md.
 Write-Host "Updating CHANGELOG.md..." -ForegroundColor Yellow
@@ -342,33 +384,22 @@ $NewUnreleasedSection = @"
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v$Version...main
 "@
 
+$ReleasePlan = @("Update CHANGELOG.md: move Unreleased to v$Version and create new Unreleased section")
+if ($UpdateCargoFiles) {
+    $ReleasePlan += "Bump crates/gdvm/Cargo.toml to $Version and update Cargo.lock"
+}
+else {
+    $ReleasePlan += "Leave Cargo.toml and Cargo.lock unchanged (both already at $Version)"
+}
+
+$ReleasePlan += @("Create commit: $CommitMessage",
+    "Create annotated tag: $TagName",
+    "Push commit to origin/main and push tag $TagName",
+    "Trigger workflow release.yml with release_tag=$TagName and post_to_bsky=$PostFlag")
+
+Show-ReleasePlan -IsDryRun $IsDryRun -Items $ReleasePlan -SocialPostContent $SocialPostContent
+
 if ($IsDryRun) {
-    Write-Host "" -ForegroundColor Gray
-    Write-Host "DRY RUN: No changes will be made. Planned actions:" -ForegroundColor Green
-    Write-Host "- Would update CHANGELOG.md: move Unreleased to v$Version and create new Unreleased section." -ForegroundColor Gray
-    if ($UpdateCargoFiles) {
-        Write-Host "- Would bump version in crates/gdvm/Cargo.toml to $Version and update Cargo.lock." -ForegroundColor Gray
-    }
-    else {
-        Write-Host "- Version already set, would leave Cargo files unchanged." -ForegroundColor Gray
-    }
-    if (-not [string]::IsNullOrWhiteSpace($SocialPostContent)) {
-        Write-Host "- Would send social post (length $($SocialPostContent.Length)): $SocialPostContent" -ForegroundColor Gray
-    }
-    else {
-        Write-Host "- No social post provided, would skip Bluesky post body." -ForegroundColor Gray
-    }
-
-    $CommitMessage = "chore: bump gdvm version to $Version"
-    $TagName = "v$Version"
-    $PostFlag = if ($PostToBluesky) { "true" } else { "false" }
-
-    Write-Host "- Would create commit: $CommitMessage" -ForegroundColor Gray
-    Write-Host "- Would create annotated tag: $TagName" -ForegroundColor Gray
-    Write-Host "- Would push commit to origin/main and push tag $TagName" -ForegroundColor Gray
-    Write-Host "- Would trigger workflow: gh workflow run release.yml -f release_tag=$TagName -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
-    Write-Host "  social_post preview: $SocialPostContent" -ForegroundColor Gray
-
     if ($HasBlockingIssues) {
         Write-Host "`nDry run completed with warnings above. Resolve them before running for real." -ForegroundColor Yellow
     }

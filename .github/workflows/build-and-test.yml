@@ -314,7 +314,7 @@ jobs:
   delete-artifacts:
     name: Delete Artifacts (standalone runs)
     runs-on: ubuntu-latest
-    if: always() && github.event_name != 'workflow_call'
+    if: always() && (github.event_name == 'push' || github.event_name == 'pull_request')
     needs: [e2e]
     permissions:
       contents: read
