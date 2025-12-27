@@ -151,6 +151,33 @@ jobs:
         shell: bash
         run: godot_console --version | grep 4.3.stable.official
 
+      - name: Showing path for Godot 4.3.0 returns existing file
+        if: success() || failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          path="$(gdvm show 4.3.0)"
+          echo "gdvm show 4.3.0 -> $path"
+          if [[ ! -e "$path" ]]; then
+              echo "Resolved path does not exist: $path"
+              exit 1
+          fi
+          "$path" --version | grep 4.3.stable.official
+
+      - name: Show without version resolves to pinned 4.3.0
+        if: success() || failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          path_default="$(gdvm show)"
+          path_explicit="$(gdvm show 4.3.0)"
+          echo "gdvm show (default) -> $path_default"
+          echo "gdvm show 4.3.0   -> $path_explicit"
+          if [[ "$path_default" != "$path_explicit" ]]; then
+              echo "Default show path did not match explicit 4.3.0 path"
+              exit 1
+          fi
+
       - name: Running Godot 3.5 explicitly should use latest 3.5
         if: (success() || failure()) && !contains(inputs.target, 'aarch64')
         shell: bash
@@ -169,3 +196,63 @@ jobs:
       - name: Running latest stable Godot should work
         shell: bash
         run: gdvm run stable --console=true -- --version | grep stable.official
+
+      - name: Linking Godot 4.3.0 to custom path creates file
+        if: success() || failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+          cd "$tmpdir"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            link_path="./godot-link.exe"
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            link_path="./godot-link.app"
+          else
+            link_path="./godot-link"
+          fi
+
+          gdvm link 4.3.0 "$link_path"
+          if [[ ! -e "$link_path" ]]; then
+            echo "Link target $link_path was not created"
+            exit 1
+          fi
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            ./godot-link_console.exe --version | grep 4.3.stable.official
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            "$link_path/Contents/MacOS/Godot" --version | grep 4.3.stable.official
+          else
+            "$link_path" --version | grep 4.3.stable.official
+          fi
+
+      - name: Copying Godot 4.3.0 to custom path with --copy creates runnable file
+        if: success() || failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+          cd "$tmpdir"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            copy_path="./godot-copy.exe"
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            copy_path="./godot-copy.app"
+          else
+            copy_path="./godot-copy"
+          fi
+
+          gdvm link 4.3.0 "$copy_path" --copy
+          if [[ ! -e "$copy_path" ]]; then
+            echo "Copy target $copy_path was not created"
+            exit 1
+          fi
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            ./godot-copy_console.exe --version | grep 4.3.stable.official
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            "$copy_path/Contents/MacOS/Godot" --version | grep 4.3.stable.official
+          else
+            "$copy_path" --version | grep 4.3.stable.official
+          fi

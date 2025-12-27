@@ -10,8 +10,9 @@ use gdvm::{eprintln_i18n, println_i18n, t};
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgMatches, Command, value_parser};
 use std::{
+    fs,
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 fn refresh_flag(i18n: &I18n) -> Arg {
@@ -188,6 +189,109 @@ fn main() -> Result<()> {
                 .arg(refresh_flag(&i18n)),
         )
         .subcommand(
+            Command::new("show")
+                .about(t!(i18n, "help-show"))
+                .arg(
+                    Arg::new("version")
+                        .required(false)
+                        .value_parser(version_utils::validate_remote_version)
+                        .help(t!(i18n, "help-version-installed")),
+                )
+                .arg(
+                    Arg::new("csharp")
+                        .long("csharp")
+                        .value_parser(value_parser!(bool))
+                        .num_args(0..=1)
+                        .default_missing_value("true")
+                        .default_value("false")
+                        .require_equals(true)
+                        .help(t!(i18n, "help-csharp"))
+                        .long_help(t!(i18n, "help-run-csharp-long")),
+                )
+                .arg(
+                    Arg::new("console")
+                        .short('c')
+                        .long("console")
+                        .value_parser(value_parser!(bool))
+                        .num_args(0..=1)
+                        .default_missing_value("true")
+                        .default_value(
+                            #[cfg(target_os = "windows")]
+                            "false",
+                            #[cfg(not(target_os = "windows"))]
+                            "true",
+                        )
+                        .require_equals(true)
+                        .help(t!(i18n, "help-console")),
+                )
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .short('f')
+                        .num_args(0)
+                        .help(t!(i18n, "help-run-force"))
+                        .long_help(t!(i18n, "help-run-force-long")),
+                )
+                .arg(refresh_flag(&i18n)),
+        )
+        .subcommand(
+            Command::new("link")
+                .about(t!(i18n, "help-link"))
+                .override_usage("gdvm link [OPTIONS] [version] <linkpath>")
+                .allow_missing_positional(true)
+                .arg(
+                    Arg::new("version")
+                        .required(false)
+                        .value_parser(version_utils::validate_remote_version)
+                        .help(t!(i18n, "help-link-version")),
+                )
+                .arg({
+                    let platform = {
+                        #[cfg(target_os = "windows")]
+                        {
+                            "windows"
+                        }
+                        #[cfg(target_os = "macos")]
+                        {
+                            "macos"
+                        }
+                        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+                        {
+                            "other"
+                        }
+                    };
+
+                    Arg::new("linkpath")
+                        .required(true)
+                        .value_name("linkpath")
+                        .help(t!(i18n, "help-link-path", platform = platform))
+                })
+                .arg(
+                    Arg::new("csharp")
+                        .long("csharp")
+                        .value_parser(value_parser!(bool))
+                        .num_args(0..=1)
+                        .default_missing_value("true")
+                        .default_value("false")
+                        .require_equals(true)
+                        .help(t!(i18n, "help-csharp"))
+                        .long_help(t!(i18n, "help-run-csharp-long")),
+                )
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .short('f')
+                        .num_args(0)
+                        .help(t!(i18n, "help-link-force")),
+                )
+                .arg(
+                    Arg::new("copy")
+                        .long("copy")
+                        .num_args(0)
+                        .help(t!(i18n, "help-link-copy")),
+                ),
+        )
+        .subcommand(
             Command::new("remove")
                 .about(t!(i18n, "help-remove"))
                 .arg(
@@ -343,6 +447,8 @@ fn main() -> Result<()> {
         Some(("install", sub_m)) => sub_install(&i18n, &manager, sub_m)?,
         Some(("list", _)) => sub_list(&i18n, &manager)?,
         Some(("run", sub_m)) => sub_run(&i18n, &manager, sub_m)?,
+        Some(("show", sub_m)) => sub_show(&i18n, &manager, sub_m)?,
+        Some(("link", sub_m)) => sub_link(&i18n, &manager, sub_m)?,
         Some(("remove", sub_m)) => sub_remove(&i18n, &manager, sub_m)?,
         Some(("search", sub_m)) => sub_search(&i18n, &manager, sub_m)?,
         Some(("clear-cache", _)) => sub_clear_cache(&i18n, &manager)?,
@@ -446,6 +552,173 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     })
 }
 
+/// Handle the 'show' subcommand
+fn sub_show(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+    let raw_args: Vec<String> = Vec::new();
+
+    let csharp_given =
+        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
+    let csharp_flag = matches.get_flag("csharp");
+    let version_input = matches.get_one::<String>("version");
+    let console = matches.get_flag("console");
+    let force_on_mismatch = matches.get_flag("force");
+    let refresh = matches.get_flag("refresh");
+
+    refresh_cache_if_requested(manager, refresh)?;
+
+    let possible_paths = collect_possible_paths(&raw_args);
+
+    let explicit_version = if let Some(v) = version_input {
+        Some(GodotVersion::from_match_str(v)?)
+    } else {
+        None
+    };
+
+    let resolver = RunVersionResolver::new(manager, i18n);
+    let resolved_version = resolver.resolve(RunResolutionRequest {
+        explicit: explicit_version,
+        possible_paths: &possible_paths,
+        csharp_given,
+        csharp_flag,
+        force_on_mismatch,
+        install_if_missing: false,
+    })?;
+
+    let exe_path = manager.get_executable_path(&resolved_version, console)?;
+    println!("{}", exe_path.display());
+
+    Ok(())
+}
+
+/// Handle the 'link' subcommand
+fn sub_link(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+    let version_input = matches.get_one::<String>("version");
+    let link_path_raw = matches
+        .get_one::<String>("linkpath")
+        .map(|s| s.as_str())
+        .ok_or_else(|| unreachable!("clap should prevent missing required arg"))?;
+
+    let explicit_version = if let Some(v) = version_input {
+        Some(GodotVersion::from_match_str(v)?)
+    } else {
+        None
+    };
+
+    let csharp_given =
+        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
+    let csharp_flag = matches.get_flag("csharp");
+    let force = matches.get_flag("force");
+    let copy = matches.get_flag("copy");
+
+    let resolver = RunVersionResolver::new(manager, i18n);
+    let resolved_version = resolver.resolve(RunResolutionRequest {
+        explicit: explicit_version,
+        possible_paths: &[],
+        csharp_given,
+        csharp_flag,
+        force_on_mismatch: force,
+        install_if_missing: false,
+    })?;
+
+    let primary_exe = manager.get_executable_path(&resolved_version, false)?;
+
+    #[cfg(target_os = "windows")]
+    let console_exe = {
+        let console_exe = manager.get_executable_path(&resolved_version, true)?;
+        if console_exe != primary_exe {
+            Some(console_exe)
+        } else {
+            None
+        }
+    };
+
+    let link_path = PathBuf::from(link_path_raw);
+    if let Some(parent) = link_path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        fs::create_dir_all(parent)?;
+    }
+
+    #[cfg(target_os = "macos")]
+    if let Some(bundle_target) = macos_bundle_from_executable(&primary_exe) {
+        prepare_link_path(&link_path, force, i18n)?;
+        link_or_copy_dir(&bundle_target, &link_path, copy, i18n)?;
+
+        if copy {
+            println_i18n!(
+                i18n,
+                "copy-created",
+                version = resolved_version.to_display_str(),
+                path = link_path.display().to_string()
+            );
+        } else {
+            println_i18n!(
+                i18n,
+                "link-created",
+                version = resolved_version.to_display_str(),
+                path = link_path.display().to_string()
+            );
+        }
+
+        return Ok(());
+    }
+
+    prepare_link_path(&link_path, force, i18n)?;
+    link_or_copy_file(&primary_exe, &link_path, copy, i18n)?;
+
+    #[cfg(target_os = "windows")]
+    if let Some(console_exe) = console_exe
+        && let Some(console_link) =
+            build_console_link_path(&link_path).filter(|console_link| console_link != &link_path)
+    {
+        prepare_link_path(&console_link, force, i18n)?;
+        link_or_copy_file(&console_exe, &console_link, copy, i18n)?;
+    }
+
+    if resolved_version.is_csharp.unwrap_or(false) {
+        let godotsharp_target = find_godotsharp_dir(&primary_exe)
+            .ok_or_else(|| anyhow!(t!(i18n, "error-link-godotsharp-missing")))?;
+
+        let godotsharp_link = link_path
+            .parent()
+            .map(|p| p.join("GodotSharp"))
+            .ok_or_else(|| anyhow!(t!(i18n, "error-link-godotsharp-target")))?;
+
+        if godotsharp_link.exists() {
+            if !force {
+                return Err(anyhow!(t!(
+                    i18n,
+                    "error-link-exists",
+                    path = godotsharp_link.display().to_string()
+                )));
+            }
+            if godotsharp_link.is_dir() {
+                fs::remove_dir_all(&godotsharp_link)?;
+            } else {
+                fs::remove_file(&godotsharp_link)?;
+            }
+        }
+
+        link_or_copy_dir(&godotsharp_target, &godotsharp_link, copy, i18n)?;
+    }
+
+    if copy {
+        println_i18n!(
+            i18n,
+            "copy-created",
+            version = resolved_version.to_display_str(),
+            path = link_path.display().to_string()
+        );
+    } else {
+        println_i18n!(
+            i18n,
+            "link-created",
+            version = resolved_version.to_display_str(),
+            path = link_path.display().to_string()
+        );
+    }
+
+    Ok(())
+}
+
 /// Extract possible project paths from raw arguments passed after "--". If a --path flag is present
 /// with a following argument, that single value wins. Otherwise, collect arguments that do not look
 /// like flags, i.e. those that do not start with "-".
@@ -466,6 +739,133 @@ fn collect_possible_paths(raw_args: &[String]) -> Vec<&str> {
             }
         })
         .collect()
+}
+
+fn find_godotsharp_dir(primary_exe: &Path) -> Option<PathBuf> {
+    let parent = primary_exe.parent()?;
+
+    #[cfg(target_os = "macos")]
+    {
+        // macOS mono builds keep GodotSharp under Contents/Resources.
+        if let Some(contents_dir) = parent.parent() {
+            let resources_dir = contents_dir.join("Resources").join("GodotSharp");
+            if resources_dir.exists() {
+                return Some(resources_dir);
+            }
+        }
+    }
+
+    let sibling = parent.join("GodotSharp");
+    if sibling.exists() {
+        return Some(sibling);
+    }
+
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn macos_bundle_from_executable(exe: &Path) -> Option<PathBuf> {
+    let macos_dir = exe.parent()?;
+    if macos_dir.file_name().is_some_and(|n| n != "MacOS") {
+        return None;
+    }
+    let contents_dir = macos_dir.parent()?;
+    if contents_dir.file_name().is_some_and(|n| n != "Contents") {
+        return None;
+    }
+    contents_dir.parent().map(|p| p.to_path_buf())
+}
+
+fn link_or_copy_file(target: &Path, link: &Path, copy: bool, i18n: &I18n) -> Result<()> {
+    if copy {
+        fs::copy(target, link)
+            .map_err(|e| anyhow!(t!(i18n, "error-link-copy", error = e.to_string())))?;
+        return Ok(());
+    }
+
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_file(target, link)
+            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+    }
+
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link)
+            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+    }
+
+    Ok(())
+}
+
+fn link_or_copy_dir(target: &Path, link: &Path, copy: bool, i18n: &I18n) -> Result<()> {
+    if copy {
+        copy_dir_recursive(target, link)?;
+        return Ok(());
+    }
+
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_dir(target, link)
+            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+    }
+
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link)
+            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+    }
+
+    Ok(())
+}
+
+fn copy_dir_recursive(source: &Path, dest: &Path) -> Result<()> {
+    fs::create_dir_all(dest)?;
+
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let dest_path = dest.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursive(&entry.path(), &dest_path)?;
+        } else if file_type.is_file() {
+            fs::copy(entry.path(), &dest_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn prepare_link_path(link_path: &Path, force: bool, i18n: &I18n) -> Result<()> {
+    if link_path.exists() {
+        if !force {
+            return Err(anyhow!(t!(
+                i18n,
+                "error-link-exists",
+                path = link_path.display().to_string()
+            )));
+        }
+        if link_path.is_dir() {
+            fs::remove_dir_all(link_path)?;
+        } else {
+            fs::remove_file(link_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn build_console_link_path(base_link: &Path) -> Option<PathBuf> {
+    let stem = base_link.file_stem()?.to_string_lossy();
+    let mut name = format!("{stem}_console");
+
+    if let Some(ext) = base_link.extension() {
+        name.push('.');
+        name.push_str(&ext.to_string_lossy());
+    }
+
+    Some(base_link.with_file_name(name))
 }
 
 /// Configuration for the `sub_run_inner` function
@@ -511,6 +911,7 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
         csharp_given,
         csharp_flag,
         force_on_mismatch,
+        install_if_missing: true,
     })?;
 
     eprintln_i18n!(

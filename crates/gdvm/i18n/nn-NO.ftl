@@ -7,6 +7,8 @@ help-gdvm-version = Vis versjonen av Godot-versjonsbehandlaren
 
 help-install = Installer ein ny Godot-versjon
 help-run = Køyr ein spesifikk Godot-versjon
+help-show = Vis stien til den køyrberre fila for den gjevne Godot-versjonen
+help-link = Opprett ei lenkje frå ein Godot-versjon si køyrbare fil til ein oppgjeven stig
 help-list = List alle installerte Godot-versjonar
 help-remove = Fjern ein installert Godot-versjon
 
@@ -34,6 +36,14 @@ help-refresh-flag = Oppdater utgjevingscachen før denne kommandoen vert køyrd
 help-force = Tving installasjon på nytt sjølv om versjonen alt er installert.
 help-redownload = Last ned versjonen på nytt sjølv om han alt er lasta ned i cachen.
 help-yes = Hopp over stadfestingsprompt for fjerning
+help-link-version = Versjonen som skal lenkjast. Viss ho ikkje vert oppgjeven, vert versjonen løyst basert på gjeldande mappe eller standardversjonen.
+help-link-path = Stien der lenkja eller kopien skal opprettast, t.d. «{ $platform ->
+    [windows] godot.exe
+    [macos] godot.app
+    *[other] godot
+    }».
+help-link-force = Overskriv eksisterande lenkje om ho finst
+help-link-copy = Kopier køyrbar i staden for å lage lenkje
 
 cached-zip-stored = Lagra Godot-utgjevingsarkivet i cachen.
 using-cached-zip = Brukar cacha utgjevingsarkiv, hoppar over nedlasting.
@@ -93,6 +103,8 @@ error-invalid-godot-version = Ugyldig Godot-versjonsformat. Forventa format: x, 
 error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventa format: x, x.y, x.y.z, x.y.z.w, x.y.z-tag eller «stable».
 
 running-version = Køyrer versjon {$version}
+link-created = Lenkja {$version} til {$path}
+copy-created = Kopierte {$version} til {$path}
 no-matching-releases = Ingen samsvarande utgjevingar funne.
 available-releases = Tilgjengelege utgjevingar:
 cache-cleared = Cachen vart tømd.
@@ -100,6 +112,11 @@ cache-refreshed = Cachen vart oppdatert.
 
 version-already-installed = Versjon {$version} er alt installert.
 godot-executable-not-found = Godot-køyrberr fil vart ikkje funnen for versjon {$version}.
+error-link-exists = Stigen {$path} finst allereie. Bruk --force for å overskrive.
+error-link-symlink = Klarte ikkje å opprette lenkje: {$error}
+error-link-copy = Klarte ikkje å kopiere køyrbar: {$error}
+error-link-godotsharp-target = Klarte ikkje å finne GodotSharp-målsti.
+error-link-godotsharp-missing = GodotSharp-katalogen manglar ved sidan av den løyste køyrbare.
 
 error-no-stable-releases-found = Ingen stabile utgivelser funne.
 

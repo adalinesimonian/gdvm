@@ -7,6 +7,8 @@ help-gdvm-version = Display the version of Godot Version Manager
 
 help-install = Install a new Godot version
 help-run = Run a specific Godot version
+help-show = Show the path to the executable for the given version of Godot
+help-link = Link the executable of a Godot version to a specified path
 help-list = List all installed Godot versions
 help-remove = Remove an installed Godot version
 
@@ -34,6 +36,14 @@ help-refresh-flag = Refresh the release cache before running this command
 help-force = Force reinstall even if the version is already installed.
 help-redownload = Redownload the version even if it's already downloaded in the cache.
 help-yes = Skip confirmation prompt for removal
+help-link-version = The version to link. If not provided, resolves the version based on the current directory or default version.
+help-link-path = The path where the link or copy will be created, e.g. "{ $platform ->
+    [windows] godot.exe
+    [macos] godot.app
+    *[other] godot
+    }".
+help-link-force = Overwrite existing link if it exists
+help-link-copy = Copy the executable instead of creating a link
 
 cached-zip-stored = Saved Godot release archive to cache.
 using-cached-zip = Using cached release archive, skipping download.
@@ -93,6 +103,8 @@ error-invalid-godot-version = Invalid Godot version format. Expected formats: x,
 error-invalid-remote-version = Invalid remote Godot version format. Expected formats: x, x.y, x.y.z, x.y.z.w, x.y.z-tag, or "stable".
 
 running-version = Running version {$version}
+link-created = Linked {$version} to {$path}
+copy-created = Copied {$version} to {$path}
 no-matching-releases = No matching releases found.
 available-releases = Available releases:
 cache-cleared = Cache cleared successfully.
@@ -100,6 +112,11 @@ cache-refreshed = Cache refreshed successfully.
 
 version-already-installed = Version {$version} already installed.
 godot-executable-not-found = Godot executable not found for version {$version}.
+error-link-exists = Path {$path} already exists. Use --force to overwrite.
+error-link-symlink = Failed to create link: {$error}
+error-link-copy = Failed to copy executable: {$error}
+error-link-godotsharp-target = Failed to determine GodotSharp target path.
+error-link-godotsharp-missing = GodotSharp directory is missing next to the resolved executable.
 
 error-no-stable-releases-found = No stable releases found.
 

@@ -178,6 +178,12 @@ command -v godot >/dev/null 2>&1
 godot --version | grep 4.3.stable.official
 TEST_SCRIPT
 
+test "Show without version resolves to pinned 4.3.0" <<'TEST_SCRIPT'
+path="$(gdvm show)"
+echo "gdvm show -> $path"
+"$path" --version | grep 4.3.stable.official
+TEST_SCRIPT
+
 popd >/dev/null
 
 if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
@@ -196,6 +202,30 @@ TEST_SCRIPT
 
 test "Verify Godot stable version" <<'TEST_SCRIPT'
 gdvm run stable --console=true -- --version | grep stable.official
+TEST_SCRIPT
+
+test "Link 4.3.0 to custom path and run it" <<'TEST_SCRIPT'
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+cd "$tmpdir"
+gdvm link 4.3.0 ./godot-link
+if [[ ! -e ./godot-link ]]; then
+    echo "Link target ./godot-link was not created"
+    exit 1
+fi
+./godot-link --version | grep 4.3.stable.official
+TEST_SCRIPT
+
+test "Copy 4.3.0 to custom path with --copy" <<'TEST_SCRIPT'
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+cd "$tmpdir"
+gdvm link 4.3.0 ./godot-copy --copy
+if [[ ! -e ./godot-copy ]]; then
+    echo "Copy target ./godot-copy was not created"
+    exit 1
+fi
+./godot-copy --version | grep 4.3.stable.official
 TEST_SCRIPT
 
 summarize_tests

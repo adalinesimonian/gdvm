@@ -7,6 +7,8 @@ help-gdvm-version = Afficher la version du Gestionnaire de Versions Godot
 
 help-install = Installer une nouvelle version de Godot
 help-run = Exécuter une version spécifique de Godot
+help-show = Afficher le chemin de l'exécutable pour la version de Godot indiquée
+help-link = Lier l'exécutable d'une version de Godot à un chemin spécifié
 help-list = Lister toutes les versions installées de Godot
 help-remove = Supprimer une version installée de Godot
 
@@ -34,6 +36,14 @@ help-refresh-flag = Actualiser le cache des versions avant d'exécuter cette com
 help-force = Forcer la réinstallation même si la version est déjà installée.
 help-redownload = Retélécharger la version même si elle est déjà présente dans le cache.
 help-yes = Ignorer la confirmation de suppression
+help-link-version = La version à lier. Si elle n'est pas fournie, la version est résolue en fonction du répertoire courant ou de la version par défaut.
+help-link-path = Le chemin où le lien ou la copie sera créé, par exemple «{ $platform ->
+    [windows] godot.exe
+    [macos] godot.app
+    *[other] godot
+    } ».
+help-link-force = Écraser le lien existant s'il existe
+help-link-copy = Copier l'exécutable au lieu de créer un lien
 
 cached-zip-stored = L'archive de cette version de Godot a été mise en cache.
 using-cached-zip = Utilisation de l'archive de version en cache, téléchargement ignoré.
@@ -93,6 +103,8 @@ error-invalid-godot-version = Format de version Godot invalide. Formats attendus
 error-invalid-remote-version = Format de version Godot distante invalide. Formats attendus : x, x.y, x.y.z, x.y.z.w, x.y.z-tag, ou « stable ».
 
 running-version = Exécution de la version {$version}
+link-created = Lien créé de {$version} vers {$path}
+copy-created = Copie de {$version} vers {$path} effectuée
 no-matching-releases = Aucune version correspondante trouvée.
 available-releases = Versions disponibles :
 cache-cleared = Cache vidé avec succès.
@@ -100,6 +112,11 @@ cache-refreshed = Cache actualisé avec succès.
 
 version-already-installed = Version {$version} déjà installée.
 godot-executable-not-found = Exécutable Godot introuvable pour la version {$version}.
+error-link-exists = Le chemin {$path} existe déjà. Utilisez --force pour écraser.
+error-link-symlink = Échec de la création du lien : {$error}
+error-link-copy = Échec de la copie de l'exécutable : {$error}
+error-link-godotsharp-target = Impossible de déterminer le chemin cible GodotSharp.
+error-link-godotsharp-missing = Le répertoire GodotSharp est manquant à côté de l'exécutable résolu.
 
 error-no-stable-releases-found = Aucune version stable trouvée.
 

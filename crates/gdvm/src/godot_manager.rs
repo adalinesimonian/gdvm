@@ -174,13 +174,27 @@ pub fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option
                 }
             });
 
-            // If found, return it; otherwise fall back to any .exe
+            // If found, return it.
             if console_candidate.is_some() {
                 return Ok(console_candidate);
             }
         }
 
-        // Either console was false, or no _console exe was found. Look for any .exe.
+        // Prefer the non-console executable when available.
+        let gui_candidate = entries.iter().find_map(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.ends_with(".exe") && !name.ends_with("_console.exe") {
+                Some(entry.path())
+            } else {
+                None
+            }
+        });
+
+        if gui_candidate.is_some() {
+            return Ok(gui_candidate);
+        }
+
+        // Fall back to any .exe if nothing else matches.
         let exe_candidate = entries.iter().find_map(|entry| {
             let name = entry.file_name().to_string_lossy().to_string();
             if name.ends_with(".exe") {
@@ -195,17 +209,42 @@ pub fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option
 
     #[cfg(target_os = "macos")]
     {
-        // On macOS, look for Godot.app or Godot_mono.app
+        // On macOS, prefer an app bundle but return the executable inside it.
         let app_candidate = entries.iter().find_map(|entry| {
-            let name = entry.file_name().to_string_lossy().to_string();
-            if name == "Godot.app" || name == "Godot_mono.app" {
+            let file_name = entry.file_name();
+            let name = file_name.to_string_lossy();
+            if name.ends_with(".app") {
                 Some(entry.path())
             } else {
                 None
             }
         });
 
-        Ok(app_candidate)
+        if let Some(app_path) = app_candidate
+            && let Some(exe) = find_macos_app_executable(&app_path)
+        {
+            return Ok(Some(exe));
+        }
+
+        // Fall back to a Godot binary directly under the install dir.
+        let binary_candidate = entries.iter().find_map(|entry| {
+            let Ok(file_type) = entry.file_type() else {
+                return None;
+            };
+            if !file_type.is_file() {
+                return None;
+            }
+
+            let file_name = entry.file_name();
+            let name = file_name.to_string_lossy();
+            if name.starts_with("Godot") {
+                Some(entry.path())
+            } else {
+                None
+            }
+        });
+
+        Ok(binary_candidate)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -227,6 +266,30 @@ pub fn find_godot_executable(version_dir: &Path, console: bool) -> Result<Option
 
         Ok(unix_candidate)
     }
+}
+
+#[cfg(target_os = "macos")]
+fn find_macos_app_executable(app_path: &Path) -> Option<PathBuf> {
+    let macos_dir = app_path.join("Contents/MacOS");
+
+    // Prefer known Godot binaries.
+    let preferred = ["Godot", "Godot_mono"];
+    for name in preferred {
+        let candidate = macos_dir.join(name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+
+    // Fall back to first regular file in Contents/MacOS.
+    let entries = fs::read_dir(&macos_dir).ok()?;
+    for entry in entries.flatten() {
+        if entry.file_type().ok()?.is_file() {
+            return Some(entry.path());
+        }
+    }
+
+    None
 }
 
 impl<'a> GodotManager<'a> {
@@ -387,52 +450,7 @@ impl<'a> GodotManager<'a> {
         console: bool,
         godot_args: &[String],
     ) -> Result<()> {
-        let version_dir = self.paths.installs().join(gv.to_install_str());
-        if !version_dir.exists() {
-            return Err(anyhow!(t!(
-                self.i18n,
-                "error-version-not-found",
-                version = &gv.to_display_str(),
-            )));
-        }
-
-        // Enumerate the version directory to find a Godot binary or app
-        let godot_executable = find_godot_executable(&version_dir, console)?;
-
-        let path = godot_executable.ok_or_else(|| {
-            anyhow!(t!(
-                self.i18n,
-                "godot-executable-not-found",
-                version = &gv.to_display_str(),
-            ))
-        })?;
-
-        // Special handling for macOS .app bundles
-        #[cfg(target_os = "macos")]
-        {
-            if path.extension().and_then(|ext| ext.to_str()) == Some("app") {
-                let inner_path = path.join("Contents/MacOS/Godot");
-                if !inner_path.exists() {
-                    return Err(anyhow!(t!(
-                        self.i18n,
-                        "godot-executable-not-found",
-                        version = &gv.to_display_str(),
-                    )));
-                }
-                if console {
-                    // On macOS, running attached is the default behavior
-                    std::process::Command::new(inner_path)
-                        .args(godot_args)
-                        .spawn()?;
-                } else {
-                    // Detached process
-                    std::process::Command::new(inner_path)
-                        .args(godot_args)
-                        .spawn()?;
-                }
-                return Ok(());
-            }
-        }
+        let path = self.get_executable_path(gv, console)?;
 
         if console {
             // Run the process attached to the terminal and wait for it to exit
@@ -464,6 +482,32 @@ impl<'a> GodotManager<'a> {
         }
 
         Ok(())
+    }
+
+    /// Resolve the path to the Godot executable for the given version and console preference.
+    pub fn get_executable_path(
+        &self,
+        gv: &GodotVersionDeterminate,
+        console: bool,
+    ) -> Result<std::path::PathBuf> {
+        let version_dir = self.paths.installs().join(gv.to_install_str());
+        if !version_dir.exists() {
+            return Err(anyhow!(t!(
+                self.i18n,
+                "error-version-not-found",
+                version = &gv.to_display_str(),
+            )));
+        }
+
+        let godot_executable = find_godot_executable(&version_dir, console)?;
+
+        godot_executable.ok_or_else(|| {
+            anyhow!(t!(
+                self.i18n,
+                "godot-executable-not-found",
+                version = &gv.to_display_str(),
+            ))
+        })
     }
 
     /// Fetch available releases from GitHub with caching
@@ -1106,6 +1150,26 @@ impl<'a> RunVersionSource for GodotManager<'a> {
         T: Into<GodotVersion> + Clone,
     {
         GodotManager::auto_install_version(self, gv)
+    }
+
+    fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    where
+        T: Into<GodotVersion> + Clone,
+    {
+        let gv: GodotVersion = gv.clone().into();
+        let matches = self.resolve_installed_version(&gv)?;
+
+        match matches.len() {
+            0 => Err(anyhow!(t!(self.i18n, "error-version-not-found"))),
+            1 => Ok(matches[0].clone()),
+            _ => {
+                eprintln_i18n!(self.i18n, "error-multiple-versions-found");
+                for v in matches {
+                    println!("- {}", v.to_display_str());
+                }
+                Err(anyhow!(t!(self.i18n, "error-version-not-found")))
+            }
+        }
     }
 }
 
