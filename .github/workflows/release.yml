@@ -60,10 +60,83 @@ jobs:
     with: {}
     secrets: inherit
 
+  prepare-release:
+    name: Prepare Release Content
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    permissions:
+      contents: read
+    outputs:
+      post_text: ${{ steps.compute_post_text.outputs.text }}
+    steps:
+      - name: Check out tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.release_tag }}
+          sparse-checkout: |
+            CHANGELOG.md
+            scripts/get-release-description.ps1
+
+      - name: Generate release description
+        shell: pwsh
+        run: |
+          & scripts/get-release-description.ps1 | Out-File -FilePath "release_description.md" -Encoding utf8
+
+      - name: Determine Bluesky post text
+        id: compute_post_text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_tag="${{ github.event.inputs.release_tag }}"
+          custom_json='${{ github.event.inputs.social_post }}'
+          post_text=$(printf '%s' "$custom_json" | jq -r 'if . == null then "" else . end')
+
+          post_text_trimmed="$(printf '%s' "$post_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+          if [ -z "$post_text_trimmed" ]; then
+            post_text=$'${release_tag} of gdvm is now out!\n\nUpgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${release_tag}\n\nReport any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!'
+          fi
+
+          printf '%s\n' "$post_text" > post_text.txt
+
+          {
+            echo 'text<<EOF'
+            cat post_text.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Preview release body and post
+        shell: bash
+        run: |
+          echo '----- Release body preview -----'
+          cat release_description.md
+          echo '----- Bluesky post preview -----'
+          cat post_text.txt
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: |
+            release_description.md
+            post_text.txt
+
+  approval:
+    name: Await Release Approval
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    environment:
+      name: release-approval
+      url: https://github.com/adalinesimonian/gdvm/releases
+    steps:
+      - name: Await manual approval
+        run: echo "Approve this job to publish the release and post to Bluesky."
+
   publish:
     name: Publish release
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: approval
     permissions:
       contents: write
     env:
@@ -77,18 +150,16 @@ jobs:
         x86_64-apple-darwin
         aarch64-apple-darwin
     steps:
-      - name: Check out tag
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.release_tag }}
-          sparse-checkout: |
-            CHANGELOG.md
-            scripts/get-release-description.ps1
-
       - name: Download binary artifacts
         uses: actions/download-artifact@v7
         with:
           pattern: binary-*
+
+      - name: Download release metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: release-metadata
+          path: release-metadata
 
       - name: Extract & rename binaries
         shell: bash
@@ -114,17 +185,12 @@ jobs:
             fi
           done <<< "$EXPECTED_TARGETS"
 
-      - name: Generate release description
-        shell: pwsh
-        run: |
-          & scripts/get-release-description.ps1 | Out-File -FilePath "release_description.md" -Encoding utf8
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
-          body_path: release_description.md
+          body_path: release-metadata/release_description.md
           files: dist/*
           draft: false
           prerelease: false
@@ -132,33 +198,21 @@ jobs:
   social-update:
     name: Update Social Media
     runs-on: ubuntu-latest
-    needs: publish
+    needs: [publish, prepare-release]
     if: ${{ github.event.inputs.post_to_bsky != 'false' }}
     environment:
       name: socials
     steps:
-      - name: Create release update post text
+      - name: Load post text
         id: post_text
         shell: bash
         run: |
-          set -euo pipefail
-
-          release_tag="${{ github.event.inputs.release_tag }}"
-          custom_json='${{ github.event.inputs.social_post }}'
-          post_text=$(printf '%s' "$custom_json" | jq -r 'if . == null then "" else . end')
-
-          post_text_trimmed="$(printf '%s' "$post_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-
-          if [ -n "$post_text_trimmed" ]; then
-            echo "Using provided Bluesky text."
-          else
-            echo "Using fallback generic Bluesky text."
-            post_text=$'${release_tag} of gdvm is now out!\n\nUpgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${release_tag}\n\nReport any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!'
-          fi
-
+          cat << 'EOF' > post_text.txt
+          ${{ needs['prepare-release'].outputs.post_text }}
+          EOF
           {
             echo 'text<<EOF'
-            printf '%s\n' "$post_text"
+            cat post_text.txt
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -290,4 +344,6 @@ jobs:
       - name: Delete binary artifacts
         uses: geekyeggo/delete-artifact@v5
         with:
-          name: binary-*
+          name: |
+            binary-*
+            release-metadata

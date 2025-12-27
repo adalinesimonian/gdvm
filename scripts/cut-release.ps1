@@ -201,7 +201,7 @@ if ($IsRerelease) {
     if ($IsDryRun) {
         Write-Host "DRY RUN: Would re-trigger release workflow for $ReleaseTag with social post below:" -ForegroundColor Green
         Write-Host $SocialPostContent -ForegroundColor Gray
-        Write-Host "Command: gh workflow run release.yml --ref $ReleaseTag -f release_tag=$ReleaseTag -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
+        Write-Host "Command: gh workflow run release.yml -f release_tag=$ReleaseTag -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
         exit 0
     }
 
@@ -217,7 +217,6 @@ if ($IsRerelease) {
     Write-Host "Re-triggering release workflow for $ReleaseTag..." -ForegroundColor Green
 
     gh workflow run release.yml `
-        --ref $ReleaseTag `
         -f release_tag=$ReleaseTag `
         -f "social_post=$SocialPostJson" `
         -f post_to_bsky=$PostFlag
@@ -367,7 +366,7 @@ if ($IsDryRun) {
     Write-Host "- Would create commit: $CommitMessage" -ForegroundColor Gray
     Write-Host "- Would create annotated tag: $TagName" -ForegroundColor Gray
     Write-Host "- Would push commit to origin/main and push tag $TagName" -ForegroundColor Gray
-    Write-Host "- Would trigger workflow: gh workflow run release.yml --ref $TagName -f release_tag=$TagName -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
+    Write-Host "- Would trigger workflow: gh workflow run release.yml -f release_tag=$TagName -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
     Write-Host "  social_post preview: $SocialPostContent" -ForegroundColor Gray
 
     if ($HasBlockingIssues) {
@@ -527,7 +526,6 @@ $PostFlag = if ($PostToBluesky) { "true" } else { "false" }
 Write-Host "Triggering release workflow on $TagName..." -ForegroundColor Green
 
 gh workflow run release.yml `
-    --ref $TagName `
     -f release_tag=$TagName `
     -f "social_post=$SocialPostJson" `
     -f post_to_bsky=$PostFlag
