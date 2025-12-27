@@ -50,14 +50,14 @@ impl ReleaseCatalog {
             if let Err(error) = self.update_cache(&mut cache, i18n) {
                 if cache.releases.is_empty() {
                     return Err(error);
-                } else {
-                    // Defer to cached data if available, mirroring previous behavior.
-                    crate::eprintln_i18n!(
-                        i18n,
-                        "warning-fetching-releases-using-cache",
-                        error = error.to_string()
-                    );
                 }
+
+                // Defer to cached data if available.
+                crate::eprintln_i18n!(
+                    i18n,
+                    "warning-fetching-releases-using-cache",
+                    error = error.to_string()
+                );
             }
         }
 
