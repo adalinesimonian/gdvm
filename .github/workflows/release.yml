@@ -92,7 +92,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          post_text=$(printf '%s' "${SOCIAL_POST:-}" | jq -r 'try fromjson catch .')
+          post_text=$(printf '%s' "${SOCIAL_POST:-}" | jq -r --raw-input --slurp 'try (fromjson | tostring) catch .')
 
           post_text_trimmed="$(printf '%s' "$post_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
