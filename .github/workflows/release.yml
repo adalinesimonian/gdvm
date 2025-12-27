@@ -122,21 +122,11 @@ jobs:
             release_description.md
             post_text.txt
 
-  approval:
-    name: Await Release Approval
-    runs-on: ubuntu-latest
-    needs: prepare-release
-    environment:
-      name: release-approval
-      url: https://github.com/adalinesimonian/gdvm/releases
-    steps:
-      - name: Await manual approval
-        run: echo "Approve this job to publish the release and post to Bluesky."
-
   publish:
     name: Publish release
     runs-on: ubuntu-latest
-    needs: approval
+    needs: prepare-release
+    environment: release-approval
     permissions:
       contents: write
     env:
