@@ -32,7 +32,10 @@ param(
     [switch]$NoBluesky,
 
     [Parameter(Mandatory = $false)]
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Rerelease
 )
 
 # Ensure the current directory is the repository root.
@@ -47,6 +50,7 @@ $ReleaseUrl = "https://github.com/adalinesimonian/gdvm/releases/tag/v$Version"
 $PostToBluesky = -not $NoBluesky
 $IsDryRun = [bool]$DryRun
 $HasBlockingIssues = $false
+$IsRerelease = [bool]$Rerelease
 
 # Records a warning during dry run, otherwise exits.
 function WarnOrExit {
@@ -161,6 +165,71 @@ if (-not (Test-SemanticVersion $Version)) {
     Exit-WithError "Version must be in the format Major.Minor.Patch (e.g., 1.2.3)"
 }
 
+if ($IsRerelease) {
+    $ReleaseTag = "v$Version"
+
+    $ChangelogContent = Get-Content "CHANGELOG.md" -Raw
+    $LatestVersionMatch = [regex]::Match($ChangelogContent, '(?m)^##\s+(v\d+\.\d+\.\d+)')
+    if (-not $LatestVersionMatch.Success) {
+        Exit-WithError "Could not find any version entries in CHANGELOG.md."
+    }
+
+    $LatestVersion = $LatestVersionMatch.Groups[1].Value
+    if ($LatestVersion -ne $ReleaseTag) {
+        Exit-WithError "Latest version in CHANGELOG.md is $LatestVersion, which does not match $ReleaseTag."
+    }
+
+    git rev-parse "$ReleaseTag" 1>$null 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "Tag $ReleaseTag does not exist locally."
+    }
+
+    $RemoteTag = git ls-remote --tags origin "$ReleaseTag" 2>$null
+    if ([string]::IsNullOrWhiteSpace($RemoteTag)) {
+        Exit-WithError "Tag $ReleaseTag is not present on origin. Push the tag before re-running release."
+    }
+
+    $SocialPostRaw = Get-SocialPostContent -CliText $SocialPost -FilePath $SocialPostFilePath
+    $SocialPostContent = Expand-SocialPostPlaceholders -Text $SocialPostRaw -ReleaseUrl $ReleaseUrl
+    if (-not [string]::IsNullOrWhiteSpace($SocialPostContent)) {
+        Assert-SocialPostLength -Text $SocialPostContent -MaxLength $SocialPostMaxLength -FilePath $SocialPostFilePath
+    }
+    $SocialPostJson = ConvertTo-Json $SocialPostContent -Compress
+
+    $PostFlag = if ($PostToBluesky) { "true" } else { "false" }
+
+    if ($IsDryRun) {
+        Write-Host "DRY RUN: Would re-trigger release workflow for $ReleaseTag with social post below:" -ForegroundColor Green
+        Write-Host $SocialPostContent -ForegroundColor Gray
+        Write-Host "Command: gh workflow run release.yml --ref $ReleaseTag -f release_tag=$ReleaseTag -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
+        exit 0
+    }
+
+    Write-Host "`nFinal verification before re-triggering the release workflow." -ForegroundColor Yellow
+    Write-Host "Type ""yes"" to continue. Any other input else cancels:" -ForegroundColor Yellow -NoNewline
+    $RerunConfirm = Read-Host
+
+    if ($RerunConfirm -ne "yes") {
+        Write-Host "Rerelease cancelled." -ForegroundColor Yellow
+        exit 0
+    }
+
+    Write-Host "Re-triggering release workflow for $ReleaseTag..." -ForegroundColor Green
+
+    gh workflow run release.yml `
+        --ref $ReleaseTag `
+        -f release_tag=$ReleaseTag `
+        -f "social_post=$SocialPostJson" `
+        -f post_to_bsky=$PostFlag
+
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "Failed to trigger release workflow."
+    }
+
+    Write-Host "Release workflow re-triggered for $ReleaseTag." -ForegroundColor Green
+    exit 0
+}
+
 Write-Host "Cutting release for version $Version..." -ForegroundColor Green
 
 # Check that current branch is main.
@@ -235,6 +304,7 @@ $SocialPostContent = Expand-SocialPostPlaceholders -Text $SocialPostRaw -Release
 if (-not [string]::IsNullOrWhiteSpace($SocialPostContent)) {
     Assert-SocialPostLength -Text $SocialPostContent -MaxLength $SocialPostMaxLength -FilePath $SocialPostFilePath
 }
+$SocialPostJson = ConvertTo-Json $SocialPostContent -Compress
 
 # Update CHANGELOG.md.
 Write-Host "Updating CHANGELOG.md..." -ForegroundColor Yellow
@@ -297,7 +367,7 @@ if ($IsDryRun) {
     Write-Host "- Would create commit: $CommitMessage" -ForegroundColor Gray
     Write-Host "- Would create annotated tag: $TagName" -ForegroundColor Gray
     Write-Host "- Would push commit to origin/main and push tag $TagName" -ForegroundColor Gray
-    Write-Host "- Would trigger workflow: gh workflow run release.yml --ref $TagName -f release_tag=$TagName -f social_post=... -f post_to_bsky=$PostFlag" -ForegroundColor Gray
+    Write-Host "- Would trigger workflow: gh workflow run release.yml --ref $TagName -f release_tag=$TagName -f social_post=$SocialPostJson -f post_to_bsky=$PostFlag" -ForegroundColor Gray
     Write-Host "  social_post preview: $SocialPostContent" -ForegroundColor Gray
 
     if ($HasBlockingIssues) {
@@ -459,7 +529,7 @@ Write-Host "Triggering release workflow on $TagName..." -ForegroundColor Green
 gh workflow run release.yml `
     --ref $TagName `
     -f release_tag=$TagName `
-    -f social_post="$SocialPostContent" `
+    -f "social_post=$SocialPostJson" `
     -f post_to_bsky=$PostFlag
 
 if ($LASTEXITCODE -ne 0) {

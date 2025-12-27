@@ -144,15 +144,13 @@ jobs:
           set -euo pipefail
 
           release_tag="${{ github.event.inputs.release_tag }}"
-          custom_text="$(cat <<'EOF'
-          ${{ github.event.inputs.social_post }}
-          EOF
-          )"
-          custom_text_trimmed="$(printf '%s' "$custom_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          custom_json='${{ github.event.inputs.social_post }}'
+          post_text=$(printf '%s' "$custom_json" | jq -r 'if . == null then "" else . end')
 
-          if [ -n "$custom_text_trimmed" ]; then
+          post_text_trimmed="$(printf '%s' "$post_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+          if [ -n "$post_text_trimmed" ]; then
             echo "Using provided Bluesky text."
-            post_text="$custom_text"
           else
             echo "Using fallback generic Bluesky text."
             post_text=$'${release_tag} of gdvm is now out!\n\nUpgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${release_tag}\n\nReport any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!'
