@@ -57,7 +57,8 @@ jobs:
       actions: write
       id-token: write
     uses: ./.github/workflows/build-and-test.yml
-    with: {}
+    with:
+      ref: ${{ github.event.inputs.release_tag }}
     secrets: inherit
 
   prepare-release:
@@ -85,17 +86,18 @@ jobs:
       - name: Determine Bluesky post text
         id: compute_post_text
         shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          SOCIAL_POST: ${{ github.event.inputs.social_post }}
         run: |
           set -euo pipefail
 
-          release_tag="${{ github.event.inputs.release_tag }}"
-          custom_json='${{ github.event.inputs.social_post }}'
-          post_text=$(printf '%s' "$custom_json" | jq -r 'if . == null then "" else . end')
+          post_text=$(printf '%b' "${SOCIAL_POST:-}")
 
           post_text_trimmed="$(printf '%s' "$post_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
           if [ -z "$post_text_trimmed" ]; then
-            post_text=$'${release_tag} of gdvm is now out!\n\nUpgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${release_tag}\n\nReport any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!'
+            post_text=$'${RELEASE_TAG} of gdvm is now out!\n\nUpgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${RELEASE_TAG}\n\nReport any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!'
           fi
 
           printf '%s\n' "$post_text" > post_text.txt

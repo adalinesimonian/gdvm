@@ -17,7 +17,11 @@ on:
       - "gh-pages/**"
       - "*.md"
   workflow_call:
-    inputs: {}
+    inputs:
+      ref:
+        description: "Ref to check out and build. Defaults to the triggering ref."
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.event_name }}-${{ github.event.number || github.run_id }}
@@ -53,6 +57,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
 
       - name: Setup Dev Drive (Windows)
         if: runner.os == 'Windows'
