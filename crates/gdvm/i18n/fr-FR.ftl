@@ -22,14 +22,14 @@ help-version-long =
     Exemples : 4.4 installera la dernière version stable de Godot 4.4. Si seules des versions de pré-publication existent, dans ce cas, la dernière version de pré-publication sera installée. 4.3-rc installera la dernière version candidate de Godot 4.3, etc.
 help-version-installed = La version installée (ex. 4.2 ou 4.2-stable).
 
-help-search = Lister les versions distantes de godot-builds
+help-search = Lister les versions disponibles depuis le registre
 help-filter = Chaîne optionnelle pour filtrer les tags de versions
 help-include-pre = Inclure les versions de pré-publication (rc, beta, dev)
-help-cache-only = Utiliser uniquement les informations de versions en cache sans interroger l'API GitHub
+help-cache-only = Utiliser uniquement les informations de versions en cache sans interroger le registre
 help-limit = Nombre de versions à lister, par défaut 10. Utilisez 0 pour lister toutes
-help-clear-cache = Vide le cache des versions gdvm
-help-refresh = Actualiser le cache des versions gdvm depuis le registre
-help-refresh-flag = Actualiser le cache du registre avant d'exécuter cette commande
+help-clear-cache = Vide le cache des versions
+help-refresh = Actualiser le cache des versions depuis le registre
+help-refresh-flag = Actualiser le cache des versions avant d'exécuter cette commande
 
 help-force = Forcer la réinstallation même si la version est déjà installée.
 help-redownload = Retélécharger la version même si elle est déjà présente dans le cache.

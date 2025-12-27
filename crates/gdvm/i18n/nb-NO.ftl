@@ -2,7 +2,7 @@ hello = Hei, Verda!
 
 help-about = Godot-versjonsbehandlaren
 help-help = Vis hjelp (se et sammendrag med '-h')
-help-help-command = Vis denne meldingen eller hjelpa for de gitte underkommandoene
+help-help-command = Vis denne meldinga eller hjelpa for de gitte underkommandoene
 help-gdvm-version = Vis versjonen av Godot-versjonsbehandleren
 
 help-install = Installer en ny Godot-versjon
@@ -14,35 +14,35 @@ help-branch = Greina (stable, beta, alpha eller tilpassa).
 help-csharp = Bruk Godot-versjonen med C#-støtte.
 help-run-csharp-long = { help-csharp }
 
-    Ved å gi en verdi, overskrider du standardversjonen satt med «use». Ellers brukes standardversjonen. Med andre ord, hvis du setter en standardversjon med «use --csharp», kan du prøve å kjøre den samme versjon men uten C#-støtte med «run --csharp false». Det kan imidlertid ikke fungere som forventet hvis versjonen uten C#-støtte ikke er installert. (Bare kjør «install» for å installere den.)
-help-version = Versjonen som skal installeres (f.eks. 4), eller stable for den siste stabile versjonen.
+    Ved å gi en verdi, overskrider du standardversjonen satt med «use». Ellers brukes standardversjonen. Med andre ord, hvis du setter en standardversjon med «use --csharp», kan du prøve å kjøre den samme versjonen, men uten C#-støtte, med «run --csharp false». Det kan imidlertid ikke fungere som forventet hvis versjonen uten C#-støtte ikke er installert. (Bare kjør «install» for å installere den.)
+help-version = Versjonen som skal installeres (f.eks. 4), eller «stable» for den siste stabile versjonen.
 help-version-long =
     { help-version }
 
     Eksempler: 4.4 vil installere den siste stabile utgivelsen av Godot 4.4. Hvis bare forhåndsversjoner finnes, vil den siste forhåndsversjonen bli installert. 4.3-rc vil installere den siste utgivelsen av Godot 4.3, osv.
 help-version-installed = Den installerte versjonen (f.eks. 4.2 eller 4.2-stable).
 
-help-search = List fjerne utgivelser fra godot-builds
+help-search = List tilgjengelige utgivelser fra registeret
 help-filter = Valgfri streng for å filtrere utgivelsestagger
 help-include-pre = Inkluder forhåndsversjoner (rc, beta, dev)
-help-cache-only = Bruk kun hurtigbufret utgivelsesinformasjon uten å spørre GitHub-APIet
+help-cache-only = Bruk bare bufra utgivelsesinformasjon uten å spørre registeret
 help-limit = Antall utgivelser som skal vises, standard er 10. Bruk 0 for å vise alle
-help-clear-cache = Tøm gdvm-utgivelseshurtigbufferen
-help-refresh = Oppdater gdvm-utgivelseshurtigbufferen fra registeret
-help-refresh-flag = Oppdater registerhurtigbufferen før denne kommandoen kjøres
+help-clear-cache = Tøm utgivelsescachen
+help-refresh = Oppdater utgivelsescachen fra registeret
+help-refresh-flag = Oppdater utgivelsescachen før denne kommandoen kjøres
 
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
-help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i hurtigbufferen.
+help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i cachen.
 help-yes = Hopp over bekreftelsesprompt for fjerning
 
-cached-zip-stored = Lagra Godot-utgivelsesarkivet i hurtigbufferen.
-using-cached-zip = Bruker hurtigbufret utgivelsesarkiv, hopper over nedlasting.
-warning-cache-metadata-reset = Hurtigbufferindeksen for utgivelser er ugyldig eller korrupt. Tilbakestiller.
-cache-files-removed = Hurtigbufferfilene ble fjernet.
-cache-metadata-removed = Hurtigbuffermetadataene ble fjernet.
-error-cache-metadata-empty = Feil: Hurtigbuffermetadataen er tom, må hente utgivelser først.
-no-cache-files-found = Ingen hurtigbufferfiler funnet.
-no-cache-metadata-found = Ingen hurtigbuffermetadata funnet.
+cached-zip-stored = Lagra Godot-utgivelsesarkivet i cachen.
+using-cached-zip = Bruker cachet utgivelsesarkiv, hopper over nedlasting.
+warning-cache-metadata-reset = Cache-indeksen for utgivelser er ugyldig eller korrupt. Tilbakestiller.
+cache-files-removed = Cache-filene ble fjerna.
+cache-metadata-removed = Cache-metadataet ble fjerna.
+error-cache-metadata-empty = Feil: Cache-metadataet er tomt, må hente utgivelser først.
+no-cache-files-found = Ingen cache-filer funnet.
+no-cache-metadata-found = Ingen cache-metadata funnet.
 
 help-console = Kjør Godot med konsoll tilkobla. Standard er false på Windows, true på andre plattformer.
 
@@ -59,7 +59,7 @@ force-reinstalling-version = Tvinger installasjon av versjon {$version} på nytt
 
 auto-installing-version = Automatisk installasjon av versjon { $version }
 
-no-versions-installed = Ingen versjoner installert.
+no-versions-installed = Ingen versjoner installerte.
 installed-versions = Installerte Godot-versjoner:
 removed-version = Fjerna versjonen {$version}
 removing-version = Fjerner versjon {$version}
@@ -68,14 +68,14 @@ force-redownload = Tvinger nedlasting av versjon {$version} på nytt.
 operation-downloading-url = Laster ned {$url}...
 operation-download-complete = Nedlasting fullført.
 operation-extracting = Pakker ut...
-operation-extract-complete = Pakking fullført.
+operation-extract-complete = Utpakking fullført.
 
 unsupported-platform = Plattforma støttes ikke
 unsupported-architecture = Arkitekturen støttes ikke
 
 verifying-checksum = Verifiserer sjekksum...
 checksum-verified = Sjekksum verifisert.
-error-checksum-mismatch = Sjekksumfeil for filen { $file }
+error-checksum-mismatch = Sjekksumfeil for fila { $file }
 error-invalid-sha-length = Ugyldig SHA-lengde { $length }
 warning-sha-sums-missing = Sjekksumfiler ble ikke funnet for denne utgivelsen. Hopper over verifisering.
 
@@ -95,8 +95,8 @@ error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventede fo
 running-version = Kjører versjon {$version}
 no-matching-releases = Ingen samsvarende utgivelser funna.
 available-releases = Tilgjengelige utgivelser:
-cache-cleared = Hurtigbufferen ble tømt.
-cache-refreshed = Hurtigbufferen ble oppdatert.
+cache-cleared = Cachen ble tømt.
+cache-refreshed = Cachen ble oppdatert.
 
 version-already-installed = Versjon {$version} er allerede installert.
 godot-executable-not-found = Godot-kjørbar fil ble ikke funnet for versjon {$version}.
@@ -135,26 +135,26 @@ upgrade-not-needed = gdvm er allerede på siste versjon: { $version }.
 upgrade-current-version-newer = Den nåværende gdvm-versjonen ({ $current }) er nyere enn den siste tilgjengelige versjonen ({ $latest }). Ingen oppgradering nødvendig.
 upgrade-failed = Oppgradering mislyktes: { $error }
 upgrade-download-failed = Nedlasting av oppgradering mislyktes: { $error }
-upgrade-file-create-failed = Klarte ikke å opprette oppgraderingsfilen: { $error }
-upgrade-file-write-failed = Klarte ikke å skrive til oppgraderingsfilen: { $error }
+upgrade-file-create-failed = Klarte ikke å opprette oppgraderingsfila: { $error }
+upgrade-file-write-failed = Klarte ikke å skrive til oppgraderingsfila: { $error }
 upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $error }
-upgrade-rename-failed = Klarte ikke å endre navn på den nåværende kjørbare filen: { $error }
-upgrade-replace-failed = Klarte ikke å erstatte den kjørbare filen med den nye: { $error }
+upgrade-rename-failed = Klarte ikke å endre navnet på den nåværende kjørbare fila: { $error }
+upgrade-replace-failed = Klarte ikke å erstatte den kjørbare fila med den nye: { $error }
 checking-updates = Sjekker etter oppdateringer til gdvm...
 upgrade-available = 💡 En ny versjon av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade» for å oppdatere.
-upgrade-available-major = 💡 En hovedversjonsoppdatering av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade -m» for å oppdatere.
-upgrade-available-both = 💡 En ny versjon av gdvm er tilgjengelig: {$minor_version}. En hovedversjonsoppdatering er også tilgjengelig: {$major_version}. Kjør «gdvm upgrade» for å oppdatere innen gjeldende hovedversjon, eller «gdvm upgrade -m» for å oppgradere til siste versjon.
+upgrade-available-major = 💡 Ei hovedversjonsoppdatering av gdvm er tilgjengelig: {$version}. Kjør «gdvm upgrade -m» for å oppdatere.
+upgrade-available-both = 💡 En ny versjon av gdvm er tilgjengelig: {$minor_version}. Ei hovedversjonsoppdatering er også tilgjengelig: {$major_version}. Kjør «gdvm upgrade» for å oppdatere innen gjeldende hovedversjon, eller «gdvm upgrade -m» for å oppgradere til aller siste versjon.
 
 help-pin = Fest en versjon av Godot til gjeldende mappe.
 help-pin-long = { help-pin }
 
-    Dette vil opprette en .gdvmrc-fil i gjeldende mappe med den festede versjonen. Når du kjører «gdvm run» i denne katalogen eller noen av underkatalogene, vil den festede versjonen bli brukt i stedet for standardversjonen.
+    Dette vil opprette en .gdvmrc-fil i gjeldende mappe med den festa versjonen. Når du kjører «gdvm run» i denne katalogen eller noen av underkatalogene, vil den festa versjonen brukes i stedet for standardversjonen.
 
     Dette er nyttig når du vil bruke en spesifikk versjon av Godot for et prosjekt uten å endre standardversjonen systemomfattende.
 help-pin-version = Versjonen som skal festes
 pinned-success = Versjon {$version} ble festet i .gdvmrc
 error-pin-version-not-found = Kan ikke feste versjon {$version}
-pin-subcommand-description = Setter eller oppdaterer .gdvmrc med forespurt versjon
+pin-subcommand-description = Sett eller oppdater .gdvmrc med forespurt versjon
 
 error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren.
 error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }
@@ -182,21 +182,21 @@ warning-project-version-mismatch =
     }
 
 error-project-version-mismatch = {"\u001b"}[31m{ $pinned ->
-        [1] Hvis du er sikker på at du vil kjøre prosjektet med den festede versjonen, kjør {"\u001b"}[0mgdvm run --force{"\u001b"}[31m. Ellers, oppdater den festede versjonen i .gdvmrc for å samsvare med prosjektversjonen, eller fjern .gdvmrc-fila for å bruke prosjektversjonen.
+        [1] Hvis du er sikker på at du vil kjøre prosjektet med den festa versjonen, kjør {"\u001b"}[0mgdvm run --force{"\u001b"}[31m. Ellers oppdater den festa versjonen i .gdvmrc for å samsvare med prosjektversjonen, eller fjern .gdvmrc-fila for å bruke prosjektversjonen.
         *[0] Hvis du er sikker på at du vil kjøre prosjektet med den forespurte versjonen, kjør {"\u001b"}[0mgdvm run --force <version>{"\u001b"}[31m.
     }{"\u001b"}[0m
 warning-project-version-mismatch-force = {"\u001b"}[33mHopper over bekreftelsesprompt og fortsetter med den { $pinned ->
-        [1] festede
+        [1] festa
         *[0] forespurte
     } versjonen {"\u001b"}[0m({ $requested_version }){"\u001b"}[33m.{"\u001b"}[0m
 
 help-run-args = Tilleggsargumenter som skal sendes til Godot-kjørbar fil (f.eks. -- path/to/project.godot).
 help-run-force =
-    Tving kjøring av prosjektet med den forespurte eller festede versjonen selv om den ikke samsvarer med prosjektversjonen.
+    Tving kjøring av prosjektet med den forespurte eller festa versjonen selv om den ikke samsvarer med prosjektversjonen.
 help-run-force-long =
-    Tving kjøring av prosjektet med den forespurte eller festede versjonen selv om den ikke samsvarer med prosjektversjonen.
+    Tving kjøring av prosjektet med den forespurte eller festa versjonen selv om den ikke samsvarer med prosjektversjonen.
 
-    Hvis du gjør dette, kan den forespurte eller festede versjonen av Godot overskrive prosjektfila. Hvis du fester versjoner, anbefales det i stedet å oppdatere den festede versjonen i .gdvmrc for å samsvare med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.
+    Hvis du gjør dette, kan den forespurte eller festa versjonen av Godot overskrive prosjektfila. Hvis du fester versjoner, anbefales det i stedet å oppdatere den festa versjonen i .gdvmrc for å samsvare med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.
 
 help-config = Administrer gdvm-konfigurasjon
 help-config-get = Hent en konfigurasjonsverdi
@@ -208,20 +208,20 @@ help-config-value = Verdien som skal settes for konfigurasjonsnøkkelen
 help-config-unset-key = Konfigurasjonsnøkkelen som skal fjernes (f.eks. github.token)
 help-config-show-sensitive = Vis sensitive konfigurasjonsverdier i klartekst
 help-config-available = List alle tilgjengelige konfigurasjonsnøkler og verdier, inkludert standardverdier
-warning-setting-sensitive = {"\u001b"}[33mAdvarsel: Du setter en sensitiv verdi som vil bli lagra i klartekst i hjemmekatalogen din.{"\u001b"}[0m
-config-set-prompt = Vennligst skriv inn verdien for { $key }:
+warning-setting-sensitive = {"\u001b"}[33mAdvarsel: Du setter en sensitiv verdi som vil lagres i klartekst i hjemmemappa di.{"\u001b"}[0m
+config-set-prompt = Vennligst oppgi verdien for { $key }:
 error-reading-input = Feil ved lesing av inndata
 config-set-success = Konfigurasjonen ble oppdatert.
 config-unset-success = Konfigurasjonsnøkkelen { $key } ble fjernet vellykket.
 config-key-not-set = Konfigurasjonsnøkkel ikke satt.
 error-unknown-config-key = Ukjent konfigurasjonsnøkkel.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk "get", "set" eller "list".
-error-parse-config = Kunne ikke tolke konfigurasjonsfilen: { $error }
+error-parse-config = Kunne ikke tolke konfigurasjonsfila: { $error }
 error-parse-config-using-default = {"\u001b"}[33mBruker standard konfigurasjonsverdier.{"\u001b"}[0m
 error-github-api = GitHub API-feil: { $error }
-error-github-rate-limit = GitHub API-ratebegrensning overskredet.
+error-github-rate-limit = GitHub API si rate-begrensing overskredet.
 
-  For å løse dette, vennligst opprett en personlig tilgangstoken på GitHub ved å besøke https://github.com/settings/tokens.
+  For å løse dette, vennligst opprett et personlig tilgangstoken på GitHub ved å besøke https://github.com/settings/tokens.
 
   Klikk på "Generate new token", velg kun de minimale tillatelsene som kreves (f.eks. public_repo), og sett deretter tokenet via miljøvariabelen GITHUB_TOKEN eller ved å kjøre:
 
