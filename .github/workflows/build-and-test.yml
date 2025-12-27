@@ -151,6 +151,7 @@ jobs:
         with:
           name: binary-${{ matrix.target }}
           path: binary.tar
+          retention-days: 1
 
   e2e:
     name: End-to-End Tests
@@ -313,14 +314,9 @@ jobs:
 
   delete-artifacts:
     name: Delete Artifacts (standalone runs)
-    runs-on: ubuntu-latest
     if: always() && (github.event_name == 'push' || github.event_name == 'pull_request')
     needs: [e2e]
     permissions:
       contents: read
       actions: write
-    steps:
-      - name: Delete binary artifacts
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: binary-*
+    uses: ./.github/workflows/cleanup-artifacts.yml
