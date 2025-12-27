@@ -103,6 +103,17 @@ jobs:
       target: x86_64-unknown-linux-gnu
     secrets: inherit
 
+  e2e-linux-i686:
+    needs: build-linux-i686
+    uses: ./.github/workflows/e2e-target.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      os: ubuntu-latest
+      target: i686-unknown-linux-gnu
+    secrets: inherit
+
   e2e-linux-aarch64:
     needs: build-linux-aarch64
     uses: ./.github/workflows/e2e-target.yml
@@ -123,6 +134,17 @@ jobs:
     with:
       os: windows-latest
       target: x86_64-pc-windows-msvc
+    secrets: inherit
+
+  e2e-windows-i686:
+    needs: build-windows-i686
+    uses: ./.github/workflows/e2e-target.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      os: windows-latest
+      target: i686-pc-windows-msvc
     secrets: inherit
 
   e2e-windows-arm64:
@@ -163,8 +185,10 @@ jobs:
     if: always() && (github.event_name == 'push' || github.event_name == 'pull_request')
     needs:
       - e2e-linux-x86_64
+      - e2e-linux-i686
       - e2e-linux-aarch64
       - e2e-windows-x86_64
+      - e2e-windows-i686
       - e2e-windows-arm64
       - e2e-macos-x86_64
       - e2e-macos-arm64

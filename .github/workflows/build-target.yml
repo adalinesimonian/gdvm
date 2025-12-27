@@ -70,7 +70,16 @@ jobs:
 
       - name: Install dependencies (Linux x86_32)
         if: inputs.os == 'ubuntu-latest' && inputs.target == 'i686-unknown-linux-gnu'
-        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-multilib \
+            libc6:i386 \
+            libgcc-s1:i386 \
+            libstdc++6:i386 \
+            libssl3:i386 \
+            zlib1g:i386
 
       - name: Build
         working-directory: ${{ env.WORKSPACE_DIR }}
@@ -104,7 +113,7 @@ jobs:
             -D clippy::unimplemented -D warnings
 
       - name: Run unit and integration tests
-        if: (success() || failure()) && (contains(inputs.target, 'x86_64') || contains(inputs.target, 'aarch64'))
+        if: (success() || failure())
         working-directory: ${{ env.WORKSPACE_DIR }}
         run: cargo test --release --features integration-tests --target ${{ inputs.target }}
 
