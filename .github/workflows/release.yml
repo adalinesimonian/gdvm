@@ -1,0 +1,291 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag (e.g. v1.2.3)"
+        required: true
+        type: string
+      social_post:
+        description: "Optional Bluesky post text"
+        required: false
+        type: string
+      post_to_bsky:
+        description: "Post to Bluesky"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.release_tag }}
+
+      - name: Validate release version against Cargo.toml and CHANGELOG.md
+        shell: bash
+        run: |
+          set -euo pipefail
+          crate_version="${{ github.event.inputs.release_tag }}"
+          expected_version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' crates/gdvm/Cargo.toml | head -1)
+
+          if [[ "$crate_version" != "v$expected_version" ]]; then
+            echo "::error::Release version $crate_version does not match Cargo.toml version $expected_version."
+            exit 1
+          fi
+
+          changelog_version=$(sed -nE 's/^## (v[0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CHANGELOG.md | head -1)
+
+          if [[ "$crate_version" != "$changelog_version" ]]; then
+            echo "::error::Release version $crate_version does not match CHANGELOG.md version $changelog_version."
+            exit 1
+          fi
+
+  build-and-test:
+    name: Build, Lint, Test
+    needs: validate
+    uses: ./.github/workflows/build-and-test.yml
+    with: {}
+    secrets: inherit
+
+  publish:
+    name: Publish release
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    permissions:
+      contents: write
+    env:
+      EXPECTED_TARGETS: |
+        x86_64-unknown-linux-gnu
+        i686-unknown-linux-gnu
+        aarch64-unknown-linux-gnu
+        x86_64-pc-windows-msvc
+        i686-pc-windows-msvc
+        aarch64-pc-windows-msvc
+        x86_64-apple-darwin
+        aarch64-apple-darwin
+    steps:
+      - name: Check out tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.release_tag }}
+          sparse-checkout: |
+            CHANGELOG.md
+            scripts/get-release-description.ps1
+
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: binary-*
+
+      - name: Extract & rename binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          while IFS= read -r target; do
+            [[ -z "$target" ]] && continue
+            dir="binary-${target}"
+            if [[ ! -d "$dir" ]]; then
+              echo "::error::artifact for $target not found"
+              exit 1
+            fi
+
+            tar -xf "$dir/binary.tar" -C "$dir"
+
+            if [[ "$target" == *windows-msvc ]]; then
+              mv "$dir/gdvm.exe" "dist/gdvm-${target}.exe"
+            else
+              mv "$dir/gdvm" "dist/gdvm-${target}"
+              chmod +x "dist/gdvm-${target}"
+            fi
+          done <<< "$EXPECTED_TARGETS"
+
+      - name: Generate release description
+        shell: pwsh
+        run: |
+          & scripts/get-release-description.ps1 | Out-File -FilePath "release_description.md" -Encoding utf8
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          name: ${{ github.event.inputs.release_tag }}
+          body_path: release_description.md
+          files: dist/*
+          draft: false
+          prerelease: false
+
+  social-update:
+    name: Update Social Media
+    runs-on: ubuntu-latest
+    needs: publish
+    if: ${{ github.event.inputs.post_to_bsky != 'false' }}
+    environment:
+      name: socials
+    steps:
+      - name: Create release update post text
+        id: post_text
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_tag="${{ github.event.inputs.release_tag }}"
+          custom_text="$(cat <<'EOF'
+          ${{ github.event.inputs.social_post }}
+          EOF
+          )"
+          custom_text_trimmed="$(printf '%s' "$custom_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+          if [ -n "$custom_text_trimmed" ]; then
+            echo "Using provided Bluesky text."
+            post_text="$custom_text"
+          else
+            echo "Using fallback generic Bluesky text."
+            post_text=$'${release_tag} of gdvm is now out!\n\nUpgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${release_tag}\n\nReport any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!'
+          fi
+
+          {
+            echo 'text<<EOF'
+            printf '%s\n' "$post_text"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post release update to BlueSky
+        continue-on-error: true
+        run: |
+          echo "Authenticating with Bluesky..."
+          session_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.server.createSession" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "identifier": "gdvm.io",
+              "password": "${{ secrets.BLUESKY_PASSWORD }}"
+            }')
+
+          access_token=$(echo "$session_response" | jq -r '.accessJwt')
+          did=$(echo "$session_response" | jq -r '.did')
+
+          if [ "$access_token" = "null" ] || [ "$did" = "null" ]; then
+            echo "❌ Failed to authenticate with Bluesky"
+            echo "Response: $session_response"
+            exit 1
+          fi
+          echo "Successfully authenticated with Bluesky."
+
+          timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+
+          post_text=$(cat << 'EOF' | jq -R -s '.'
+          ${{ steps.post_text.outputs.text }}
+          EOF
+          )
+
+          release_url="https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.event.inputs.release_tag }}"
+          html_content=$(curl -s "$release_url")
+
+          og_title=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:title"[^>]*content="\K[^"]*' | head -1)
+          if [ -z "$og_title" ]; then
+            og_title="gdvm ${{ github.event.inputs.release_tag }} Release"
+          fi
+
+          og_description=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:description"[^>]*content="\K[^"]*' | head -1)
+          if [ -z "$og_description" ]; then
+            og_description="Latest release of gdvm - Godot Version Manager"
+          fi
+
+          og_image=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:image"[^>]*content="\K[^"]*' | head -1)
+
+          embed_external="{
+            \"uri\": \"$release_url\",
+            \"title\": $(echo "$og_title" | jq -R '.'),
+            \"description\": $(echo "$og_description" | jq -R '.')
+          }"
+
+          if [ -n "$og_image" ]; then
+            if [[ "$og_image" != http* ]]; then
+              og_image="https://github.com$og_image"
+            fi
+
+            temp_image="/tmp/og_image"
+            curl -s "$og_image" -o "$temp_image"
+            image_content_type=$(curl -s -I "$og_image" | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r\n')
+
+            blob_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.uploadBlob" \
+              -H "Authorization: Bearer $access_token" \
+              -H "Content-Type: $image_content_type" \
+              --data-binary "@$temp_image")
+
+            rm -f "$temp_image"
+
+            blob_ref=$(echo "$blob_response" | jq '.blob')
+
+            if [ "$blob_ref" != "null" ]; then
+              embed_external=$(echo "$embed_external" | jq --argjson thumb "$blob_ref" '. + {"thumb": $thumb}')
+              echo "✅ Image uploaded successfully."
+            else
+              echo "⚠️ Image upload failed, continuing without thumbnail."
+            fi
+          else
+            echo "⚠️ No OpenGraph image found, continuing without thumbnail."
+          fi
+
+          jq -n \
+            --arg repo "$did" \
+            --arg collection "app.bsky.feed.post" \
+            --arg type "app.bsky.feed.post" \
+            --argjson text "$post_text" \
+            --arg createdAt "$timestamp" \
+            --arg embed_type "app.bsky.embed.external" \
+            --argjson external "$embed_external" \
+            '{
+              repo: $repo,
+              collection: $collection,
+              record: {
+                "$type": $type,
+                text: $text,
+                createdAt: $createdAt,
+                embed: {
+                  "$type": $embed_type,
+                  external: $external
+                }
+              }
+            }' > /tmp/post_payload.json
+
+          post_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.createRecord" \
+            -H "Authorization: Bearer $access_token" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data-binary "@/tmp/post_payload.json")
+
+          rm -f /tmp/post_payload.json
+
+          if echo "$post_response" | jq -e '.uri' > /dev/null; then
+            post_uri=$(echo "$post_response" | jq -r '.uri')
+            echo "✅ Successfully posted to Bluesky!"
+            echo "Post URI: $post_uri"
+          else
+            echo "❌ Failed to post to Bluesky"
+            echo "Response: $post_response"
+            exit 1
+          fi
+
+  delete-artifacts:
+    name: Delete Artifacts
+    runs-on: ubuntu-latest
+    needs: [publish]
+    if: always()
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Delete binary artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: binary-*

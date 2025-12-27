@@ -1,5 +1,8 @@
 name: Build and Test
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches:
@@ -13,8 +16,8 @@ on:
     paths-ignore:
       - "gh-pages/**"
       - "*.md"
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_call:
+    inputs: {}
 
 concurrency:
   group: ${{ github.event_name }}-${{ github.event.number || github.run_id }}
@@ -90,29 +93,6 @@ jobs:
       - name: Build
         working-directory: ${{ runner.os == 'Windows' && env.DEV_DRIVE_WORKSPACE || github.workspace }}
         run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Validate release version against Cargo.toml and CHANGELOG.md
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          set -euo pipefail
-          crate_version="${{ github.ref_name }}"
-          expected_version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' crates/gdvm/Cargo.toml | head -1)
-
-          if [[ "$crate_version" != "v$expected_version" ]]; then
-            echo "::error::Release version $crate_version does not match Cargo.toml version $expected_version."
-            echo "::error::Please update the Cargo.toml version to match the release tag."
-            exit 1
-          fi
-
-          # Read the first version header underneath the unreleased section in CHANGELOG.md
-          changelog_version=$(sed -nE 's/^## (v[0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CHANGELOG.md | head -1)
-
-          if [[ "$crate_version" != "$changelog_version" ]]; then
-            echo "::error::Release version $crate_version does not match CHANGELOG.md version $changelog_version."
-            echo "::error::Please update the CHANGELOG.md version to match the release tag."
-            exit 1
-          fi
 
       - name: Check i18n bundles for missing keys
         if: success() || failure()
@@ -325,248 +305,14 @@ jobs:
         shell: bash
         run: gdvm run stable --console=true -- --version | grep stable.official
 
-  publish:
-    name: Publish binaries
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: e2e
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      id-token: write
-
-    env:
-      EXPECTED_TARGETS: |
-        x86_64-unknown-linux-gnu
-        i686-unknown-linux-gnu
-        aarch64-unknown-linux-gnu
-        x86_64-pc-windows-msvc
-        i686-pc-windows-msvc
-        aarch64-pc-windows-msvc
-        x86_64-apple-darwin
-        aarch64-apple-darwin
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-        with:
-          sparse-checkout: |
-            CHANGELOG.md
-            scripts/get-release-description.ps1
-
-      - name: Download binary artifacts
-        uses: actions/download-artifact@v7
-        with:
-          pattern: binary-*
-
-      - name: Extract & rename binaries
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-
-          while IFS= read -r target; do
-            [[ -z "$target" ]] && continue
-            dir="binary-${target}"
-            if [[ ! -d "$dir" ]]; then
-              echo "::error::artifact for $target not found"
-              exit 1
-            fi
-
-            tar -xf "$dir/binary.tar" -C "$dir"
-
-            if [[ "$target" == *windows-msvc ]]; then
-              mv "$dir/gdvm.exe" "dist/gdvm-${target}.exe"
-            else
-              mv "$dir/gdvm" "dist/gdvm-${target}"
-              chmod +x "dist/gdvm-${target}"
-            fi
-          done <<< "$EXPECTED_TARGETS"
-
-      - name: Generate release description
-        shell: pwsh
-        run: |
-          & scripts/get-release-description.ps1 | Out-File -FilePath "release_description.md" -Encoding utf8
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          body_path: release_description.md
-          files: dist/*
-          draft: false
-          prerelease: false
-
-  social-update:
-    name: Update Social Media
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: publish
-
-    environment:
-      name: socials
-
-    steps:
-      - name: Create release update post text
-        id: post_text
-        run: |
-          echo 'text<<EOF' >> $GITHUB_OUTPUT
-          echo "${{ github.ref_name }} of gdvm is now out!" >> $GITHUB_OUTPUT
-          echo '' >> $GITHUB_OUTPUT
-          echo "Upgrade with `gdvm upgrade` or check out the latest improvements at https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          echo '' >> $GITHUB_OUTPUT
-          echo 'Report any issues you may encounter at https://github.com/adalinesimonian/gdvm/issues. Thank you for using gdvm!' >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
-
-      - name: Post release update to BlueSky
-        continue-on-error: true
-        run: |
-          echo "Authenticating with Bluesky..."
-          # Create session with Bluesky.
-          session_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.server.createSession" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "identifier": "gdvm.io",
-              "password": "${{ secrets.BLUESKY_PASSWORD }}"
-            }')
-
-          # Extract access token and DID from response.
-          access_token=$(echo "$session_response" | jq -r '.accessJwt')
-          did=$(echo "$session_response" | jq -r '.did')
-
-          if [ "$access_token" = "null" ] || [ "$did" = "null" ]; then
-            echo "❌ Failed to authenticate with Bluesky"
-            echo "Response: $session_response"
-            exit 1
-          fi
-          echo "Successfully authenticated with Bluesky."
-
-          # Create timestamp.
-          timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
-
-          # Prepare post text.
-          post_text=$(cat << 'EOF' | jq -R -s '.'
-          ${{ steps.post_text.outputs.text }}
-          EOF
-          )
-
-          echo "Fetching OpenGraph metadata from GitHub release..."
-
-          # Fetch OpenGraph metadata from the release URL.
-          release_url="https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.ref_name }}"
-
-          # Fetch the HTML and extract OpenGraph metadata.
-          html_content=$(curl -s "$release_url")
-
-          # Extract og:title.
-          og_title=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:title"[^>]*content="\K[^"]*' | head -1)
-          if [ -z "$og_title" ]; then
-            og_title="gdvm ${{ github.ref_name }} Release"
-          fi
-
-          # Extract og:description.
-          og_description=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:description"[^>]*content="\K[^"]*' | head -1)
-          if [ -z "$og_description" ]; then
-            og_description="Latest release of gdvm - Godot Version Manager"
-          fi
-
-          # Extract og:image.
-          og_image=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:image"[^>]*content="\K[^"]*' | head -1)
-
-          echo "Title: $og_title"
-          echo "Description: $og_description"
-
-          # Prepare embed external object.
-          embed_external="{
-            \"uri\": \"$release_url\",
-            \"title\": $(echo "$og_title" | jq -R '.'),
-            \"description\": $(echo "$og_description" | jq -R '.')
-          }"
-
-          # If there's an og:image, fetch and upload it.
-          if [ -n "$og_image" ]; then
-            echo "Found OpenGraph image, downloading and uploading..."
-            # Handle relative URLs
-            if [[ "$og_image" != http* ]]; then
-              og_image="https://github.com$og_image"
-            fi
-
-            # Download the image to a temporary file.
-            temp_image="/tmp/og_image"
-            curl -s "$og_image" -o "$temp_image"
-            image_content_type=$(curl -s -I "$og_image" | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r\n')
-
-            # Upload the image as a blob.
-            blob_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.uploadBlob" \
-              -H "Authorization: Bearer $access_token" \
-              -H "Content-Type: $image_content_type" \
-              --data-binary "@$temp_image")
-
-            # Clean up temp file.
-            rm -f "$temp_image"
-
-            # Extract the blob reference.
-            blob_ref=$(echo "$blob_response" | jq '.blob')
-
-            if [ "$blob_ref" != "null" ]; then
-              # Add thumb to embed external
-              embed_external=$(echo "$embed_external" | jq --argjson thumb "$blob_ref" '. + {"thumb": $thumb}')
-              echo "✅ Image uploaded successfully."
-            else
-              echo "⚠️ Image upload failed, continuing without thumbnail."
-            fi
-          else
-            echo "⚠️ No OpenGraph image found, continuing without thumbnail."
-          fi
-
-          echo "Posting to Bluesky..."
-          # Create the post payload and send it.
-          jq -n \
-            --arg repo "$did" \
-            --arg collection "app.bsky.feed.post" \
-            --arg type "app.bsky.feed.post" \
-            --argjson text "$post_text" \
-            --arg createdAt "$timestamp" \
-            --arg embed_type "app.bsky.embed.external" \
-            --argjson external "$embed_external" \
-            '{
-              repo: $repo,
-              collection: $collection,
-              record: {
-                "$type": $type,
-                text: $text,
-                createdAt: $createdAt,
-                embed: {
-                  "$type": $embed_type,
-                  external: $external
-                }
-              }
-            }' > /tmp/post_payload.json
-
-          post_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.createRecord" \
-            -H "Authorization: Bearer $access_token" \
-            -H "Content-Type: application/json; charset=utf-8" \
-            --data-binary "@/tmp/post_payload.json")
-
-          # Clean up.
-          rm -f /tmp/post_payload.json
-
-          if echo "$post_response" | jq -e '.uri' > /dev/null; then
-            post_uri=$(echo "$post_response" | jq -r '.uri')
-            echo "✅ Successfully posted to Bluesky!"
-            echo "Post URI: $post_uri"
-          else
-            echo "❌ Failed to post to Bluesky"
-            echo "Response: $post_response"
-            exit 1
-          fi
-
   delete-artifacts:
-    name: Delete Artifacts
+    name: Delete Artifacts (standalone runs)
     runs-on: ubuntu-latest
-    if: always()
-    needs: [e2e, publish]
+    if: always() && github.event_name != 'workflow_call'
+    needs: [e2e]
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Delete binary artifacts
         uses: geekyeggo/delete-artifact@v5

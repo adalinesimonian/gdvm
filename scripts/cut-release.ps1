@@ -23,13 +23,55 @@
 
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [string]$Version
+    [string]$Version,
+
+    [Parameter(Mandatory = $false)]
+    [string]$SocialPost,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$NoBluesky,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$DryRun
 )
 
 # Ensure the current directory is the repository root.
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $RepoRoot = Split-Path -Parent $ScriptDir
 Set-Location $RepoRoot
+
+$SocialPostMaxLength = 280
+$SocialPostFilePath = Join-Path $RepoRoot ".release-social-post.md"
+$ReleaseUrl = "https://github.com/adalinesimonian/gdvm/releases/tag/v$Version"
+
+$PostToBluesky = -not $NoBluesky
+$IsDryRun = [bool]$DryRun
+$HasBlockingIssues = $false
+
+# Records a warning during dry run, otherwise exits.
+function WarnOrExit {
+    param([string]$Message)
+
+    if ($IsDryRun) {
+        Write-Host "DRY RUN warning: $Message" -ForegroundColor Yellow
+        $script:HasBlockingIssues = $true
+    }
+    else {
+        Exit-WithError $Message
+    }
+}
+
+$GhCli = Get-Command gh -ErrorAction SilentlyContinue
+if (-not $GhCli) {
+    WarnOrExit "GitHub CLI (gh) is not installed. Install from https://cli.github.com/ and run 'gh auth login'."
+}
+
+if (-not $IsDryRun) {
+    gh auth status 1>$null 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "GitHub CLI (gh) is not authenticated. Run: gh auth login"
+    }
+}
 
 # Exits with an error message and exit code.
 function Exit-WithError {
@@ -58,6 +100,62 @@ function Compare-SemanticVersion {
     return 0
 }
 
+# Retrieves the Bluesky post text from CLI input, environment, or a local file.
+function Get-SocialPostContent {
+    param(
+        [string]$CliText,
+        [string]$FilePath
+    )
+
+    $textSource = $CliText
+
+    if ([string]::IsNullOrWhiteSpace($textSource)) {
+        $EnvText = $env:GDVM_RELEASE_SOCIAL_POST
+        if (-not [string]::IsNullOrWhiteSpace($EnvText)) {
+            $textSource = $EnvText
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($textSource) -and (Test-Path $FilePath)) {
+        $fileContent = Get-Content $FilePath -Raw
+        if (-not [string]::IsNullOrWhiteSpace($fileContent)) {
+            $textSource = $fileContent
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($textSource)) {
+        return ""
+    }
+
+    return $textSource.Trim()
+}
+
+function Expand-SocialPostPlaceholders {
+    param(
+        [string]$Text,
+        [string]$ReleaseUrl
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return ""
+    }
+
+    return $Text.Replace("{{RELEASE_URL}}", $ReleaseUrl)
+}
+
+function Assert-SocialPostLength {
+    param(
+        [string]$Text,
+        [int]$MaxLength,
+        [string]$FilePath
+    )
+
+    $length = $Text.Length
+    if ($length -gt $MaxLength) {
+        Exit-WithError "Bluesky post text is $length characters, exceeding the limit of $MaxLength. Please shorten it and rerun."
+    }
+}
+
 # Validate version format.
 if (-not (Test-SemanticVersion $Version)) {
     Exit-WithError "Version must be in the format Major.Minor.Patch (e.g., 1.2.3)"
@@ -68,7 +166,7 @@ Write-Host "Cutting release for version $Version..." -ForegroundColor Green
 # Check that current branch is main.
 $CurrentBranch = git rev-parse --abbrev-ref HEAD
 if ($CurrentBranch -ne "main") {
-    Exit-WithError "Current branch is '$CurrentBranch', but must be 'main'"
+    WarnOrExit "Current branch is '$CurrentBranch', but must be 'main'"
 }
 
 # Check for staged or unstaged changes, ignoring untracked files and CHANGELOG.md.
@@ -76,16 +174,17 @@ $StagedChanges = git diff --cached --name-only | Where-Object { $_ -ne "CHANGELO
 $UnstagedChanges = git diff --name-only | Where-Object { $_ -ne "CHANGELOG.md" }
 
 if ($StagedChanges -or $UnstagedChanges) {
-    Exit-WithError "There are staged or unstaged changes. Please commit or stash them first."
+    WarnOrExit "There are staged or unstaged changes. Please commit or stash them first."
 }
 
 # Check that current branch is in sync with origin.
 git fetch origin main
 $LocalCommit = git rev-parse HEAD
 $RemoteCommit = git rev-parse origin/main
+$OriginalHead = $LocalCommit
 
 if ($LocalCommit -ne $RemoteCommit) {
-    Exit-WithError "Local branch is not in sync with origin/main. Please pull or push as needed."
+    WarnOrExit "Local branch is not in sync with origin/main. Please pull or push as needed."
 }
 
 # Check that CHANGELOG.md has content in the unreleased section.
@@ -131,6 +230,12 @@ else {
     Write-Host "Version validation passed. Current: $CurrentVersion, New: $Version" -ForegroundColor Green
 }
 
+$SocialPostRaw = Get-SocialPostContent -CliText $SocialPost -FilePath $SocialPostFilePath
+$SocialPostContent = Expand-SocialPostPlaceholders -Text $SocialPostRaw -ReleaseUrl $ReleaseUrl
+if (-not [string]::IsNullOrWhiteSpace($SocialPostContent)) {
+    Assert-SocialPostLength -Text $SocialPostContent -MaxLength $SocialPostMaxLength -FilePath $SocialPostFilePath
+}
+
 # Update CHANGELOG.md.
 Write-Host "Updating CHANGELOG.md..." -ForegroundColor Yellow
 
@@ -142,10 +247,12 @@ $UnreleasedText = ($UnreleasedLines | Where-Object { $_.Trim() }) -join "`n"
 $PreviousVersionMatch = [regex]::Match($ChangelogContent, '## v(\d+\.\d+\.\d+)\s')
 if ($PreviousVersionMatch.Success) {
     $PreviousVersion = $PreviousVersionMatch.Groups[1].Value
-} elseif ($UpdateCargoFiles) {
+}
+elseif ($UpdateCargoFiles) {
     # Use the version from Cargo.toml if no previous version found.
     $PreviousVersion = $CurrentVersion
-} else {
+}
+else {
     # Should never happen.
     Exit-WithError "Could not determine previous version from CHANGELOG.md or Cargo.toml."
 }
@@ -165,6 +272,43 @@ $NewUnreleasedSection = @"
 
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v$Version...main
 "@
+
+if ($IsDryRun) {
+    Write-Host "" -ForegroundColor Gray
+    Write-Host "DRY RUN: No changes will be made. Planned actions:" -ForegroundColor Green
+    Write-Host "- Would update CHANGELOG.md: move Unreleased to v$Version and create new Unreleased section." -ForegroundColor Gray
+    if ($UpdateCargoFiles) {
+        Write-Host "- Would bump version in crates/gdvm/Cargo.toml to $Version and update Cargo.lock." -ForegroundColor Gray
+    }
+    else {
+        Write-Host "- Version already set, would leave Cargo files unchanged." -ForegroundColor Gray
+    }
+    if (-not [string]::IsNullOrWhiteSpace($SocialPostContent)) {
+        Write-Host "- Would send social post (length $($SocialPostContent.Length)): $SocialPostContent" -ForegroundColor Gray
+    }
+    else {
+        Write-Host "- No social post provided, would skip Bluesky post body." -ForegroundColor Gray
+    }
+
+    $CommitMessage = "chore: bump gdvm version to $Version"
+    $TagName = "v$Version"
+    $PostFlag = if ($PostToBluesky) { "true" } else { "false" }
+
+    Write-Host "- Would create commit: $CommitMessage" -ForegroundColor Gray
+    Write-Host "- Would create annotated tag: $TagName" -ForegroundColor Gray
+    Write-Host "- Would push commit to origin/main and push tag $TagName" -ForegroundColor Gray
+    Write-Host "- Would trigger workflow: gh workflow run release.yml --ref $TagName -f release_tag=$TagName -f social_post=... -f post_to_bsky=$PostFlag" -ForegroundColor Gray
+    Write-Host "  social_post preview: $SocialPostContent" -ForegroundColor Gray
+
+    if ($HasBlockingIssues) {
+        Write-Host "`nDry run completed with warnings above. Resolve them before running for real." -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "`nDry run completed with no blocking issues detected." -ForegroundColor Green
+    }
+
+    exit 0
+}
 
 # Create a stash to save the current state before making changes.
 Write-Host "Saving current git state..." -ForegroundColor Yellow
@@ -196,7 +340,8 @@ $YarnExists = Get-Command yarn -ErrorAction SilentlyContinue
 if ($YarnExists) {
     $PrettierResult = yarn dlx prettier --write CHANGELOG.md 2>&1
     $PrettierExitCode = $LASTEXITCODE
-} else {
+}
+else {
     $PrettierResult = npx prettier --write CHANGELOG.md 2>&1
     $PrettierExitCode = $LASTEXITCODE
 }
@@ -208,7 +353,8 @@ if ($PrettierExitCode -ne 0) {
 # Stage changes and show diff.
 if ($UpdateCargoFiles) {
     git add $CargoTomlPath "Cargo.lock" "CHANGELOG.md"
-} else {
+}
+else {
     git add "CHANGELOG.md"
 }
 
@@ -226,7 +372,8 @@ if ($UserInput -notmatch '^[Yy]$') {
     if ($UpdateCargoFiles) {
         git reset HEAD $CargoTomlPath "Cargo.lock" "CHANGELOG.md" 2>&1 | Out-Null
         git checkout HEAD -- $CargoTomlPath "Cargo.lock" "CHANGELOG.md" 2>&1 | Out-Null
-    } else {
+    }
+    else {
         git reset HEAD "CHANGELOG.md" 2>&1 | Out-Null
         git checkout HEAD -- "CHANGELOG.md" 2>&1 | Out-Null
     }
@@ -248,6 +395,28 @@ if ($LASTEXITCODE -ne 0) {
     Exit-WithError "Failed to create commit."
 }
 
+Write-Host "`nFinal verification before pushing and triggering the release." -ForegroundColor Yellow
+Write-Host "Type ""yes"" to continue. Any other input cancels and restores the repository state: " -ForegroundColor Yellow -NoNewline
+$FinalConfirmation = Read-Host
+
+if ($FinalConfirmation -ne "yes") {
+    Write-Host "Release cancelled. Reverting repository to its previous state..." -ForegroundColor Yellow
+
+    git reset --hard $OriginalHead 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Exit-WithError "Failed to restore repository to original state."
+    }
+
+    if ($HasStash) {
+        git stash pop 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Exit-WithError "Failed to restore saved stash state."
+        }
+    }
+
+    exit 0
+}
+
 # Delete the stash if it was created.
 if ($HasStash) {
     Write-Host "Deleting stash created by the release script..." -ForegroundColor Yellow
@@ -255,7 +424,8 @@ if ($HasStash) {
     git stash drop -q "$StashName"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Failed to delete stash '$StashName'. It may still exist." -ForegroundColor Yellow
-    } else {
+    }
+    else {
         Write-Host "Stash '$StashName' deleted successfully." -ForegroundColor Green
     }
 }
@@ -270,7 +440,7 @@ if ($LASTEXITCODE -ne 0) {
 $TagName = "v$Version"
 Write-Host "Creating tag: $TagName" -ForegroundColor Green
 
-git tag $TagName
+git tag -a $TagName -m "gdvm $Version"
 if ($LASTEXITCODE -ne 0) {
     Exit-WithError "Failed to create tag '$TagName'."
 }
@@ -281,9 +451,24 @@ if ($LASTEXITCODE -ne 0) {
     Exit-WithError "Failed to push tag '$TagName' to origin."
 }
 
-Write-Host "`nRelease $Version created successfully! 🎉" -ForegroundColor Green
+# Trigger release workflow via GitHub Actions using gh CLI.
+$PostFlag = if ($PostToBluesky) { "true" } else { "false" }
+
+Write-Host "Triggering release workflow on $TagName..." -ForegroundColor Green
+
+gh workflow run release.yml `
+    --ref $TagName `
+    -f release_tag=$TagName `
+    -f social_post="$SocialPostContent" `
+    -f post_to_bsky=$PostFlag
+
+if ($LASTEXITCODE -ne 0) {
+    Exit-WithError "Failed to trigger release workflow."
+}
+
+Write-Host "`nRelease workflow started for $Version! 🎉" -ForegroundColor Green
 Write-Host "- Commit: $CommitMessage" -ForegroundColor Gray
 Write-Host "- Tag: $TagName" -ForegroundColor Gray
 Write-Host "- Changelog updated with new version section." -ForegroundColor Gray
 Write-Host "See CI for build and release artifacts:" -ForegroundColor Gray
-Write-Host "  https://github.com/adalinesimonian/gdvm/actions/workflows/build-and-test.yml" -ForegroundColor Gray
+Write-Host "  https://github.com/adalinesimonian/gdvm/actions/workflows/release.yml" -ForegroundColor Gray

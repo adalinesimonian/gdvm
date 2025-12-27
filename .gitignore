@@ -13,3 +13,4 @@
 .DS_Store
 *.log
 **/*.github_token
+.release-social-post.md
