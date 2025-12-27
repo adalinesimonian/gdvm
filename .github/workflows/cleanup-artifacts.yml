@@ -1,0 +1,116 @@
+name: Cleanup Artifacts
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  cleanup:
+    name: Cleanup artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete artifacts
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const runId = context.runId;
+            const { owner, repo } = context.repo;
+
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner,
+              repo,
+              run_id: runId,
+            });
+
+            let allTestsSucceeded = true;
+            const successTargets = new Set();
+            const targetStatus = new Map();
+
+            const extractTarget = (job) => {
+              if (!job.name) {
+                return undefined;
+              }
+
+              const match = job.name.match(/End-to-End Tests \([^,]+,\s*(.+)\)/);
+
+              if (match) {
+                return match[1].trim();
+              }
+
+              return job.matrix?.target;
+            };
+
+            for (const job of jobs) {
+              if (!job.name?.includes('End-to-End Tests')) {
+                continue;
+              }
+
+              const target = extractTarget(job);
+
+              if (job.conclusion !== 'success') {
+                allTestsSucceeded = false;
+                if (target) {
+                  targetStatus.set(target, 'failed');
+                }
+                continue;
+              }
+
+              if (target) {
+                successTargets.add(target);
+                targetStatus.set(target, 'success');
+              }
+            }
+
+            core.info(`Successful e2e targets: ${[...successTargets].join(', ') || 'none'}`);
+
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner,
+              repo,
+              run_id: runId,
+            });
+
+            for (const artifact of artifacts) {
+              const { name, id } = artifact;
+
+              if (!name) {
+                continue;
+              }
+
+              if (name.startsWith('binary-')) {
+                const target = name.substring('binary-'.length);
+                const status = targetStatus.get(target) || 'missing';
+
+                if (status === 'success') {
+                  core.info(`Deleting binary artifact '${name}' (id: ${id})`);
+                  await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: id });
+                  continue;
+                }
+
+                if (status === 'failed') {
+                  core.info(`Skipping '${name}' (e2e for target failed).`);
+                  continue;
+                }
+
+                if (!allTestsSucceeded) {
+                  core.info(`Keeping '${name}' (some e2e jobs failed).`);
+                  continue;
+                }
+
+                core.info(`Deleting '${name}' (all e2e jobs succeeded).`);
+                await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: id });
+                continue;
+              }
+
+              if (name === 'release-metadata') {
+                if (!allTestsSucceeded) {
+                  core.info(`Skipping release metadata deletion; not all e2e jobs succeeded.`);
+                  continue;
+                }
+
+                core.info(`Deleting release metadata artifact '${name}' (id: ${id})`);
+                await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: id });
+              }
+            }
