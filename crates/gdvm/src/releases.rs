@@ -46,19 +46,20 @@ impl ReleaseCatalog {
                 .clear_capabilities_cache(cache.last_fetched)?;
         }
 
-        if should_refresh && !use_cache_only {
-            if let Err(error) = self.update_cache(&mut cache, i18n) {
-                if cache.releases.is_empty() {
-                    return Err(error);
-                }
-
-                // Defer to cached data if available.
-                crate::eprintln_i18n!(
-                    i18n,
-                    "warning-fetching-releases-using-cache",
-                    error = error.to_string()
-                );
+        if should_refresh
+            && !use_cache_only
+            && let Err(error) = self.update_cache(&mut cache, i18n)
+        {
+            if cache.releases.is_empty() {
+                return Err(error);
             }
+
+            // Defer to cached data if available.
+            crate::eprintln_i18n!(
+                i18n,
+                "warning-fetching-releases-using-cache",
+                error = error.to_string()
+            );
         }
 
         Ok(filter_cached_releases(&cache, filter))

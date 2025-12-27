@@ -450,10 +450,10 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
 /// with a following argument, that single value wins. Otherwise, collect arguments that do not look
 /// like flags, i.e. those that do not start with "-".
 fn collect_possible_paths(raw_args: &[String]) -> Vec<&str> {
-    if let Some(index) = raw_args.iter().position(|arg| arg == "--path") {
-        if let Some(path_arg) = raw_args.get(index + 1) {
-            return vec![path_arg.as_str()];
-        }
+    if let Some(index) = raw_args.iter().position(|arg| arg == "--path")
+        && let Some(path_arg) = raw_args.get(index + 1)
+    {
+        return vec![path_arg.as_str()];
     }
 
     raw_args
