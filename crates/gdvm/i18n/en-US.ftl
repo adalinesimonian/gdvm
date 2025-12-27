@@ -29,6 +29,7 @@ help-cache-only = Use only cached release information without querying the GitHu
 help-limit = Number of releases to list, default is 10. Use 0 to list all
 help-clear-cache = Clears the gdvm release cache
 help-refresh = Refresh the gdvm release cache from the registry
+help-refresh-flag = Refresh the registry cache before running this command
 
 help-force = Force reinstall even if the version is already installed.
 help-redownload = Redownload the version even if it's already downloaded in the cache.

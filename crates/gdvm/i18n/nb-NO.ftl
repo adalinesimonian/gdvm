@@ -29,6 +29,7 @@ help-cache-only = Bruk kun hurtigbufret utgivelsesinformasjon uten å spørre Gi
 help-limit = Antall utgivelser som skal vises, standard er 10. Bruk 0 for å vise alle
 help-clear-cache = Tøm gdvm-utgivelseshurtigbufferet
 help-refresh = Oppdater gdvm-utgivelseshurtigbufferet fra registeret
+help-refresh-flag = Oppdater registerhurtigbufferen før denne kommandoen kjøres
 
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
 help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i hurtigbufferet.

@@ -29,6 +29,7 @@ help-cache-only = Utiliser uniquement les informations de versions en cache sans
 help-limit = Nombre de versions à lister, par défaut 10. Utilisez 0 pour lister toutes
 help-clear-cache = Vide le cache des versions gdvm
 help-refresh = Actualiser le cache des versions gdvm depuis le registre
+help-refresh-flag = Actualiser le cache du registre avant d'exécuter cette commande
 
 help-force = Forcer la réinstallation même si la version est déjà installée.
 help-redownload = Retélécharger la version même si elle est déjà présente dans le cache.

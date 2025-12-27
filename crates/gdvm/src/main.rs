@@ -14,6 +14,21 @@ use std::{
     path::Path,
 };
 
+fn refresh_flag(i18n: &I18n) -> Arg {
+    Arg::new("refresh")
+        .long("refresh")
+        .num_args(0)
+        .help(t!(i18n, "help-refresh-flag"))
+}
+
+fn refresh_cache_if_requested(manager: &GodotManager, refresh: bool) -> Result<()> {
+    if refresh {
+        manager.refresh_cache()?;
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let i18n = I18n::new(100)?;
     let manager = GodotManager::new(&i18n)?;
@@ -115,7 +130,8 @@ fn main() -> Result<()> {
                         .long("redownload")
                         .num_args(0)
                         .help(t!(i18n, "help-redownload")),
-                ),
+                )
+                .arg(refresh_flag(&i18n)),
         )
         .subcommand(Command::new("list").about(t!(i18n, "help-list")))
         .subcommand(
@@ -168,7 +184,8 @@ fn main() -> Result<()> {
                         .num_args(0..)
                         .last(true)
                         .help(t!(i18n, "help-run-args")),
-                ),
+                )
+                .arg(refresh_flag(&i18n)),
         )
         .subcommand(
             Command::new("remove")
@@ -221,7 +238,8 @@ fn main() -> Result<()> {
                         .default_value("10")
                         .value_parser(clap::value_parser!(usize))
                         .help(t!(i18n, "help-limit")),
-                ),
+                )
+                .arg(refresh_flag(&i18n)),
         )
         .subcommand(Command::new("clear-cache").about(t!(i18n, "help-clear-cache")))
         .subcommand(Command::new("refresh").about(t!(i18n, "help-refresh")))
@@ -238,7 +256,8 @@ fn main() -> Result<()> {
                         .long("csharp")
                         .num_args(0)
                         .help(t!(i18n, "help-csharp")),
-                ),
+                )
+                .arg(refresh_flag(&i18n)),
         )
         .subcommand(
             Command::new("upgrade").about(t!(i18n, "help-upgrade")).arg(
@@ -263,7 +282,8 @@ fn main() -> Result<()> {
                         .long("csharp")
                         .num_args(0)
                         .help(t!(i18n, "help-csharp")),
-                ),
+                )
+                .arg(refresh_flag(&i18n)),
         )
         .subcommand(
             Command::new("config")
@@ -342,6 +362,9 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
     let version_input = matches.get_one::<String>("version").unwrap();
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
+    let refresh = matches.get_flag("refresh");
+
+    refresh_cache_if_requested(manager, refresh)?;
 
     let requested_version = GodotVersion::from_match_str(version_input)?;
     let mut gv = manager
@@ -407,6 +430,9 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     let version_input = matches.get_one::<String>("version");
     let console = matches.get_flag("console");
     let force_on_mismatch = matches.get_flag("force");
+    let refresh = matches.get_flag("refresh");
+
+    refresh_cache_if_requested(manager, refresh)?;
 
     sub_run_inner(RunConfig {
         i18n,
@@ -546,6 +572,9 @@ fn sub_search(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
     let filter = matches.get_one::<String>("filter").map(|s| s.as_str());
     let include_pre = matches.get_flag("include-pre");
     let cache_only = matches.get_flag("cache-only");
+    let refresh = matches.get_flag("refresh");
+
+    refresh_cache_if_requested(manager, refresh)?;
 
     let requested_version = match filter {
         Some(filter) => Some(GodotVersion::from_match_str(filter)?),
@@ -592,6 +621,7 @@ fn sub_refresh(i18n: &I18n, manager: &GodotManager) -> Result<()> {
 /// Handle the 'use' subcommand
 fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
     let csharp = matches.get_flag("csharp");
+    let refresh = matches.get_flag("refresh");
 
     let version_input = match matches.get_one::<String>("version") {
         Some(v) => v,
@@ -606,6 +636,8 @@ fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         println_i18n!(i18n, "default-unset-success");
         return Ok(());
     }
+
+    refresh_cache_if_requested(manager, refresh)?;
 
     let mut requested_version = GodotVersion::from_match_str(version_input)?;
 
@@ -633,7 +665,10 @@ fn sub_upgrade(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
 fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
     let version_str = matches.get_one::<String>("version").unwrap();
     let csharp = matches.get_flag("csharp");
+    let refresh = matches.get_flag("refresh");
     let mut version = GodotVersion::from_match_str(version_str)?;
+
+    refresh_cache_if_requested(manager, refresh)?;
 
     version.is_csharp = Some(csharp);
 
