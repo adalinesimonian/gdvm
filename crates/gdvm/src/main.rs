@@ -1,8 +1,11 @@
 use gdvm::config::{self, ConfigOps};
 use gdvm::godot_manager::{GodotManager, InstallOutcome};
 use gdvm::i18n::I18n;
+use gdvm::run_version_resolver::{
+    RunResolutionRequest, RunVersionResolver, warn_project_version_mismatch,
+};
 use gdvm::version_utils::{self, GodotVersion};
-use gdvm::{eprintln_i18n, println_i18n, t, t_w};
+use gdvm::{eprintln_i18n, println_i18n, t};
 
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgMatches, Command, value_parser};
@@ -469,73 +472,20 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
     // given.
     let possible_paths = collect_possible_paths(raw_args);
 
-    let resolved_version = if let Some(v) = version_input {
-        let mut requested_version = GodotVersion::from_match_str(v)?;
-
-        requested_version.is_csharp = Some(csharp_flag);
-
-        if warn_project_version_mismatch(
-            i18n,
-            manager,
-            &requested_version,
-            false,
-            Some(&possible_paths),
-        ) {
-            if force_on_mismatch {
-                eprintln_i18n!(
-                    i18n,
-                    "warning-project-version-mismatch-force",
-                    requested_version = requested_version.to_display_str(),
-                    pinned = 0,
-                );
-            } else {
-                return Err(anyhow!(t_w!(
-                    i18n,
-                    "error-project-version-mismatch",
-                    pinned = 0,
-                )));
-            }
-        }
-
-        manager.auto_install_version(&requested_version)?
-    } else if let Some(pinned) = manager.get_pinned_version() {
-        if warn_project_version_mismatch::<&Path>(i18n, manager, &pinned, true, None) {
-            if force_on_mismatch {
-                eprintln_i18n!(
-                    i18n,
-                    "warning-project-version-mismatch-force",
-                    requested_version = pinned.to_display_str(),
-                    pinned = 1,
-                );
-            } else {
-                return Err(anyhow!(t_w!(
-                    i18n,
-                    "error-project-version-mismatch",
-                    pinned = 1
-                )));
-            }
-        }
-
-        manager.auto_install_version(&pinned)?
-    } else if let Some(project_version) = possible_paths
-        .iter()
-        .find_map(|p| manager.determine_version(Some(p)))
-    {
-        eprintln_i18n!(
-            i18n,
-            "warning-using-project-version",
-            version = project_version.to_display_str()
-        );
-        manager.auto_install_version(&project_version)?
-    } else if let Some(mut default_ver) = manager.get_default()? {
-        if csharp_given {
-            default_ver.is_csharp = Some(csharp_flag);
-        }
-
-        default_ver
+    let explicit_version = if let Some(v) = version_input {
+        Some(GodotVersion::from_match_str(v)?)
     } else {
-        return Err(anyhow!(t!(i18n, "no-default-set")));
+        None
     };
+
+    let resolver = RunVersionResolver::new(manager, i18n);
+    let resolved_version = resolver.resolve(RunResolutionRequest {
+        explicit: explicit_version,
+        possible_paths: &possible_paths,
+        csharp_given,
+        csharp_flag,
+        force_on_mismatch,
+    })?;
 
     eprintln_i18n!(
         i18n,
@@ -546,40 +496,6 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
     manager.run(&resolved_version, console, raw_args)?;
 
     Ok(())
-}
-
-/// Show a warning if the project version is different from the pinned version
-fn warn_project_version_mismatch<P: AsRef<Path>>(
-    i18n: &I18n,
-    manager: &GodotManager,
-    requested: &GodotVersion,
-    is_pin: bool,
-    paths: Option<&[P]>,
-) -> bool {
-    let determined_version = if let Some(paths) = paths {
-        paths
-            .iter()
-            .find_map(|p| manager.determine_version(Some(p)))
-    } else {
-        manager.determine_version::<P>(None)
-    };
-
-    if let Some(project_version) = determined_version {
-        if project_version.conflicts_with(requested) {
-            eprintln_i18n!(
-                i18n,
-                "warning-project-version-mismatch",
-                project_version = project_version.to_display_str(),
-                requested_version = requested.to_display_str(),
-                pinned = is_pin as i32,
-            );
-            eprintln!();
-
-            return true;
-        }
-    }
-
-    false
 }
 
 /// Handle the 'remove' subcommand
@@ -721,7 +637,7 @@ fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
 
     version.is_csharp = Some(csharp);
 
-    warn_project_version_mismatch::<&Path>(i18n, manager, &version, true, None);
+    warn_project_version_mismatch::<_, &Path>(manager, i18n, &version, true, None);
 
     let resolved_version = manager.auto_install_version(&version)?;
 

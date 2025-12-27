@@ -7,6 +7,7 @@ use crate::metadata_cache::{RegistryReleasesCache, ReleaseCache, filter_cached_r
 use crate::paths::GdvmPaths;
 use crate::registry::{self, BinarySelectionError, Registry};
 use crate::releases::ReleaseCatalog;
+use crate::run_version_resolver::RunVersionSource;
 use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
@@ -22,7 +23,7 @@ use std::{env, fs};
 
 use crate::download_utils::download_file;
 use crate::migrations;
-use crate::version_resolver::VersionResolver;
+use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::version_utils::GodotVersion;
 use crate::zip_utils;
 use crate::{eprintln_i18n, println_i18n};
@@ -571,7 +572,7 @@ impl<'a> GodotManager<'a> {
     {
         let gv: GodotVersion = gv.clone().into();
         let installed = self.list_installed()?;
-        let resolver = VersionResolver::new(&self.release_catalog, self.i18n, self.host);
+        let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
         Ok(resolver.resolve_installed(&gv, &installed))
     }
 
@@ -588,7 +589,7 @@ impl<'a> GodotManager<'a> {
         T: Into<GodotVersion> + Clone,
     {
         let gv: GodotVersion = gv.clone().into();
-        let resolver = VersionResolver::new(&self.release_catalog, self.i18n, self.host);
+        let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
         resolver.resolve_available(&gv, use_cache_only)
     }
 
@@ -694,7 +695,7 @@ impl<'a> GodotManager<'a> {
         T: Into<GodotVersion> + Clone,
     {
         let gv: GodotVersion = gv.clone().into();
-        let resolver = VersionResolver::new(&self.release_catalog, self.i18n, self.host);
+        let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
 
         let actual_version = resolver.resolve_for_auto_install(&gv)?;
 
@@ -1085,6 +1086,27 @@ impl<'a> GodotManager<'a> {
         println_i18n!(self.i18n, "upgrade-complete");
 
         Ok(())
+    }
+}
+
+impl<'a> RunVersionSource for GodotManager<'a> {
+    fn get_pinned_version(&self) -> Option<GodotVersion> {
+        GodotManager::get_pinned_version(self)
+    }
+
+    fn get_default(&self) -> Result<Option<GodotVersionDeterminate>> {
+        GodotManager::get_default(self)
+    }
+
+    fn determine_version<P: AsRef<Path>>(&self, path: Option<P>) -> Option<GodotVersion> {
+        GodotManager::determine_version(self, path)
+    }
+
+    fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    where
+        T: Into<GodotVersion> + Clone,
+    {
+        GodotManager::auto_install_version(self, gv)
     }
 }
 

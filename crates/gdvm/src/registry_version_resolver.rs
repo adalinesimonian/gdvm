@@ -8,7 +8,7 @@ use crate::t_w;
 use crate::version_utils::{GodotVersion, GodotVersionDeterminate, GodotVersionDeterminateVecExt};
 
 /// Provides an API for resolving Godot versions against installed and available releases.
-pub struct VersionResolver<'a> {
+pub struct RegistryVersionResolver<'a> {
     catalog: &'a ReleaseCatalog,
     i18n: &'a I18n,
     host: HostPlatform,
@@ -61,7 +61,7 @@ impl<'a> ResolveRequest<'a> {
     }
 }
 
-impl<'a> VersionResolver<'a> {
+impl<'a> RegistryVersionResolver<'a> {
     pub fn new(catalog: &'a ReleaseCatalog, i18n: &'a I18n, host: HostPlatform) -> Self {
         Self {
             catalog,
@@ -305,7 +305,7 @@ mod tests {
     fn resolve_available_prefers_stable() {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-rc1", "4.2-stable"]);
         let intl = i18n();
-        let resolver = VersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
         let query = GodotVersion {
             major: Some(4),
             minor: Some(2),
@@ -324,7 +324,7 @@ mod tests {
     fn resolve_for_auto_install_uses_latest_stable() {
         let (catalog, _tmp) = catalog_with_tags(&["4.1-stable", "4.0-stable"]);
         let intl = i18n();
-        let resolver = VersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
         let query = GodotVersion {
             major: None,
             minor: None,
@@ -343,7 +343,7 @@ mod tests {
     fn resolve_request_available_reports_not_found() {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-stable"]);
         let intl = i18n();
-        let resolver = VersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
         let request = ResolveRequest::available(
             GodotVersion {
                 major: Some(3),
@@ -364,7 +364,7 @@ mod tests {
     fn resolve_installed_sorts_and_filters() {
         let (catalog, _tmp) = catalog_with_tags(&[]);
         let intl = i18n();
-        let resolver = VersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
         let query = GodotVersion {
             major: Some(3),
             minor: None,
