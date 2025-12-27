@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### New Features
+
+- Added a `--refresh` flag that updates the Godot build registry cache before running commands. This lets you pull from the latest builds without waiting for the automatic refresh or having to run `gdvm refresh` separately.
+
+### Fixed
+
+- Version resolution now filters registry entries by OS and architecture, so gdvm only picks Godot builds that actually exist for your platform.
+- Handles downloads more robustly when the server does not provide a `Content-Length` header.
+- Polished translations, including standardised wording across i18n strings.
+
+### Changed
+
+- Cache data is now written atomically to reduce the risk of corrupted registry or release cache files.
+
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.9.0...main
 
 ## v0.9.0
