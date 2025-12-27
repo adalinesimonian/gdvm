@@ -6,6 +6,95 @@ use crate::eprintln_i18n;
 use crate::i18n::I18n;
 use crate::version_utils::GodotVersion;
 
+/// Parsed representation of a `project.godot` file.
+pub struct ParsedProject {
+    config_version: Option<u32>,
+    features_version: Option<String>,
+    has_dotnet: bool,
+}
+
+impl ParsedProject {
+    /// Parse raw `project.godot` contents.
+    pub fn parse_str(contents: &str) -> Self {
+        let config_version = parse_config_version(contents);
+        // Check for [dotnet] section in project.godot
+        let has_dotnet = contents.contains("[dotnet]");
+        // Extract lines for `[application]` section.
+        let features_version = extract_application_section(contents)
+            .and_then(|lines| {
+                // Look for `config/features` line and parse out version.
+                lines
+                    .iter()
+                    .find(|line| line.trim_start().starts_with("config/features="))
+                    .cloned()
+            })
+            .and_then(|line| parse_packed_string_array_for_version(&line));
+
+        Self {
+            config_version,
+            features_version,
+            has_dotnet,
+        }
+    }
+
+    /// Convert the parsed fields into a detected `GodotVersion`.
+    pub fn detected_version(&self) -> Option<GodotVersion> {
+        // If the config_version is 4, then it's a Godot 3.x version.
+        if self.config_version == Some(4) {
+            return Some(GodotVersion {
+                major: Some(3),
+                minor: None,
+                patch: None,
+                subpatch: None,
+                release_type: None,
+                is_csharp: Some(self.has_dotnet),
+            });
+        }
+
+        let version_candidate = self.features_version.as_ref()?;
+
+        parse_version_string(version_candidate).map(|mut gv| {
+            gv.is_csharp = Some(self.has_dotnet);
+            gv
+        })
+    }
+}
+
+impl std::str::FromStr for ParsedProject {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::parse_str(s))
+    }
+}
+
+/// IO helper that finds `project.godot`, reads it, and yields the parsed representation.
+pub struct ProjectVersionProbe {
+    contents: String,
+}
+
+impl ProjectVersionProbe {
+    /// Walk upward from the provided path to locate `project.godot`, read its contents, and return
+    /// a probe for further parsing.
+    pub fn load<P: AsRef<Path>>(i18n: &I18n, path: P) -> Option<Self> {
+        let project_file = find_project_file(path.as_ref())?;
+        let contents = match fs::read_to_string(&project_file) {
+            Ok(s) => s,
+            Err(_) => {
+                eprintln_i18n!(i18n, "error-failed-reading-project-godot");
+                return None;
+            }
+        };
+
+        Some(Self { contents })
+    }
+
+    /// Parse the loaded file contents into `ParsedProject` so version detection can run.
+    pub fn parse(&self) -> ParsedProject {
+        ParsedProject::parse_str(&self.contents)
+    }
+}
+
 /// Detect the Godot version by looking for a `project.godot` file in the
 /// directory tree that `path` belongs to, then parsing `[application]`
 /// → `config/features` → `PackedStringArray(...)` for any `x.x` or `x.x.x`.
@@ -14,60 +103,12 @@ use crate::version_utils::GodotVersion;
 /// is specified in `config/features`.
 pub fn detect_godot_version_in_path<P: AsRef<Path>>(i18n: &I18n, path: P) -> Option<GodotVersion> {
     // Find the project root by walking up until we find `project.godot`.
-    let project_file = find_project_file(path.as_ref())?;
+    let probe = ProjectVersionProbe::load(i18n, path)?;
 
     // Parse the file, looking for the `[application]` section and
     //    `config/features=PackedStringArray(...)`.
-    let contents = match fs::read_to_string(&project_file) {
-        Ok(s) => s,
-        Err(_) => {
-            eprintln_i18n!(i18n, "error-failed-reading-project-godot");
-            return None;
-        }
-    };
-
-    // Check for [dotnet] section in project.godot
-    let is_csharp = contents.contains("[dotnet]");
-
-    let config_version = parse_config_version(&contents);
-
-    // If the config_version is 4, then it's a Godot 3.x version.
-    if config_version == Some(4) {
-        return Some(GodotVersion {
-            major: Some(3),
-            minor: None,
-            patch: None,
-            subpatch: None,
-            release_type: None,
-            is_csharp: Some(is_csharp),
-        });
-    }
-
-    // Extract lines for `[application]` section.
-    let application_lines = extract_application_section(&contents)?;
-
-    // Look for `config/features` line and parse out version.
-    let features_line = application_lines
-        .iter()
-        .find(|line| line.trim_start().starts_with("config/features="));
-
-    let features_line = features_line?;
-
-    // Expects something like: config/features=PackedStringArray("4.3", "Forward Plus")
-    let version_candidate = parse_packed_string_array_for_version(features_line)?;
-
-    // Parse the version string x.x or x.x.x into GodotVersion.
-    match parse_version_string(&version_candidate) {
-        Some(gv) => Some(GodotVersion {
-            major: gv.major,
-            minor: gv.minor,
-            patch: gv.patch,
-            subpatch: gv.subpatch,
-            release_type: gv.release_type,
-            is_csharp: Some(is_csharp),
-        }),
-        None => None,
-    }
+    let parsed = probe.parse();
+    parsed.detected_version()
 }
 
 /// Walks up the directory tree starting from `start_path` until it finds
@@ -278,5 +319,29 @@ foo=bar
     fn test_parse_config_version() {
         let contents = "config_version=4\n";
         assert_eq!(super::parse_config_version(contents), Some(4));
+    }
+
+    #[test]
+    fn parsed_project_maps_config_version_four_to_godot_three() {
+        let contents =
+            "config_version=4\n[application]\nconfig/features=PackedStringArray(\"4.3\")\n";
+        let parsed = super::ParsedProject::parse_str(contents);
+        let detected = parsed.detected_version().unwrap();
+        assert_eq!(detected.major, Some(3));
+        assert_eq!(detected.is_csharp, Some(false));
+    }
+
+    #[test]
+    fn parsed_project_reads_features_version_and_dotnet() {
+        let contents = r#"
+[dotnet]
+[application]
+config/features=PackedStringArray("4.3", "Forward Plus")
+"#;
+        let parsed = super::ParsedProject::parse_str(contents);
+        let detected = parsed.detected_version().unwrap();
+        assert_eq!(detected.major, Some(4));
+        assert_eq!(detected.minor, Some(3));
+        assert_eq!(detected.is_csharp, Some(true));
     }
 }
