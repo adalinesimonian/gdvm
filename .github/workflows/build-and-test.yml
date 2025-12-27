@@ -285,6 +285,11 @@ jobs:
         shell: bash
         run: gdvm run 4.4 --console=true -- --version | grep 4.4.1.stable.official
 
+      - name: Running Godot 4.4 with C# support should use Mono build
+        if: success() || failure()
+        shell: bash
+        run: gdvm run 4.4 --csharp --console=true -- --version | grep 4.4.1.stable.mono.official
+
       - name: Running latest stable Godot should work
         shell: bash
         run: gdvm run stable --console=true -- --version | grep stable.official

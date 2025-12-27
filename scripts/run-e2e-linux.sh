@@ -150,6 +150,8 @@ command -v godot >/dev/null 2>&1
 godot --version | grep 4.3.stable.official
 TEST_SCRIPT
 
+popd >/dev/null
+
 if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
     test "Verify Godot 4.4 on ARM" <<'TEST_SCRIPT'
 gdvm run 4.4 --console=true -- --version | grep 4.4.1.stable.official
@@ -160,10 +162,12 @@ gdvm run 3.5 --console=true -- --version | grep 3.5.3.stable.official
 TEST_SCRIPT
 fi
 
+test "Verify Godot 4.4 with C# support" <<'TEST_SCRIPT'
+gdvm run 4.4 --csharp --console=true -- --version | grep 4.4.1.stable.mono.official
+TEST_SCRIPT
+
 test "Verify Godot stable version" <<'TEST_SCRIPT'
 gdvm run stable --console=true -- --version | grep stable.official
 TEST_SCRIPT
-
-popd >/dev/null
 
 summarize_tests
