@@ -27,15 +27,15 @@ help-filter = Valfri streng for å filtrere utgjevingstagg
 help-include-pre = Inkluder førhandsversjonar (rc, beta, dev)
 help-cache-only = Bruk berre hurtigbufra utgjevingsinformasjon utan å spørja GitHub-APIet
 help-limit = Talet på utgjevingar som skal visast, standard er 10. Bruk 0 for å vise alle
-help-clear-cache = Tøm gdvm-utgjevingshurtigbufferet
-help-refresh = Oppdater gdvm-utgjevingshurtigbufferet frå registeret
+help-clear-cache = Tøm gdvm-utgjevingshurtigbufferen
+help-refresh = Oppdater gdvm-utgjevingshurtigbufferen frå registeret
 help-refresh-flag = Oppdater registerhurtigbufferen før denne kommandoen vert køyrd
 
 help-force = Tving installasjon på nytt sjølv om versjonen allereie er installert.
-help-redownload = Last ned versjonen på nytt sjølv om den allereie er lasta ned i hurtigbufferet.
+help-redownload = Last ned versjonen på nytt sjølv om den allereie er lasta ned i hurtigbufferen.
 help-yes = Hopp over bekreftelsesprompt for fjerning
 
-cached-zip-stored = Lagra Godot-utgjevingsarkivet i hurtigbufferet.
+cached-zip-stored = Lagra Godot-utgjevingsarkivet i hurtigbufferen.
 using-cached-zip = Brukar hurtigbufra utgjevingsarkiv, hoppar over nedlasting.
 warning-cache-metadata-reset = Hurtigbufferindeksen for utgjevingar er ugyldig eller korrupt. Tilbakestiller.
 cache-files-removed = Hurtigbufferfilene vart fjerna.
@@ -95,8 +95,8 @@ error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventa form
 running-version = Køyrer versjon {$version}
 no-matching-releases = Ingen samsvarande utgjevingar funne.
 available-releases = Tilgjengelege utgjevingar:
-cache-cleared = Hurtigbufferet vart tømt.
-cache-refreshed = Hurtigbufferet vart oppdatert.
+cache-cleared = Hurtigbufferen vart tømd.
+cache-refreshed = Hurtigbufferen vart oppdatert.
 
 version-already-installed = Versjon {$version} er allereie installert.
 godot-executable-not-found = Godot-køyrberr fil vart ikkje funne for versjon {$version}.

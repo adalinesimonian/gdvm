@@ -27,15 +27,15 @@ help-filter = Valgfri streng for å filtrere utgivelsestagger
 help-include-pre = Inkluder forhåndsversjoner (rc, beta, dev)
 help-cache-only = Bruk kun hurtigbufret utgivelsesinformasjon uten å spørre GitHub-APIet
 help-limit = Antall utgivelser som skal vises, standard er 10. Bruk 0 for å vise alle
-help-clear-cache = Tøm gdvm-utgivelseshurtigbufferet
-help-refresh = Oppdater gdvm-utgivelseshurtigbufferet fra registeret
+help-clear-cache = Tøm gdvm-utgivelseshurtigbufferen
+help-refresh = Oppdater gdvm-utgivelseshurtigbufferen fra registeret
 help-refresh-flag = Oppdater registerhurtigbufferen før denne kommandoen kjøres
 
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
-help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i hurtigbufferet.
+help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i hurtigbufferen.
 help-yes = Hopp over bekreftelsesprompt for fjerning
 
-cached-zip-stored = Lagra Godot-utgivelsesarkivet i hurtigbufferet.
+cached-zip-stored = Lagra Godot-utgivelsesarkivet i hurtigbufferen.
 using-cached-zip = Bruker hurtigbufret utgivelsesarkiv, hopper over nedlasting.
 warning-cache-metadata-reset = Hurtigbufferindeksen for utgivelser er ugyldig eller korrupt. Tilbakestiller.
 cache-files-removed = Hurtigbufferfilene ble fjernet.
