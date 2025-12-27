@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.10.0...main
+
+## v0.10.0
+
 ### New Features
 
 - Added a `--refresh` flag that updates the Godot build registry cache before running commands. This lets you pull from the latest builds without waiting for the automatic refresh or having to run `gdvm refresh` separately.
@@ -16,7 +20,7 @@
 
 - Cache data is now written atomically to reduce the risk of corrupted registry or release cache files.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.9.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.9.0...v0.10.0
 
 ## v0.9.0
 
