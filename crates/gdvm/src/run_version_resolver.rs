@@ -12,6 +12,9 @@ pub trait RunVersionSource {
     fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone;
+    fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    where
+        T: Into<GodotVersion> + Clone;
 }
 
 pub struct RunVersionResolver<'a, S: RunVersionSource> {
@@ -25,6 +28,7 @@ pub struct RunResolutionRequest<'a> {
     pub csharp_given: bool,
     pub csharp_flag: bool,
     pub force_on_mismatch: bool,
+    pub install_if_missing: bool,
 }
 
 impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
@@ -58,7 +62,11 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 )));
             }
 
-            return self.source.auto_install_version(&requested_version);
+            return if request.install_if_missing {
+                self.source.auto_install_version(&requested_version)
+            } else {
+                self.source.ensure_installed_version(&requested_version)
+            };
         }
 
         if let Some(pinned) = self.source.get_pinned_version() {
@@ -77,7 +85,11 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 )));
             }
 
-            return self.source.auto_install_version(&pinned);
+            return if request.install_if_missing {
+                self.source.auto_install_version(&pinned)
+            } else {
+                self.source.ensure_installed_version(&pinned)
+            };
         }
 
         if let Some(project_version) = self.detect_project_version(&path_bufs) {
@@ -86,14 +98,22 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 "warning-using-project-version",
                 version = project_version.to_display_str()
             );
-            return self.source.auto_install_version(&project_version);
+            return if request.install_if_missing {
+                self.source.auto_install_version(&project_version)
+            } else {
+                self.source.ensure_installed_version(&project_version)
+            };
         }
 
         if let Some(mut default_ver) = self.source.get_default()? {
             if request.csharp_given {
                 default_ver.is_csharp = Some(request.csharp_flag);
             }
-            return Ok(default_ver);
+            return if request.install_if_missing {
+                self.source.auto_install_version(&default_ver)
+            } else {
+                self.source.ensure_installed_version(&default_ver)
+            };
         }
 
         Err(anyhow!(t!(self.i18n, "no-default-set")))
@@ -216,6 +236,17 @@ mod tests {
             let gv: GodotVersion = gv.clone().into();
             Ok(GodotVersionDeterminate::from(gv))
         }
+
+        fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+        where
+            T: Into<GodotVersion> + Clone,
+        {
+            if let Some(result) = self.auto_result.clone() {
+                return Ok(result);
+            }
+            let gv: GodotVersion = gv.clone().into();
+            Ok(GodotVersionDeterminate::from(gv))
+        }
     }
 
     fn gv(major: u32, minor: u32, release: &str) -> GodotVersion {
@@ -259,6 +290,7 @@ mod tests {
             csharp_given: false,
             csharp_flag: false,
             force_on_mismatch: false,
+            install_if_missing: true,
         };
 
         let resolved = resolver.resolve(request).unwrap();
@@ -280,6 +312,7 @@ mod tests {
                 csharp_given: false,
                 csharp_flag: false,
                 force_on_mismatch: false,
+                install_if_missing: true,
             })
             .unwrap();
 
@@ -301,6 +334,7 @@ mod tests {
                 csharp_given: false,
                 csharp_flag: false,
                 force_on_mismatch: false,
+                install_if_missing: true,
             })
             .unwrap();
 
@@ -320,6 +354,7 @@ mod tests {
                 csharp_given: false,
                 csharp_flag: false,
                 force_on_mismatch: false,
+                install_if_missing: true,
             })
             .unwrap();
 
@@ -340,6 +375,7 @@ mod tests {
                 csharp_given: false,
                 csharp_flag: false,
                 force_on_mismatch: false,
+                install_if_missing: true,
             })
             .unwrap_err();
 
@@ -351,6 +387,7 @@ mod tests {
                 csharp_given: false,
                 csharp_flag: false,
                 force_on_mismatch: true,
+                install_if_missing: true,
             })
             .unwrap();
 
