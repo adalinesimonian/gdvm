@@ -2,7 +2,16 @@
 
 ## Unreleased
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.10.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.11.0...main
+
+## v0.11.0
+
+### New Features
+
+- Added the `show` command, which will print the path to the Godot binary for a given version.
+- Added the `link` command, which will create a symlink or copy of a specified Godot version at a given path. This is useful for any debugger setups or IDE integrations that can't use the `gdvm` or `godot` commands directly and need a path to the actual Godot binary.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.10.0...v0.11.0
 
 ## v0.10.0
 
