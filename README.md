@@ -62,6 +62,12 @@ gdvm upgrade                 # Upgrade gdvm.
 
 For more information, run `gdvm --help`.
 
+### Using gdvm with debuggers
+
+While for most purposes it is more than enough to run `godot`, the shim provided by gdvm, or `gdvm run` directly, debuggers often need to attach directly to the Godot process. To do so, they typically require a path to the Godot binary to launch or attach to.
+
+See the dedicated guide for details and examples (including a Visual Studio Code debugger configuration): [Using gdvm with debuggers](docs/debuggers.md).
+
 ## Contributing
 
 Please see [Contributing](CONTRIBUTING.md) for guidelines.

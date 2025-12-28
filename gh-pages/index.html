@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -53,9 +53,10 @@
             }
 
             :root {
-                --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                    Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
-                    "Helvetica Neue", sans-serif;
+                --font-body:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+                    sans-serif;
                 --font-heading: "InterDisplay", var(--font-body);
                 --font-mono: "Fira Code", monospace;
 
@@ -145,7 +146,10 @@
                 border-radius: var(--radius);
                 font-weight: 600;
                 box-shadow: var(--shadow);
-                transition: transform 0.2s, box-shadow 0.3s, font-size 0.2s;
+                transition:
+                    transform 0.2s,
+                    box-shadow 0.3s,
+                    font-size 0.2s;
                 position: relative;
                 z-index: 2;
             }
@@ -319,7 +323,6 @@
                 <a
                     class="btn"
                     href="https://github.com/adalinesimonian/gdvm"
-                    target="_blank"
                     rel="noopener"
                     ><img alt="GitHub logo" src="./github-logo.svg" /> View on
                     GitHub</a
@@ -327,7 +330,6 @@
                 <a
                     class="btn"
                     href="https://bsky.app/profile/gdvm.io"
-                    target="_blank"
                     rel="noopener"
                     ><img alt="Bluesky logo" src="./bluesky-logo.svg" />Follow
                     on Bluesky</a
@@ -487,7 +489,7 @@
                         Hitting GitHub rate limits? Create a
                         <a
                             href="https://github.com/settings/personal-access-tokens/new"
-                            target="_blank"
+                            rel="noopener"
                             >fine-grained token</a
                         >
                         with access to public repositories, and run
@@ -496,6 +498,15 @@
                     </div>
                 </div>
                 <p>For more information, run <code>gdvm --help</code>.</p>
+
+                <p>
+                    For examples of using gdvm with debuggers, see the
+                    <a
+                        href="https://github.com/adalinesimonian/gdvm/blob/main/docs/debuggers.md"
+                        rel="noopener"
+                        >guide to using gdvm with debuggers</a
+                    >.
+                </p>
             </section>
         </main>
 
@@ -510,10 +521,10 @@
 
             function activate(tabBtn, panel) {
                 [tabNix, tabWin].forEach((btn) =>
-                    btn.setAttribute("aria-selected", false)
+                    btn.setAttribute("aria-selected", false),
                 );
                 [panelNix, panelWin].forEach(
-                    (p) => (p.dataset.active = "false")
+                    (p) => (p.dataset.active = "false"),
                 );
 
                 tabBtn.setAttribute("aria-selected", true);
@@ -521,7 +532,7 @@
             }
             activate(
                 isWindows ? tabWin : tabNix,
-                isWindows ? panelWin : panelNix
+                isWindows ? panelWin : panelNix,
             );
 
             tabNix.addEventListener("click", () => activate(tabNix, panelNix));
