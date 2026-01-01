@@ -30,13 +30,22 @@ reqwest = { version = "=0.13.1", features = [
     "brotli",
     "deflate",
     "rustls",
-    "blocking",
+    "stream",
 ] }
 indicatif = { version = "=0.18.3", features = ["improved_unicode"] }
 sha2 = "=0.10.9"
 serde_json = "=1.0.148"
 serde = { version = "=1.0.228", features = ["derive"] }
 semver = "=1.0.27"
+tokio = { version = "=1.48.0", features = [
+    "macros",
+    "rt-multi-thread",
+    "fs",
+    "io-util",
+    "time",
+] }
+async-trait = "=0.1.89"
+futures-util = "=0.3.31"
 
 # For file system operations:
 zip = "=7.0.0"

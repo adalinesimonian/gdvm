@@ -35,7 +35,7 @@ pub enum BinarySelectionError {
 }
 
 pub struct Registry {
-    client: reqwest::blocking::Client,
+    client: reqwest::Client,
 }
 
 pub fn registry_platform_key(host: HostPlatform, is_csharp: bool) -> &'static str {
@@ -104,27 +104,25 @@ pub fn select_binary(
 impl Registry {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            client: reqwest::blocking::ClientBuilder::new()
-                .user_agent("gdvm")
-                .build()?,
+            client: reqwest::ClientBuilder::new().user_agent("gdvm").build()?,
         })
     }
 
-    pub fn fetch_index(&self) -> Result<Vec<IndexEntry>> {
+    pub async fn fetch_index(&self) -> Result<Vec<IndexEntry>> {
         let url = format!("{BASE_URL}/index.json");
-        let resp = self.client.get(&url).send()?;
+        let resp = self.client.get(&url).send().await?;
         if resp.status().is_success() {
-            Ok(resp.json()?)
+            Ok(resp.json().await?)
         } else {
             Err(anyhow!("Failed to fetch registry index"))
         }
     }
 
-    pub fn fetch_release(&self, id: u64, name: &str) -> Result<ReleaseMetadata> {
+    pub async fn fetch_release(&self, id: u64, name: &str) -> Result<ReleaseMetadata> {
         let url = format!("{BASE_URL}/releases/{id}_{name}.json");
-        let resp = self.client.get(&url).send()?;
+        let resp = self.client.get(&url).send().await?;
         if resp.status().is_success() {
-            Ok(resp.json()?)
+            Ok(resp.json().await?)
         } else {
             Err(anyhow!("Failed to fetch release metadata"))
         }

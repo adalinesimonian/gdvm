@@ -1,20 +1,17 @@
 use anyhow::{Result, anyhow};
-use std::{
-    fs,
-    io::{Read, Write},
-    path::Path,
-    time::Duration,
-};
-
+use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
+use std::{path::Path, time::Duration};
+use tokio::{fs, io::AsyncWriteExt};
 
 use crate::{eprintln_i18n, i18n::I18n, t};
 
-pub fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
+pub async fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
     // Print downloading URL message
     eprintln_i18n!(i18n, "operation-downloading-url", url = url);
 
-    let response = reqwest::blocking::get(url)?;
+    let client = reqwest::ClientBuilder::new().user_agent("gdvm").build()?;
+    let response = client.get(url).send().await?;
 
     match response.status() {
         reqwest::StatusCode::OK => {
@@ -38,18 +35,14 @@ pub fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
 
             pb.enable_steady_tick(Duration::from_millis(100));
 
-            let mut file = fs::File::create(dest)?;
+            let mut file = fs::File::create(dest).await?;
             let mut downloaded: u64 = 0;
-            let mut buffer = [0; 8192]; // 8 KB buffer
-            let mut reader = response;
+            let mut stream = response.bytes_stream();
 
-            loop {
-                let bytes_read = reader.read(&mut buffer)?;
-                if bytes_read == 0 {
-                    break; // Download complete
-                }
-                file.write_all(&buffer[..bytes_read])?;
-                downloaded += bytes_read as u64;
+            while let Some(chunk) = stream.next().await {
+                let chunk = chunk?;
+                file.write_all(&chunk).await?;
+                downloaded += chunk.len() as u64;
                 if total_size.is_some() {
                     pb.set_position(downloaded);
                 }
