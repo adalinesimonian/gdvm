@@ -55,13 +55,6 @@ winapi = { version = "=0.3.9", features = ["winbase"] }
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 daemonize = "=0.5.0"
 
-# OpenSSL for cross-compiling:
-[target.i686-unknown-linux-gnu.dependencies]
-openssl = { version = "=0.10.75", features = ["vendored"] }
-
-[target.aarch64-unknown-linux-gnu.dependencies]
-openssl = { version = "=0.10.75", features = ["vendored"] }
-
 [dev-dependencies]
 tempfile = "3.20.0"
 serial_test = "3.2.0"
