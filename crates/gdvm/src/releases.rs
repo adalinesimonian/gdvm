@@ -29,7 +29,7 @@ impl ReleaseCatalog {
 
     /// List available releases, optionally filtering with a partial GodotVersion. Respects cache-
     /// only mode and refreshes the registry index when stale.
-    pub fn list_releases(
+    pub async fn list_releases(
         &self,
         filter: Option<&GodotVersion>,
         use_cache_only: bool,
@@ -48,7 +48,7 @@ impl ReleaseCatalog {
 
         if should_refresh
             && !use_cache_only
-            && let Err(error) = self.update_cache(&mut cache, i18n)
+            && let Err(error) = self.update_cache(&mut cache, i18n).await
         {
             if cache.releases.is_empty() {
                 return Err(error);
@@ -66,7 +66,11 @@ impl ReleaseCatalog {
     }
 
     /// Fetch capabilities for a given tag, caching results.
-    pub fn capabilities_for(&self, tag: &str, i18n: &I18n) -> Result<ReleaseCapabilitiesEntry> {
+    pub async fn capabilities_for(
+        &self,
+        tag: &str,
+        i18n: &I18n,
+    ) -> Result<ReleaseCapabilitiesEntry> {
         let mut caps_cache = self.cache_store.load_capabilities_cache()?;
         if let Some(entry) = caps_cache.entries.iter().find(|c| c.tag_name == tag) {
             return Ok(entry.clone());
@@ -81,7 +85,10 @@ impl ReleaseCatalog {
             .ok_or_else(|| anyhow!(t_w!(i18n, "error-version-not-found")))?;
 
         // Fetch metadata once, then derive capabilities.
-        let metadata = self.registry.fetch_release(release.id, &release.tag_name)?;
+        let metadata = self
+            .registry
+            .fetch_release(release.id, &release.tag_name)
+            .await?;
 
         let capabilities = derive_capabilities(tag, &metadata);
 
@@ -95,7 +102,7 @@ impl ReleaseCatalog {
     }
 
     /// Retrieve release metadata for an exact version, refreshing the cache if needed.
-    pub fn metadata_for(
+    pub async fn metadata_for(
         &self,
         gv: &GodotVersionDeterminate,
         i18n: &I18n,
@@ -104,33 +111,33 @@ impl ReleaseCatalog {
         let mut cache = self.cache_store.load_registry_cache()?;
 
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(entry.id, &entry.tag_name);
+            return self.registry.fetch_release(entry.id, &entry.tag_name).await;
         }
 
-        self.update_cache(&mut cache, i18n)?;
+        self.update_cache(&mut cache, i18n).await?;
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(entry.id, &entry.tag_name);
+            return self.registry.fetch_release(entry.id, &entry.tag_name).await;
         }
 
         Err(anyhow!(t_w!(i18n, "error-version-not-found")))
     }
 
-    pub fn refresh_cache(&self, i18n: &I18n) -> Result<()> {
+    pub async fn refresh_cache(&self, i18n: &I18n) -> Result<()> {
         let mut cache = self.cache_store.load_registry_cache()?;
-        self.update_cache(&mut cache, i18n)
+        self.update_cache(&mut cache, i18n).await
     }
 
     pub fn cache_store(&self) -> &CacheStore {
         &self.cache_store
     }
 
-    fn update_cache(&self, cache: &mut RegistryReleasesCache, i18n: &I18n) -> Result<()> {
+    async fn update_cache(&self, cache: &mut RegistryReleasesCache, i18n: &I18n) -> Result<()> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
         pb.enable_steady_tick(Duration::from_millis(100));
         pb.set_message(t_w!(i18n, "fetching-releases"));
 
-        let index = self.registry.fetch_index()?;
+        let index = self.registry.fetch_index().await?;
 
         pb.finish_with_message(t_w!(i18n, "releases-fetched"));
 
@@ -226,14 +233,15 @@ mod tests {
         (ReleaseCatalog::new(registry, cache_store), tmp)
     }
 
-    #[test]
-    fn uses_cached_releases_when_fresh() {
+    #[tokio::test]
+    async fn uses_cached_releases_when_fresh() {
         let now = now_seconds().unwrap();
         let (catalog, _tmp) = make_catalog_with_cache(&["4.3-stable", "4.2-rc1"], now);
         let intl = i18n();
 
         let releases = catalog
             .list_releases(None, false, &intl)
+            .await
             .expect("list releases");
 
         assert_eq!(releases.len(), 2);
@@ -242,8 +250,8 @@ mod tests {
         assert_eq!(releases[1].to_remote_str(), "4.2-rc1");
     }
 
-    #[test]
-    fn filters_cached_releases_with_query() {
+    #[tokio::test]
+    async fn filters_cached_releases_with_query() {
         let now = now_seconds().unwrap();
         let (catalog, _tmp) = make_catalog_with_cache(&["4.3-stable", "4.2-rc1"], now);
         let intl = i18n();
@@ -258,6 +266,7 @@ mod tests {
 
         let releases = catalog
             .list_releases(Some(&filter), true, &intl)
+            .await
             .expect("filtered releases");
 
         assert_eq!(releases.len(), 1);

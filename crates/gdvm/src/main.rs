@@ -22,17 +22,18 @@ fn refresh_flag(i18n: &I18n) -> Arg {
         .help(t!(i18n, "help-refresh-flag"))
 }
 
-fn refresh_cache_if_requested(manager: &GodotManager, refresh: bool) -> Result<()> {
+async fn refresh_cache_if_requested(manager: &GodotManager<'_>, refresh: bool) -> Result<()> {
     if refresh {
-        manager.refresh_cache()?;
+        manager.refresh_cache().await?;
     }
 
     Ok(())
 }
 
-fn main() -> Result<()> {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
     let i18n = I18n::new(100)?;
-    let manager = GodotManager::new(&i18n)?;
+    let manager = GodotManager::new(&i18n).await?;
 
     // Detect if running through "godot" or "godot_console" shim.
     let exe_name = std::env::var("GDVM_ALIAS").ok().unwrap_or_else(|| {
@@ -57,14 +58,16 @@ fn main() -> Result<()> {
 
         if let Err(err) = sub_run_inner(RunConfig {
             i18n: &i18n,
-            manager: &GodotManager::new(&i18n)?,
+            manager: &GodotManager::new(&i18n).await?,
             version_input: None,
             csharp_given: false,
             csharp_flag: false,
             console: console_mode,
             raw_args: &args,
             force_on_mismatch: false,
-        }) {
+        })
+        .await
+        {
             eprintln!("{err}");
 
             // Wait for 5 seconds before exiting on Windows to allow the user to read the error.
@@ -444,18 +447,18 @@ fn main() -> Result<()> {
 
     // Match the subcommand and call the appropriate function
     match matches.subcommand() {
-        Some(("install", sub_m)) => sub_install(&i18n, &manager, sub_m)?,
+        Some(("install", sub_m)) => sub_install(&i18n, &manager, sub_m).await?,
         Some(("list", _)) => sub_list(&i18n, &manager)?,
-        Some(("run", sub_m)) => sub_run(&i18n, &manager, sub_m)?,
-        Some(("show", sub_m)) => sub_show(&i18n, &manager, sub_m)?,
-        Some(("link", sub_m)) => sub_link(&i18n, &manager, sub_m)?,
-        Some(("remove", sub_m)) => sub_remove(&i18n, &manager, sub_m)?,
-        Some(("search", sub_m)) => sub_search(&i18n, &manager, sub_m)?,
+        Some(("run", sub_m)) => sub_run(&i18n, &manager, sub_m).await?,
+        Some(("show", sub_m)) => sub_show(&i18n, &manager, sub_m).await?,
+        Some(("link", sub_m)) => sub_link(&i18n, &manager, sub_m).await?,
+        Some(("remove", sub_m)) => sub_remove(&i18n, &manager, sub_m).await?,
+        Some(("search", sub_m)) => sub_search(&i18n, &manager, sub_m).await?,
         Some(("clear-cache", _)) => sub_clear_cache(&i18n, &manager)?,
-        Some(("refresh", _)) => sub_refresh(&i18n, &manager)?,
-        Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m)?,
-        Some(("upgrade", sub_m)) => sub_upgrade(&manager, sub_m)?,
-        Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m)?,
+        Some(("refresh", _)) => sub_refresh(&i18n, &manager).await?,
+        Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m).await?,
+        Some(("upgrade", sub_m)) => sub_upgrade(&manager, sub_m).await?,
+        Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m).await?,
         Some(("config", sub_m)) => sub_config(&i18n, sub_m)?,
         _ => {}
     }
@@ -464,17 +467,18 @@ fn main() -> Result<()> {
 }
 
 /// Handle the 'install' subcommand
-fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version").unwrap();
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
     let refresh = matches.get_flag("refresh");
 
-    refresh_cache_if_requested(manager, refresh)?;
+    refresh_cache_if_requested(manager, refresh).await?;
 
     let requested_version = GodotVersion::from_match_str(version_input)?;
     let mut gv = manager
-        .resolve_available_version(&requested_version, false)?
+        .resolve_available_version(&requested_version, false)
+        .await?
         .ok_or_else(|| anyhow!(t!(i18n, "error-version-not-found")))?;
 
     let is_csharp = matches.get_flag("csharp");
@@ -488,7 +492,7 @@ fn sub_install(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Res
         version = &gv.to_display_str()
     );
 
-    match manager.install(&gv, force_reinstall, redownload)? {
+    match manager.install(&gv, force_reinstall, redownload).await? {
         InstallOutcome::Installed => {
             // Print a message indicating the successful installation
             println_i18n!(i18n, "installed-success", version = &gv.to_display_str());
@@ -522,7 +526,7 @@ fn sub_list(i18n: &I18n, manager: &GodotManager) -> Result<()> {
 }
 
 /// Handle the 'run' subcommand
-fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_run(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     // Capture args after "--" to pass directly to child
     let raw_args = match std::env::args().position(|x| x == "--") {
         Some(pos) => std::env::args().skip(pos + 1).collect(),
@@ -538,7 +542,7 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
     let force_on_mismatch = matches.get_flag("force");
     let refresh = matches.get_flag("refresh");
 
-    refresh_cache_if_requested(manager, refresh)?;
+    refresh_cache_if_requested(manager, refresh).await?;
 
     sub_run_inner(RunConfig {
         i18n,
@@ -550,10 +554,11 @@ fn sub_run(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         raw_args: &raw_args,
         force_on_mismatch,
     })
+    .await
 }
 
 /// Handle the 'show' subcommand
-fn sub_show(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_show(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let raw_args: Vec<String> = Vec::new();
 
     let csharp_given =
@@ -564,7 +569,7 @@ fn sub_show(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result
     let force_on_mismatch = matches.get_flag("force");
     let refresh = matches.get_flag("refresh");
 
-    refresh_cache_if_requested(manager, refresh)?;
+    refresh_cache_if_requested(manager, refresh).await?;
 
     let possible_paths = collect_possible_paths(&raw_args);
 
@@ -575,14 +580,16 @@ fn sub_show(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result
     };
 
     let resolver = RunVersionResolver::new(manager, i18n);
-    let resolved_version = resolver.resolve(RunResolutionRequest {
-        explicit: explicit_version,
-        possible_paths: &possible_paths,
-        csharp_given,
-        csharp_flag,
-        force_on_mismatch,
-        install_if_missing: false,
-    })?;
+    let resolved_version = resolver
+        .resolve(RunResolutionRequest {
+            explicit: explicit_version,
+            possible_paths: &possible_paths,
+            csharp_given,
+            csharp_flag,
+            force_on_mismatch,
+            install_if_missing: false,
+        })
+        .await?;
 
     let exe_path = manager.get_executable_path(&resolved_version, console)?;
     println!("{}", exe_path.display());
@@ -591,7 +598,7 @@ fn sub_show(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result
 }
 
 /// Handle the 'link' subcommand
-fn sub_link(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version");
     let link_path_raw = matches
         .get_one::<String>("linkpath")
@@ -611,14 +618,16 @@ fn sub_link(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result
     let copy = matches.get_flag("copy");
 
     let resolver = RunVersionResolver::new(manager, i18n);
-    let resolved_version = resolver.resolve(RunResolutionRequest {
-        explicit: explicit_version,
-        possible_paths: &[],
-        csharp_given,
-        csharp_flag,
-        force_on_mismatch: force,
-        install_if_missing: false,
-    })?;
+    let resolved_version = resolver
+        .resolve(RunResolutionRequest {
+            explicit: explicit_version,
+            possible_paths: &[],
+            csharp_given,
+            csharp_flag,
+            force_on_mismatch: force,
+            install_if_missing: false,
+        })
+        .await?;
 
     let primary_exe = manager.get_executable_path(&resolved_version, false)?;
 
@@ -881,7 +890,7 @@ struct RunConfig<'a> {
 }
 
 /// Run the Godot executable
-fn sub_run_inner(config: RunConfig) -> Result<()> {
+async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
     let RunConfig {
         i18n,
         manager,
@@ -905,14 +914,16 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
     };
 
     let resolver = RunVersionResolver::new(manager, i18n);
-    let resolved_version = resolver.resolve(RunResolutionRequest {
-        explicit: explicit_version,
-        possible_paths: &possible_paths,
-        csharp_given,
-        csharp_flag,
-        force_on_mismatch,
-        install_if_missing: true,
-    })?;
+    let resolved_version = resolver
+        .resolve(RunResolutionRequest {
+            explicit: explicit_version,
+            possible_paths: &possible_paths,
+            csharp_given,
+            csharp_flag,
+            force_on_mismatch,
+            install_if_missing: true,
+        })
+        .await?;
 
     eprintln_i18n!(
         i18n,
@@ -926,14 +937,16 @@ fn sub_run_inner(config: RunConfig) -> Result<()> {
 }
 
 /// Handle the 'remove' subcommand
-fn sub_remove(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_remove(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version").unwrap();
     let csharp = matches.get_flag("csharp");
     let mut requested_version = GodotVersion::from_match_str(version_input)?;
 
     requested_version.is_csharp = Some(csharp);
 
-    let resolved_versions = manager.resolve_installed_version(&requested_version)?;
+    let resolved_versions = manager
+        .resolve_installed_version(&requested_version)
+        .await?;
 
     match resolved_versions.len() {
         0 => {
@@ -969,20 +982,22 @@ fn sub_remove(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Resu
 }
 
 /// Handle the 'search' subcommand
-fn sub_search(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_search(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let filter = matches.get_one::<String>("filter").map(|s| s.as_str());
     let include_pre = matches.get_flag("include-pre");
     let cache_only = matches.get_flag("cache-only");
     let refresh = matches.get_flag("refresh");
 
-    refresh_cache_if_requested(manager, refresh)?;
+    refresh_cache_if_requested(manager, refresh).await?;
 
     let requested_version = match filter {
         Some(filter) => Some(GodotVersion::from_match_str(filter)?),
         None => None,
     };
 
-    let mut releases = manager.fetch_available_releases(&requested_version, cache_only)?;
+    let mut releases = manager
+        .fetch_available_releases(&requested_version, cache_only)
+        .await?;
 
     // Default to showing only stable releases unless `--include-pre` is specified
     if !include_pre {
@@ -1013,14 +1028,14 @@ fn sub_clear_cache(i18n: &I18n, manager: &GodotManager) -> Result<()> {
 }
 
 /// Handle the 'refresh' subcommand
-fn sub_refresh(i18n: &I18n, manager: &GodotManager) -> Result<()> {
-    manager.refresh_cache()?;
+async fn sub_refresh(i18n: &I18n, manager: &GodotManager<'_>) -> Result<()> {
+    manager.refresh_cache().await?;
     println_i18n!(i18n, "cache-refreshed");
     Ok(())
 }
 
 /// Handle the 'use' subcommand
-fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_use(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let csharp = matches.get_flag("csharp");
     let refresh = matches.get_flag("refresh");
 
@@ -1038,13 +1053,13 @@ fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
         return Ok(());
     }
 
-    refresh_cache_if_requested(manager, refresh)?;
+    refresh_cache_if_requested(manager, refresh).await?;
 
     let mut requested_version = GodotVersion::from_match_str(version_input)?;
 
     requested_version.is_csharp = Some(csharp);
 
-    let resolved_version = manager.auto_install_version(&requested_version)?;
+    let resolved_version = manager.auto_install_version(&requested_version).await?;
 
     manager.set_default(&resolved_version)?;
     println_i18n!(
@@ -1057,25 +1072,25 @@ fn sub_use(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<
 }
 
 /// Handle the 'upgrade' subcommand
-fn sub_upgrade(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_upgrade(manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let allow_major = matches.get_flag("major");
-    manager.upgrade(allow_major)
+    manager.upgrade(allow_major).await
 }
 
 /// Handle the 'pin' subcommand
-fn sub_pin(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+async fn sub_pin(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let version_str = matches.get_one::<String>("version").unwrap();
     let csharp = matches.get_flag("csharp");
     let refresh = matches.get_flag("refresh");
     let mut version = GodotVersion::from_match_str(version_str)?;
 
-    refresh_cache_if_requested(manager, refresh)?;
+    refresh_cache_if_requested(manager, refresh).await?;
 
     version.is_csharp = Some(csharp);
 
-    warn_project_version_mismatch::<_, &Path>(manager, i18n, &version, true, None);
+    warn_project_version_mismatch::<_, &Path>(manager, i18n, &version, true, None).await;
 
-    let resolved_version = manager.auto_install_version(&version)?;
+    let resolved_version = manager.auto_install_version(&version).await?;
 
     match manager.pin_version(&resolved_version) {
         Ok(()) => println_i18n!(

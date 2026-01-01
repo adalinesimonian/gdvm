@@ -89,7 +89,7 @@ pub struct GodotManager<'a> {
     /// Release catalog for fetching Godot versions
     release_catalog: ReleaseCatalog,
     /// Client for GitHub API requests
-    client: reqwest::blocking::Client,
+    client: reqwest::Client,
     /// Host platform
     host: HostPlatform,
     i18n: &'a I18n,
@@ -294,7 +294,7 @@ fn find_macos_app_executable(app_path: &Path) -> Option<PathBuf> {
 
 impl<'a> GodotManager<'a> {
     /// Create a new GodotManager instance and set up the installation and cache paths
-    pub fn new(i18n: &'a I18n) -> Result<Self> {
+    pub async fn new(i18n: &'a I18n) -> Result<Self> {
         let paths = GdvmPaths::new(i18n)?;
         let artifact_cache = ArtifactCache::new(paths.cache_dir().to_path_buf());
         artifact_cache.ensure_dir()?;
@@ -317,7 +317,7 @@ impl<'a> GodotManager<'a> {
         migrations::run_migrations(manager.paths.base(), i18n)?;
 
         // Don't fail if update check fails, since it isn't critical
-        manager.check_for_upgrades().ok();
+        manager.check_for_upgrades().await.ok();
 
         Ok(manager)
     }
@@ -332,7 +332,7 @@ impl<'a> GodotManager<'a> {
     ///
     /// - `force`: If true, reinstall the version even if it's already installed.
     /// - `redownload`: If true, ignore cached zip files and download fresh ones.
-    pub fn install(
+    pub async fn install(
         &self,
         gv: &GodotVersionDeterminate,
         force: bool,
@@ -360,7 +360,7 @@ impl<'a> GodotManager<'a> {
 
         self.artifact_cache.ensure_dir()?;
 
-        let meta = self.release_catalog.metadata_for(gv, self.i18n)?;
+        let meta = self.release_catalog.metadata_for(gv, self.i18n).await?;
         let is_csharp = gv.is_csharp.unwrap_or(false);
 
         let binary =
@@ -393,7 +393,7 @@ impl<'a> GodotManager<'a> {
                 .join(format!("{}.zip", gv.to_install_str()));
 
             // Download the archive
-            download_file(download_url, &tmp_file, self.i18n)?;
+            download_file(download_url, &tmp_file, self.i18n).await?;
             verify_sha(&tmp_file, &binary.sha512, self.i18n)?;
 
             // Move the verified zip to cache_dir
@@ -511,17 +511,18 @@ impl<'a> GodotManager<'a> {
     }
 
     /// Fetch available releases from GitHub with caching
-    pub fn fetch_available_releases(
+    pub async fn fetch_available_releases(
         &self,
         filter: &Option<GodotVersion>,
         use_cache_only: bool,
     ) -> Result<Vec<GodotVersionDeterminate>> {
         self.release_catalog
             .list_releases(filter.as_ref(), use_cache_only, self.i18n)
+            .await
     }
 
     /// Gets a reqwest client with the GitHub token if available
-    fn get_github_client(i18n: &I18n) -> Result<reqwest::blocking::Client> {
+    fn get_github_client(i18n: &I18n) -> Result<reqwest::Client> {
         let token = env::var("GITHUB_TOKEN").ok().or_else(|| {
             let config = Config::load(i18n).ok()?;
             config.github_token
@@ -533,7 +534,7 @@ impl<'a> GodotManager<'a> {
                 format!("token {token}").parse()?,
             );
         }
-        Ok(reqwest::blocking::ClientBuilder::new()
+        Ok(reqwest::ClientBuilder::new()
             .default_headers(headers)
             .user_agent("gdvm")
             .build()?)
@@ -541,7 +542,7 @@ impl<'a> GodotManager<'a> {
 
     /// Tries to query the GitHub API with a GET at a given URL. If it fails due
     /// to a rate-limit, it will return an error after printing a message.
-    fn get_github_json(&self, url: &str) -> Result<serde_json::Value, GithubJsonError> {
+    async fn get_github_json(&self, url: &str) -> Result<serde_json::Value, GithubJsonError> {
         // Rate limits are 403s with a JSON object that has a "message" key that
         // starts with "API rate limit exceeded".
 
@@ -550,16 +551,22 @@ impl<'a> GodotManager<'a> {
             .get(url)
             .timeout(Duration::from_secs(3))
             .send()
+            .await
             .map_err(GithubJsonError::Network)?;
 
         if resp.status().is_success() {
-            let json: serde_json::Value =
-                resp.json().map_err(|e| GithubJsonError::Other(e.into()))?;
+            let json: serde_json::Value = resp
+                .json()
+                .await
+                .map_err(|e| GithubJsonError::Other(e.into()))?;
             return Ok(json);
         }
 
         let status = resp.status();
-        let json: serde_json::Value = resp.json().map_err(|e| GithubJsonError::Other(e.into()))?;
+        let json: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| GithubJsonError::Other(e.into()))?;
         if status == reqwest::StatusCode::FORBIDDEN
             && let Some(message) = json.get("message").and_then(|m| m.as_str())
             && message.starts_with("API rate limit exceeded")
@@ -599,8 +606,8 @@ impl<'a> GodotManager<'a> {
     }
 
     /// Refresh the gdvm release cache by re-downloading the registry index.
-    pub fn refresh_cache(&self) -> Result<()> {
-        self.release_catalog.refresh_cache(self.i18n)
+    pub async fn refresh_cache(&self) -> Result<()> {
+        self.release_catalog.refresh_cache(self.i18n).await
     }
 
     /// Resolve the Godot version from a string, for an installed version
@@ -609,21 +616,21 @@ impl<'a> GodotManager<'a> {
     /// unless of course the version is not found, in which case the list will
     /// be empty.
     /// Accepts full and partial versions.
-    pub fn resolve_installed_version<T>(&self, gv: &T) -> Result<Vec<GodotVersionDeterminate>>
+    pub async fn resolve_installed_version<T>(&self, gv: &T) -> Result<Vec<GodotVersionDeterminate>>
     where
         T: Into<GodotVersion> + Clone,
     {
         let gv: GodotVersion = gv.clone().into();
         let installed = self.list_installed()?;
         let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
-        Ok(resolver.resolve_installed(&gv, &installed))
+        Ok(resolver.resolve_installed(&gv, &installed).await)
     }
 
     /// Resolve the Godot version from a string, for an available version
     /// Returns a single version, whichever is the latest that matches the
     /// input.
     /// Accepts full and partial versions.
-    pub fn resolve_available_version<T>(
+    pub async fn resolve_available_version<T>(
         &self,
         gv: &T,
         use_cache_only: bool,
@@ -633,7 +640,7 @@ impl<'a> GodotManager<'a> {
     {
         let gv: GodotVersion = gv.clone().into();
         let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
-        resolver.resolve_available(&gv, use_cache_only)
+        resolver.resolve_available(&gv, use_cache_only).await
     }
 
     pub fn set_default(&self, gv: &GodotVersionDeterminate) -> Result<()> {
@@ -733,14 +740,14 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    pub fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    pub async fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone,
     {
         let gv: GodotVersion = gv.clone().into();
         let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
 
-        let actual_version = resolver.resolve_for_auto_install(&gv)?;
+        let actual_version = resolver.resolve_for_auto_install(&gv).await?;
 
         // Check if version is installed, if not, install
         if !self.is_version_installed(&actual_version)? {
@@ -749,7 +756,7 @@ impl<'a> GodotManager<'a> {
                 "auto-installing-version",
                 version = &actual_version.to_display_str(),
             );
-            self.install(&actual_version, false, false)?;
+            self.install(&actual_version, false, false).await?;
         }
         Ok(actual_version)
     }
@@ -812,7 +819,7 @@ impl<'a> GodotManager<'a> {
         Ok(matching_versions.first().map(|(_, tag)| tag.clone()))
     }
 
-    pub fn check_for_upgrades(&self) -> Result<()> {
+    pub async fn check_for_upgrades(&self) -> Result<()> {
         // Load or initialize gdvm cache
         let gdvm_cache = self.release_catalog.cache_store().load_gdvm_cache()?;
 
@@ -836,6 +843,7 @@ impl<'a> GodotManager<'a> {
 
             let releases = match self
                 .get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases")
+                .await
             {
                 Ok(json) => json,
                 Err(e) => {
@@ -989,14 +997,15 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    pub fn upgrade(&self, allow_major: bool) -> Result<()> {
+    pub async fn upgrade(&self, allow_major: bool) -> Result<()> {
         println_i18n!(self.i18n, "upgrade-starting");
         println_i18n!(self.i18n, "upgrade-downloading-latest");
 
         let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
 
-        let releases =
-            self.get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases")?;
+        let releases = self
+            .get_github_json("https://api.github.com/repos/adalinesimonian/gdvm/releases")
+            .await?;
 
         // Determine version requirement based on allow_major flag.
         let version_req = if allow_major {
@@ -1059,7 +1068,7 @@ impl<'a> GodotManager<'a> {
         let out_file = install_dir.join("gdvm.new");
 
         // Download the new binary.
-        if let Err(err) = download_file(&bin_url, &out_file, self.i18n) {
+        if let Err(err) = download_file(&bin_url, &out_file, self.i18n).await {
             eprintln_i18n!(self.i18n, "upgrade-download-failed");
             return Err(err);
         }
@@ -1132,32 +1141,36 @@ impl<'a> GodotManager<'a> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'a> RunVersionSource for GodotManager<'a> {
-    fn get_pinned_version(&self) -> Option<GodotVersion> {
+    async fn get_pinned_version(&self) -> Option<GodotVersion> {
         GodotManager::get_pinned_version(self)
     }
 
-    fn get_default(&self) -> Result<Option<GodotVersionDeterminate>> {
+    async fn get_default(&self) -> Result<Option<GodotVersionDeterminate>> {
         GodotManager::get_default(self)
     }
 
-    fn determine_version<P: AsRef<Path>>(&self, path: Option<P>) -> Option<GodotVersion> {
+    async fn determine_version<P: AsRef<Path> + Send + Sync>(
+        &self,
+        path: Option<P>,
+    ) -> Option<GodotVersion> {
         GodotManager::determine_version(self, path)
     }
 
-    fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    async fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
     where
-        T: Into<GodotVersion> + Clone,
+        T: Into<GodotVersion> + Clone + Send + Sync,
     {
-        GodotManager::auto_install_version(self, gv)
+        GodotManager::auto_install_version(self, gv).await
     }
 
-    fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    async fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
     where
-        T: Into<GodotVersion> + Clone,
+        T: Into<GodotVersion> + Clone + Send + Sync,
     {
         let gv: GodotVersion = gv.clone().into();
-        let matches = self.resolve_installed_version(&gv)?;
+        let matches = self.resolve_installed_version(&gv).await?;
 
         match matches.len() {
             0 => Err(anyhow!(t!(self.i18n, "error-version-not-found"))),
@@ -1213,10 +1226,10 @@ mod tests {
         assert_eq!(tags, vec!["4.1.1-stable"]);
     }
 
-    #[test]
-    fn test_find_latest_stable_release() {
+    #[tokio::test]
+    async fn test_find_latest_stable_release() {
         let i18n = I18n::new(100).unwrap();
-        let manager = GodotManager::new(&i18n).unwrap();
+        let manager = GodotManager::new(&i18n).await.unwrap();
 
         // Mock release data based on GitHub API response.
         let releases = json!([
@@ -1274,10 +1287,10 @@ mod tests {
         assert_eq!(result, Some("v0.8.0".to_string()));
     }
 
-    #[test]
-    fn test_find_latest_stable_release_no_matches() {
+    #[tokio::test]
+    async fn test_find_latest_stable_release_no_matches() {
         let i18n = I18n::new(100).unwrap();
-        let manager = GodotManager::new(&i18n).unwrap();
+        let manager = GodotManager::new(&i18n).await.unwrap();
 
         // Mock releases with no stable 0.x.x versions.
         let releases = json!([
@@ -1303,10 +1316,10 @@ mod tests {
         assert_eq!(result, None);
     }
 
-    #[test]
-    fn test_find_latest_stable_release_skips_drafts() {
+    #[tokio::test]
+    async fn test_find_latest_stable_release_skips_drafts() {
         let i18n = I18n::new(100).unwrap();
-        let manager = GodotManager::new(&i18n).unwrap();
+        let manager = GodotManager::new(&i18n).await.unwrap();
 
         // Mock releases with drafts.
         let releases = json!([
@@ -1327,10 +1340,10 @@ mod tests {
         assert_eq!(result, Some("v0.8.0".to_string()));
     }
 
-    #[test]
-    fn test_find_latest_stable_release_invalid_requirement() {
+    #[tokio::test]
+    async fn test_find_latest_stable_release_invalid_requirement() {
         let i18n = I18n::new(100).unwrap();
-        let manager = GodotManager::new(&i18n).unwrap();
+        let manager = GodotManager::new(&i18n).await.unwrap();
 
         let releases = json!([]);
 
