@@ -10,7 +10,7 @@ repository = "https://github.com/adalinesimonian/gdvm"
 [dependencies]
 
 # For command-line argument parsing:
-clap = { version = "=4.5.53", features = ["derive", "wrap_help"] }
+clap = { version = "=4.5.53", features = ["wrap_help"] }
 regex = "=1.12.2"
 
 # For cross-platform paths:
@@ -18,14 +18,10 @@ directories = "=6.0.0"
 
 # For i18n:
 fluent-bundle = "=0.16.0"
-fluent-langneg = "=0.14.2"
 unic-langid = { version = "=0.9.6", features = ["unic-langid-macros"] }
 anyhow = "=1.0.100"
 terminal_size = "=0.4.3"
-textwrap = { version = "=0.16.2", features = [
-    "unicode-width",
-    "unicode-linebreak",
-] }
+textwrap = "=0.16.2"
 
 # For downloading files:
 reqwest = { version = "=0.13.1", features = [
@@ -36,8 +32,7 @@ reqwest = { version = "=0.13.1", features = [
     "rustls",
     "blocking",
 ] }
-futures-io = "=0.3.31"
-indicatif = "=0.18.3"
+indicatif = { version = "=0.18.3", features = ["improved_unicode"] }
 sha2 = "=0.10.9"
 serde_json = "=1.0.148"
 serde = { version = "=1.0.228", features = ["derive"] }
@@ -45,8 +40,8 @@ semver = "=1.0.27"
 
 # For file system operations:
 zip = "=7.0.0"
-toml = "0.9.0"
-rpassword = "7.3.1"
+toml = "=0.9.10"
+rpassword = "=7.4.0"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -56,8 +51,8 @@ winapi = { version = "=0.3.9", features = ["winbase"] }
 daemonize = "=0.5.0"
 
 [dev-dependencies]
-tempfile = "3.20.0"
-serial_test = "3.2.0"
+tempfile = "=3.24.0"
+serial_test = "=3.2.0"
 
 [features]
 integration-tests = []
