@@ -61,7 +61,7 @@ daemonize = "=0.5.0"
 
 [dev-dependencies]
 tempfile = "=3.24.0"
-serial_test = "=3.2.0"
+serial_test = "=3.3.1"
 
 [features]
 integration-tests = []
