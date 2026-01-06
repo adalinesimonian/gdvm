@@ -34,7 +34,7 @@ reqwest = { version = "=0.13.1", features = [
 ] }
 indicatif = { version = "=0.18.3", features = ["improved_unicode"] }
 sha2 = "=0.10.9"
-serde_json = "=1.0.148"
+serde_json = "=1.0.149"
 serde = { version = "=1.0.228", features = ["derive"] }
 semver = "=1.0.27"
 tokio = { version = "=1.49.0", features = [
