@@ -1,0 +1,49 @@
+{
+	"id": 274871544,
+	"name": "4.6-beta3",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/4.6-beta3",
+	"binaries": {
+		"linux": {
+			"arm64": {
+				"sha512": "ab91aed8ce6e7e687123b1e004f516b67bdd671b84f7c0ce671a5afb565e41abf9c7f7308df8af24681639f0f029b025585ce5fcfb499a038f4abd3f6760f65f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.6-beta3/Godot_v4.6-beta3_linux.arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "1f3146449d04f7d7b3c17456a7fd9a9c5a759c242f2340844108303c71207f9b1a4b0c6f512f102e1ccccbf5fe9e8569432c20c9182f9d450555c59f3a046a0a",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.6-beta3/Godot_v4.6-beta3_linux.x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "a296737448862e0873425e54a6c1bf0813cdd3a8c80977f92236ff77a87247e63a028df98b1a3b1bd37f0965a636d1e1975547c28cbde489dc3fac3112a19a4e",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.6-beta3/Godot_v4.6-beta3_linux.x86_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "f61f012af1c70bd98e047d40c2e406a14fe8d49ee91d95c9d055f8fe229228137d14065ccf6c3ae976bde12737a082dd964a42ed8c2cd3247a95aa71a8fc8c15",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.6-beta3/Godot_v4.6-beta3_macos.universal.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "a6f6e90b91630e9605830795ca40d7e294705745c9663e1bf644710e801125459c6580361ff99f84b35a40fb39d4442ae8ca308a97a39fb70569ff6738ff0e15",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.6-beta3/Godot_v4.6-beta3_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "2fc841c149c1355e12a5ecd5d9bc4d8a73e496b490baa30bfaad1ca70f18d57aa5f39d7384dfea8eee85597d6633a01b8f0fa968d1fcdf0962761da5265eda77",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.6-beta3/Godot_v4.6-beta3_win64.exe.zip"
+				]
+			}
+		}
+	}
+}
