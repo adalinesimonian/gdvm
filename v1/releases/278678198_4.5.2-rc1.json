@@ -1,0 +1,49 @@
+{
+	"id": 278678198,
+	"name": "4.5.2-rc1",
+	"url": "https://github.com/godotengine/godot-builds/releases/tag/4.5.2-rc1",
+	"binaries": {
+		"linux": {
+			"arm64": {
+				"sha512": "060521092c9b256df55024a20b13a2fbd1daef0e0494a198bf88c1f0fff963ba51049733d18efe2643ba33b87056d337b7f56ddf8b0a962105a95d955492f71d",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5.2-rc1/Godot_v4.5.2-rc1_linux.arm64.zip"
+				]
+			},
+			"x86": {
+				"sha512": "95462465477c2ee8ca27408fb172f3c989336750e20e37462b647dc62b8c65da6f8bdd5b3d7412098d48bbc607784e6804bd24952c732b66b334fbe1cf6659b1",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5.2-rc1/Godot_v4.5.2-rc1_linux.x86_32.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "76a84cf62b0290daed3f2e0d9a41586750c313121e2928ba949d6b4e961fd22d3669f62b4ba83ea1a8bda224b1af321defaddc22f6a4bde2642e01df074de8cb",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5.2-rc1/Godot_v4.5.2-rc1_linux.x86_64.zip"
+				]
+			}
+		},
+		"macos": {
+			"universal": {
+				"sha512": "963f8ff78f998b2dc38e62b66509ba933189669bf5c026ae553db3d6bf644a439482269b77ac5cf986b7ffb90d67fee893c5605aa7d053d48137f82a21084e70",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5.2-rc1/Godot_v4.5.2-rc1_macos.universal.zip"
+				]
+			}
+		},
+		"windows": {
+			"x86": {
+				"sha512": "04d8c782751e13928e91dcf63dbd616f8fc5ffc457ae81d11b4baf46a06832319c0678330734ad0c9b5e6fc78e1966610ec14e0270a610941b1ce16dec933078",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5.2-rc1/Godot_v4.5.2-rc1_win32.exe.zip"
+				]
+			},
+			"x86_64": {
+				"sha512": "756f2bf7ea0f0e5e518ef52dc213319ad1a79069e14b5da8549d797f93660992912b069652a758811db61d3d5427ba7846f5c8efcdf0676a42b3291c46c84f1c",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.5.2-rc1/Godot_v4.5.2-rc1_win64.exe.zip"
+				]
+			}
+		}
+	}
+}
