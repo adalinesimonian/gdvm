@@ -60,7 +60,7 @@ winapi = { version = "=0.3.9", features = ["winbase"] }
 daemonize = "=0.5.0"
 
 [dev-dependencies]
-tempfile = "=3.24.0"
+tempfile = "=3.25.0"
 serial_test = "=3.3.1"
 
 [features]
