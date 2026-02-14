@@ -32,7 +32,7 @@ reqwest = { version = "=0.13.2", features = [
     "rustls",
     "stream",
 ] }
-indicatif = { version = "=0.18.3", features = ["improved_unicode"] }
+indicatif = { version = "=0.18.4", features = ["improved_unicode"] }
 sha2 = "=0.10.9"
 serde_json = "=1.0.149"
 serde = { version = "=1.0.228", features = ["derive"] }
