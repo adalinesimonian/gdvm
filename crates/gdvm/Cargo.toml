@@ -48,7 +48,7 @@ async-trait = "=0.1.89"
 futures-util = "=0.3.31"
 
 # For file system operations:
-zip = "=7.4.0"
+zip = "=8.1.0"
 toml = "=1.0.2"
 rpassword = "=7.4.0"
 
