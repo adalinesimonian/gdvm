@@ -49,7 +49,7 @@ futures-util = "=0.3.32"
 
 # For file system operations:
 zip = "=8.1.0"
-toml = "=1.0.2"
+toml = "=1.0.3"
 rpassword = "=7.4.0"
 
 # For starting Godot:
