@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       - name: Download binary artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: binary-${{ inputs.target }}
 
