@@ -36,7 +36,7 @@ indicatif = { version = "=0.18.4", features = ["improved_unicode"] }
 sha2 = "=0.10.9"
 serde_json = "=1.0.149"
 serde = { version = "=1.0.228", features = ["derive"] }
-semver = "=1.0.27"
+semver = "=1.0.28"
 tokio = { version = "=1.51.0", features = [
     "macros",
     "rt-multi-thread",
