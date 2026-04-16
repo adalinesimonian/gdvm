@@ -11,6 +11,7 @@ use crate::run_version_resolver::RunVersionSource;
 use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
+use digest_io::IoWrapper;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
 use semver::{Version, VersionReq};
@@ -114,14 +115,24 @@ fn verify_sha(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
 
     let local_hash = match sha_type {
         ShaType::Sha256 => {
-            let mut hasher = Sha256::new();
+            let mut hasher = IoWrapper(Sha256::new());
             std::io::copy(&mut f, &mut hasher)?;
-            format!("{:x}", hasher.finalize())
+            hasher
+                .0
+                .finalize()
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
         }
         ShaType::Sha512 => {
-            let mut hasher = Sha512::new();
+            let mut hasher = IoWrapper(Sha512::new());
             std::io::copy(&mut f, &mut hasher)?;
-            format!("{:x}", hasher.finalize())
+            hasher
+                .0
+                .finalize()
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
         }
     };
 
