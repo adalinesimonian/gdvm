@@ -51,7 +51,7 @@ futures-util = "=0.3.32"
 # For file system operations:
 zip = "=8.6.0"
 toml = "=1.1.2"
-rpassword = "=7.4.0"
+rpassword = "=7.5.1"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
