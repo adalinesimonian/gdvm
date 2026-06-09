@@ -11,7 +11,7 @@ repository = "https://github.com/adalinesimonian/gdvm"
 
 # For command-line argument parsing:
 clap = { version = "=4.6.1", features = ["wrap_help"] }
-regex = "=1.12.3"
+regex = "=1.12.4"
 
 # For cross-platform paths:
 directories = "=6.0.0"
