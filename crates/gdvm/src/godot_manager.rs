@@ -408,10 +408,26 @@ impl<'a> GodotManager<'a> {
             verify_sha(&tmp_file, &binary.sha512, self.i18n)?;
 
             // Move the verified zip to cache_dir
-            fs::rename(&tmp_file, &cache_zip_path).unwrap_or_else(|_| {
-                fs::copy(&tmp_file, &cache_zip_path).unwrap();
-                fs::remove_file(&tmp_file).unwrap();
-            });
+            fs::rename(&tmp_file, &cache_zip_path).or_else(|e| {
+                // On errors like "os error 17: The system cannot move the file to a different disk drive" for windows
+                if e.kind() == std::io::ErrorKind::CrossesDevices {
+                    fs::copy(&tmp_file, &cache_zip_path)
+                        .and_then(|_| fs::remove_file(&tmp_file))
+                        .map_err(|copy_err| {
+                            anyhow!(t_w!(
+                                self.i18n,
+                                "error-move-file-fallback-failed",
+                                error = copy_err.to_string()
+                            ))
+                        })
+                } else {
+                    Err(anyhow!(t_w!(
+                        self.i18n,
+                        "error-move-file-failed",
+                        error = e.to_string()
+                    )))
+                }
+            })?;
             eprintln_i18n!(self.i18n, "cached-zip-stored");
         }
 
