@@ -38,6 +38,8 @@ fn test_load_save_roundtrip() {
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token1".into()),
+            global_installs_location: None,
+            global_add_shortcuts: None,
         };
         cfg.save(&i18n).unwrap();
     });
@@ -48,6 +50,8 @@ fn test_load_save_roundtrip() {
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token2".into()),
+            global_installs_location: None,
+            global_add_shortcuts: None,
         };
         cfg.save(&i18n).unwrap();
     });
