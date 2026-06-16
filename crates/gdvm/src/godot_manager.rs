@@ -408,7 +408,10 @@ impl<'a> GodotManager<'a> {
             verify_sha(&tmp_file, &binary.sha512, self.i18n)?;
 
             // Move the verified zip to cache_dir
-            fs::rename(&tmp_file, &cache_zip_path)?;
+            fs::rename(&tmp_file, &cache_zip_path).unwrap_or_else(|_| {
+                fs::copy(&tmp_file, &cache_zip_path).unwrap();
+                fs::remove_file(&tmp_file).unwrap();
+            });
             eprintln_i18n!(self.i18n, "cached-zip-stored");
         }
 

@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::config::get_home_dir;
 use crate::i18n::I18n;
 use anyhow::Result;
@@ -17,8 +18,13 @@ impl GdvmPaths {
     /// Construct paths rooted at the GDVM base directory, ~/.gdvm, and ensure the base, installs,
     /// cache, and bin directories exist.
     pub fn new(i18n: &I18n) -> Result<Self> {
-        let base = get_home_dir(i18n)?.join(".gdvm");
-        let installs = base.join("installs");
+        let base = get_home_dir(i18n)?.join(".gdvm"); // Ensure config can be loaded/saved before creating directories.
+        let config = Config::load(i18n)?;
+        let installs = config
+            .global_installs_location
+            .clone()
+            .unwrap_or_else(|| base.join("installs"));
+
         let cache_dir = base.join("cache");
         let cache_index = base.join("cache.json");
         let bin_dir = base.join("bin");
@@ -83,6 +89,34 @@ impl GdvmPaths {
             bin_dir,
         })
     }
+
+    #[cfg(test)]
+    pub fn from_config_installs_for_tests(base: PathBuf) -> Result<Self> {
+        let config = Config {
+            global_installs_location: Some(base.join("test_installs")),
+            global_add_shortcuts: None,
+            github_token: None,
+        };
+        let installs = config
+            .global_installs_location
+            .clone()
+            .unwrap_or_else(|| base.join("installs"));
+        let cache_dir = base.join("cache");
+        let cache_index = base.join("cache.json");
+        let bin_dir = base.join("bin");
+
+        fs::create_dir_all(&installs)?;
+        fs::create_dir_all(&cache_dir)?;
+        fs::create_dir_all(&bin_dir)?;
+
+        Ok(Self {
+            base,
+            installs,
+            cache_dir,
+            cache_index,
+            bin_dir,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -94,6 +128,26 @@ mod tests {
     fn creates_directories_and_exposes_paths() -> Result<()> {
         let tmp = TempDir::new()?;
         let paths = GdvmPaths::from_base_for_tests(tmp.path().to_path_buf())?;
+
+        assert!(paths.base().starts_with(tmp.path()));
+        assert!(paths.installs().exists());
+        assert!(paths.cache_dir().exists());
+        assert!(paths.bin_dir().exists());
+
+        // Derived files live under base.
+        assert_eq!(paths.default_file(), paths.base().join("default"));
+        assert_eq!(
+            paths.current_godot_symlink(),
+            paths.bin_dir().join("current_godot")
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn creates_directories_and_exposes_paths_with_config() -> Result<()> {
+        let tmp = TempDir::new()?;
+        let paths = GdvmPaths::from_config_installs_for_tests(tmp.path().to_path_buf())?;
 
         assert!(paths.base().starts_with(tmp.path()));
         assert!(paths.installs().exists());
