@@ -14,6 +14,8 @@ use daemonize::Daemonize;
 use digest_io::IoWrapper;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
+#[cfg(target_os = "windows")]
+use mslnk::ShellLink;
 use semver::{Version, VersionReq};
 use sha2::{Digest, Sha256, Sha512};
 #[cfg(target_family = "unix")]
@@ -343,11 +345,13 @@ impl<'a> GodotManager<'a> {
     ///
     /// - `force`: If true, reinstall the version even if it's already installed.
     /// - `redownload`: If true, ignore cached zip files and download fresh ones.
+    /// - `add_shortcut`: If true, add shortcuts for the installed version.
     pub async fn install(
         &self,
         gv: &GodotVersionDeterminate,
         force: bool,
         redownload: bool,
+        launch_shortcut: bool,
     ) -> Result<InstallOutcome> {
         let install_str = gv.to_install_str();
         let version_path = self.paths.installs().join(install_str);
@@ -435,6 +439,33 @@ impl<'a> GodotManager<'a> {
 
         // Extract from cache_zip_path
         zip_utils::extract_zip(&cache_zip_path, &version_path, self.i18n)?;
+
+        // creates shortcut on desktop directory
+        if launch_shortcut {
+            #[cfg(target_os = "windows")]
+            {
+                use crate::config::get_home_dir;
+
+                let target = self.get_base_path().join("bin").join("gdvm.exe");
+                let link_name = Some(format!("Godot {}", gv.to_install_str()));
+                let shortcut_path = &get_home_dir(self.i18n)?.join("Desktop").join(format!(
+                    "{}.lnk",
+                    link_name.as_ref().expect("cannot set name")
+                ));
+
+                let mut lnk = ShellLink::new(target)?;
+                lnk.set_icon_location(Some(
+                    self.get_base_path()
+                        .join("bin")
+                        .join("godot.ico")
+                        .to_string_lossy()
+                        .to_string(),
+                ));
+                lnk.set_arguments(Some(format!("run {}", gv.to_install_str())));
+                lnk.set_name(link_name);
+                lnk.create_lnk(shortcut_path)?;
+            }
+        }
 
         Ok(InstallOutcome::Installed)
     }
@@ -786,7 +817,14 @@ impl<'a> GodotManager<'a> {
                 "auto-installing-version",
                 version = &actual_version.to_display_str(),
             );
-            self.install(&actual_version, false, false).await?;
+            let config = Config::load(self.i18n)?;
+            self.install(
+                &actual_version,
+                false,
+                false,
+                config.global_add_shortcuts.is_some(),
+            )
+            .await?;
         }
         Ok(actual_version)
     }

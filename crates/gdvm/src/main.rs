@@ -492,7 +492,15 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
         version = &gv.to_display_str()
     );
 
-    match manager.install(&gv, force_reinstall, redownload).await? {
+    match manager
+        .install(
+            &gv,
+            force_reinstall,
+            redownload,
+            config::Config::load(i18n)?.global_add_shortcuts.is_some(),
+        )
+        .await?
+    {
         InstallOutcome::Installed => {
             // Print a message indicating the successful installation
             println_i18n!(i18n, "installed-success", version = &gv.to_display_str());
