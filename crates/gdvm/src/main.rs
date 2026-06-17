@@ -472,6 +472,8 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
     let refresh = matches.get_flag("refresh");
+    let launch_shortcut = matches.get_flag("launch-shortcut")
+        || config::Config::load(i18n)?.global_add_shortcuts.is_some();
 
     refresh_cache_if_requested(manager, refresh).await?;
 
@@ -493,12 +495,7 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
     );
 
     match manager
-        .install(
-            &gv,
-            force_reinstall,
-            redownload,
-            config::Config::load(i18n)?.global_add_shortcuts.is_some(),
-        )
+        .install(&gv, force_reinstall, redownload, launch_shortcut)
         .await?
     {
         InstallOutcome::Installed => {
