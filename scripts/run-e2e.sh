@@ -413,6 +413,31 @@ gdvm install latest
 gdvm run latest --console=true -- --version | grep stable.official
 TEST_SCRIPT
 
+test ".env file variables are loaded by gdvm and passed to Godot" <<'TEST_SCRIPT'
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+cd "$tmpdir"
+gdvm pin 4.3.0
+
+cat > check_env.gd << 'GDSCRIPT'
+extends SceneTree
+
+func _initialize():
+    print("ENV_VALUE=" + OS.get_environment("GDVM_E2E_TEST_VAR"))
+    quit(0)
+GDSCRIPT
+
+printf 'GDVM_E2E_TEST_VAR=hello_from_dotenv\n' > .env
+
+output="$(gdvm run --console=true -- --headless --script check_env.gd 2>&1)"
+echo "Script output: $output"
+
+if ! echo "$output" | grep -q "ENV_VALUE=hello_from_dotenv"; then
+    echo "Expected env var value not found in Godot output"
+    exit 1
+fi
+TEST_SCRIPT
+
 test "Link 4.3.0 to a custom path and run it" <<'TEST_SCRIPT'
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT

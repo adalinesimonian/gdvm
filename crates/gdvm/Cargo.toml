@@ -68,6 +68,7 @@ futures-util = "=0.3.32"
 zip = "=8.6.0"
 toml = "=1.1.2"
 rpassword = "=7.5.4"
+dotenvy = "=0.15.7"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]

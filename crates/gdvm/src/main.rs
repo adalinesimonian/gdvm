@@ -26,6 +26,7 @@ use gdvm::{eprintln_i18n, println_i18n, t};
 
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgMatches, Command, value_parser};
+use dotenvy::dotenv;
 use std::{
     fs,
     io::{self, Write},
@@ -116,6 +117,7 @@ fn keyword_to_version_filter(keyword: &str) -> GodotVersion {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
+    dotenv().ok();
     let i18n = I18n::new(100)?;
     let manager = GodotManager::new(&i18n).await?;
 
