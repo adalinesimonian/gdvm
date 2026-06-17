@@ -48,7 +48,7 @@ foo=bar
     )
     .unwrap();
     let i18n = I18n::new(80).unwrap();
-    let gv = detect_godot_version_in_path(&i18n, &proj).unwrap();
+    let (gv, _variant) = detect_godot_version_in_path(&i18n, &proj).unwrap();
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(2));
 }

@@ -21,12 +21,29 @@ $ErrorActionPreference = "Stop"
 # Build the e2e image and run tests inside Docker.
 
 $image = if ($env:IMAGE) { $env:IMAGE } else { "gdvm-e2e" }
+$cache = if ($null -ne $env:GDVM_E2E_CACHE) { $env:GDVM_E2E_CACHE } else { "gdvm-e2e-cache" }
 
 docker build -f Dockerfile.e2e -t $image .
 
-$envVars = @()
+$runArgs = @("--rm", "-ti")
+
 if ($env:GITHUB_TOKEN) {
-    $envVars += "-e"
-    $envVars += "GITHUB_TOKEN=$($env:GITHUB_TOKEN)"
+    $runArgs += "-e"
+    $runArgs += "GITHUB_TOKEN=$($env:GITHUB_TOKEN)"
 }
-docker run --rm -ti $envVars $image
+
+if (-not $env:GDVM_E2E_NO_CACHE -and $cache) {
+    if ($cache -match '^([A-Za-z]:[\\/]|[\\/])') {
+        New-Item -ItemType Directory -Force -Path $cache | Out-Null
+    }
+
+    Write-Host "Persisting e2e cache."
+
+    $runArgs += "-v"
+    $runArgs += "${cache}:/root/.gdvm/cache"
+}
+else {
+    Write-Host "e2e cache disabled."
+}
+
+docker run @runArgs $image

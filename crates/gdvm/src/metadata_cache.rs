@@ -36,7 +36,7 @@ pub struct ReleaseCache {
 /// Cached capability info for a single release.
 pub struct ReleaseCapabilitiesEntry {
     pub tag_name: String,
-    pub has_csharp: bool,
+    pub variants: Vec<String>,
     pub platforms: Vec<String>,
 }
 
@@ -217,7 +217,7 @@ pub fn filter_cached_releases(
     let mut releases: Vec<GodotVersionDeterminate> = cache
         .releases
         .iter()
-        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
+        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name).ok())
         .map(|gv| gv.to_determinate())
         .filter(|r| filter.is_none_or(|f| f.matches(r)))
         .collect();

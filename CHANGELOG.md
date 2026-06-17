@@ -21,8 +21,22 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### Deprecated
+
+The following features have been deprecated. They will continue to work for the time being, but will be removed in a future release. See [MIGRATION.md](MIGRATION.md) for details.
+
+- The `--csharp` flag for selecting C# builds. Use the `csharp:` prefix instead, for example, `csharp:4.4`.
+- The `stable` keyword for the latest stable release. Use `latest` instead.
+- The `.gdvmrc` file for pinned versions. Use `gdvm.toml` instead.
+
+### New Features
+
+- Added a `latest` keyword that resolves to the latest stable release. If `--pre` is also passed, it resolves to the absolute latest release, including pre-releases and dev builds.
+
 ### Changed
 
+- The version syntax now uses a `[variant:]version` form. C# builds are selected with the `csharp:` prefix, for example, `csharp:4.4`. The standard build can be named explicitly with the reserved `default:` prefix.
+- Pinned versions are stored in a new `gdvm.toml` file.
 - Relicensed from ISC to GPL-3.0-or-later. This ensures that improvements to gdvm will be shared with the community.
 
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.11.0...main

@@ -45,6 +45,8 @@ pub enum ResolveMode<'a> {
 #[derive(Debug, Clone)]
 pub struct ResolveRequest<'a> {
     pub query: GodotVersion,
+    pub variant: Option<String>,
+    pub include_pre: bool,
     pub mode: ResolveMode<'a>,
 }
 
@@ -59,20 +61,39 @@ impl<'a> ResolveRequest<'a> {
     pub fn installed(query: GodotVersion, installed: &'a [GodotVersionDeterminate]) -> Self {
         Self {
             query,
+            variant: None,
+            include_pre: false,
             mode: ResolveMode::Installed { installed },
         }
     }
 
-    pub fn available(query: GodotVersion, use_cache_only: bool) -> Self {
+    pub fn installed_with_variant(
+        query: GodotVersion,
+        variant: Option<String>,
+        installed: &'a [GodotVersionDeterminate],
+    ) -> Self {
         Self {
             query,
+            variant,
+            include_pre: false,
+            mode: ResolveMode::Installed { installed },
+        }
+    }
+
+    pub fn available(query: GodotVersion, variant: Option<String>, use_cache_only: bool) -> Self {
+        Self {
+            query,
+            variant,
+            include_pre: false,
             mode: ResolveMode::Available { use_cache_only },
         }
     }
 
-    pub fn auto_install(query: GodotVersion) -> Self {
+    pub fn auto_install(query: GodotVersion, variant: Option<String>) -> Self {
         Self {
             query,
+            variant,
+            include_pre: false,
             mode: ResolveMode::AutoInstall,
         }
     }
@@ -85,17 +106,6 @@ impl<'a> RegistryVersionResolver<'a> {
             i18n,
             host,
         }
-    }
-
-    fn apply_csharp(
-        &self,
-        query: &GodotVersion,
-        mut selected: GodotVersionDeterminate,
-    ) -> GodotVersionDeterminate {
-        if let Some(is_csharp) = query.is_csharp {
-            selected.is_csharp = Some(is_csharp);
-        }
-        selected
     }
 
     pub async fn resolve(&self, request: ResolveRequest<'_>) -> Result<ResolveOutcome> {
@@ -111,14 +121,25 @@ impl<'a> RegistryVersionResolver<'a> {
             }
             ResolveMode::Available { use_cache_only } => {
                 let resolved = self
-                    .resolve_available_impl(&request.query, use_cache_only)
+                    .resolve_available_impl(
+                        &request.query,
+                        request.variant.as_deref(),
+                        request.include_pre,
+                        use_cache_only,
+                    )
                     .await?;
                 Ok(resolved
                     .map(ResolveOutcome::Determinate)
                     .unwrap_or(ResolveOutcome::NotFound))
             }
             ResolveMode::AutoInstall => {
-                let resolved = self.resolve_for_auto_install_impl(&request.query).await?;
+                let resolved = self
+                    .resolve_for_auto_install_impl(
+                        &request.query,
+                        request.variant.as_deref(),
+                        request.include_pre,
+                    )
+                    .await?;
                 Ok(resolved
                     .map(ResolveOutcome::Determinate)
                     .unwrap_or(ResolveOutcome::NotFound))
@@ -146,12 +167,17 @@ impl<'a> RegistryVersionResolver<'a> {
     pub async fn resolve_available(
         &self,
         query: &GodotVersion,
+        variant: Option<&str>,
+        include_pre: bool,
         use_cache_only: bool,
     ) -> Result<Option<GodotVersionDeterminate>> {
-        match self
-            .resolve(ResolveRequest::available(query.clone(), use_cache_only))
-            .await
-        {
+        let mut request = ResolveRequest::available(
+            query.clone(),
+            variant.map(|s| s.to_string()),
+            use_cache_only,
+        );
+        request.include_pre = include_pre;
+        match self.resolve(request).await {
             Ok(ResolveOutcome::Determinate(gv)) => Ok(Some(gv)),
             Ok(ResolveOutcome::NotFound) => Ok(None),
             Ok(ResolveOutcome::Candidates(_)) => Ok(None),
@@ -163,11 +189,13 @@ impl<'a> RegistryVersionResolver<'a> {
     pub async fn resolve_for_auto_install(
         &self,
         query: &GodotVersion,
+        variant: Option<&str>,
+        include_pre: bool,
     ) -> Result<GodotVersionDeterminate> {
-        match self
-            .resolve(ResolveRequest::auto_install(query.clone()))
-            .await?
-        {
+        let mut request =
+            ResolveRequest::auto_install(query.clone(), variant.map(|s| s.to_string()));
+        request.include_pre = include_pre;
+        match self.resolve(request).await? {
             ResolveOutcome::Determinate(gv) => Ok(gv),
             ResolveOutcome::NotFound => Err(anyhow!(t_w!(self.i18n, "error-version-not-found"))),
             ResolveOutcome::Candidates(_) => unreachable!("auto-install never yields candidates"),
@@ -201,6 +229,8 @@ impl<'a> RegistryVersionResolver<'a> {
     async fn resolve_available_impl(
         &self,
         query: &GodotVersion,
+        variant: Option<&str>,
+        include_pre: bool,
         use_cache_only: bool,
     ) -> Result<Option<GodotVersionDeterminate>> {
         let releases = self
@@ -208,12 +238,15 @@ impl<'a> RegistryVersionResolver<'a> {
             .list_releases(Some(query), use_cache_only, self.i18n)
             .await?;
 
-        let needs_csharp = query.is_csharp.unwrap_or(false);
         let mut compatible = Vec::new();
         for gv in releases {
-            if self.is_compatible(&gv, needs_csharp).await? {
+            if self.is_compatible(&gv, variant).await? {
                 compatible.push(gv);
             }
+        }
+
+        if include_pre {
+            return Ok(compatible.into_iter().next());
         }
 
         let latest_stable = compatible
@@ -221,29 +254,30 @@ impl<'a> RegistryVersionResolver<'a> {
             .find(|r| r.release_type == "stable")
             .cloned();
 
-        Ok(latest_stable
-            .or_else(|| compatible.into_iter().next())
-            .map(|gv| self.apply_csharp(query, gv)))
+        Ok(latest_stable.or_else(|| compatible.into_iter().next()))
     }
 
     async fn resolve_for_auto_install_impl(
         &self,
         query: &GodotVersion,
+        variant: Option<&str>,
+        include_pre: bool,
     ) -> Result<Option<GodotVersionDeterminate>> {
         if query.is_stable() && query.major.is_none() {
-            return self.resolve_available_impl(query, false).await;
+            return self
+                .resolve_available_impl(query, variant, include_pre, false)
+                .await;
         }
 
         if query.is_incomplete() {
-            return self.resolve_available_impl(query, false).await;
+            return self
+                .resolve_available_impl(query, variant, include_pre, false)
+                .await;
         }
 
         let determinate: GodotVersionDeterminate = query.clone().into();
-        if self
-            .is_compatible(&determinate, query.is_csharp.unwrap_or(false))
-            .await?
-        {
-            Ok(Some(self.apply_csharp(query, determinate)))
+        if self.is_compatible(&determinate, variant).await? {
+            Ok(Some(determinate))
         } else {
             Ok(None)
         }
@@ -252,18 +286,20 @@ impl<'a> RegistryVersionResolver<'a> {
     async fn is_compatible(
         &self,
         gv: &GodotVersionDeterminate,
-        needs_csharp: bool,
+        variant: Option<&str>,
     ) -> Result<bool> {
         let caps = self
             .catalog
             .capabilities_for(&gv.to_remote_str(), self.i18n)
             .await?;
 
-        if needs_csharp && !caps.has_csharp {
+        if let Some(v) = variant
+            && !caps.variants.iter().any(|cv| cv == v)
+        {
             return Ok(false);
         }
 
-        let platform_key = registry_platform_key(self.host, needs_csharp);
+        let platform_key = registry_platform_key(self.host, variant);
         let arch_key = registry_arch_key(self.host);
         let exact = format!("{platform_key}-{arch_key}");
         let universal = format!("{platform_key}-universal");
@@ -323,7 +359,7 @@ mod tests {
                     .iter()
                     .map(|tag| ReleaseCapabilitiesEntry {
                         tag_name: (*tag).to_string(),
-                        has_csharp: true,
+                        variants: vec!["csharp".to_string(), "default".to_string()],
                         platforms: vec![
                             "linux-csharp-x86_64".to_string(),
                             "linux-x86_64".to_string(),
@@ -355,16 +391,37 @@ mod tests {
             patch: None,
             subpatch: None,
             release_type: None,
-            is_csharp: Some(true),
         };
 
         let resolved = resolver
-            .resolve_available(&query, false)
+            .resolve_available(&query, Some("csharp"), false, false)
             .await
             .unwrap()
             .unwrap();
         assert_eq!(resolved.to_remote_str(), "4.2-stable");
-        assert_eq!(resolved.is_csharp, Some(true));
+    }
+
+    #[tokio::test]
+    async fn resolve_available_standard_variant() {
+        let (catalog, _tmp) = catalog_with_tags(&["4.2-rc1", "4.2-stable"]);
+        let intl = i18n();
+        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
+        let query = GodotVersion {
+            major: Some(4),
+            minor: Some(2),
+            patch: None,
+            subpatch: None,
+            release_type: None,
+        };
+
+        for variant in [None, Some("default")] {
+            let resolved = resolver
+                .resolve_available(&query, variant, false, false)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(resolved.to_remote_str(), "4.2-stable");
+        }
     }
 
     #[tokio::test]
@@ -378,12 +435,13 @@ mod tests {
             patch: None,
             subpatch: None,
             release_type: Some("stable".to_string()),
-            is_csharp: Some(true),
         };
 
-        let resolved = resolver.resolve_for_auto_install(&query).await.unwrap();
+        let resolved = resolver
+            .resolve_for_auto_install(&query, Some("csharp"), false)
+            .await
+            .unwrap();
         assert_eq!(resolved.to_remote_str(), "4.1-stable");
-        assert_eq!(resolved.is_csharp, Some(true));
     }
 
     #[tokio::test]
@@ -398,8 +456,8 @@ mod tests {
                 patch: None,
                 subpatch: None,
                 release_type: None,
-                is_csharp: None,
             },
+            None,
             false,
         );
 
@@ -418,7 +476,6 @@ mod tests {
             patch: None,
             subpatch: None,
             release_type: None,
-            is_csharp: None,
         };
 
         let installed = vec![
@@ -428,7 +485,6 @@ mod tests {
                 patch: 0,
                 subpatch: 0,
                 release_type: "stable".into(),
-                is_csharp: None,
             },
             GodotVersionDeterminate {
                 major: 4,
@@ -436,7 +492,6 @@ mod tests {
                 patch: 0,
                 subpatch: 0,
                 release_type: "stable".into(),
-                is_csharp: None,
             },
             GodotVersionDeterminate {
                 major: 3,
@@ -444,7 +499,6 @@ mod tests {
                 patch: 1,
                 subpatch: 0,
                 release_type: "rc1".into(),
-                is_csharp: None,
             },
         ];
 

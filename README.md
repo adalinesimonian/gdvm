@@ -56,25 +56,34 @@ powershell -NoProfile -Command "(iwr -useb 'https://gdvm.io/install.ps1.txt').Co
 Once installed, you can use the `gdvm` command to manage your Godot installations. Here are some common commands:
 
 ```bash
-gdvm use stable              # Set the global default to the latest stable.
+gdvm use latest         # Set the global default to the latest stable.
+gdvm use --pre latest   # Set the global default to the latest build of any kind
+                        # (stable/rc/beta/dev).
 
-gdvm pin stable --csharp     # Pin the current folder to latest stable with C#,
-                             # using a .gdvmrc file.
+gdvm pin csharp:latest  # Pin the current folder to latest stable with C#,
+                        # using a gdvm.toml file.
 ```
 
 > [!TIP]
 > Associate `.godot` files with `~/.gdvm/bin/godot.exe` to auto-use the correct version. gdvm can also detect the required version from `project.godot`.
 
 ```bash
-gdvm run                     # Run the default Godot for the folder.
-godot                        # Alias for `gdvm run`.
-godot_console                # Windows variant keeping the console open.
-gdvm run 3.5 --csharp        # Run Godot 3.5 with C#.
-gdvm remove 3.5              # Removes Godot 3.5 without C#.
-gdvm list                    # List installed versions.
-gdvm search 4                # Search available 4.x versions.
-gdvm upgrade                 # Upgrade gdvm.
+gdvm run             # Run the default Godot for the folder.
+godot                # Alias for `gdvm run`.
+godot_console        # Windows variant keeping the console open.
+gdvm run csharp:3.5  # Run Godot 3.5 with C#.
+gdvm remove 3.5      # Removes Godot 3.5 without C#.
+gdvm list            # List installed versions.
+gdvm search 4        # Search available 4.x versions.
+gdvm upgrade         # Upgrade gdvm.
 ```
+
+> [!NOTE]
+> Upgrading from an older version of gdvm? The Godot version syntax changed.
+>
+> The `csharp:` prefix replaces the old `--csharp` flag, and pins are stored in `gdvm.toml`.
+>
+> Your existing commands and `.gdvmrc` files still work. See [Migrating to the new version syntax](MIGRATION.md) for the details.
 
 > [!NOTE]
 > Hitting GitHub rate limits? Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with access to public repositories, and run `gdvm config set github.token` (stored plaintext in `~/.gdvm/config.toml`).

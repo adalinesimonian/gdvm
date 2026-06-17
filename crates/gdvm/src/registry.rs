@@ -55,29 +55,16 @@ pub struct Registry {
     client: reqwest::Client,
 }
 
-pub fn registry_platform_key(host: HostPlatform, is_csharp: bool) -> &'static str {
-    match host.os {
-        HostOs::Windows => {
-            if is_csharp {
-                "windows-csharp"
-            } else {
-                "windows"
-            }
-        }
-        HostOs::Macos => {
-            if is_csharp {
-                "macos-csharp"
-            } else {
-                "macos"
-            }
-        }
-        HostOs::Linux => {
-            if is_csharp {
-                "linux-csharp"
-            } else {
-                "linux"
-            }
-        }
+pub fn registry_platform_key(host: HostPlatform, variant: Option<&str>) -> String {
+    let os = match host.os {
+        HostOs::Windows => "windows",
+        HostOs::Macos => "macos",
+        HostOs::Linux => "linux",
+    };
+    if crate::version_utils::is_default_variant(variant) {
+        os.to_string()
+    } else {
+        format!("{os}-{}", variant.unwrap())
     }
 }
 
@@ -90,15 +77,15 @@ pub fn registry_arch_key(host: HostPlatform) -> &'static str {
 }
 
 /// Select the binary entry for a given host platform.
-pub fn select_binary(
-    meta: &ReleaseMetadata,
+pub fn select_binary<'a>(
+    meta: &'a ReleaseMetadata,
     host: HostPlatform,
-    is_csharp: bool,
-) -> Result<&BinaryInfo, BinarySelectionError> {
-    let platform_key = registry_platform_key(host, is_csharp);
+    variant: Option<&str>,
+) -> Result<&'a BinaryInfo, BinarySelectionError> {
+    let platform_key = registry_platform_key(host, variant);
     let platform_map = meta
         .binaries
-        .get(platform_key)
+        .get(&platform_key)
         .ok_or(BinarySelectionError::UnsupportedPlatform)?;
 
     let arch_key = if matches!(host.os, HostOs::Macos) && platform_map.contains_key("universal") {
@@ -186,7 +173,7 @@ mod tests {
             arch: HostArch::X86_64,
         };
 
-        let selected = select_binary(&meta, host, false).unwrap();
+        let selected = select_binary(&meta, host, None).unwrap();
         assert_eq!(selected.urls[0], "http://example.com/universal.zip");
     }
 
@@ -198,7 +185,7 @@ mod tests {
             arch: HostArch::X86_64,
         };
 
-        let err = select_binary(&meta, host, false).unwrap_err();
+        let err = select_binary(&meta, host, None).unwrap_err();
         assert_eq!(err, BinarySelectionError::UnsupportedPlatform);
     }
 }
