@@ -345,7 +345,7 @@ impl<'a> GodotManager<'a> {
     ///
     /// - `force`: If true, reinstall the version even if it's already installed.
     /// - `redownload`: If true, ignore cached zip files and download fresh ones.
-    /// - `add_shortcut`: If true, add shortcuts for the installed version.
+    /// - `launch_shortcut`: If true, add shortcuts for the installed version.
     pub async fn install(
         &self,
         gv: &GodotVersionDeterminate,
