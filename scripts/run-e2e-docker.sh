@@ -21,12 +21,26 @@ set -euo pipefail
 # Build the e2e image and run tests inside Docker.
 
 IMAGE="${IMAGE:-gdvm-e2e}"
+CACHE="${GDVM_E2E_CACHE-gdvm-e2e-cache}"
 
 docker build -f Dockerfile.e2e -t "$IMAGE" .
 
-env_vars=()
+run_args=(--rm -ti)
+
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-    env_vars+=("-e" "GITHUB_TOKEN=$GITHUB_TOKEN")
+    run_args+=("-e" "GITHUB_TOKEN=$GITHUB_TOKEN")
 fi
 
-docker run --rm -ti "${env_vars[@]}" "$IMAGE"
+if [[ -z "${GDVM_E2E_NO_CACHE:-}" && -n "$CACHE" ]]; then
+    if [[ "$CACHE" == /* ]]; then
+        mkdir -p "$CACHE"
+    fi
+
+    echo "Persisting e2e cache."
+
+    run_args+=("-v" "$CACHE:/root/.gdvm/cache")
+else
+    echo "e2e cache disabled."
+fi
+
+docker run "${run_args[@]}" "$IMAGE"

@@ -26,6 +26,7 @@ path = [
     "Cargo.lock",
     "gh-pages/*.webmanifest",
     "gh-pages/robots.txt",
+    "crates/gdvm/i18n/**",
 ]
 SPDX-FileCopyrightText = "Copyright (C) 2024 Adaline Simonian"
 SPDX-License-Identifier = "GPL-3.0-or-later"

@@ -178,11 +178,17 @@ impl ReleaseCatalog {
 
 fn derive_capabilities(tag: &str, metadata: &ReleaseMetadata) -> ReleaseCapabilitiesEntry {
     let mut platforms = Vec::new();
-    let mut has_csharp = false;
+    let mut variants = Vec::new();
 
     for (platform_key, arches) in &metadata.binaries {
-        if platform_key.contains("csharp") {
-            has_csharp = true;
+        // Extract variant from platform key, e.g. "csharp" from "linux-csharp".
+        let variant = match platform_key.split_once('-') {
+            Some((_os, variant)) => variant,
+            None => crate::version_utils::DEFAULT_VARIANT,
+        };
+
+        if !variants.iter().any(|v: &String| v == variant) {
+            variants.push(variant.to_string());
         }
         for arch_key in arches.keys() {
             platforms.push(format!("{platform_key}-{arch_key}"));
@@ -191,10 +197,11 @@ fn derive_capabilities(tag: &str, metadata: &ReleaseMetadata) -> ReleaseCapabili
 
     platforms.sort();
     platforms.dedup();
+    variants.sort();
 
     ReleaseCapabilitiesEntry {
         tag_name: tag.to_string(),
-        has_csharp,
+        variants,
         platforms,
     }
 }
@@ -278,7 +285,6 @@ mod tests {
             patch: None,
             subpatch: None,
             release_type: None,
-            is_csharp: None,
         };
 
         let releases = catalog

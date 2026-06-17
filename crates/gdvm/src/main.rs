@@ -21,7 +21,7 @@ use gdvm::i18n::I18n;
 use gdvm::run_version_resolver::{
     RunResolutionRequest, RunVersionResolver, warn_project_version_mismatch,
 };
-use gdvm::version_utils::{self, GodotVersion};
+use gdvm::version_utils::{self, GodotVersion, VersionSpec, VersionTarget};
 use gdvm::{eprintln_i18n, println_i18n, t};
 
 use anyhow::{Result, anyhow};
@@ -39,12 +39,79 @@ fn refresh_flag(i18n: &I18n) -> Arg {
         .help(t!(i18n, "help-refresh-flag"))
 }
 
+fn include_pre_flag(i18n: &I18n) -> Arg {
+    Arg::new("include-pre")
+        .long("include-pre")
+        .visible_alias("pre")
+        .short('p')
+        .num_args(0)
+        .help(t!(i18n, "help-include-pre"))
+}
+
+fn deprecated_csharp_flag(i18n: &I18n) -> Arg {
+    Arg::new("csharp")
+        .long("csharp")
+        .num_args(0)
+        .hide(true)
+        .help(t!(i18n, "help-csharp"))
+}
+
+fn deprecated_csharp_flag_with_value(i18n: &I18n) -> Arg {
+    Arg::new("csharp")
+        .long("csharp")
+        .value_parser(value_parser!(bool))
+        .num_args(0..=1)
+        .default_missing_value("true")
+        .default_value("false")
+        .require_equals(true)
+        .hide(true)
+        .help(t!(i18n, "help-csharp"))
+        .long_help(t!(i18n, "help-run-csharp-long"))
+}
+
+/// Check if the deprecated `--csharp` flag was explicitly provided.
+fn check_deprecated_csharp_flag(
+    i18n: &I18n,
+    matches: &ArgMatches,
+    spec_variant: Option<String>,
+) -> Option<String> {
+    let explicitly_given =
+        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
+    if !explicitly_given {
+        return spec_variant;
+    }
+    eprintln_i18n!(i18n, "warning-deprecated-csharp-flag");
+
+    // If the new variant field was used, it takes precedence.
+    if spec_variant.is_some() {
+        return spec_variant;
+    }
+
+    if matches.get_flag("csharp") {
+        Some("csharp".to_string())
+    } else {
+        None
+    }
+}
+
 async fn refresh_cache_if_requested(manager: &GodotManager<'_>, refresh: bool) -> Result<()> {
     if refresh {
         manager.refresh_cache().await?;
     }
 
     Ok(())
+}
+
+/// Convert a keyword to a `GodotVersion` filter for resolution.
+fn keyword_to_version_filter(keyword: &str) -> GodotVersion {
+    if keyword == "stable" {
+        GodotVersion {
+            release_type: Some("stable".to_string()),
+            ..Default::default()
+        }
+    } else {
+        GodotVersion::default()
+    }
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -77,11 +144,11 @@ async fn main() -> Result<()> {
             i18n: &i18n,
             manager: &GodotManager::new(&i18n).await?,
             version_input: None,
-            csharp_given: false,
-            csharp_flag: false,
+            variant: None,
             console: console_mode,
             raw_args: &args,
             force_on_mismatch: false,
+            include_pre: false,
         })
         .await
         {
@@ -129,15 +196,9 @@ async fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(version_utils::validate_remote_version)
+                        .value_parser(version_utils::validate_version_spec)
                         .help(t!(i18n, "help-version"))
                         .long_help(t!(i18n, "help-version-long")),
-                )
-                .arg(
-                    Arg::new("csharp")
-                        .long("csharp")
-                        .num_args(0)
-                        .help(t!(i18n, "help-csharp")),
                 )
                 .arg(
                     Arg::new("force")
@@ -152,6 +213,8 @@ async fn main() -> Result<()> {
                         .num_args(0)
                         .help(t!(i18n, "help-redownload")),
                 )
+                .arg(deprecated_csharp_flag(&i18n))
+                .arg(include_pre_flag(&i18n))
                 .arg(refresh_flag(&i18n)),
         )
         .subcommand(Command::new("list").about(t!(i18n, "help-list")))
@@ -161,19 +224,8 @@ async fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(version_utils::validate_remote_version)
+                        .value_parser(version_utils::validate_version_spec)
                         .help(t!(i18n, "help-version-installed")),
-                )
-                .arg(
-                    Arg::new("csharp")
-                        .long("csharp")
-                        .value_parser(value_parser!(bool))
-                        .num_args(0..=1)
-                        .default_missing_value("true")
-                        .default_value("false")
-                        .require_equals(true)
-                        .help(t!(i18n, "help-csharp"))
-                        .long_help(t!(i18n, "help-run-csharp-long")),
                 )
                 .arg(
                     Arg::new("console")
@@ -206,6 +258,8 @@ async fn main() -> Result<()> {
                         .last(true)
                         .help(t!(i18n, "help-run-args")),
                 )
+                .arg(deprecated_csharp_flag_with_value(&i18n))
+                .arg(include_pre_flag(&i18n))
                 .arg(refresh_flag(&i18n)),
         )
         .subcommand(
@@ -214,19 +268,8 @@ async fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(version_utils::validate_remote_version)
+                        .value_parser(version_utils::validate_version_spec)
                         .help(t!(i18n, "help-version-installed")),
-                )
-                .arg(
-                    Arg::new("csharp")
-                        .long("csharp")
-                        .value_parser(value_parser!(bool))
-                        .num_args(0..=1)
-                        .default_missing_value("true")
-                        .default_value("false")
-                        .require_equals(true)
-                        .help(t!(i18n, "help-csharp"))
-                        .long_help(t!(i18n, "help-run-csharp-long")),
                 )
                 .arg(
                     Arg::new("console")
@@ -252,6 +295,8 @@ async fn main() -> Result<()> {
                         .help(t!(i18n, "help-run-force"))
                         .long_help(t!(i18n, "help-run-force-long")),
                 )
+                .arg(deprecated_csharp_flag_with_value(&i18n))
+                .arg(include_pre_flag(&i18n))
                 .arg(refresh_flag(&i18n)),
         )
         .subcommand(
@@ -262,7 +307,7 @@ async fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(version_utils::validate_remote_version)
+                        .value_parser(version_utils::validate_version_spec)
                         .help(t!(i18n, "help-link-version")),
                 )
                 .arg({
@@ -287,17 +332,6 @@ async fn main() -> Result<()> {
                         .help(t!(i18n, "help-link-path", platform = platform))
                 })
                 .arg(
-                    Arg::new("csharp")
-                        .long("csharp")
-                        .value_parser(value_parser!(bool))
-                        .num_args(0..=1)
-                        .default_missing_value("true")
-                        .default_value("false")
-                        .require_equals(true)
-                        .help(t!(i18n, "help-csharp"))
-                        .long_help(t!(i18n, "help-run-csharp-long")),
-                )
-                .arg(
                     Arg::new("force")
                         .long("force")
                         .short('f')
@@ -309,7 +343,8 @@ async fn main() -> Result<()> {
                         .long("copy")
                         .num_args(0)
                         .help(t!(i18n, "help-link-copy")),
-                ),
+                )
+                .arg(deprecated_csharp_flag_with_value(&i18n)),
         )
         .subcommand(
             Command::new("remove")
@@ -317,14 +352,8 @@ async fn main() -> Result<()> {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(version_utils::validate_remote_version)
+                        .value_parser(version_utils::validate_version_spec)
                         .help(t!(i18n, "help-version-installed")),
-                )
-                .arg(
-                    Arg::new("csharp")
-                        .long("csharp")
-                        .num_args(0)
-                        .help(t!(i18n, "help-csharp")),
                 )
                 .arg(
                     Arg::new("yes")
@@ -332,7 +361,8 @@ async fn main() -> Result<()> {
                         .long("yes")
                         .num_args(0)
                         .help(t!(i18n, "help-yes")),
-                ),
+                )
+                .arg(deprecated_csharp_flag(&i18n)),
         )
         .subcommand(
             Command::new("search")
@@ -346,6 +376,8 @@ async fn main() -> Result<()> {
                 .arg(
                     Arg::new("include-pre")
                         .long("include-pre")
+                        .visible_alias("pre")
+                        .short('p')
                         .num_args(0)
                         .help(t!(i18n, "help-include-pre")),
                 )
@@ -375,12 +407,8 @@ async fn main() -> Result<()> {
                         .help(t!(i18n, "help-default-version"))
                         .required(false),
                 )
-                .arg(
-                    Arg::new("csharp")
-                        .long("csharp")
-                        .num_args(0)
-                        .help(t!(i18n, "help-csharp")),
-                )
+                .arg(deprecated_csharp_flag(&i18n))
+                .arg(include_pre_flag(&i18n))
                 .arg(refresh_flag(&i18n)),
         )
         .subcommand(
@@ -401,13 +429,15 @@ async fn main() -> Result<()> {
                         .help(t!(i18n, "help-pin-version"))
                         .required(true),
                 )
+                .arg(deprecated_csharp_flag(&i18n))
+                .arg(include_pre_flag(&i18n))
+                .arg(refresh_flag(&i18n))
                 .arg(
-                    Arg::new("csharp")
-                        .long("csharp")
+                    Arg::new("no-legacy")
+                        .long("no-legacy")
                         .num_args(0)
-                        .help(t!(i18n, "help-csharp")),
-                )
-                .arg(refresh_flag(&i18n)),
+                        .help(t!(i18n, "help-no-legacy")),
+                ),
         )
         .subcommand(
             Command::new("config")
@@ -489,38 +519,40 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
     let refresh = matches.get_flag("refresh");
+    let include_pre = matches.get_flag("include-pre");
 
     refresh_cache_if_requested(manager, refresh).await?;
 
-    let requested_version = GodotVersion::from_match_str(version_input)?;
-    let mut gv = manager
-        .resolve_available_version(&requested_version, false)
+    let spec = VersionSpec::parse(version_input)?;
+    let variant = check_deprecated_csharp_flag(i18n, matches, spec.variant);
+    let variant = variant.as_deref();
+
+    let requested_version = match &spec.target {
+        VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
+        VersionTarget::Pattern(gv) => gv.clone(),
+    };
+
+    let gv = manager
+        .resolve_available_version(&requested_version, variant, include_pre, false)
         .await?
         .ok_or_else(|| anyhow!(t!(i18n, "error-version-not-found")))?;
 
-    let is_csharp = matches.get_flag("csharp");
-    gv.is_csharp = Some(is_csharp);
+    let display = version_utils::display_with_variant(&gv.to_display_str(), variant);
 
     // Print a message indicating the start of the installation process
-    println_i18n!(
-        i18n,
-        "installing-version",
-        //[("version", &gv.to_display_str())]
-        version = &gv.to_display_str()
-    );
+    println_i18n!(i18n, "installing-version", version = &display);
 
-    match manager.install(&gv, force_reinstall, redownload).await? {
+    match manager
+        .install(&gv, variant, force_reinstall, redownload)
+        .await?
+    {
         InstallOutcome::Installed => {
             // Print a message indicating the successful installation
-            println_i18n!(i18n, "installed-success", version = &gv.to_display_str());
+            println_i18n!(i18n, "installed-success", version = &display);
         }
         InstallOutcome::AlreadyInstalled => {
             // Print a message indicating the version is already installed
-            println_i18n!(
-                i18n,
-                "version-already-installed",
-                version = &gv.to_display_str()
-            );
+            println_i18n!(i18n, "version-already-installed", version = &display);
             return Ok(());
         }
     }
@@ -535,8 +567,11 @@ fn sub_list(i18n: &I18n, manager: &GodotManager) -> Result<()> {
         println_i18n!(i18n, "no-versions-installed");
     } else {
         println_i18n!(i18n, "installed-versions");
-        for v in versions {
-            println!("- {v}");
+        for (v, variant) in &versions {
+            println!(
+                "- {}",
+                version_utils::display_with_variant(&v.to_display_str(), variant.as_deref())
+            );
         }
     }
     Ok(())
@@ -550,10 +585,6 @@ async fn sub_run(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) 
         None => Vec::new(),
     };
 
-    // specifically check if --csharp was provided as a flag or if we're reading the default value
-    let csharp_given =
-        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
-    let csharp_flag = matches.get_flag("csharp");
     let version_input = matches.get_one::<String>("version");
     let console = matches.get_flag("console");
     let force_on_mismatch = matches.get_flag("force");
@@ -561,15 +592,23 @@ async fn sub_run(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) 
 
     refresh_cache_if_requested(manager, refresh).await?;
 
+    let spec_variant = version_input
+        .map(|v| VersionSpec::parse(v))
+        .transpose()?
+        .and_then(|s| s.variant);
+
+    let variant = check_deprecated_csharp_flag(i18n, matches, spec_variant);
+    let include_pre = matches.get_flag("include-pre");
+
     sub_run_inner(RunConfig {
         i18n,
         manager,
         version_input,
-        csharp_given,
-        csharp_flag,
+        variant,
         console,
         raw_args: &raw_args,
         force_on_mismatch,
+        include_pre,
     })
     .await
 }
@@ -578,9 +617,6 @@ async fn sub_run(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) 
 async fn sub_show(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let raw_args: Vec<String> = Vec::new();
 
-    let csharp_given =
-        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
-    let csharp_flag = matches.get_flag("csharp");
     let version_input = matches.get_one::<String>("version");
     let console = matches.get_flag("console");
     let force_on_mismatch = matches.get_flag("force");
@@ -590,25 +626,32 @@ async fn sub_show(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
 
     let possible_paths = collect_possible_paths(&raw_args);
 
-    let explicit_version = if let Some(v) = version_input {
-        Some(GodotVersion::from_match_str(v)?)
-    } else {
-        None
+    let spec = version_input.map(|v| VersionSpec::parse(v)).transpose()?;
+    let spec_variant = spec.as_ref().and_then(|s| s.variant.clone());
+    let variant = check_deprecated_csharp_flag(i18n, matches, spec_variant);
+
+    let explicit_version = match spec.as_ref().map(|s| &s.target) {
+        Some(VersionTarget::Pattern(gv)) => Some(gv.clone()),
+        Some(VersionTarget::Keyword(kw)) => Some(keyword_to_version_filter(kw)),
+        None => None,
     };
 
+    let include_pre = matches.get_flag("include-pre");
+
     let resolver = RunVersionResolver::new(manager, i18n);
-    let resolved_version = resolver
+    let resolved = resolver
         .resolve(RunResolutionRequest {
             explicit: explicit_version,
+            variant,
+            include_pre,
             possible_paths: &possible_paths,
-            csharp_given,
-            csharp_flag,
             force_on_mismatch,
             install_if_missing: false,
         })
         .await?;
 
-    let exe_path = manager.get_executable_path(&resolved_version, console)?;
+    let exe_path =
+        manager.get_executable_path(&resolved.version, resolved.variant.as_deref(), console)?;
     println!("{}", exe_path.display());
 
     Ok(())
@@ -622,41 +665,49 @@ async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
         .map(|s| s.as_str())
         .ok_or_else(|| unreachable!("clap should prevent missing required arg"))?;
 
-    let explicit_version = if let Some(v) = version_input {
-        Some(GodotVersion::from_match_str(v)?)
-    } else {
-        None
+    let spec = version_input.map(|v| VersionSpec::parse(v)).transpose()?;
+    let spec_variant = spec.as_ref().and_then(|s| s.variant.clone());
+    let variant = check_deprecated_csharp_flag(i18n, matches, spec_variant);
+
+    let explicit_version = match spec.as_ref().map(|s| &s.target) {
+        Some(VersionTarget::Pattern(gv)) => Some(gv.clone()),
+        Some(VersionTarget::Keyword(kw)) => Some(keyword_to_version_filter(kw)),
+        None => None,
     };
 
-    let csharp_given =
-        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
-    let csharp_flag = matches.get_flag("csharp");
     let force = matches.get_flag("force");
     let copy = matches.get_flag("copy");
 
     let resolver = RunVersionResolver::new(manager, i18n);
-    let resolved_version = resolver
+    let resolved = resolver
         .resolve(RunResolutionRequest {
             explicit: explicit_version,
+            variant,
+            include_pre: false,
             possible_paths: &[],
-            csharp_given,
-            csharp_flag,
             force_on_mismatch: force,
             install_if_missing: false,
         })
         .await?;
 
-    let primary_exe = manager.get_executable_path(&resolved_version, false)?;
+    let primary_exe =
+        manager.get_executable_path(&resolved.version, resolved.variant.as_deref(), false)?;
 
     #[cfg(target_os = "windows")]
     let console_exe = {
-        let console_exe = manager.get_executable_path(&resolved_version, true)?;
+        let console_exe =
+            manager.get_executable_path(&resolved.version, resolved.variant.as_deref(), true)?;
         if console_exe != primary_exe {
             Some(console_exe)
         } else {
             None
         }
     };
+
+    let display = version_utils::display_with_variant(
+        &resolved.version.to_display_str(),
+        resolved.variant.as_deref(),
+    );
 
     let link_path = PathBuf::from(link_path_raw);
     if let Some(parent) = link_path.parent().filter(|p| !p.as_os_str().is_empty()) {
@@ -672,14 +723,14 @@ async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
             println_i18n!(
                 i18n,
                 "copy-created",
-                version = resolved_version.to_display_str(),
+                version = display,
                 path = link_path.display().to_string()
             );
         } else {
             println_i18n!(
                 i18n,
                 "link-created",
-                version = resolved_version.to_display_str(),
+                version = display,
                 path = link_path.display().to_string()
             );
         }
@@ -699,7 +750,7 @@ async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
         link_or_copy_file(&console_exe, &console_link, copy, i18n)?;
     }
 
-    if resolved_version.is_csharp.unwrap_or(false) {
+    if resolved.variant.as_deref() == Some("csharp") {
         let godotsharp_target = find_godotsharp_dir(&primary_exe)
             .ok_or_else(|| anyhow!(t!(i18n, "error-link-godotsharp-missing")))?;
 
@@ -730,14 +781,14 @@ async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
         println_i18n!(
             i18n,
             "copy-created",
-            version = resolved_version.to_display_str(),
+            version = display,
             path = link_path.display().to_string()
         );
     } else {
         println_i18n!(
             i18n,
             "link-created",
-            version = resolved_version.to_display_str(),
+            version = display,
             path = link_path.display().to_string()
         );
     }
@@ -811,14 +862,28 @@ fn link_or_copy_file(target: &Path, link: &Path, copy: bool, i18n: &I18n) -> Res
 
     #[cfg(windows)]
     {
-        std::os::windows::fs::symlink_file(target, link)
-            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+        std::os::windows::fs::symlink_file(target, link).map_err(|e| {
+            anyhow!(t!(
+                i18n,
+                "error-link-symlink",
+                error = e.to_string(),
+                target = target.display().to_string(),
+                link = link.display().to_string()
+            ))
+        })?;
     }
 
     #[cfg(unix)]
     {
-        std::os::unix::fs::symlink(target, link)
-            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+        std::os::unix::fs::symlink(target, link).map_err(|e| {
+            anyhow!(t!(
+                i18n,
+                "error-link-symlink",
+                error = e.to_string(),
+                target = target.display().to_string(),
+                link = link.display().to_string()
+            ))
+        })?;
     }
 
     Ok(())
@@ -832,14 +897,28 @@ fn link_or_copy_dir(target: &Path, link: &Path, copy: bool, i18n: &I18n) -> Resu
 
     #[cfg(windows)]
     {
-        std::os::windows::fs::symlink_dir(target, link)
-            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+        std::os::windows::fs::symlink_dir(target, link).map_err(|e| {
+            anyhow!(t!(
+                i18n,
+                "error-link-symlink",
+                error = e.to_string(),
+                target = target.display().to_string(),
+                link = link.display().to_string()
+            ))
+        })?;
     }
 
     #[cfg(unix)]
     {
-        std::os::unix::fs::symlink(target, link)
-            .map_err(|e| anyhow!(t!(i18n, "error-link-symlink", error = e.to_string())))?;
+        std::os::unix::fs::symlink(target, link).map_err(|e| {
+            anyhow!(t!(
+                i18n,
+                "error-link-symlink",
+                error = e.to_string(),
+                target = target.display().to_string(),
+                link = link.display().to_string()
+            ))
+        })?;
     }
 
     Ok(())
@@ -899,11 +978,11 @@ struct RunConfig<'a> {
     i18n: &'a I18n,
     manager: &'a GodotManager<'a>,
     version_input: Option<&'a String>,
-    csharp_given: bool,
-    csharp_flag: bool,
+    variant: Option<String>,
     console: bool,
     raw_args: &'a Vec<String>,
     force_on_mismatch: bool,
+    include_pre: bool,
 }
 
 /// Run the Godot executable
@@ -912,11 +991,11 @@ async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
         i18n,
         manager,
         version_input,
-        csharp_given,
-        csharp_flag,
+        variant,
         console,
         raw_args,
         force_on_mismatch,
+        include_pre,
     } = config;
 
     // Try to see if a path was given in raw_args. First, by checking if the --path flag was given
@@ -924,31 +1003,43 @@ async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
     // given.
     let possible_paths = collect_possible_paths(raw_args);
 
-    let explicit_version = if let Some(v) = version_input {
-        Some(GodotVersion::from_match_str(v)?)
+    let (explicit_version, resolved_variant) = if let Some(v) = version_input {
+        let spec = VersionSpec::parse(v)?;
+        let var = spec.variant.or(variant);
+        let ver = match spec.target {
+            VersionTarget::Pattern(gv) => Some(gv),
+            VersionTarget::Keyword(ref kw) => Some(keyword_to_version_filter(kw)),
+        };
+        (ver, var)
     } else {
-        None
+        (None, variant)
     };
 
     let resolver = RunVersionResolver::new(manager, i18n);
-    let resolved_version = resolver
+    let resolved = resolver
         .resolve(RunResolutionRequest {
             explicit: explicit_version,
+            variant: resolved_variant,
+            include_pre,
             possible_paths: &possible_paths,
-            csharp_given,
-            csharp_flag,
             force_on_mismatch,
             install_if_missing: true,
         })
         .await?;
 
-    eprintln_i18n!(
-        i18n,
-        "running-version",
-        version = &resolved_version.to_display_str()
+    let display = version_utils::display_with_variant(
+        &resolved.version.to_display_str(),
+        resolved.variant.as_deref(),
     );
 
-    manager.run(&resolved_version, console, raw_args)?;
+    eprintln_i18n!(i18n, "running-version", version = &display);
+
+    manager.run(
+        &resolved.version,
+        resolved.variant.as_deref(),
+        console,
+        raw_args,
+    )?;
 
     Ok(())
 }
@@ -956,13 +1047,19 @@ async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
 /// Handle the 'remove' subcommand
 async fn sub_remove(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version").unwrap();
-    let csharp = matches.get_flag("csharp");
-    let mut requested_version = GodotVersion::from_match_str(version_input)?;
+    let spec = VersionSpec::parse(version_input)?;
+    let variant = check_deprecated_csharp_flag(i18n, matches, spec.variant);
+    let variant = variant.as_deref();
 
-    requested_version.is_csharp = Some(csharp);
+    let requested_version = match &spec.target {
+        VersionTarget::Keyword(_) => {
+            return Err(anyhow!(t!(i18n, "error-version-not-found")));
+        }
+        VersionTarget::Pattern(gv) => gv.clone(),
+    };
 
     let resolved_versions = manager
-        .resolve_installed_version(&requested_version)
+        .resolve_installed_version(&requested_version, variant)
         .await?;
 
     match resolved_versions.len() {
@@ -970,9 +1067,10 @@ async fn sub_remove(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatche
             eprintln_i18n!(i18n, "error-version-not-found");
         }
         1 => {
-            let gv = &resolved_versions[0];
+            let (gv, var) = &resolved_versions[0];
+            let display = version_utils::display_with_variant(&gv.to_display_str(), var.as_deref());
 
-            println_i18n!(i18n, "removing-version", version = gv.to_display_str());
+            println_i18n!(i18n, "removing-version", version = &display);
 
             if !matches.get_flag("yes") {
                 println_i18n!(i18n, "confirm-remove");
@@ -984,13 +1082,16 @@ async fn sub_remove(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatche
                     return Ok(());
                 }
             }
-            manager.remove(gv)?;
-            println_i18n!(i18n, "removed-version", version = gv.to_display_str());
+            manager.remove(gv, var.as_deref())?;
+            println_i18n!(i18n, "removed-version", version = &display);
         }
         _ => {
             eprintln_i18n!(i18n, "error-multiple-versions-found");
-            for v in resolved_versions {
-                println!("- {}", v.to_display_str());
+            for (v, var) in &resolved_versions {
+                println!(
+                    "- {}",
+                    version_utils::display_with_variant(&v.to_display_str(), var.as_deref())
+                );
             }
         }
     }
@@ -1053,7 +1154,6 @@ async fn sub_refresh(i18n: &I18n, manager: &GodotManager<'_>) -> Result<()> {
 
 /// Handle the 'use' subcommand
 async fn sub_use(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
-    let csharp = matches.get_flag("csharp");
     let refresh = matches.get_flag("refresh");
 
     let version_input = match matches.get_one::<String>("version") {
@@ -1072,18 +1172,24 @@ async fn sub_use(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) 
 
     refresh_cache_if_requested(manager, refresh).await?;
 
-    let mut requested_version = GodotVersion::from_match_str(version_input)?;
+    let spec = VersionSpec::parse(version_input)?;
+    let variant = check_deprecated_csharp_flag(i18n, matches, spec.variant);
+    let variant = variant.as_deref();
 
-    requested_version.is_csharp = Some(csharp);
+    let requested_version = match &spec.target {
+        VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
+        VersionTarget::Pattern(gv) => gv.clone(),
+    };
 
-    let resolved_version = manager.auto_install_version(&requested_version).await?;
+    let include_pre = matches.get_flag("include-pre");
 
-    manager.set_default(&resolved_version)?;
-    println_i18n!(
-        i18n,
-        "default-set-success",
-        version = &resolved_version.to_display_str(),
-    );
+    let resolved_version = manager
+        .auto_install_version(&requested_version, variant, include_pre)
+        .await?;
+
+    manager.set_default(&resolved_version, variant)?;
+    let display = version_utils::display_with_variant(&resolved_version.to_display_str(), variant);
+    println_i18n!(i18n, "default-set-success", version = &display);
 
     Ok(())
 }
@@ -1097,29 +1203,33 @@ async fn sub_upgrade(manager: &GodotManager<'_>, matches: &ArgMatches) -> Result
 /// Handle the 'pin' subcommand
 async fn sub_pin(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let version_str = matches.get_one::<String>("version").unwrap();
-    let csharp = matches.get_flag("csharp");
     let refresh = matches.get_flag("refresh");
-    let mut version = GodotVersion::from_match_str(version_str)?;
+    let spec = VersionSpec::parse(version_str)?;
+    let variant = check_deprecated_csharp_flag(i18n, matches, spec.variant);
+    let variant = variant.as_deref();
 
     refresh_cache_if_requested(manager, refresh).await?;
 
-    version.is_csharp = Some(csharp);
+    let version = match &spec.target {
+        VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
+        VersionTarget::Pattern(gv) => gv.clone(),
+    };
 
     warn_project_version_mismatch::<_, &Path>(manager, i18n, &version, true, None).await;
 
-    let resolved_version = manager.auto_install_version(&version).await?;
+    let include_pre = matches.get_flag("include-pre");
 
-    match manager.pin_version(&resolved_version) {
-        Ok(()) => println_i18n!(
-            i18n,
-            "pinned-success",
-            version = &resolved_version.to_display_str(),
-        ),
-        Err(_) => eprintln_i18n!(
-            i18n,
-            "error-pin-version-not-found",
-            version = &resolved_version.to_display_str(),
-        ),
+    let resolved_version = manager
+        .auto_install_version(&version, variant, include_pre)
+        .await?;
+
+    let display = version_utils::display_with_variant(&resolved_version.to_display_str(), variant);
+
+    let skip_gdvmrc = matches.get_flag("no-legacy");
+
+    match manager.pin_version(&resolved_version, variant, skip_gdvmrc) {
+        Ok(()) => println_i18n!(i18n, "pinned-success", version = &display),
+        Err(_) => eprintln_i18n!(i18n, "error-pin-version-not-found", version = &display),
     }
     Ok(())
 }

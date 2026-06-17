@@ -30,13 +30,17 @@ help-list = List alle installerte Godot-versjoner
 help-remove = Fjern en installert Godot-versjon
 
 help-branch = Greina (stable, beta, alpha eller tilpassa).
-help-csharp = Bruk Godot-versjonen med C#-støtte.
+help-csharp = [avvikla] Bruk Godot-versjonen med C#-støtte. Bruk variantspesifikatoren «csharp» i stedet (f.eks. csharp:4.4).
 help-run-csharp-long = { help-csharp }
-
-    Ved å gi en verdi, overskrider du standardversjonen satt med «use». Ellers brukes standardversjonen. Med andre ord, hvis du setter en standardversjon med «use --csharp», kan du prøve å kjøre den samme versjonen, men uten C#-støtte, med «run --csharp false». Det kan imidlertid ikke fungere som forventet hvis versjonen uten C#-støtte ikke er installert. (Bare kjør «install» for å installere den.)
-help-version = Versjonen som skal installeres (f.eks. 4), eller «stable» for den siste stabile versjonen.
+help-version = Versjonen som skal installeres (f.eks. 4, csharp:4.4, stable, latest).
 help-version-long =
     { help-version }
+
+    Format: [variant:]versjon_eller_nøkkelord
+
+    Nøkkelord: «latest» løser til den nyeste versjonen. Som standard inkluderer dette bare stabile utgivelser, men forhåndsversjoner kan inkluderes med --pre-flagget.
+
+    Varianter: prefiks med et variantnavn og kolon, f.eks. «csharp:4.4» for C#-versjonen.
 
     Eksempler: 4.4 vil installere den siste stabile utgivelsen av Godot 4.4. Hvis bare forhåndsversjoner finnes, vil den siste forhåndsversjonen bli installert. 4.3-rc vil installere den siste utgivelsen av Godot 4.3, osv.
 help-version-installed = Den installerte versjonen (f.eks. 4.2 eller 4.2-stable).
@@ -80,7 +84,8 @@ no-default-set = Ingen standardversjon er satt. Kjør «gdvm use <version>» for
 installing-version = Installerer versjon {$version}
 installed-success = Installerte {$version} vellykka.
 
-warning-prerelease = Advarsel: Du installerer en forhåndsversjon ({$branch}).
+warning-prerelease = {"\u001b"}[33mAdvarsel: Du installerer en forhåndsversjon ({$branch}).{"\u001b"}[0m
+warning-deprecated-csharp-flag = {"\u001b"}[33mAdvarsel: Flagget --csharp er avvikla. Bruk "csharp"-variantspesifikatoren i stedet (f.eks. csharp:4.4).{"\u001b"}[0m
 
 force-reinstalling-version = Tvinger installasjon av versjon {$version} på nytt.
 
@@ -116,9 +121,6 @@ warning-fetching-releases-using-cache = Feil ved henting av utgivelser: { $error
 error-version-not-found = Versjonen ble ikke funnet.
 error-multiple-versions-found = Flere versjoner samsvarer med forespørselen:
 
-error-invalid-godot-version = Ugyldig Godot-versjonsformat. Forventede formater: x, x.y, x.y.z, x.y.z.w eller x.y.z-tag.
-error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventede formater: x, x.y, x.y.z, x.y.z.w, x.y.z-tag eller «stable».
-
 running-version = Kjører versjon {$version}
 link-created = Lenket {$version} til {$path}
 copy-created = Kopierte {$version} til {$path}
@@ -130,7 +132,7 @@ cache-refreshed = Cachen ble oppdatert.
 version-already-installed = Versjon {$version} er allerede installert.
 godot-executable-not-found = Godot-kjørbar fil ble ikke funnet for versjon {$version}.
 error-link-exists = Stien {$path} finnes allerede. Bruk --force for å overskrive.
-error-link-symlink = Klarte ikke å opprette lenke: {$error}
+error-link-symlink = Klarte ikke å opprette lenke fra {$link} til {$target}: {$error}
 error-link-copy = Klarte ikke å kopiere kjørbar: {$error}
 error-link-godotsharp-target = Klarte ikke å finne GodotSharp-målsti.
 error-link-godotsharp-missing = GodotSharp-katalogen mangler ved siden av den løste kjørbaren.
@@ -182,13 +184,18 @@ upgrade-available-both = 💡 En ny versjon av gdvm er tilgjengelig: {$minor_ver
 help-pin = Fest en versjon av Godot til gjeldende mappe.
 help-pin-long = { help-pin }
 
-    Dette vil opprette en .gdvmrc-fil i gjeldende mappe med den festa versjonen. Når du kjører «gdvm run» i denne katalogen eller noen av underkatalogene, vil den festa versjonen brukes i stedet for standardversjonen.
+    Dette vil opprette en gdvm.toml-fil i gjeldende mappe med den festa versjonen. Når du kjører «gdvm run» i denne katalogen eller noen av underkatalogene, vil den festa versjonen brukes i stedet for standardversjonen.
 
     Dette er nyttig når du vil bruke en spesifikk versjon av Godot for et prosjekt uten å endre standardversjonen systemomfattende.
+
+    Dette skriver foreløpig også den eldre .gdvmrc-fila for kompatibilitet med eldre versjoner av gdvm. Dette vil bli fjerna i en framtidig utgivelse, så det anbefales å gå over til det nye gdvm.toml-formatet og fjerne .gdvmrc-fila hvis den finnes.
+
+    Du kan deaktivere skriving av en .gdvmrc-fil med --no-legacy-flagget.
 help-pin-version = Versjonen som skal festes
-pinned-success = Versjon {$version} ble festet i .gdvmrc
+help-no-legacy = Ikke skriv den eldre .gdvmrc-kompatibilitetsfila
+pinned-success = Versjon {$version} ble festet i gdvm.toml
 error-pin-version-not-found = Kan ikke feste versjon {$version}
-pin-subcommand-description = Sett eller oppdater .gdvmrc med forespurt versjon
+pin-subcommand-description = Sett eller oppdater gdvm.toml med forespurt versjon
 
 error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren.
 error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }

@@ -25,16 +25,25 @@ use crate::{eprintln_i18n, i18n::I18n, t, t_w};
 
 #[async_trait(?Send)]
 pub trait RunVersionSource {
-    async fn get_pinned_version(&self) -> Option<GodotVersion>;
-    async fn get_default(&self) -> Result<Option<GodotVersionDeterminate>>;
+    async fn get_pinned_version(&self) -> Option<(GodotVersion, Option<String>)>;
+    async fn get_default(&self) -> Result<Option<(GodotVersionDeterminate, Option<String>)>>;
     async fn determine_version<P: AsRef<Path> + Send + Sync>(
         &self,
         path: Option<P>,
-    ) -> Option<GodotVersion>;
-    async fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    ) -> Option<(GodotVersion, Option<String>)>;
+    async fn auto_install_version<T>(
+        &self,
+        gv: &T,
+        variant: Option<&str>,
+        include_pre: bool,
+    ) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone + Send + Sync;
-    async fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    async fn ensure_installed_version<T>(
+        &self,
+        gv: &T,
+        variant: Option<&str>,
+    ) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone + Send + Sync;
 }
@@ -44,11 +53,17 @@ pub struct RunVersionResolver<'a, S: RunVersionSource> {
     i18n: &'a I18n,
 }
 
+#[derive(Debug)]
+pub struct RunResolutionResult {
+    pub version: GodotVersionDeterminate,
+    pub variant: Option<String>,
+}
+
 pub struct RunResolutionRequest<'a> {
     pub explicit: Option<GodotVersion>,
+    pub variant: Option<String>,
+    pub include_pre: bool,
     pub possible_paths: &'a [&'a str],
-    pub csharp_given: bool,
-    pub csharp_flag: bool,
     pub force_on_mismatch: bool,
     pub install_if_missing: bool,
 }
@@ -59,18 +74,15 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
     }
 
     /// Resolve the Godot version to use based on the provided request.
-    pub async fn resolve(
-        &self,
-        request: RunResolutionRequest<'_>,
-    ) -> Result<GodotVersionDeterminate> {
+    pub async fn resolve(&self, request: RunResolutionRequest<'_>) -> Result<RunResolutionResult> {
         let path_bufs: Vec<PathBuf> = request
             .possible_paths
             .iter()
             .map(|p| PathBuf::from(*p))
             .collect();
 
-        if let Some(mut requested_version) = request.explicit {
-            requested_version.is_csharp = Some(request.csharp_flag);
+        if let Some(requested_version) = request.explicit {
+            let variant = request.variant.clone();
 
             if warn_project_version_mismatch::<S, PathBuf>(
                 self.source,
@@ -89,16 +101,26 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 )));
             }
 
-            return if request.install_if_missing {
-                self.source.auto_install_version(&requested_version).await
+            let version = if request.install_if_missing {
+                self.source
+                    .auto_install_version(
+                        &requested_version,
+                        variant.as_deref(),
+                        request.include_pre,
+                    )
+                    .await?
             } else {
                 self.source
-                    .ensure_installed_version(&requested_version)
-                    .await
+                    .ensure_installed_version(&requested_version, variant.as_deref())
+                    .await?
             };
+            return Ok(RunResolutionResult { version, variant });
         }
 
-        if let Some(pinned) = self.source.get_pinned_version().await {
+        if let Some((pinned, pinned_variant)) = self.source.get_pinned_version().await {
+            // Explicit variant from request takes precedence.
+            let variant = request.variant.clone().or(pinned_variant);
+
             if warn_project_version_mismatch::<S, PathBuf>(
                 self.source,
                 self.i18n,
@@ -116,44 +138,67 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 )));
             }
 
-            return if request.install_if_missing {
-                self.source.auto_install_version(&pinned).await
+            let version = if request.install_if_missing {
+                self.source
+                    .auto_install_version(&pinned, variant.as_deref(), request.include_pre)
+                    .await?
             } else {
-                self.source.ensure_installed_version(&pinned).await
+                self.source
+                    .ensure_installed_version(&pinned, variant.as_deref())
+                    .await?
             };
+            return Ok(RunResolutionResult { version, variant });
         }
 
-        if let Some(project_version) = self.detect_project_version(&path_bufs).await {
+        if let Some((project_version, project_variant)) =
+            self.detect_project_version(&path_bufs).await
+        {
+            // Explicit variant from request takes precedence.
+            let variant = request.variant.clone().or(project_variant);
+
             eprintln_i18n!(
                 self.i18n,
                 "warning-using-project-version",
                 version = project_version.to_display_str()
             );
-            return if request.install_if_missing {
-                self.source.auto_install_version(&project_version).await
+            let version = if request.install_if_missing {
+                self.source
+                    .auto_install_version(&project_version, variant.as_deref(), request.include_pre)
+                    .await?
             } else {
-                self.source.ensure_installed_version(&project_version).await
+                self.source
+                    .ensure_installed_version(&project_version, variant.as_deref())
+                    .await?
             };
+            return Ok(RunResolutionResult { version, variant });
         }
 
-        if let Some(mut default_ver) = self.source.get_default().await? {
-            if request.csharp_given {
-                default_ver.is_csharp = Some(request.csharp_flag);
-            }
-            return if request.install_if_missing {
-                self.source.auto_install_version(&default_ver).await
+        if let Some((default_ver, default_variant)) = self.source.get_default().await? {
+            // Explicit variant from request takes precedence.
+            let variant = request.variant.clone().or(default_variant);
+
+            let version = if request.install_if_missing {
+                self.source
+                    .auto_install_version(&default_ver, variant.as_deref(), request.include_pre)
+                    .await?
             } else {
-                self.source.ensure_installed_version(&default_ver).await
+                self.source
+                    .ensure_installed_version(&default_ver, variant.as_deref())
+                    .await?
             };
+            return Ok(RunResolutionResult { version, variant });
         }
 
         Err(anyhow!(t!(self.i18n, "no-default-set")))
     }
 
-    async fn detect_project_version(&self, paths: &[PathBuf]) -> Option<GodotVersion> {
+    async fn detect_project_version(
+        &self,
+        paths: &[PathBuf],
+    ) -> Option<(GodotVersion, Option<String>)> {
         for path in paths {
-            if let Some(version) = self.source.determine_version(Some(path)).await {
-                return Some(version);
+            if let Some(result) = self.source.determine_version(Some(path)).await {
+                return Some(result);
             }
         }
 
@@ -168,12 +213,12 @@ pub async fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path> +
     is_pin: bool,
     paths: Option<&[P]>,
 ) -> bool {
-    let determined_version = match paths {
+    let determined = match paths {
         Some(paths) => {
             let mut found = None;
             for path in paths {
-                if let Some(version) = source.determine_version(Some(path.as_ref())).await {
-                    found = Some(version);
+                if let Some(result) = source.determine_version(Some(path.as_ref())).await {
+                    found = Some(result);
                     break;
                 }
             }
@@ -185,7 +230,7 @@ pub async fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path> +
         None => source.determine_version::<&Path>(None).await,
     };
 
-    if let Some(project_version) = determined_version
+    if let Some((project_version, _variant)) = determined
         && project_version.conflicts_with(requested)
     {
         eprintln_i18n!(
@@ -248,28 +293,38 @@ mod tests {
 
     #[async_trait::async_trait(?Send)]
     impl RunVersionSource for FakeSource {
-        async fn get_pinned_version(&self) -> Option<GodotVersion> {
-            self.pinned.clone()
+        async fn get_pinned_version(&self) -> Option<(GodotVersion, Option<String>)> {
+            self.pinned.clone().map(|v| (v, None))
         }
 
-        async fn get_default(&self) -> Result<Option<GodotVersionDeterminate>> {
-            Ok(self.default.clone())
+        async fn get_default(&self) -> Result<Option<(GodotVersionDeterminate, Option<String>)>> {
+            Ok(self.default.clone().map(|v| (v, None)))
         }
 
         async fn determine_version<P: AsRef<Path> + Send + Sync>(
             &self,
             path: Option<P>,
-        ) -> Option<GodotVersion> {
+        ) -> Option<(GodotVersion, Option<String>)> {
             match path {
                 Some(p) => self
                     .project_versions
                     .get(&p.as_ref().to_string_lossy().to_string())
-                    .cloned(),
-                None => self.project_versions.get("<cwd>").cloned(),
+                    .cloned()
+                    .map(|v| (v, None)),
+                None => self
+                    .project_versions
+                    .get("<cwd>")
+                    .cloned()
+                    .map(|v| (v, None)),
             }
         }
 
-        async fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+        async fn auto_install_version<T>(
+            &self,
+            gv: &T,
+            _variant: Option<&str>,
+            _include_pre: bool,
+        ) -> Result<GodotVersionDeterminate>
         where
             T: Into<GodotVersion> + Clone + Send + Sync,
         {
@@ -280,7 +335,11 @@ mod tests {
             Ok(GodotVersionDeterminate::from(gv))
         }
 
-        async fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+        async fn ensure_installed_version<T>(
+            &self,
+            gv: &T,
+            _variant: Option<&str>,
+        ) -> Result<GodotVersionDeterminate>
         where
             T: Into<GodotVersion> + Clone + Send + Sync,
         {
@@ -299,7 +358,6 @@ mod tests {
             patch: Some(0),
             subpatch: None,
             release_type: Some(release.to_string()),
-            is_csharp: Some(false),
         }
     }
 
@@ -310,7 +368,6 @@ mod tests {
             patch: 0,
             subpatch: 0,
             release_type: release.to_string(),
-            is_csharp: Some(false),
         }
     }
 
@@ -329,15 +386,15 @@ mod tests {
         let explicit = gv(5, 0, "stable");
         let request = RunResolutionRequest {
             explicit: Some(explicit),
+            variant: None,
+            include_pre: false,
             possible_paths: &[],
-            csharp_given: false,
-            csharp_flag: false,
             force_on_mismatch: false,
             install_if_missing: true,
         };
 
         let resolved = resolver.resolve(request).await.unwrap();
-        assert_eq!(resolved.major, 5);
+        assert_eq!(resolved.version.major, 5);
     }
 
     #[tokio::test]
@@ -351,16 +408,16 @@ mod tests {
         let resolved = resolver
             .resolve(RunResolutionRequest {
                 explicit: None,
+                variant: None,
+                include_pre: false,
                 possible_paths: &[],
-                csharp_given: false,
-                csharp_flag: false,
                 force_on_mismatch: false,
                 install_if_missing: true,
             })
             .await
             .unwrap();
 
-        assert_eq!(resolved.major, 3);
+        assert_eq!(resolved.version.major, 3);
     }
 
     #[tokio::test]
@@ -374,16 +431,16 @@ mod tests {
         let resolved = resolver
             .resolve(RunResolutionRequest {
                 explicit: None,
+                variant: None,
+                include_pre: false,
                 possible_paths: &["/proj"],
-                csharp_given: false,
-                csharp_flag: false,
                 force_on_mismatch: false,
                 install_if_missing: true,
             })
             .await
             .unwrap();
 
-        assert_eq!(resolved.minor, 2);
+        assert_eq!(resolved.version.minor, 2);
     }
 
     #[tokio::test]
@@ -395,16 +452,16 @@ mod tests {
         let resolved = resolver
             .resolve(RunResolutionRequest {
                 explicit: None,
+                variant: None,
+                include_pre: false,
                 possible_paths: &[],
-                csharp_given: false,
-                csharp_flag: false,
                 force_on_mismatch: false,
                 install_if_missing: true,
             })
             .await
             .unwrap();
 
-        assert_eq!(resolved.major, 4);
+        assert_eq!(resolved.version.major, 4);
     }
 
     #[tokio::test]
@@ -417,9 +474,9 @@ mod tests {
         resolver
             .resolve(RunResolutionRequest {
                 explicit: Some(requested.clone()),
+                variant: None,
+                include_pre: false,
                 possible_paths: &[],
-                csharp_given: false,
-                csharp_flag: false,
                 force_on_mismatch: false,
                 install_if_missing: true,
             })
@@ -430,15 +487,15 @@ mod tests {
         let resolved = resolver
             .resolve(RunResolutionRequest {
                 explicit: Some(requested.clone()),
+                variant: None,
+                include_pre: false,
                 possible_paths: &[],
-                csharp_given: false,
-                csharp_flag: false,
                 force_on_mismatch: true,
                 install_if_missing: true,
             })
             .await
             .unwrap();
 
-        assert_eq!(resolved.major, requested.major.unwrap());
+        assert_eq!(resolved.version.major, requested.major.unwrap());
     }
 }

@@ -30,15 +30,19 @@ help-list = Lister toutes les versions installées de Godot
 help-remove = Supprimer une version installée de Godot
 
 help-branch = La branche (stable, beta, alpha, ou personnalisée).
-help-csharp = Utiliser la version de Godot avec le support C#.
+help-csharp = [obsolète] Utiliser la version de Godot avec le support C#. Utilisez plutôt le spécificateur de variante « csharp » (ex. csharp:4.4).
 help-run-csharp-long = { help-csharp }
-
-    Si spécifié, la valeur remplace la version par défaut définie avec « use ». Sinon, la version par défaut est utilisée. En d'autres termes, si vous définissez une version par défaut avec « use --csharp », vous pouvez essayer d'exécuter la même version mais sans le support C# avec « run --csharp false ». Cependant, cela peut ne pas fonctionner comme attendu si la version sans support C# n'est pas installée. (Exécutez simplement « install » pour l'installer.)
-help-version = La version à installer (ex. 4), ou « stable » pour la dernière version stable.
+help-version = La version à installer (ex. 4, csharp:4.4, stable, latest).
 help-version-long =
     { help-version }
 
-    Exemples : 4.4 installera la dernière version stable de Godot 4.4. Si seules des versions de pré-publication existent, dans ce cas, la dernière version de pré-publication sera installée. 4.3-rc installera la dernière version candidate de Godot 4.3, etc.
+    Format : [variante:]version_ou_mot_clé
+
+    Mots-clés : « latest » correspond à la version la plus récente. Par défaut, cela n'inclut que les versions stables, mais les pré-publications peuvent être incluses avec le drapeau --pre.
+
+    Variantes : préfixez avec un nom de variante et deux-points, ex. « csharp:4.4 » pour la version C#.
+
+    Exemples : 4.4 installera la dernière version stable de Godot 4.4. Si seules des versions de pré-publication existent, la dernière version de pré-publication sera installée. 4.3-rc installera la dernière version candidate de Godot 4.3, etc.
 help-version-installed = La version installée (ex. 4.2 ou 4.2-stable).
 
 help-search = Lister les versions disponibles depuis le registre
@@ -81,6 +85,7 @@ installing-version = Installation de la version {$version}
 installed-success = {$version} installée avec succès
 
 warning-prerelease = {"\u001b"}[33mAvertissement : Vous installez une version de pré-publication ({$branch}).{"\u001b"}[0m
+warning-deprecated-csharp-flag = {"\u001b"}[33mAvertissement : Le drapeau --csharp est obsolète. Utilisez le spécificateur de variante "csharp" à la place (ex. csharp:4.4).{"\u001b"}[0m
 
 force-reinstalling-version = Réinstallation forcée de la version {$version}.
 
@@ -116,9 +121,6 @@ warning-fetching-releases-using-cache = Erreur lors de la récupération des ver
 error-version-not-found = Version introuvable.
 error-multiple-versions-found = Plusieurs versions correspondent à votre demande :
 
-error-invalid-godot-version = Format de version Godot invalide. Formats attendus : x, x.y, x.y.z, x.y.z.w, x.y.z-tag.
-error-invalid-remote-version = Format de version Godot distante invalide. Formats attendus : x, x.y, x.y.z, x.y.z.w, x.y.z-tag, ou « stable ».
-
 running-version = Exécution de la version {$version}
 link-created = Lien créé de {$version} vers {$path}
 copy-created = Copie de {$version} vers {$path} effectuée
@@ -130,7 +132,7 @@ cache-refreshed = Cache actualisé avec succès.
 version-already-installed = Version {$version} déjà installée.
 godot-executable-not-found = Exécutable Godot introuvable pour la version {$version}.
 error-link-exists = Le chemin {$path} existe déjà. Utilisez --force pour écraser.
-error-link-symlink = Échec de la création du lien : {$error}
+error-link-symlink = Échec de la création du lien de {$link} vers {$target} : {$error}
 error-link-copy = Échec de la copie de l'exécutable : {$error}
 error-link-godotsharp-target = Impossible de déterminer le chemin cible GodotSharp.
 error-link-godotsharp-missing = Le répertoire GodotSharp est manquant à côté de l'exécutable résolu.
@@ -182,13 +184,18 @@ upgrade-available-both = 💡 Une nouvelle version de gdvm est disponible : {$mi
 help-pin = Épingler une version de Godot au répertoire courant.
 help-pin-long = { help-pin }
 
-    Cela créera un fichier .gdvmrc dans le répertoire courant avec la version épinglée. Lorsque vous exécutez « gdvm run » dans ce répertoire ou dans l'un de ses sous-répertoires, la version épinglée sera utilisée au lieu de la version par défaut.
+    Cela créera un fichier gdvm.toml dans le répertoire courant avec la version épinglée. Lorsque vous exécutez « gdvm run » dans ce répertoire ou dans l'un de ses sous-répertoires, la version épinglée sera utilisée au lieu de la version par défaut.
 
     Ceci est utile lorsque vous voulez utiliser une version spécifique de Godot pour un projet sans changer la version par défaut du système.
+
+    Actuellement, cela écrit aussi le fichier .gdvmrc hérité pour la compatibilité avec les anciennes versions de gdvm. Cela sera supprimé dans une future version, il est donc recommandé de passer au nouveau format gdvm.toml et de supprimer le fichier .gdvmrc s'il existe.
+
+    Vous pouvez désactiver l'écriture du fichier .gdvmrc avec le drapeau --no-legacy.
 help-pin-version = La version à épingler
-pinned-success = Version {$version} épinglée avec succès dans .gdvmrc
+help-no-legacy = Ne pas écrire le fichier de compatibilité hérité .gdvmrc
+pinned-success = Version {$version} épinglée avec succès dans gdvm.toml
 error-pin-version-not-found = Impossible d'épingler la version {$version}
-pin-subcommand-description = Définir ou mettre à jour .gdvmrc avec la version demandée
+pin-subcommand-description = Définir ou mettre à jour gdvm.toml avec la version demandée
 
 error-file-not-found = Fichier introuvable. Il peut ne pas exister sur le serveur.
 error-download-failed = Échec du téléchargement dû à une erreur inattendue : { $error }

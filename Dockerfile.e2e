@@ -79,8 +79,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /workspace/target/release/gdvm /root/.gdvm/bin/gdvm
-COPY scripts/run-e2e-linux.sh /app/run-e2e-linux.sh
+COPY scripts/run-e2e.sh /app/run-e2e.sh
 
 ENV PATH="/root/.gdvm/bin:/root/.gdvm/bin/current_godot:/usr/local/bin:${PATH}"
 
-ENTRYPOINT ["/app/run-e2e-linux.sh"]
+ENTRYPOINT ["/app/run-e2e.sh"]
