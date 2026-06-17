@@ -32,6 +32,7 @@ The following features have been deprecated. They will continue to work for the 
 ### New Features
 
 - Added a `latest` keyword that resolves to the latest stable release. If `--pre` is also passed, it resolves to the absolute latest release, including pre-releases and dev builds.
+- gdvm now respects `.env` files in the current directory, so you can set environment variables for your projects without having to set them in your shell profile or terminal every time.
 
 ### Changed
 
