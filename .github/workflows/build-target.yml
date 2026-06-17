@@ -1,3 +1,20 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 name: Build Target
 
 on:
@@ -68,6 +85,9 @@ jobs:
           cache-workspaces: ${{ env.WORKSPACE_DIR }}
           components: rustc, rust-std, cargo, rustfmt, clippy
 
+      - name: Setup UV
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
       - name: Install dependencies (Linux x86_32)
         if: inputs.os == 'ubuntu-latest' && inputs.target == 'i686-unknown-linux-gnu'
         run: |
@@ -111,6 +131,11 @@ jobs:
             -D clippy::suspicious -D clippy::style -D clippy::complexity \
             -D clippy::perf -D clippy::dbg_macro -D clippy::todo \
             -D clippy::unimplemented -D warnings
+
+      - name: Lint licences
+        if: success() || failure()
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        run: uvx reuse lint
 
       - name: Run unit and integration tests
         if: (success() || failure())

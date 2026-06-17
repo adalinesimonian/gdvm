@@ -1,3 +1,20 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 Param()
 
 # Set install directory
@@ -7,18 +24,20 @@ New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 # Architecture (assuming Windows)
 if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
     $arch = 'aarch64-pc-windows-msvc'
-} elseif ([Environment]::Is64BitOperatingSystem) {
+}
+elseif ([Environment]::Is64BitOperatingSystem) {
     $arch = 'x86_64-pc-windows-msvc'
-} else {
+}
+else {
     $arch = 'i686-pc-windows-msvc'
 }
 
-$repoUrl   = 'https://github.com/adalinesimonian/gdvm'
+$repoUrl = 'https://github.com/adalinesimonian/gdvm'
 $latestUrl = "$repoUrl/releases/latest/download"
-$apiUrl    = 'https://api.github.com/repos/adalinesimonian/gdvm/releases/latest'
-$file      = "gdvm-$arch.exe"
-$binUrl    = "$latestUrl/$file"
-$outFile   = Join-Path $installDir "gdvm.exe"
+$apiUrl = 'https://api.github.com/repos/adalinesimonian/gdvm/releases/latest'
+$file = "gdvm-$arch.exe"
+$binUrl = "$latestUrl/$file"
+$outFile = Join-Path $installDir "gdvm.exe"
 
 Write-Host "🔄 Downloading gdvm from $binUrl..." -ForegroundColor Green
 Invoke-WebRequest -Uri $binUrl -OutFile $outFile -UseBasicParsing
@@ -42,17 +61,20 @@ try {
 
         if ($actualChecksum -eq $expectedChecksum) {
             Write-Host "✅ Checksum verified successfully." -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "❌ Checksum verification failed!" -ForegroundColor Red
             Write-Host "Expected: $expectedChecksum" -ForegroundColor Red
             Write-Host "Actual:   $actualChecksum" -ForegroundColor Red
             Remove-Item -Path $outFile -Force
             exit 1
         }
-    } else {
+    }
+    else {
         Write-Host "⚠️ Warning: Could not fetch checksum from GitHub API. Skipping verification." -ForegroundColor Yellow
     }
-} catch {
+}
+catch {
     Write-Host "⚠️ Warning: Error fetching checksum from GitHub API. Skipping verification." -ForegroundColor Yellow
     Write-Host "Error: $_" -ForegroundColor Yellow
 }
@@ -72,12 +94,14 @@ function Update-UserPath {
         try {
             [System.Environment]::SetEnvironmentVariable('PATH', "$existingUserPath;$pathToAdd", [System.EnvironmentVariableTarget]::User)
             Write-Host "✅ Added $pathToAdd to the user environment PATH." -ForegroundColor Green
-        } catch {
+        }
+        catch {
             $failedPaths += $pathToAdd
             Write-Error "❌ Failed to add $pathToAdd to the PATH." -ForegroundColor Red
         }
         Write-Host "ℹ️ You may need to log out and log back in for the changes to take effect." -ForegroundColor Yellow
-    } else {
+    }
+    else {
         Write-Host "ℹ️ $pathToAdd is already in the user environment PATH." -ForegroundColor Cyan
     }
 }
@@ -109,7 +133,8 @@ $iconPath = Join-Path $installDir 'godot.ico'
 
 try {
     Invoke-WebRequest -Uri $iconUrl -OutFile $iconPath -UseBasicParsing
-} catch {
+}
+catch {
     Write-Error "❌ Failed to download the Godot icon."
 }
 
@@ -154,7 +179,8 @@ if ($godotAssoc -eq 'y') {
         Remove-Item -Path $iconCachePath\iconcache* -Force -ErrorAction SilentlyContinue
 
         Write-Host "✅ Associated .godot files with gdvm." -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Error "❌ Failed to associate .godot files with gdvm."
     }
 }

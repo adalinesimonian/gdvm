@@ -1,3 +1,20 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 # Determine the directory where the script is located
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
@@ -38,8 +55,8 @@ Get-ChildItem -Path "$ScriptDir/../crates/gdvm/i18n" -Filter *.ftl | ForEach-Obj
 
     # Extract keys from the .ftl file
     $keys = Get-Content $ftl |
-        Select-String -Pattern '^[a-zA-Z0-9_-]+\s*=' |
-        ForEach-Object { ($_ -split '=')[0].Trim() }
+    Select-String -Pattern '^[a-zA-Z0-9_-]+\s*=' |
+    ForEach-Object { ($_ -split '=')[0].Trim() }
 
     $missing = @()
     # Check for missing strings

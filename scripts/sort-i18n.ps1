@@ -1,4 +1,20 @@
 #!/usr/bin/env pwsh
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
 
 $ErrorActionPreference = "Stop"
 
@@ -12,7 +28,8 @@ $Format = $false
 for ($i = 0; $i -lt $args.Count; $i++) {
     if ($args[$i] -eq "--format") {
         $Format = $true
-    } elseif ($args[$i] -match "^--") {
+    }
+    elseif ($args[$i] -match "^--") {
         Write-Error "Unknown option: $($args[$i])"
         exit 1
     }
@@ -30,8 +47,8 @@ function Convert-FluentFile {
 
     $entries = @()
     $currentEntry = @{
-        Key = ""
-        Lines = @()
+        Key               = ""
+        Lines             = @()
         LeadingEmptyLines = 0
     }
     $inEntry = $false
@@ -54,15 +71,18 @@ function Convert-FluentFile {
                 if ($nextKeyLine -lt $lines.Count -and $lines[$nextKeyLine] -match '^([a-zA-Z][a-zA-Z0-9_-]*)\s*=') {
                     # Next non-empty line is a new key, so this empty line is between entries.
                     $emptyLineCount++
-                } else {
+                }
+                else {
                     # This empty line is within the current entry, i.e. a multi-line value.
                     $currentEntry.Lines += $line
                 }
-            } else {
+            }
+            else {
                 # Empty line between entries.
                 $emptyLineCount++
             }
-        } elseif ($line -match '^([a-zA-Z][a-zA-Z0-9_-]*)\s*=') {
+        }
+        elseif ($line -match '^([a-zA-Z][a-zA-Z0-9_-]*)\s*=') {
             # Start of a new entry.
             if ($inEntry -and $currentEntry.Key) {
                 # Save the previous entry.
@@ -70,13 +90,14 @@ function Convert-FluentFile {
             }
 
             $currentEntry = @{
-                Key = $Matches[1]
-                Lines = @($line)
+                Key               = $Matches[1]
+                Lines             = @($line)
                 LeadingEmptyLines = $emptyLineCount
             }
             $inEntry = $true
             $emptyLineCount = 0
-        } elseif ($inEntry) {
+        }
+        elseif ($inEntry) {
             # Continuation of current entry in a multi-line value.
             $currentEntry.Lines += $line
         }
@@ -159,12 +180,13 @@ foreach ($file in $ftlFiles) {
             $entry = $entryLookup[$refEntry.Key]
             # Keep the original entry but update spacing to match reference.
             $sortedEntry = [PSCustomObject]@{
-                Key = $entry.Key
-                Lines = $entry.Lines
+                Key               = $entry.Key
+                Lines             = $entry.Lines
                 LeadingEmptyLines = $refEntry.LeadingEmptyLines
             }
             $sortedEntries += $sortedEntry
-        } else {
+        }
+        else {
             $missingKeys += $refEntry.Key
         }
     }
@@ -242,7 +264,8 @@ foreach ($file in $ftlFiles) {
     $needsChanges = $false
     if ($currentReferenceContent.Count -ne $expectedReferenceContent.Count) {
         $needsChanges = $true
-    } else {
+    }
+    else {
         for ($i = 0; $i -lt $currentReferenceContent.Count; $i++) {
             if ($currentReferenceContent[$i] -ne $expectedReferenceContent[$i]) {
                 $needsChanges = $true
@@ -261,11 +284,13 @@ foreach ($file in $ftlFiles) {
         if ($Format) {
             Write-SortedFluentFile -FilePath $file.FullName -SortedEntries $sortedEntries
             Write-Host "  ✓ Formatted and saved"
-        } else {
+        }
+        else {
             Write-Host "  ✗ File is not properly sorted" -ForegroundColor Red
             $exitCode = 1
         }
-    } else {
+    }
+    else {
         Write-Host "  ✓ File is properly sorted" -ForegroundColor Green
     }
 }
@@ -273,13 +298,16 @@ foreach ($file in $ftlFiles) {
 if ($Format) {
     if ($hasChanges) {
         Write-Host "`nFormatting complete! Files have been updated."
-    } else {
+    }
+    else {
         Write-Host "`nAll files were already properly sorted."
     }
-} else {
+}
+else {
     if ($exitCode -eq 0) {
         Write-Host "`nAll files are properly sorted!"
-    } else {
+    }
+    else {
         Write-Host "`nSome files are not properly sorted. Run with --format to fix them." -ForegroundColor Red
     }
 }

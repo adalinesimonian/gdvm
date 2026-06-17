@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 set -e
 
 repoUrl="https://github.com/adalinesimonian/gdvm"
@@ -15,17 +32,23 @@ arch="$(uname -m)"
 file="gdvm"
 
 case "$os" in
-    Linux*)   os="unknown-linux-gnu" ;;
-    Darwin*)  os="apple-darwin" ;;
-    MINGW*|MSYS*|CYGWIN*) os="pc-windows-gnu" ;;
-    *)        echo "Unsupported OS: $os"; exit 1 ;;
+Linux*) os="unknown-linux-gnu" ;;
+Darwin*) os="apple-darwin" ;;
+MINGW* | MSYS* | CYGWIN*) os="pc-windows-gnu" ;;
+*)
+    echo "Unsupported OS: $os"
+    exit 1
+    ;;
 esac
 
 case "$arch" in
-    x86_64) arch="x86_64" ;;
-    i686)   arch="i686" ;;
-    arm64)  arch="aarch64" ;;
-    *)      echo "Unsupported ARCH: $arch"; exit 1 ;;
+x86_64) arch="x86_64" ;;
+i686) arch="i686" ;;
+arm64) arch="aarch64" ;;
+*)
+    echo "Unsupported ARCH: $arch"
+    exit 1
+    ;;
 esac
 
 file="gdvm-${arch}-${os}"
@@ -107,23 +130,23 @@ export PATH=\"\$installDir:\$PATH\""
 if [ -n "$SHELL" ]; then
     shellName=$(basename "$SHELL")
     case "$shellName" in
-        bash)
-            profileFile="$HOME/.bashrc"
-            ;;
-        zsh)
-            profileFile="$HOME/.zshrc"
-            ;;
-        fish)
-            profileFile="$HOME/.config/fish/config.fish"
-            ;;
-        *)
-            profileFile=""
-            ;;
+    bash)
+        profileFile="$HOME/.bashrc"
+        ;;
+    zsh)
+        profileFile="$HOME/.zshrc"
+        ;;
+    fish)
+        profileFile="$HOME/.config/fish/config.fish"
+        ;;
+    *)
+        profileFile=""
+        ;;
     esac
 
     if [ -n "$profileFile" ]; then
         if ! grep -Fxq "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" "$profileFile"; then
-            echo "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" >> "$profileFile"
+            echo "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" >>"$profileFile"
             echo -e "\e[32m✅ Added $installDir to PATH in $profileFile\e[0m"
         else
             echo -e "\e[36mℹ️ $profileFile already adds $installDir and $installDir/current_godot to PATH.\e[0m"
@@ -142,7 +165,7 @@ echo
 # Ask to associate .godot files with gdvm (specifically godot in .gdvm/bin)
 # printf "Would you like to associate .godot files with gdvm (specifically godot in $installDir)? [y/N] "
 printf "Would you like to create a shortcut for the current Godot version? [y/N] "
-read -r REPLY < /dev/tty
+read -r REPLY </dev/tty
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     # echo "Skipping association of .godot files."
@@ -193,7 +216,7 @@ elif [ "$os" = "apple-darwin" ]; then
 
     # Generate the Info.plist
     infoPlist="$contentsDir/Info.plist"
-    cat > "$infoPlist" <<EOF
+    cat >"$infoPlist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -216,13 +239,13 @@ elif [ "$os" = "apple-darwin" ]; then
 EOF
 
     if [ "$haveIcon" = "true" ]; then
-        cat >> "$infoPlist" <<EOF
+        cat >>"$infoPlist" <<EOF
     <key>CFBundleIconFile</key>
     <string>Godot.icns</string>
 EOF
     fi
 
-    cat >> "$infoPlist" <<EOF
+    cat >>"$infoPlist" <<EOF
 
     <!-- Tells macOS we handle .godot files -->
     <key>CFBundleDocumentTypes</key>
@@ -264,7 +287,7 @@ EOF
 EOF
 
     # Create the wrapper script in Contents/MacOS
-    cat > "$macOsDir/godot-wrapper" <<'EOF'
+    cat >"$macOsDir/godot-wrapper" <<'EOF'
 #!/usr/bin/env bash
 
 # Path to the actual Godot binary
@@ -304,9 +327,8 @@ EOF
     echo
     echo -e "\e[32m✅ Created a shortcut for the current Godot version in the user Applications folder.\e[0m"
 
-
     printf "Would you like to associate .godot files with gdvm (specifically godot in %s)? [y/N] " "$installDir"
-    read -r REPLY < /dev/tty
+    read -r REPLY </dev/tty
     echo
 
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -350,7 +372,7 @@ EOF
 elif [ "$os" = "unknown-linux-gnu" ]; then
     echo "You appear to be on Linux."
     wrapperScript="$installDir/godot-wrapper-linux"
-    cat > "$wrapperScript" <<'EOF'
+    cat >"$wrapperScript" <<'EOF'
 #!/usr/bin/env bash
 
 # Execute gdvm and capture both stdout and stderr
@@ -379,7 +401,7 @@ EOF
     mkdir -p "$desktopDir"
     desktopFile="$desktopDir/godot-gdvm.desktop"
 
-    cat <<EOF > "$desktopFile"
+    cat <<EOF >"$desktopFile"
 [Desktop Entry]
 Name=Godot (via gdvm)
 Exec="$wrapperScript" %f
@@ -399,7 +421,7 @@ EOF
     if ! curl -sL "$iconUrl" -o "$iconFile"; then
         echo -e "\e[33m⚠️ Failed to download Godot icon. Will continue without an icon.\e[0m" >&2
     else
-        echo "Icon=$iconFile" >> "$desktopFile"
+        echo "Icon=$iconFile" >>"$desktopFile"
         echo -e "\e[32m✅ Downloaded Godot icon to $iconFile\e[0m"
     fi
 
