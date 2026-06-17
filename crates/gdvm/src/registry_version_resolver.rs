@@ -238,23 +238,27 @@ impl<'a> RegistryVersionResolver<'a> {
             .list_releases(Some(query), use_cache_only, self.i18n)
             .await?;
 
-        let mut compatible = Vec::new();
+        let mut newest_compatible_pre_release: Option<GodotVersionDeterminate> = None;
+
         for gv in releases {
-            if self.is_compatible(&gv, variant).await? {
-                compatible.push(gv);
+            if !self.is_compatible(&gv, variant).await? {
+                continue;
+            }
+
+            if include_pre {
+                return Ok(Some(gv));
+            }
+
+            if gv.release_type == "stable" {
+                return Ok(Some(gv));
+            }
+
+            if newest_compatible_pre_release.is_none() {
+                newest_compatible_pre_release = Some(gv);
             }
         }
 
-        if include_pre {
-            return Ok(compatible.into_iter().next());
-        }
-
-        let latest_stable = compatible
-            .iter()
-            .find(|r| r.release_type == "stable")
-            .cloned();
-
-        Ok(latest_stable.or_else(|| compatible.into_iter().next()))
+        Ok(newest_compatible_pre_release)
     }
 
     async fn resolve_for_auto_install_impl(
