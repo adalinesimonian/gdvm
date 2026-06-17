@@ -1,4 +1,20 @@
 #!/usr/bin/env node
+// SPDX-FileCopyrightText: Copyright (C) 2025 Adaline Simonian
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of gdvm.
+//
+// gdvm is free software: you can redistribute it and/or modify it under the
+// terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <https://www.gnu.org/licenses/>.
 
 /*
  Validates the Godot build registry.
@@ -161,7 +177,7 @@ for (const file of expectedFiles.keys()) {
     typeof rel.url !== "string" ||
     !validUrl(
       rel.url,
-      "https://github.com/godotengine/godot-builds/releases/tag/"
+      "https://github.com/godotengine/godot-builds/releases/tag/",
     )
   ) {
     pushErr(ctx, "`url` invalid or wrong prefix");
@@ -208,7 +224,7 @@ for (const file of expectedFiles.keys()) {
           if (
             !validUrl(
               u,
-              "https://github.com/godotengine/godot-builds/releases/download/"
+              "https://github.com/godotengine/godot-builds/releases/download/",
             )
           ) {
             pushErr(archCtx, `url "${u}" has wrong prefix or is not https`);

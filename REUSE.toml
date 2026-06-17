@@ -15,15 +15,26 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
-root = true
+version = 1
 
-[*]
-indent_style = space
-indent_size = 4
-end_of_line = lf
-charset = utf-8
-trim_trailing_whitespace = true
-insert_final_newline = true
+[[annotations]]
+path = [
+    ".prettierrc",
+    ".vscode/**",
+    "v1/package.json",
+]
+SPDX-FileCopyrightText = "Copyright (C) 2025 Adaline Simonian"
+SPDX-License-Identifier = "GPL-3.0-or-later"
 
-[*.{md,yml,yaml,json,webmanifest,js,mjs}]
-indent_size = 2
+[[annotations]]
+path = [
+    "v1/index.json",
+    "v1/releases/**",
+]
+SPDX-FileCopyrightText = "Copyright (C) 2025 Adaline Simonian"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = ["README.md"]
+SPDX-FileCopyrightText = "Copyright (C) 2025 Adaline Simonian"
+SPDX-License-Identifier = "CC-BY-SA-4.0"

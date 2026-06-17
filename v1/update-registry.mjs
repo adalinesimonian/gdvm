@@ -1,4 +1,20 @@
 #!/usr/bin/env node
+// SPDX-FileCopyrightText: Copyright (C) 2025 Adaline Simonian
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of gdvm.
+//
+// gdvm is free software: you can redistribute it and/or modify it under the
+// terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <https://www.gnu.org/licenses/>.
 
 /*
   update-registry.mjs - Builds a JSON-based registry for Godot releases
@@ -37,7 +53,7 @@ const fetchOpts = {
 
 if (!githubToken) {
   console.warn(
-    "Warning: no GitHub token found. Unauthenticated requests are limited to 60/hour."
+    "Warning: no GitHub token found. Unauthenticated requests are limited to 60/hour.",
   );
 }
 
@@ -89,10 +105,10 @@ function slotFor(filename) {
   let os = /win(dows)?/.test(name)
     ? "windows"
     : /(mac|osx)/.test(name)
-    ? "macos"
-    : /(linux|x11)/.test(name)
-    ? "linux"
-    : null;
+      ? "macos"
+      : /(linux|x11)/.test(name)
+        ? "linux"
+        : null;
 
   if (!os) {
     return null;
@@ -166,7 +182,7 @@ function sortObjectDeep(obj) {
         obj[key] && typeof obj[key] === "object" && !Array.isArray(obj[key])
           ? sortObjectDeep(obj[key])
           : obj[key],
-      ])
+      ]),
   );
 }
 
@@ -251,7 +267,7 @@ async function runWorker() {
       try {
         const files = await fs.readdir(outDir);
         const oldFilePattern = new RegExp(
-          `^\\d+_${safeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.json$`
+          `^\\d+_${safeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.json$`,
         );
 
         for (const file of files) {
@@ -286,13 +302,13 @@ async function runWorker() {
 
     const binaries = {};
     const byName = Object.fromEntries(
-      release.assets.map((asset) => [asset.name, asset.url])
+      release.assets.map((asset) => [asset.name, asset.url]),
     );
 
     // Pull SHA512-SUMS once.
     let sums = {};
     const sumsFile = Object.keys(byName).find((name) =>
-      /^sha512-sums.txt$/i.test(name)
+      /^sha512-sums.txt$/i.test(name),
     );
 
     if (sumsFile) {
@@ -318,7 +334,7 @@ async function runWorker() {
             tag: release.tag_name,
             note: `downloading sums, attempt ${attempt}`,
           });
-        }
+        },
       );
 
       for (const line of sumsData.split("\n")) {
@@ -366,7 +382,7 @@ async function runWorker() {
               file: fileName,
               note: `${purpose || "download"} attempt ${attempt}`,
             });
-          }
+          },
         );
       };
 
@@ -393,14 +409,14 @@ async function runWorker() {
             status = Status.SumsMismatch;
             note = `sums.txt=${recordedSha.slice(0, 8)}… dl=${sha1.slice(
               0,
-              8
+              8,
             )}…`; // Keep downloaded consistent SHA.
             finalSha = sha1;
           } else {
             status = Status.Inconsistent;
             note = `sums.txt=${recordedSha.slice(0, 8)}… dl1=${sha1.slice(
               0,
-              8
+              8,
             )}… dl2=${sha2.slice(0, 8)}…`;
             // For security, do not trust either mismatching SHA. Instead,
             // use the recorded SHA from sums.txt.
@@ -530,7 +546,7 @@ async function runParent() {
     console.log(
       `Will refetch data for the last ${lastBuilds.length} builds: ${lastBuilds
         .map((b) => b.name)
-        .join(", ")}`
+        .join(", ")}`,
     );
   }
 
@@ -574,12 +590,12 @@ async function runParent() {
 
         if (isRerelease) {
           console.log(
-            `Found re-release: ${release.tag_name} (new ID: ${release.id})`
+            `Found re-release: ${release.tag_name} (new ID: ${release.id})`,
           );
         }
       } else {
         console.log(
-          `Found known release ID ${release.id} (${release.tag_name}) on page ${page}. Stopping.`
+          `Found known release ID ${release.id} (${release.tag_name}) on page ${page}. Stopping.`,
         );
         page = Infinity; // Stop outer loop.
         break;
@@ -642,7 +658,7 @@ async function runParent() {
       `[${bar}] ${(pct * 100).toFixed(1).padStart(5)}%  ` +
         `${completed}/${total} done  ` +
         `${active.size} active  ` +
-        (active.size ? `{ ${tags}${more} }` : "")
+        (active.size ? `{ ${tags}${more} }` : ""),
     );
   }
 
@@ -717,7 +733,7 @@ async function runParent() {
         if (oldId) {
           indexMap.delete(oldId);
           console.log(
-            `Removed old index entry for re-release: ${r.tag_name} (old ID: ${oldId})`
+            `Removed old index entry for re-release: ${r.tag_name} (old ID: ${oldId})`,
           );
         }
       }
