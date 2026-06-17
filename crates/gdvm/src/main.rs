@@ -135,6 +135,12 @@ async fn main() -> Result<()> {
                         .num_args(0)
                         .help(t!(i18n, "help-redownload")),
                 )
+                .arg(
+                    Arg::new("launch-shortcut")
+                        .long("launch-shortcut")
+                        .num_args(0)
+                        .help(t!(i18n, "help-launch-shortcut")),
+                )
                 .arg(refresh_flag(&i18n)),
         )
         .subcommand(Command::new("list").about(t!(i18n, "help-list")))
