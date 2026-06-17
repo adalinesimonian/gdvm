@@ -135,7 +135,7 @@ jobs:
       - name: Lint licences
         if: success() || failure()
         working-directory: ${{ env.WORKSPACE_DIR }}
-        run: uvx reuse lint
+        run: uvx reuse[charset-normalizer] lint
 
       - name: Run unit and integration tests
         if: (success() || failure())
