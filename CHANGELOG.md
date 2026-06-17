@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.0...main
+
+## v0.12.0
+
 ### Deprecated
 
 The following features have been deprecated. They will continue to work for the time being, but will be removed in a future release. See [MIGRATION.md](MIGRATION.md) for details.
@@ -40,7 +44,7 @@ The following features have been deprecated. They will continue to work for the 
 - Pinned versions are stored in a new `gdvm.toml` file.
 - Relicensed from ISC to GPL-3.0-or-later. This ensures that improvements to gdvm will be shared with the community.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.11.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.11.0...v0.12.0
 
 ## v0.11.0
 
