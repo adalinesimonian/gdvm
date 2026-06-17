@@ -21,11 +21,15 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.1...main
+
+## v0.12.1
+
 ### Fixed
 
 - Running `gdvm run latest` would take a long time when the release cache wasn't up to date, because it would check the platform compatibility of every single matching release up front. Now it stops as soon as it finds a compatible release.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.0...v0.12.1
 
 ## v0.12.0
 
