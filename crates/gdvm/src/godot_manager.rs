@@ -23,6 +23,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
+use std::fs::File;
+use std::io::Write;
 
 use crate::download_utils::download_file;
 use crate::migrations;
@@ -1232,16 +1234,16 @@ impl<'a> GodotManager<'a> {
 
             let shortcut_path = desktop_path.join(format!(
                 "{}.desktop",
-                link_name.as_ref().expect("cannot set name")
+                link_name.as_ref().expect("cannot get name")
             ));
 
             if shortcut_path.exists() {
                 return Ok(());
             }
 
-            let link_name_args = format!(
+            let exec_args = format!(
                 "{} {}",
-                link_name.as_ref().expect("cannot set name"),
+                target.display(),
                 format!("run {}", gv.to_install_str())
             );
 
@@ -1251,17 +1253,17 @@ impl<'a> GodotManager<'a> {
                 Name={}
                 Exec={}
                 Icon={}",
-                link_name_args,
-                target.display(),
+                link_name.as_ref().expect("cannot get name"),
+                exec_args,
                 self.get_base_path().join("bin").join("godot.svg").display()
             );
 
-            let mut file = File::create(path)?;
-            file.write_all(shortcut_content.as_bytes())?;
+            let mut file = File::create(&shortcut_path)?;
+            file.write(shortcut_content.as_bytes())?;
 
             let mut perms = file.metadata()?.permissions();
             perms.set_mode(0o755); // make the .desktop file executable
-            std::fs::set_permissions(path, perms)?;
+            std::fs::set_permissions(&shortcut_path, perms)?;
 
             std::fs::write(&shortcut_path, shortcut_content)?;
         }
