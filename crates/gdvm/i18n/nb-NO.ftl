@@ -246,3 +246,9 @@ error-github-rate-limit = GitHub API si rate-begrensing overskredet.
 
   Merk: Tokenet vil bli lagret i klartekst i hjemmekatalogen din. Vennligst sørg for at du holder det sikkert.
   Det anbefales å regelmessig gjennomgå og rotere tokenene dine for sikkerhetsformål.
+
+error-copy-file-failed = Kunne ikke kopiere filen: { $error }
+error-move-file-failed = Kunne ikke flytte filen: { $error }
+error-user-dir-not-found = Kunne ikke opprette snarvei: Brukerkatalogen ble ikke funnet
+error-desktop-not-found = Kunne ikke opprette snarvei: Skrivebordskatalogen ble ikke funnet
+warning-shortcut-macos-not-supported = For øyeblikket støttes ikke oppretting av snarveier i MacOS, så snarveien vil ikke bli opprettet.

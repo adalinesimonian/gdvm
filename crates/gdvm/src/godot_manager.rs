@@ -427,7 +427,7 @@ impl<'a> GodotManager<'a> {
                         .map_err(|copy_err| {
                             anyhow!(t_w!(
                                 self.i18n,
-                                "error-move-file-fallback-failed",
+                                "error-copy-file-failed",
                                 error = copy_err.to_string()
                             ))
                         })
@@ -1518,6 +1518,4 @@ mod tests {
 
         assert!(result.is_err());
     }
-
-    // todo: shortcut test
 }
