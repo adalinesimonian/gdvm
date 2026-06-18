@@ -19,12 +19,14 @@ use mslnk::ShellLink;
 use semver::{Version, VersionReq};
 use sha2::{Digest, Sha256, Sha512};
 #[cfg(target_family = "unix")]
+use std::fs::File;
+#[cfg(target_family = "unix")]
+use std::io::Write;
+#[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
-use std::fs::File;
-use std::io::Write;
 
 use crate::download_utils::download_file;
 use crate::migrations;
@@ -1228,8 +1230,6 @@ impl<'a> GodotManager<'a> {
         }
         #[cfg(target_os = "linux")]
         {
-            use std::os::unix::fs::PermissionsExt;
-
             let target = self.get_base_path().join("bin").join("gdvm");
 
             let shortcut_path = desktop_path.join(format!(
@@ -1266,6 +1266,11 @@ impl<'a> GodotManager<'a> {
             std::fs::set_permissions(&shortcut_path, perms)?;
 
             std::fs::write(&shortcut_path, shortcut_content)?;
+        }
+        #[cfg(target_os = "macos")]
+        {
+            // i don't have any device with MacOS installed, so i can't code and test this feature.
+            anyhow!(t_w!(self.i18n, "warning-shortcut-macos-not-supported"));
         }
         Ok(())
     }
