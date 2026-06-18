@@ -1,3 +1,20 @@
+// SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of gdvm.
+//
+// gdvm is free software: you can redistribute it and/or modify it under the
+// terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <https://www.gnu.org/licenses/>.
+
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -47,16 +64,22 @@ impl ParsedProject {
                 patch: None,
                 subpatch: None,
                 release_type: None,
-                is_csharp: Some(self.has_dotnet),
             });
         }
 
         let version_candidate = self.features_version.as_ref()?;
 
-        parse_version_string(version_candidate).map(|mut gv| {
-            gv.is_csharp = Some(self.has_dotnet);
-            gv
-        })
+        parse_version_string(version_candidate)
+    }
+
+    /// Return the detected variant based on project contents. Returns
+    /// `Some("csharp")` if the project has a `[dotnet]` section.
+    pub fn detected_variant(&self) -> Option<String> {
+        if self.has_dotnet {
+            Some("csharp".to_string())
+        } else {
+            None
+        }
     }
 }
 
@@ -101,14 +124,19 @@ impl ProjectVersionProbe {
 ///
 /// Returns `None` if the file cannot be found, parsed, or no version
 /// is specified in `config/features`.
-pub fn detect_godot_version_in_path<P: AsRef<Path>>(i18n: &I18n, path: P) -> Option<GodotVersion> {
+pub fn detect_godot_version_in_path<P: AsRef<Path>>(
+    i18n: &I18n,
+    path: P,
+) -> Option<(GodotVersion, Option<String>)> {
     // Find the project root by walking up until we find `project.godot`.
     let probe = ProjectVersionProbe::load(i18n, path)?;
 
     // Parse the file, looking for the `[application]` section and
     //    `config/features=PackedStringArray(...)`.
     let parsed = probe.parse();
-    parsed.detected_version()
+    let version = parsed.detected_version()?;
+    let variant = parsed.detected_variant();
+    Some((version, variant))
 }
 
 /// Walks up the directory tree starting from `start_path` until it finds
@@ -263,7 +291,6 @@ fn parse_version_string(version: &str) -> Option<GodotVersion> {
         patch,
         subpatch: None,
         release_type: None,
-        is_csharp: None,
     })
 }
 
@@ -328,7 +355,7 @@ foo=bar
         let parsed = super::ParsedProject::parse_str(contents);
         let detected = parsed.detected_version().unwrap();
         assert_eq!(detected.major, Some(3));
-        assert_eq!(detected.is_csharp, Some(false));
+        assert!(parsed.detected_variant().is_none());
     }
 
     #[test]
@@ -342,6 +369,6 @@ config/features=PackedStringArray("4.3", "Forward Plus")
         let detected = parsed.detected_version().unwrap();
         assert_eq!(detected.major, Some(4));
         assert_eq!(detected.minor, Some(3));
-        assert_eq!(detected.is_csharp, Some(true));
+        assert_eq!(parsed.detected_variant().as_deref(), Some("csharp"));
     }
 }

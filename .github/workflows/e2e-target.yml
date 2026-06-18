@@ -1,3 +1,20 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 name: End-to-End Target
 
 on:
@@ -21,6 +38,11 @@ jobs:
     name: End-to-End Tests (${{ inputs.os }}, ${{ inputs.target }})
     runs-on: ${{ inputs.os }}
     steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 1
+
       - name: Download binary artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -65,194 +87,8 @@ jobs:
           echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
           ~/.gdvm/bin/gdvm.exe --version
 
-      - name: Set up GitHub token
-        if: success() || failure()
+      - name: Run end-to-end tests
         shell: bash
-        run: gdvm config set github.token ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Search for 4.x releases of Godot
-        if: success() || failure()
-        shell: bash
-        run: gdvm search --filter 4 | grep 4.3-stable
-
-      - name: Refresh flag repopulates registry cache
-        if: success() || failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          cache="$HOME/.gdvm/cache.json"
-          backup="$cache.bak.refresh"
-
-          if [[ -f "$cache" ]]; then
-              cp "$cache" "$backup"
-          fi
-
-          printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"godot_registry":{"last_fetched":0,"releases":[]},"release_capabilities":{"last_fetched":0,"entries":[]}}' > "$cache"
-
-          if gdvm search --cache-only --filter 4 | grep -q 4.3-stable; then
-              echo "cache-only search unexpectedly found releases with empty cache"
-              [[ -f "$backup" ]] && mv "$backup" "$cache"
-              exit 1
-          fi
-
-          gdvm search --refresh --filter 4 | grep 4.3-stable
-
-          if ! grep -q '"tag_name"' "$cache"; then
-              echo "cache was not repopulated with releases"
-              cat "$cache"
-              [[ -f "$backup" ]] && mv "$backup" "$cache"
-              exit 1
-          fi
-
-          [[ -f "$backup" ]] && mv "$backup" "$cache"
-
-      - name: Install Godot 4.3
-        if: success() || failure()
-        shell: bash
-        run: gdvm install 4.3
-
-      - name: Install Godot 3.6.2
-        if: (success() || failure()) && inputs.os != 'windows-11-arm'
-        shell: bash
-        run: gdvm install 3.6.2
-
-      - name: Use Godot 3.6.2 globally
-        if: (success() || failure()) && inputs.os != 'windows-11-arm'
-        shell: bash
-        run: gdvm use 3.6.2
-
-      - name: Install Godot 4.4.0
-        if: (success() || failure()) && inputs.os == 'windows-11-arm'
-        shell: bash
-        run: gdvm install 4.4.0
-
-      - name: Use Godot 4.4.0 globally
-        if: (success() || failure()) && inputs.os == 'windows-11-arm'
-        shell: bash
-        run: gdvm use 4.4.0
-
-      - name: Pin Godot 4.3.0 to current directory
-        if: success() || failure()
-        shell: bash
-        run: gdvm pin 4.3.0
-
-      - name: Running Godot in current directory should use 4.3.0
-        if: success() || failure()
-        shell: bash
-        run: gdvm run --console=true -- --version | grep 4.3.stable.official
-
-      - name: Running Godot in current directory with godot alias should use 4.3.0
-        if: (success() || failure()) && !contains(inputs.os, 'windows')
-        shell: bash
-        run: godot --version | grep 4.3.stable.official
-
-      - name: Running Godot in current directory with godot_console alias should use 4.3.0
-        if: (success() || failure()) && contains(inputs.os, 'windows')
-        shell: bash
-        run: godot_console --version | grep 4.3.stable.official
-
-      - name: Showing path for Godot 4.3.0 returns existing file
-        if: success() || failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          path="$(gdvm show 4.3.0)"
-          echo "gdvm show 4.3.0 -> $path"
-          if [[ ! -e "$path" ]]; then
-              echo "Resolved path does not exist: $path"
-              exit 1
-          fi
-          "$path" --version | grep 4.3.stable.official
-
-      - name: Show without version resolves to pinned 4.3.0
-        if: success() || failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          path_default="$(gdvm show)"
-          path_explicit="$(gdvm show 4.3.0)"
-          echo "gdvm show (default) -> $path_default"
-          echo "gdvm show 4.3.0   -> $path_explicit"
-          if [[ "$path_default" != "$path_explicit" ]]; then
-              echo "Default show path did not match explicit 4.3.0 path"
-              exit 1
-          fi
-
-      - name: Running Godot 3.5 explicitly should use latest 3.5
-        if: (success() || failure()) && !contains(inputs.target, 'aarch64')
-        shell: bash
-        run: gdvm run 3.5 --console=true -- --version | grep 3.5.3.stable.official
-
-      - name: Running Godot 4.4 explicitly should use latest 4.4
-        if: (success() || failure()) && contains(inputs.target, 'aarch64')
-        shell: bash
-        run: gdvm run 4.4 --console=true -- --version | grep 4.4.1.stable.official
-
-      - name: Running Godot 4.4 with C# support should use Mono build
-        if: success() || failure()
-        shell: bash
-        run: gdvm run 4.4 --csharp --console=true -- --version | grep 4.4.1.stable.mono.official
-
-      - name: Running latest stable Godot should work
-        shell: bash
-        run: gdvm run stable --console=true -- --version | grep stable.official
-
-      - name: Linking Godot 4.3.0 to custom path creates file
-        if: success() || failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          tmpdir="$(mktemp -d)"
-          trap 'rm -rf "$tmpdir"' EXIT
-          cd "$tmpdir"
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            link_path="./godot-link.exe"
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            link_path="./godot-link.app"
-          else
-            link_path="./godot-link"
-          fi
-
-          gdvm link 4.3.0 "$link_path"
-          if [[ ! -e "$link_path" ]]; then
-            echo "Link target $link_path was not created"
-            exit 1
-          fi
-
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            ./godot-link_console.exe --version | grep 4.3.stable.official
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            "$link_path/Contents/MacOS/Godot" --version | grep 4.3.stable.official
-          else
-            "$link_path" --version | grep 4.3.stable.official
-          fi
-
-      - name: Copying Godot 4.3.0 to custom path with --copy creates runnable file
-        if: success() || failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          tmpdir="$(mktemp -d)"
-          trap 'rm -rf "$tmpdir"' EXIT
-          cd "$tmpdir"
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            copy_path="./godot-copy.exe"
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            copy_path="./godot-copy.app"
-          else
-            copy_path="./godot-copy"
-          fi
-
-          gdvm link 4.3.0 "$copy_path" --copy
-          if [[ ! -e "$copy_path" ]]; then
-            echo "Copy target $copy_path was not created"
-            exit 1
-          fi
-
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            ./godot-copy_console.exe --version | grep 4.3.stable.official
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            "$copy_path/Contents/MacOS/Godot" --version | grep 4.3.stable.official
-          else
-            "$copy_path" --version | grep 4.3.stable.official
-          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/run-e2e.sh

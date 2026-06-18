@@ -1,8 +1,58 @@
+<!--
+SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+SPDX-License-Identifier: GPL-3.0-or-later
+
+This file is part of gdvm.
+
+gdvm is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+
 # Changelog
 
 ## Unreleased
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.11.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.1...main
+
+## v0.12.1
+
+### Fixed
+
+- Running `gdvm run latest` would take a long time when the release cache wasn't up to date, because it would check the platform compatibility of every single matching release up front. Now it stops as soon as it finds a compatible release.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.0...v0.12.1
+
+## v0.12.0
+
+### Deprecated
+
+The following features have been deprecated. They will continue to work for the time being, but will be removed in a future release. See [MIGRATION.md](MIGRATION.md) for details.
+
+- The `--csharp` flag for selecting C# builds. Use the `csharp:` prefix instead, for example, `csharp:4.4`.
+- The `stable` keyword for the latest stable release. Use `latest` instead.
+- The `.gdvmrc` file for pinned versions. Use `gdvm.toml` instead.
+
+### New Features
+
+- Added a `latest` keyword that resolves to the latest stable release. If `--pre` is also passed, it resolves to the absolute latest release, including pre-releases and dev builds.
+- gdvm now respects `.env` files in the current directory, so you can set environment variables for your projects without having to set them in your shell profile or terminal every time.
+
+### Changed
+
+- The version syntax now uses a `[variant:]version` form. C# builds are selected with the `csharp:` prefix, for example, `csharp:4.4`. The standard build can be named explicitly with the reserved `default:` prefix.
+- Pinned versions are stored in a new `gdvm.toml` file.
+- Relicensed from ISC to GPL-3.0-or-later. This ensures that improvements to gdvm will be shared with the community.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.11.0...v0.12.0
 
 ## v0.11.0
 

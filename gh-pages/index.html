@@ -1,3 +1,11 @@
+<!--
+SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+SPDX-License-Identifier: CC-BY-SA-4.0 AND GPL-3.0-or-later
+
+Page content is licensed under CC BY-SA 4.0.
+Page source code is licensed under GPL-3.0-or-later.
+-->
+
 <!doctype html>
 <html lang="en">
     <head>
@@ -435,11 +443,11 @@
                 </p>
                 <ul>
                     <li>
-                        <code>gdvm use stable</code> — Set the global default to
+                        <code>gdvm use latest</code> — Set the global default to
                         the latest stable.
                     </li>
                     <li>
-                        <code>gdvm pin stable --csharp</code> — Pin the current
+                        <code>gdvm pin csharp:latest</code> — Pin the current
                         folder to latest stable with C#, using a
                         <code>.gdvmrc</code> file.
                     </li>
@@ -468,7 +476,7 @@
                         console open.
                     </li>
                     <li>
-                        <code>gdvm run 3.5 --csharp</code> — Run Godot 3.5 with
+                        <code>gdvm run csharp:3.5</code> — Run Godot 3.5 with
                         C#.
                     </li>
                     <li>
@@ -510,7 +518,23 @@
             </section>
         </main>
 
-        <footer>&copy; 2024 Adaline Simonian. All rights reserved.</footer>
+        <footer>
+            <p>&copy; 2024 Adaline Simonian.</p>
+            <p>
+                Page content is licensed under
+                <a
+                    href="https://creativecommons.org/licenses/by-sa/4.0/"
+                    rel="license noopener"
+                    >CC BY-SA 4.0</a
+                >.<br />
+                Page source code is licensed under
+                <a
+                    href="https://www.gnu.org/licenses/gpl-3.0.html"
+                    rel="license noopener"
+                    >GPL-3.0-or-later</a
+                >.
+            </p>
+        </footer>
 
         <script>
             const isWindows = /windows|win32|win64/i.test(navigator.userAgent);

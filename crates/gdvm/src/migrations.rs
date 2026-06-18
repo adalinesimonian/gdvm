@@ -1,9 +1,26 @@
+// SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of gdvm.
+//
+// gdvm is free software: you can redistribute it and/or modify it under the
+// terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{eprintln_i18n, i18n::I18n};
 use anyhow::Result;
 use std::fs;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "windows")]
 const GDVM_SHIM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/shim.exe"));
@@ -51,6 +68,77 @@ define_migrations! {
                     path = &exe_path.to_string_lossy().to_string(),
                 );
                 return Err(err);
+            }
+        }
+
+        Ok(())
+    },
+    2 => |base_path, i18n| {
+        // Migrate install directories from flat layout to variant subfolder
+        // layout, so every build lives under a variant dir:
+        //
+        //   4.4.1-stable-csharp/  moves to  csharp/4.4.1-stable/
+        //   4.4.1-stable/         moves to  default/4.4.1-stable/
+        //
+        // Create a symlink from the old path to the new path for backward
+        // compatibility with existing links. Silently warn on symlink failure.
+        let installs = base_path.join("installs");
+
+        if !installs.is_dir() {
+            return Ok(());
+        }
+
+        let entries: Vec<PathBuf> = fs::read_dir(&installs)?
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                // Only process real directories, not symlinks from a previous migration.
+                e.metadata().map(|m| m.is_dir()).unwrap_or(false)
+                    && !e.file_type().map(|t| t.is_symlink()).unwrap_or(false)
+            })
+            .map(|e| e.path())
+            .collect();
+
+        for old_path in entries {
+            let dir_name = match old_path.file_name().and_then(|n| n.to_str()) {
+                Some(n) => n.to_string(),
+                None => continue,
+            };
+
+            let new_path = if let Some(base) = dir_name.strip_suffix("-csharp") {
+                installs.join("csharp").join(base)
+            } else if crate::version_utils::GodotVersion::from_install_str(&dir_name).is_ok() {
+                installs
+                    .join(crate::version_utils::DEFAULT_VARIANT)
+                    .join(&dir_name)
+            } else {
+                // Not a recognized install, ignore.
+                continue;
+            };
+
+            if new_path.exists() {
+                continue;
+            }
+
+            if let Some(parent) = new_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            // Don't error if the user ran gdvm twice and the other instance
+            // already got rid of the path.
+            match fs::rename(&old_path, &new_path) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e.into()),
+            }
+
+            if let Err(err) = create_symlink(&new_path, &old_path) {
+                eprintln_i18n!(
+                    i18n,
+                    "error-link-symlink",
+                    target = &old_path.to_string_lossy().to_string(),
+                    link = &new_path.to_string_lossy().to_string(),
+                    error = &err.to_string(),
+                );
             }
         }
 
@@ -154,4 +242,14 @@ fn write_bytes_if_different(bytes: &[u8], dest: &Path, perm: Option<u32>) -> Res
     }
 
     Ok(())
+}
+
+#[cfg(target_family = "unix")]
+fn create_symlink(target: &Path, link: &Path) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(target, link)
+}
+
+#[cfg(target_family = "windows")]
+fn create_symlink(target: &Path, link: &Path) -> std::io::Result<()> {
+    std::os::windows::fs::symlink_dir(target, link)
 }

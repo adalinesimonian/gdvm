@@ -1,3 +1,20 @@
+// SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of gdvm.
+//
+// gdvm is free software: you can redistribute it and/or modify it under the
+// terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::artifact_cache::ArtifactCache;
 use crate::config::Config;
 use crate::host::{HostPlatform, detect_host};
@@ -36,7 +53,7 @@ use crate::zip_utils;
 use crate::{eprintln_i18n, println_i18n};
 use crate::{i18n, project_version_detector, t, t_w};
 
-use crate::version_utils::{GodotVersionDeterminate, GodotVersionDeterminateVecExt};
+use crate::version_utils::GodotVersionDeterminate;
 
 #[derive(Debug)]
 pub enum InstallOutcome {
@@ -347,22 +364,24 @@ impl<'a> GodotManager<'a> {
 
     /// Install a specified Godot version
     ///
+    /// - `variant`: Optional variant, e.g. `Some("csharp")`.
     /// - `force`: If true, reinstall the version even if it's already installed.
     /// - `redownload`: If true, ignore cached zip files and download fresh ones.
     /// - `launch_shortcut`: If true, add shortcuts for the installed version.
     pub async fn install(
         &self,
         gv: &GodotVersionDeterminate,
+        variant: Option<&str>,
         force: bool,
         redownload: bool,
         launch_shortcut: bool,
     ) -> Result<InstallOutcome> {
-        let install_str = gv.to_install_str();
-        let version_path = self.paths.installs().join(install_str);
+        let install_str = crate::version_utils::install_dir_subpath(&gv.to_remote_str(), variant);
+        let version_path = self.paths.installs().join(&install_str);
 
         if version_path.exists() {
             if force {
-                self.remove(gv)?;
+                self.remove(gv, variant)?;
                 eprintln_i18n!(
                     self.i18n,
                     "force-reinstalling-version",
@@ -383,10 +402,9 @@ impl<'a> GodotManager<'a> {
         self.artifact_cache.ensure_dir()?;
 
         let meta = self.release_catalog.metadata_for(gv, self.i18n).await?;
-        let is_csharp = gv.is_csharp.unwrap_or(false);
 
         let binary =
-            registry::select_binary(&meta, self.host, is_csharp).map_err(|err| match err {
+            registry::select_binary(&meta, self.host, variant).map_err(|err| match err {
                 BinarySelectionError::UnsupportedPlatform => {
                     anyhow!(t_w!(self.i18n, "unsupported-platform"))
                 }
@@ -410,13 +428,22 @@ impl<'a> GodotManager<'a> {
             }
 
             let tmp_file = self
-                .paths
-                .installs()
-                .join(format!("{}.zip", gv.to_install_str()));
+                .artifact_cache
+                .cached_zip_path(&format!("{archive_name}.partial"));
 
-            // Download the archive
-            download_file(download_url, &tmp_file, self.i18n).await?;
-            verify_sha(&tmp_file, &binary.sha512, self.i18n)?;
+            // Download the archive.
+            let staged = async {
+                download_file(download_url, &tmp_file, self.i18n).await?;
+                verify_sha(&tmp_file, &binary.sha512, self.i18n)?;
+                fs::rename(&tmp_file, &cache_zip_path)?;
+                anyhow::Ok(())
+            }
+            .await;
+
+            if let Err(err) = staged {
+                let _ = fs::remove_file(&tmp_file);
+                return Err(err);
+            }
 
             // Move the verified zip to cache_dir
             fs::rename(&tmp_file, &cache_zip_path).or_else(|e| {
@@ -456,29 +483,52 @@ impl<'a> GodotManager<'a> {
     }
 
     /// List all installed Godot versions
-    pub fn list_installed(&self) -> Result<Vec<GodotVersionDeterminate>> {
+    pub fn list_installed(&self) -> Result<Vec<(GodotVersionDeterminate, Option<String>)>> {
         let mut versions = vec![];
-        for entry in fs::read_dir(self.paths.installs())? {
+        let installs_dir = self.paths.installs();
+
+        for entry in fs::read_dir(installs_dir)? {
             let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                let name = entry.file_name().to_string_lossy().to_string();
-                if let Ok(gv) = GodotVersion::from_install_str(&name) {
-                    versions.push(gv.to_determinate())
+
+            if !entry.file_type()?.is_dir() {
+                continue;
+            }
+
+            let variant_name = entry.file_name().to_string_lossy().to_string();
+            let variant_dir = installs_dir.join(&variant_name);
+            for sub_entry in fs::read_dir(&variant_dir)?.flatten() {
+                if sub_entry.file_type().is_ok_and(|ft| ft.is_dir())
+                    && let Ok(gv) =
+                        GodotVersion::from_install_str(&sub_entry.file_name().to_string_lossy())
+                {
+                    versions.push((gv.to_determinate(), Some(variant_name.clone())));
                 }
             }
         }
-        versions.sort_by_version();
+        versions.sort_by(|(a, _), (b, _)| {
+            use crate::version_utils::GodotVersionDeterminateVecExt;
+            let mut v = vec![a.clone(), b.clone()];
+            v.sort_by_version();
+            if v[0] == *a {
+                std::cmp::Ordering::Greater // Newest first.
+            } else {
+                std::cmp::Ordering::Less
+            }
+        });
         Ok(versions)
     }
 
     /// Remove a specified Godot version
-    pub fn remove(&self, gv: &GodotVersionDeterminate) -> Result<()> {
-        let path = self.paths.installs().join(gv.to_install_str());
+    pub fn remove(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
+        let install_name = crate::version_utils::install_dir_subpath(&gv.to_remote_str(), variant);
+        let path = self.paths.installs().join(&install_name);
 
         if path.exists() {
             // If this version is the default, unset it
-            if let Some(def) = self.get_default()?
-                && def.to_install_str() == path.file_name().unwrap().to_string_lossy()
+            if let Some((def, def_variant)) = self.get_default()?
+                && def.to_remote_str() == gv.to_remote_str()
+                && crate::version_utils::normalize_variant(def_variant.as_deref())
+                    == crate::version_utils::normalize_variant(variant)
             {
                 self.unset_default()?;
             }
@@ -494,10 +544,11 @@ impl<'a> GodotManager<'a> {
     pub fn run(
         &self,
         gv: &GodotVersionDeterminate,
+        variant: Option<&str>,
         console: bool,
         godot_args: &[String],
     ) -> Result<()> {
-        let path = self.get_executable_path(gv, console)?;
+        let path = self.get_executable_path(gv, variant, console)?;
 
         if console {
             // Run the process attached to the terminal and wait for it to exit
@@ -535,9 +586,11 @@ impl<'a> GodotManager<'a> {
     pub fn get_executable_path(
         &self,
         gv: &GodotVersionDeterminate,
+        variant: Option<&str>,
         console: bool,
     ) -> Result<std::path::PathBuf> {
-        let version_dir = self.paths.installs().join(gv.to_install_str());
+        let install_name = crate::version_utils::install_dir_subpath(&gv.to_remote_str(), variant);
+        let version_dir = self.paths.installs().join(&install_name);
         if !version_dir.exists() {
             return Err(anyhow!(t!(
                 self.i18n,
@@ -663,14 +716,26 @@ impl<'a> GodotManager<'a> {
     /// unless of course the version is not found, in which case the list will
     /// be empty.
     /// Accepts full and partial versions.
-    pub async fn resolve_installed_version<T>(&self, gv: &T) -> Result<Vec<GodotVersionDeterminate>>
+    pub async fn resolve_installed_version<T>(
+        &self,
+        gv: &T,
+        variant: Option<&str>,
+    ) -> Result<Vec<(GodotVersionDeterminate, Option<String>)>>
     where
         T: Into<GodotVersion> + Clone,
     {
         let gv: GodotVersion = gv.clone().into();
         let installed = self.list_installed()?;
-        let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
-        Ok(resolver.resolve_installed(&gv, &installed).await)
+        // Filter by variant, then filter by version match.
+        let matches: Vec<_> = installed
+            .into_iter()
+            .filter(|(v, v_variant)| {
+                crate::version_utils::normalize_variant(v_variant.as_deref())
+                    == crate::version_utils::normalize_variant(variant)
+                    && gv.matches(v)
+            })
+            .collect();
+        Ok(matches)
     }
 
     /// Resolve the Godot version from a string, for an available version
@@ -680,6 +745,8 @@ impl<'a> GodotManager<'a> {
     pub async fn resolve_available_version<T>(
         &self,
         gv: &T,
+        variant: Option<&str>,
+        include_pre: bool,
         use_cache_only: bool,
     ) -> Result<Option<GodotVersionDeterminate>>
     where
@@ -687,24 +754,27 @@ impl<'a> GodotManager<'a> {
     {
         let gv: GodotVersion = gv.clone().into();
         let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
-        resolver.resolve_available(&gv, use_cache_only).await
+        resolver
+            .resolve_available(&gv, variant, include_pre, use_cache_only)
+            .await
     }
 
-    pub fn set_default(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+    pub fn set_default(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
         // Check if the version exists
-        let version_str = gv.to_install_str();
-        let version_path = self.paths.installs().join(&version_str);
+        let install_name = crate::version_utils::install_dir_subpath(&gv.to_remote_str(), variant);
+        let version_path = self.paths.installs().join(&install_name);
         if !version_path.exists() {
             return Err(anyhow!(t_w!(self.i18n, "error-version-not-found")));
         }
 
-        // Write version to .gdvm/default
+        // Write pinned-format string to .gdvm/default
         let default_path = self.paths.default_file();
-        fs::write(&default_path, &version_str)?;
+        let default_str = crate::version_utils::pinned_str(&gv.to_remote_str(), variant);
+        fs::write(&default_path, &default_str)?;
 
-        // Create directory symlink .gdvm/bin/current_godot -> .gdvm/<version_str>/
+        // Create directory symlink .gdvm/bin/current_godot -> .gdvm/<install_name>/
         let symlink_dir = self.paths.current_godot_symlink();
-        let target_dir = self.paths.installs().join(version_str);
+        let target_dir = self.paths.installs().join(&install_name);
 
         // Make sure bin directory exists
         fs::create_dir_all(symlink_dir.parent().unwrap())?;
@@ -740,28 +810,46 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    pub fn get_default(&self) -> Result<Option<GodotVersionDeterminate>> {
+    pub fn get_default(&self) -> Result<Option<(GodotVersionDeterminate, Option<String>)>> {
         let default_file = self.paths.default_file();
         if default_file.exists() {
             let contents = fs::read_to_string(&default_file)?;
-            Ok(Some(
-                GodotVersion::from_install_str(contents.trim())?.to_determinate(),
-            ))
+            let (variant, version_str) = crate::version_utils::parse_pinned_str(contents.trim());
+            let gv = GodotVersion::from_install_str(&version_str)?.to_determinate();
+            Ok(Some((gv, variant)))
         } else {
             Ok(None)
         }
     }
 
-    /// Recursively search upward for .gdvmrc, return the pinned version if found
-    pub fn get_pinned_version(&self) -> Option<GodotVersion> {
+    /// Recursively search upward for gdvm.toml, return the pinned version if found.
+    pub fn get_pinned_version(&self) -> Option<(GodotVersion, Option<String>)> {
         let mut current = std::env::current_dir().ok()?;
         loop {
-            let candidate = current.join(".gdvmrc");
-            if candidate.is_file()
-                && let Ok(contents) = fs::read_to_string(&candidate)
+            let toml_candidate = current.join("gdvm.toml");
+            if toml_candidate.is_file()
+                && let Ok(contents) = fs::read_to_string(&toml_candidate)
+                && let Ok(gdvm_toml) = crate::version_utils::deserialize_gdvm_toml(&contents)
             {
-                return GodotVersion::from_install_str(contents.trim()).ok();
+                let (variant, version_str) =
+                    crate::version_utils::parse_pinned_str(gdvm_toml.godot.version.trim());
+                if let Ok(gv) = GodotVersion::from_install_str(&version_str) {
+                    return Some((gv, variant));
+                }
             }
+
+            // Fall back to deprecated .gdvmrc.
+            let rc_candidate = current.join(".gdvmrc");
+            if rc_candidate.is_file()
+                && let Ok(contents) = fs::read_to_string(&rc_candidate)
+            {
+                let (variant, version_str) =
+                    crate::version_utils::parse_pinned_str(contents.trim());
+                if let Ok(gv) = GodotVersion::from_install_str(&version_str) {
+                    return Some((gv, variant));
+                }
+            }
+
             if !current.pop() {
                 break;
             }
@@ -770,7 +858,10 @@ impl<'a> GodotManager<'a> {
     }
 
     /// Try to determine the version to use based on the current Godot project
-    pub fn determine_version<P: AsRef<Path>>(&self, path: Option<P>) -> Option<GodotVersion> {
+    pub fn determine_version<P: AsRef<Path>>(
+        &self,
+        path: Option<P>,
+    ) -> Option<(GodotVersion, Option<String>)> {
         let current_dir = match path {
             Some(p) => p.as_ref().to_path_buf(),
             None => std::env::current_dir().ok()?,
@@ -779,25 +870,46 @@ impl<'a> GodotManager<'a> {
         project_version_detector::detect_godot_version_in_path(self.i18n, &current_dir)
     }
 
-    /// Pin a version to .gdvmrc in the current directory
-    pub fn pin_version(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+    /// Pin a version to gdvm.toml in the current directory.
+    pub fn pin_version(
+        &self,
+        gv: &GodotVersionDeterminate,
+        variant: Option<&str>,
+        gdvm_toml_only: bool,
+    ) -> Result<()> {
         let path = std::env::current_dir()?;
-        let file = path.join(".gdvmrc");
-        fs::write(&file, gv.to_pinned_str())?;
+
+        let specifier = crate::version_utils::pinned_str(&gv.to_remote_str(), variant);
+        let toml_content = crate::version_utils::serialize_gdvm_toml(&specifier);
+        fs::write(path.join("gdvm.toml"), toml_content)?;
+
+        // Write deprecated .gdvmrc for backward compatibility with older versions of gdvm.
+        if !gdvm_toml_only {
+            let legacy = crate::version_utils::legacy_pinned_str(gv, variant);
+            fs::write(path.join(".gdvmrc"), legacy)?;
+        }
+
         Ok(())
     }
 
-    pub async fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    pub async fn auto_install_version<T>(
+        &self,
+        gv: &T,
+        variant: Option<&str>,
+        include_pre: bool,
+    ) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone,
     {
         let gv: GodotVersion = gv.clone().into();
         let resolver = RegistryVersionResolver::new(&self.release_catalog, self.i18n, self.host);
 
-        let actual_version = resolver.resolve_for_auto_install(&gv).await?;
+        let actual_version = resolver
+            .resolve_for_auto_install(&gv, variant, include_pre)
+            .await?;
 
         // Check if version is installed, if not, install
-        if !self.is_version_installed(&actual_version)? {
+        if !self.is_version_installed(&actual_version, variant)? {
             eprintln_i18n!(
                 self.i18n,
                 "auto-installing-version",
@@ -815,14 +927,18 @@ impl<'a> GodotManager<'a> {
         Ok(actual_version)
     }
 
-    fn is_version_installed<T>(&self, gv: &T) -> Result<bool>
+    fn is_version_installed<T>(&self, gv: &T, variant: Option<&str>) -> Result<bool>
     where
         T: Into<GodotVersion> + Clone,
     {
         let gv: GodotVersion = gv.clone().into();
 
         let installed_versions = self.list_installed()?;
-        Ok(installed_versions.iter().any(|v| gv.matches(v)))
+        Ok(installed_versions.iter().any(|(v, v_variant)| {
+            crate::version_utils::normalize_variant(v_variant.as_deref())
+                == crate::version_utils::normalize_variant(variant)
+                && gv.matches(v)
+        }))
     }
 
     /// Find the latest stable release matching a semver requirement from a list of GitHub releases
@@ -1310,42 +1426,57 @@ impl<'a> GodotManager<'a> {
 
 #[async_trait::async_trait(?Send)]
 impl<'a> RunVersionSource for GodotManager<'a> {
-    async fn get_pinned_version(&self) -> Option<GodotVersion> {
+    async fn get_pinned_version(&self) -> Option<(GodotVersion, Option<String>)> {
         GodotManager::get_pinned_version(self)
     }
 
-    async fn get_default(&self) -> Result<Option<GodotVersionDeterminate>> {
+    async fn get_default(&self) -> Result<Option<(GodotVersionDeterminate, Option<String>)>> {
         GodotManager::get_default(self)
     }
 
     async fn determine_version<P: AsRef<Path> + Send + Sync>(
         &self,
         path: Option<P>,
-    ) -> Option<GodotVersion> {
+    ) -> Option<(GodotVersion, Option<String>)> {
         GodotManager::determine_version(self, path)
     }
 
-    async fn auto_install_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    async fn auto_install_version<T>(
+        &self,
+        gv: &T,
+        variant: Option<&str>,
+        include_pre: bool,
+    ) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone + Send + Sync,
     {
-        GodotManager::auto_install_version(self, gv).await
+        GodotManager::auto_install_version(self, gv, variant, include_pre).await
     }
 
-    async fn ensure_installed_version<T>(&self, gv: &T) -> Result<GodotVersionDeterminate>
+    async fn ensure_installed_version<T>(
+        &self,
+        gv: &T,
+        variant: Option<&str>,
+    ) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone + Send + Sync,
     {
         let gv: GodotVersion = gv.clone().into();
-        let matches = self.resolve_installed_version(&gv).await?;
+        let matches = self.resolve_installed_version(&gv, variant).await?;
 
         match matches.len() {
             0 => Err(anyhow!(t!(self.i18n, "error-version-not-found"))),
-            1 => Ok(matches[0].clone()),
+            1 => Ok(matches[0].0.clone()),
             _ => {
                 eprintln_i18n!(self.i18n, "error-multiple-versions-found");
-                for v in matches {
-                    println!("- {}", v.to_display_str());
+                for (v, var) in &matches {
+                    println!(
+                        "- {}",
+                        crate::version_utils::display_with_variant(
+                            &v.to_display_str(),
+                            var.as_deref()
+                        )
+                    );
                 }
                 Err(anyhow!(t!(self.i18n, "error-version-not-found")))
             }

@@ -5,7 +5,7 @@
     "mkhl.shfmt",
     "ms-azuretools.vscode-containers",
     "ms-vscode.powershell",
-    "prettier.prettier-vscode",
+    "esbenp.prettier-vscode",
     "rust-lang.rust-analyzer",
     "tamasfe.even-better-toml",
     "vadimcn.vscode-lldb"

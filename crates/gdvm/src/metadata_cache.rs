@@ -1,3 +1,20 @@
+// SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This file is part of gdvm.
+//
+// gdvm is free software: you can redistribute it and/or modify it under the
+// terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <https://www.gnu.org/licenses/>.
+
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -19,7 +36,7 @@ pub struct ReleaseCache {
 /// Cached capability info for a single release.
 pub struct ReleaseCapabilitiesEntry {
     pub tag_name: String,
-    pub has_csharp: bool,
+    pub variants: Vec<String>,
     pub platforms: Vec<String>,
 }
 
@@ -200,7 +217,7 @@ pub fn filter_cached_releases(
     let mut releases: Vec<GodotVersionDeterminate> = cache
         .releases
         .iter()
-        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name, None).ok())
+        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name).ok())
         .map(|gv| gv.to_determinate())
         .filter(|r| filter.is_none_or(|f| f.matches(r)))
         .collect();

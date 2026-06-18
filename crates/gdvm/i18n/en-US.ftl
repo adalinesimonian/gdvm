@@ -1,3 +1,20 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 hello = Hello, World!
 
 help-about = Godot Version Manager
@@ -13,15 +30,21 @@ help-list = List all installed Godot versions
 help-remove = Remove an installed Godot version
 
 help-branch = The branch (stable, beta, alpha, or custom).
-help-csharp = Use the Godot version with C# support.
+help-csharp = [deprecated] Use the Godot version with C# support. Use the "csharp" variant specifier instead (e.g. csharp:4.4).
 help-run-csharp-long = { help-csharp }
 
     If given, value overrides the default version set with "use". Otherwise, the default version is used. In other words, if you set a default version with "use --csharp", you can try to run the same version but without C# support with "run --csharp false". However, it may not work as expected if the version without C# support is not installed. (Just run "install" to install it.)
-help-version = The version to install (e.g. 4), or "stable" for the latest stable version.
+help-version = The version to install (e.g. 4, csharp:4.4, stable, latest).
 help-version-long =
     { help-version }
 
-    Examples: 4.4 will install the latest stable release of Godot 4.4. If only pre-release versions exist, in which case, the latest pre-release version will be installed. 4.3-rc will install the latest release candidate of Godot 4.3, etc.
+    Format: [variant:]version_or_keyword
+
+    Keywords: "latest" resolves to the newest version. By default, this includes only stable releases, but pre-releases can be included with the --pre flag.
+
+    Variants: prefix with a variant name and colon, e.g. "csharp:4.4" for the C# build.
+
+    Examples: 4.4 will install the latest stable release of Godot 4.4. If only pre-release versions exist, the latest pre-release version will be installed. 4.3-rc will install the latest release candidate of Godot 4.3, etc.
 help-version-installed = The installed version (e.g. 4.2 or 4.2-stable).
 
 help-search = List available releases from the registry
@@ -64,6 +87,7 @@ installing-version = Installing version {$version}
 installed-success = Successfully installed {$version}
 
 warning-prerelease = {"\u001b"}[33mWarning: You are installing a pre-release version ({$branch}).{"\u001b"}[0m
+warning-deprecated-csharp-flag = {"\u001b"}[33mWarning: The --csharp flag is deprecated. Use the "csharp" variant specifier instead (e.g. csharp:4.4).{"\u001b"}[0m
 
 force-reinstalling-version = Forcing reinstallation of version {$version}.
 
@@ -99,9 +123,6 @@ warning-fetching-releases-using-cache = Error fetching releases: { $error }. Usi
 error-version-not-found = Version not found.
 error-multiple-versions-found = Multiple versions match your request:
 
-error-invalid-godot-version = Invalid Godot version format. Expected formats: x, x.y, x.y.z, x.y.z.w, x.y.z-tag.
-error-invalid-remote-version = Invalid remote Godot version format. Expected formats: x, x.y, x.y.z, x.y.z.w, x.y.z-tag, or "stable".
-
 running-version = Running version {$version}
 link-created = Linked {$version} to {$path}
 copy-created = Copied {$version} to {$path}
@@ -113,7 +134,7 @@ cache-refreshed = Cache refreshed successfully.
 version-already-installed = Version {$version} already installed.
 godot-executable-not-found = Godot executable not found for version {$version}.
 error-link-exists = Path {$path} already exists. Use --force to overwrite.
-error-link-symlink = Failed to create link: {$error}
+error-link-symlink = Failed to create link from {$link} to {$target}: {$error}
 error-link-copy = Failed to copy executable: {$error}
 error-link-godotsharp-target = Failed to determine GodotSharp target path.
 error-link-godotsharp-missing = GodotSharp directory is missing next to the resolved executable.
@@ -165,13 +186,18 @@ upgrade-available-both = 💡 A new version of gdvm is available: {$minor_versio
 help-pin = Pin a version of Godot to the current directory.
 help-pin-long = { help-pin }
 
-    This will create a .gdvmrc file in the current directory with the pinned version. When you run "gdvm run" in this directory or any of its subdirectories, the pinned version will be used instead of the default version.
+    This will create a gdvm.toml file in the current directory with the pinned version. When you run "gdvm run" in this directory or any of its subdirectories, the pinned version will be used instead of the default version.
 
     This is useful when you want to use a specific version of Godot for a project without changing the default version system-wide.
+
+    This currently also writes the legacy .gdvmrc file for compatibility with older versions of gdvm. This will be removed in a future release, so it is recommended to update to the new gdvm.toml format and remove the .gdvmrc file if it exists.
+
+    You can disable writing a .gdvmrc file using the --no-legacy flag.
 help-pin-version = The version to pin
-pinned-success = Successfully pinned version {$version} in .gdvmrc
+help-no-legacy = Do not write the legacy .gdvmrc compatibility file
+pinned-success = Successfully pinned version {$version} in gdvm.toml
 error-pin-version-not-found = Could not pin version {$version}
-pin-subcommand-description = Set or update .gdvmrc with the requested version
+pin-subcommand-description = Set or update gdvm.toml with the requested version
 
 error-file-not-found = File not found. It may not exist on the server.
 error-download-failed = Download failed due to an unexpected error: { $error }

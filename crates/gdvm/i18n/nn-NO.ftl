@@ -1,3 +1,20 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 hello = Hei, Verda!
 
 help-about = Godot-versjonsbehandlaren
@@ -13,13 +30,17 @@ help-list = List alle installerte Godot-versjonar
 help-remove = Fjern ein installert Godot-versjon
 
 help-branch = Greina (stable, beta, alpha eller tilpassa).
-help-csharp = Bruk Godot-versjonen med C#-støtte.
+help-csharp = [avvikla] Bruk Godot-versjonen med C#-støtte. Bruk variantspesifikatoren «csharp» i staden (t.d. csharp:4.4).
 help-run-csharp-long = { help-csharp }
-
-    Ved å gjeva ein verdi, overskridar du standardversjonen sett med «use». Elles vert standardversjonen bruka. Med andre ord, om du set ein standardversjon med «use --csharp», kan du prøve å køyre den same versjonen, men utan C#-støtte, med «run --csharp false». Det kan likevel ikkje fungere som forventa om versjonen utan C#-støtte ikkje er installert. (Berre køyr «install» for å installere han.)
-help-version = Versjonen som skal installerast (t.d. 4), eller «stable» for den siste stabile versjonen.
+help-version = Versjonen som skal installerast (t.d. 4, csharp:4.4, stable, latest).
 help-version-long =
     { help-version }
+
+    Format: [variant:]versjon_eller_nykelord
+
+    Nøkkelord: «latest» løyser til den nyaste versjonen. Som standard inkluderer dette berre stabile utgjevingar, men førehandsversjonar kan inkluderast med --pre-flagget.
+
+    Variantar: prefiks med eit variantnamn og kolon, t.d. «csharp:4.4» for C#-versjonen.
 
     Døme: 4.4 vil installere den siste stabile utgjevinga av Godot 4.4. Viss berre førehandsversjonar finst, vil den siste førehandsversjonen verta installert. 4.3-rc vil installere den siste utgjevinga av Godot 4.3, osb.
 help-version-installed = Den installerte versjonen (t.d. 4.2 eller 4.2-stable).
@@ -63,7 +84,8 @@ no-default-set = Ingen standardversjon er sett. Køyr «gdvm use <version>» for
 installing-version = Installerer versjon {$version}
 installed-success = Installerte {$version} vellukka.
 
-warning-prerelease = Åtvaring: Du installerer ein førehandsversjon ({$branch}).
+warning-prerelease = {"\u001b"}[33mÅtvaring: Du installerer ein førehandsversjon ({$branch}).{"\u001b"}[0m
+warning-deprecated-csharp-flag = {"\u001b"}[33mÅtvaring: Flagget --csharp er avvikla. Bruk "csharp"-variantspesifikatoren i staden (t.d. csharp:4.4).{"\u001b"}[0m
 
 force-reinstalling-version = Tvingar installasjon av versjon {$version} på nytt.
 
@@ -99,9 +121,6 @@ warning-fetching-releases-using-cache = Feil ved henting av utgjevingar: { $erro
 error-version-not-found = Versjonen vart ikkje funnen.
 error-multiple-versions-found = Fleire versjonar samsvarar med førespurnaden:
 
-error-invalid-godot-version = Ugyldig Godot-versjonsformat. Forventa format: x, x.y, x.y.z, x.y.z.w eller x.y.z-tag.
-error-invalid-remote-version = Ugyldig fjern Godot-versjonsformat. Forventa format: x, x.y, x.y.z, x.y.z.w, x.y.z-tag eller «stable».
-
 running-version = Køyrer versjon {$version}
 link-created = Lenkja {$version} til {$path}
 copy-created = Kopierte {$version} til {$path}
@@ -113,7 +132,7 @@ cache-refreshed = Cachen vart oppdatert.
 version-already-installed = Versjon {$version} er alt installert.
 godot-executable-not-found = Godot-køyrberr fil vart ikkje funnen for versjon {$version}.
 error-link-exists = Stigen {$path} finst allereie. Bruk --force for å overskrive.
-error-link-symlink = Klarte ikkje å opprette lenkje: {$error}
+error-link-symlink = Klarte ikkje å opprette lenkje frå {$link} til {$target}: {$error}
 error-link-copy = Klarte ikkje å kopiere køyrbar: {$error}
 error-link-godotsharp-target = Klarte ikkje å finne GodotSharp-målsti.
 error-link-godotsharp-missing = GodotSharp-katalogen manglar ved sidan av den løyste køyrbare.
@@ -165,13 +184,18 @@ upgrade-available-both = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$minor_ve
 help-pin = Fest ein versjon av Godot til gjeldande mappe.
 help-pin-long = { help-pin }
 
-    Dette vil opprette ei .gdvmrc-fil i gjeldande mappe med den festa versjonen. Når du køyrer «gdvm run» i denne katalogen eller nokre av underkatalogane, vil den festa versjonen verta bruka i staden for standardversjonen.
+    Dette vil opprette ei gdvm.toml-fil i gjeldande mappe med den festa versjonen. Når du køyrer «gdvm run» i denne katalogen eller nokre av underkatalogane, vil den festa versjonen verta bruka i staden for standardversjonen.
 
     Dette er nyttig når du vil bruke ein spesifikk versjon av Godot for eit prosjekt utan å endre standardversjonen systemomfattande.
+
+    Dette skriv førebels òg den eldre .gdvmrc-fila for bakoverkompatibilitet med eldre versjonar av gdvm. Dette vil verta fjerna i ei framtidig utgjeving, so det er tilrådd å gå over til det nye gdvm.toml-formatet og fjerne .gdvmrc-fila om ho finst.
+
+    Du kan deaktivere skriving av ei .gdvmrc-fil med --no-legacy-flagget.
 help-pin-version = Versjonen som skal festast
-pinned-success = Versjon {$version} vart festa i .gdvmrc
+help-no-legacy = Ikkje skriv den eldre .gdvmrc-kompatibilitetsfila
+pinned-success = Versjon {$version} vart festa i gdvm.toml
 error-pin-version-not-found = Kan ikkje feste versjon {$version}
-pin-subcommand-description = Set eller oppdater .gdvmrc med ynskt versjon
+pin-subcommand-description = Set eller oppdater gdvm.toml med ynskt versjon
 
 error-file-not-found = Fil vart ikkje funnen. Ho finst kanskje ikkje på tenaren.
 error-download-failed = Nedlasting feila på grunn av ein uventa feil: { $error }

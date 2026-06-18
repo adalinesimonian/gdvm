@@ -1,10 +1,29 @@
+<!--
+SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+SPDX-License-Identifier: GPL-3.0-or-later
+
+This file is part of gdvm.
+
+gdvm is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+
 # gdvm — Godot Version Manager
 
 ![Project banner](https://gdvm.io/gdvm-github-banner.png)
 
 <!--[Follow on Bluesky](https://bsky.app/profile/gdvm.io)-->
 
-[![GitHub Release](https://img.shields.io/github/v/release/adalinesimonian/gdvm)](https://github.com/adalinesimonian/gdvm/releases/latest) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/adalinesimonian/gdvm/build-and-test.yml?branch=main)](https://github.com/adalinesimonian/gdvm/actions/workflows/build-and-test.yml) [![License](https://img.shields.io/github/license/adalinesimonian/gdvm)](https://github.com/adalinesimonian/gdvm/blob/main/LICENCE) [![Bluesky](https://img.shields.io/badge/Bluesky-follow-blue?logo=bluesky&style=social)](https://bsky.app/profile/gdvm.io) [![GitHub Stargazers](https://img.shields.io/github/stars/adalinesimonian/gdvm?style=social)](https://github.com/adalinesimonian/gdvm/stargazers)
+[![GitHub Release](https://img.shields.io/github/v/release/adalinesimonian/gdvm)](https://github.com/adalinesimonian/gdvm/releases/latest) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/adalinesimonian/gdvm/build-and-test.yml?branch=main)](https://github.com/adalinesimonian/gdvm/actions/workflows/build-and-test.yml) [![License](https://img.shields.io/github/license/adalinesimonian/gdvm)](https://github.com/adalinesimonian/gdvm/blob/main/COPYING) [![Bluesky](https://img.shields.io/badge/Bluesky-follow-blue?logo=bluesky&style=social)](https://bsky.app/profile/gdvm.io) [![GitHub Stargazers](https://img.shields.io/github/stars/adalinesimonian/gdvm?style=social)](https://github.com/adalinesimonian/gdvm/stargazers)
 
 Godot Version Manager (gdvm) is a tool designed to simplify the installation, management, and switching between different versions of the Godot Engine.
 
@@ -37,25 +56,34 @@ powershell -NoProfile -Command "(iwr -useb 'https://gdvm.io/install.ps1.txt').Co
 Once installed, you can use the `gdvm` command to manage your Godot installations. Here are some common commands:
 
 ```bash
-gdvm use stable              # Set the global default to the latest stable.
+gdvm use latest         # Set the global default to the latest stable.
+gdvm use --pre latest   # Set the global default to the latest build of any kind
+                        # (stable/rc/beta/dev).
 
-gdvm pin stable --csharp     # Pin the current folder to latest stable with C#,
-                             # using a .gdvmrc file.
+gdvm pin csharp:latest  # Pin the current folder to latest stable with C#,
+                        # using a gdvm.toml file.
 ```
 
 > [!TIP]
 > Associate `.godot` files with `~/.gdvm/bin/godot.exe` to auto-use the correct version. gdvm can also detect the required version from `project.godot`.
 
 ```bash
-gdvm run                     # Run the default Godot for the folder.
-godot                        # Alias for `gdvm run`.
-godot_console                # Windows variant keeping the console open.
-gdvm run 3.5 --csharp        # Run Godot 3.5 with C#.
-gdvm remove 3.5              # Removes Godot 3.5 without C#.
-gdvm list                    # List installed versions.
-gdvm search 4                # Search available 4.x versions.
-gdvm upgrade                 # Upgrade gdvm.
+gdvm run             # Run the default Godot for the folder.
+godot                # Alias for `gdvm run`.
+godot_console        # Windows variant keeping the console open.
+gdvm run csharp:3.5  # Run Godot 3.5 with C#.
+gdvm remove 3.5      # Removes Godot 3.5 without C#.
+gdvm list            # List installed versions.
+gdvm search 4        # Search available 4.x versions.
+gdvm upgrade         # Upgrade gdvm.
 ```
+
+> [!NOTE]
+> Upgrading from an older version of gdvm? The Godot version syntax changed.
+>
+> The `csharp:` prefix replaces the old `--csharp` flag, and pins are stored in `gdvm.toml`.
+>
+> Your existing commands and `.gdvmrc` files still work. See [Migrating to the new version syntax](MIGRATION.md) for the details.
 
 > [!NOTE]
 > Hitting GitHub rate limits? Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with access to public repositories, and run `gdvm config set github.token` (stored plaintext in `~/.gdvm/config.toml`).
@@ -78,4 +106,4 @@ Please see [Code of Conduct](CODE_OF_CONDUCT.md) for details.
 
 ## Licence
 
-[ISC](LICENCE)
+This project is licensed under the GNU General Public License v3.0 or later. See [COPYING](COPYING) for more information.

@@ -1,17 +1,33 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
 [package]
 name = "gdvm"
-version = "0.11.0"
+version = "0.12.1"
 edition = "2024"
 build = "build.rs"
 description = "Godot Version Manager"
-license = "ISC"
+license = "GPL-3.0-or-later"
 repository = "https://github.com/adalinesimonian/gdvm"
 
 [dependencies]
 
 # For command-line argument parsing:
 clap = { version = "=4.6.1", features = ["wrap_help"] }
-regex = "=1.12.4"
 
 # For cross-platform paths:
 directories = "=6.0.0"
@@ -52,6 +68,7 @@ futures-util = "=0.3.32"
 zip = "=8.6.0"
 toml = "=1.1.2"
 rpassword = "=7.5.4"
+dotenvy = "=0.15.7"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
