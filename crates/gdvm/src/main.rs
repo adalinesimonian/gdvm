@@ -479,7 +479,7 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
     let redownload = matches.get_flag("redownload");
     let refresh = matches.get_flag("refresh");
     let launch_shortcut = matches.get_flag("launch-shortcut")
-        || config::Config::load(i18n)?.global_add_shortcuts.is_some();
+        || config::Config::load(i18n)?.global_launch_shortcut.is_some();
 
     refresh_cache_if_requested(manager, refresh).await?;
 

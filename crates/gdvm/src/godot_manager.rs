@@ -808,7 +808,7 @@ impl<'a> GodotManager<'a> {
                 &actual_version,
                 false,
                 false,
-                config.global_add_shortcuts.is_some(),
+                config.global_launch_shortcut.is_some(),
             )
             .await?;
         }

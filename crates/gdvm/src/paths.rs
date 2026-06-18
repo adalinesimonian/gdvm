@@ -94,7 +94,7 @@ impl GdvmPaths {
     pub fn from_config_installs_for_tests(base: PathBuf) -> Result<Self> {
         let config = Config {
             global_installs_location: Some(base.join("test_installs")),
-            global_add_shortcuts: None,
+            global_launch_shortcut: None,
             github_token: None,
         };
         let installs = config

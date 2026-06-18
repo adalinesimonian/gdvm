@@ -10,7 +10,7 @@ use std::path::PathBuf;
 pub const KNOWN_KEYS: &[&str] = &[
     "github.token",
     "global.installs_location",
-    "global.add_shortcuts",
+    "global.launch_shortcut",
 ];
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -20,7 +20,7 @@ pub struct Config {
     #[serde(default)]
     pub global_installs_location: Option<PathBuf>,
     #[serde(default)]
-    pub global_add_shortcuts: Option<bool>,
+    pub global_launch_shortcut: Option<bool>,
 }
 
 /// Get/set operations for configuration keys.
@@ -49,7 +49,7 @@ impl ConfigOps for Config {
                 .global_installs_location
                 .clone()
                 .map(|p| p.to_string_lossy().into_owned()),
-            "global.add_shortcuts" => self.global_add_shortcuts.map(|v| v.to_string()),
+            "global.launch_shortcut" => self.global_launch_shortcut.map(|v| v.to_string()),
             _ => None,
         }
     }
@@ -64,8 +64,8 @@ impl ConfigOps for Config {
                 self.global_installs_location = Some(PathBuf::from(value));
                 Ok(())
             }
-            "global.add_shortcuts" => {
-                self.global_add_shortcuts = Some(
+            "global.launch_shortcut" => {
+                self.global_launch_shortcut = Some(
                     value
                         .parse()
                         .map_err(|e| anyhow!("Failed to parse boolean value for {key}: {e}"))?,
@@ -86,8 +86,8 @@ impl ConfigOps for Config {
                 self.global_installs_location = None;
                 Ok(())
             }
-            "global.add_shortcuts" => {
-                self.global_add_shortcuts = None;
+            "global.launch_shortcut" => {
+                self.global_launch_shortcut = None;
                 Ok(())
             }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
@@ -110,10 +110,10 @@ impl ConfigOps for Config {
                 false,
             ));
         }
-        if let Some(add_shortcuts) = self.global_add_shortcuts {
+        if let Some(launch_shortcut) = self.global_launch_shortcut {
             entries.push((
-                "global.add_shortcuts".to_string(),
-                add_shortcuts.to_string(),
+                "global.launch_shortcut".to_string(),
+                launch_shortcut.to_string(),
                 false,
             ));
         }
