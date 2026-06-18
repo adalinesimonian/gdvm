@@ -483,6 +483,7 @@ impl<'a> GodotManager<'a> {
                 self.unset_default()?;
             }
             fs::remove_dir_all(path)?;
+            self.remove_shortcut(gv)?;
             Ok(())
         } else {
             Err(anyhow!(t_w!(self.i18n, "error-version-not-found")))
@@ -1270,7 +1271,38 @@ impl<'a> GodotManager<'a> {
         #[cfg(target_os = "macos")]
         {
             // i don't have any device with MacOS installed, so i can't code and test this feature.
-            anyhow!(t_w!(self.i18n, "warning-shortcut-macos-not-supported"));
+            eprintln_i18n!((self.i18n, "warning-shortcut-macos-not-supported"));
+        }
+        Ok(())
+    }
+
+    fn remove_shortcut(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+        use directories::UserDirs;
+
+        let user_dir =
+            UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+        let desktop_path = user_dir
+            .desktop_dir()
+            .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
+
+        #[cfg(target_os = "windows")]
+        {
+            let shortcut_path = desktop_path.join(format!("Godot {}.lnk", gv.to_install_str()));
+            if shortcut_path.exists() {
+                std::fs::remove_file(shortcut_path)?;
+            }
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let shortcut_path = desktop_path.join(format!("Godot {}.desktop", gv.to_install_str()));
+            if shortcut_path.exists() {
+                std::fs::remove_file(shortcut_path)?;
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            // i don't have any device with MacOS installed, so i can't code and test this feature.
+            eprintln_i18n!(self.i18n, "warning-shortcut-macos-not-supported");
         }
         Ok(())
     }
