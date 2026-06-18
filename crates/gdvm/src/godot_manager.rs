@@ -365,6 +365,9 @@ impl<'a> GodotManager<'a> {
                     version = gv.to_display_str(),
                 );
             } else {
+                if launch_shortcut {
+                    self.create_shortcut(gv)?;
+                }
                 return Ok(InstallOutcome::AlreadyInstalled);
             }
         }
@@ -442,29 +445,7 @@ impl<'a> GodotManager<'a> {
 
         // creates shortcut on desktop directory
         if launch_shortcut {
-            #[cfg(target_os = "windows")]
-            {
-                use crate::config::get_home_dir;
-
-                let target = self.get_base_path().join("bin").join("gdvm.exe");
-                let link_name = Some(format!("Godot {}", gv.to_install_str()));
-                let shortcut_path = &get_home_dir(self.i18n)?.join("Desktop").join(format!(
-                    "{}.lnk",
-                    link_name.as_ref().expect("cannot set name")
-                ));
-
-                let mut lnk = ShellLink::new(target)?;
-                lnk.set_icon_location(Some(
-                    self.get_base_path()
-                        .join("bin")
-                        .join("godot.ico")
-                        .to_string_lossy()
-                        .to_string(),
-                ));
-                lnk.set_arguments(Some(format!("run {}", gv.to_install_str())));
-                lnk.set_name(link_name);
-                lnk.create_lnk(shortcut_path)?;
-            }
+            self.create_shortcut(gv)?;
         }
 
         Ok(InstallOutcome::Installed)
@@ -1207,6 +1188,41 @@ impl<'a> GodotManager<'a> {
 
         Ok(())
     }
+
+    fn create_shortcut(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+        #[cfg(target_os = "windows")]
+        {
+            use crate::config::get_home_dir;
+
+            let target = self.get_base_path().join("bin").join("gdvm.exe");
+            let link_name = Some(format!("Godot {}", gv.to_install_str()));
+            let shortcut_path = &get_home_dir(self.i18n)?.join("Desktop").join(format!(
+                "{}.lnk",
+                link_name.as_ref().expect("cannot set name")
+            ));
+
+            if shortcut_path.exists() {
+                return Ok(());
+            }
+
+            let mut lnk = ShellLink::new(target)?;
+            lnk.set_icon_location(Some(
+                self.get_base_path()
+                    .join("bin")
+                    .join("godot.ico")
+                    .to_string_lossy()
+                    .to_string(),
+            ));
+            lnk.set_arguments(Some(format!("run {}", gv.to_install_str())));
+            lnk.set_name(link_name);
+            lnk.create_lnk(shortcut_path)?;
+        }
+        #[cfg(target_os = "linux")]
+        {
+            // todo: implement .desktop file creation for Linux
+        }
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait(?Send)]
@@ -1419,4 +1435,6 @@ mod tests {
 
         assert!(result.is_err());
     }
+
+    // todo: shortcut test
 }
