@@ -1190,13 +1190,20 @@ impl<'a> GodotManager<'a> {
     }
 
     fn create_shortcut(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+        use directories::UserDirs;
+
+        let user_dir =
+            UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+        let link_name = Some(format!("Godot {}", gv.to_install_str()));
+        let desktop_path = user_dir
+            .desktop_dir()
+            .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
+
         #[cfg(target_os = "windows")]
         {
-            use crate::config::get_home_dir;
-
             let target = self.get_base_path().join("bin").join("gdvm.exe");
-            let link_name = Some(format!("Godot {}", gv.to_install_str()));
-            let shortcut_path = &get_home_dir(self.i18n)?.join("Desktop").join(format!(
+
+            let shortcut_path = desktop_path.join(format!(
                 "{}.lnk",
                 link_name.as_ref().expect("cannot set name")
             ));
@@ -1219,7 +1226,44 @@ impl<'a> GodotManager<'a> {
         }
         #[cfg(target_os = "linux")]
         {
-            // todo: implement .desktop file creation for Linux
+            use std::os::unix::fs::PermissionsExt;
+
+            let target = self.get_base_path().join("bin").join("gdvm");
+
+            let shortcut_path = desktop_path.join(format!(
+                "{}.desktop",
+                link_name.as_ref().expect("cannot set name")
+            ));
+
+            if shortcut_path.exists() {
+                return Ok(());
+            }
+
+            let link_name_args = format!(
+                "{} {}",
+                link_name.as_ref().expect("cannot set name"),
+                format!("run {}", gv.to_install_str())
+            );
+
+            let shortcut_content = format!(
+                "[Desktop Entry]
+                Type=Application
+                Name={}
+                Exec={}
+                Icon={}",
+                link_name_args,
+                target.display(),
+                self.get_base_path().join("bin").join("godot.svg").display()
+            );
+
+            let mut file = File::create(path)?;
+            file.write_all(shortcut_content.as_bytes())?;
+
+            let mut perms = file.metadata()?.permissions();
+            perms.set_mode(0o755); // make the .desktop file executable
+            std::fs::set_permissions(path, perms)?;
+
+            std::fs::write(&shortcut_path, shortcut_content)?;
         }
         Ok(())
     }
