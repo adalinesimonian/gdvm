@@ -758,7 +758,6 @@ dependencies = [
  "futures-util",
  "indicatif",
  "mslnk",
- "regex",
  "reqwest",
  "rpassword",
  "semver",

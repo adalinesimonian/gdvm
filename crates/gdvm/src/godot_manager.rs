@@ -444,29 +444,6 @@ impl<'a> GodotManager<'a> {
                 let _ = fs::remove_file(&tmp_file);
                 return Err(err);
             }
-
-            // Move the verified zip to cache_dir
-            fs::rename(&tmp_file, &cache_zip_path).or_else(|e| {
-                // On errors like "os error 17: The system cannot move the file to a different disk drive" for windows
-                if e.kind() == std::io::ErrorKind::CrossesDevices {
-                    fs::copy(&tmp_file, &cache_zip_path)
-                        .and_then(|_| fs::remove_file(&tmp_file))
-                        .map_err(|copy_err| {
-                            anyhow!(t_w!(
-                                self.i18n,
-                                "error-copy-file-failed",
-                                error = copy_err.to_string()
-                            ))
-                        })
-                } else {
-                    Err(anyhow!(t_w!(
-                        self.i18n,
-                        "error-move-file-failed",
-                        error = e.to_string()
-                    )))
-                }
-            })?;
-            eprintln_i18n!(self.i18n, "cached-zip-stored");
         }
 
         fs::create_dir_all(&version_path)?;
@@ -918,6 +895,7 @@ impl<'a> GodotManager<'a> {
             let config = Config::load(self.i18n)?;
             self.install(
                 &actual_version,
+                variant,
                 false,
                 false,
                 config.global_launch_shortcut.is_some(),
@@ -1315,7 +1293,7 @@ impl<'a> GodotManager<'a> {
 
         let user_dir =
             UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
-        let link_name = Some(format!("Godot {}", gv.to_install_str()));
+        let link_name = Some(format!("Godot {}", gv.to_display_str()));
         let desktop_path = user_dir
             .desktop_dir()
             .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
@@ -1341,7 +1319,7 @@ impl<'a> GodotManager<'a> {
                     .to_string_lossy()
                     .to_string(),
             ));
-            lnk.set_arguments(Some(format!("run {}", gv.to_install_str())));
+            lnk.set_arguments(Some(format!("run {}", gv.to_display_str())));
             lnk.set_name(link_name);
             lnk.create_lnk(shortcut_path)?;
         }
@@ -1361,7 +1339,7 @@ impl<'a> GodotManager<'a> {
             let exec_args = format!(
                 "{} {}",
                 target.display(),
-                format!("run {}", gv.to_install_str())
+                format!("run {}", gv.to_display_str())
             );
 
             let shortcut_content = format!(
@@ -1403,14 +1381,14 @@ impl<'a> GodotManager<'a> {
 
         #[cfg(target_os = "windows")]
         {
-            let shortcut_path = desktop_path.join(format!("Godot {}.lnk", gv.to_install_str()));
+            let shortcut_path = desktop_path.join(format!("Godot {}.lnk", gv.to_display_str()));
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
             }
         }
         #[cfg(target_os = "linux")]
         {
-            let shortcut_path = desktop_path.join(format!("Godot {}.desktop", gv.to_install_str()));
+            let shortcut_path = desktop_path.join(format!("Godot {}.desktop", gv.to_display_str()));
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
             }
