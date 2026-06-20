@@ -1293,7 +1293,11 @@ impl<'a> GodotManager<'a> {
 
         let user_dir =
             UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
-        let link_name = Some(format!("Godot {}", gv.to_display_str()));
+        let link_name = Some(format!(
+            "Godot {} {}",
+            gv.to_display_str(),
+            &variant.unwrap_or("")
+        ));
         let desktop_path = user_dir
             .desktop_dir()
             .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
