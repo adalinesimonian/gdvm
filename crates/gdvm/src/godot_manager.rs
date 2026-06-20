@@ -389,7 +389,7 @@ impl<'a> GodotManager<'a> {
                 );
             } else {
                 if launch_shortcut {
-                    self.create_shortcut(gv)?;
+                    self.create_shortcut(gv, variant)?;
                 }
                 return Ok(InstallOutcome::AlreadyInstalled);
             }
@@ -453,7 +453,7 @@ impl<'a> GodotManager<'a> {
 
         // creates shortcut on desktop directory
         if launch_shortcut {
-            self.create_shortcut(gv)?;
+            self.create_shortcut(gv, variant)?;
         }
 
         Ok(InstallOutcome::Installed)
@@ -1288,7 +1288,7 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    fn create_shortcut(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+    fn create_shortcut(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
         use directories::UserDirs;
 
         let user_dir =
@@ -1297,6 +1297,14 @@ impl<'a> GodotManager<'a> {
         let desktop_path = user_dir
             .desktop_dir()
             .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
+
+        let args = {
+            if variant == Some("csharp") {
+                format!("run csharp:{}", gv.to_display_str())
+            } else {
+                format!("run {}", gv.to_display_str())
+            }
+        };
 
         #[cfg(target_os = "windows")]
         {
@@ -1319,7 +1327,7 @@ impl<'a> GodotManager<'a> {
                     .to_string_lossy()
                     .to_string(),
             ));
-            lnk.set_arguments(Some(format!("run {}", gv.to_display_str())));
+            lnk.set_arguments(Some(args));
             lnk.set_name(link_name);
             lnk.create_lnk(shortcut_path)?;
         }
@@ -1336,11 +1344,7 @@ impl<'a> GodotManager<'a> {
                 return Ok(());
             }
 
-            let exec_args = format!(
-                "{} {}",
-                target.display(),
-                format!("run {}", gv.to_display_str())
-            );
+            let exec_args = format!("{} {}", target.display(), args);
 
             let shortcut_content = format!(
                 "[Desktop Entry]
