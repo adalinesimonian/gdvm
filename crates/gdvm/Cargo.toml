@@ -73,6 +73,7 @@ dotenvy = "=0.15.7"
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "=0.3.9", features = ["winbase"] }
+mslnk = "0.1.8"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 daemonize = "=0.5.0"
