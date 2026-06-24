@@ -24,12 +24,17 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token"];
+pub const KNOWN_KEYS: &[&str] = &[
+    "github.token",
+    "global.installs_location",
+];
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub github_token: Option<String>,
+    #[serde(default)]
+    pub global_installs_location: Option<PathBuf>,
 }
 
 /// Get/set operations for configuration keys.
@@ -54,6 +59,10 @@ impl ConfigOps for Config {
     fn get_value(&self, key: &str) -> Option<String> {
         match key {
             "github.token" => self.github_token.clone(),
+            "global.installs_location" => self
+                .global_installs_location
+                .clone()
+                .map(|p| p.to_string_lossy().into_owned()),
             _ => None,
         }
     }
@@ -64,6 +73,10 @@ impl ConfigOps for Config {
                 self.github_token = Some(value.to_string());
                 Ok(())
             }
+            "global.installs_location" => {
+                self.global_installs_location = Some(PathBuf::from(value));
+                Ok(())
+            }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
@@ -72,6 +85,10 @@ impl ConfigOps for Config {
         match key {
             "github.token" => {
                 self.github_token = None;
+                Ok(())
+            }
+            "global.installs_location" => {
+                self.global_installs_location = None;
                 Ok(())
             }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
@@ -86,6 +103,13 @@ impl ConfigOps for Config {
         let mut entries = Vec::new();
         if let Some(token) = self.github_token.as_ref() {
             entries.push(("github.token".to_string(), token.clone(), true));
+        }
+        if let Some(installs_location) = self.global_installs_location.as_ref() {
+            entries.push((
+                "global.installs_location".to_string(),
+                installs_location.to_string_lossy().into_owned(),
+                false,
+            ));
         }
         entries
     }

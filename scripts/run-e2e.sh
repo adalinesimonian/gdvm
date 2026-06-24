@@ -215,7 +215,7 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 test "Search for 4.x releases" <<'TEST_SCRIPT'
-gdvm search --filter 4 | grep 4.3-stable
+gdvm search --limit 0 --filter 4 | grep 4.3-stable
 TEST_SCRIPT
 
 test "Refresh flag repopulates registry cache" <<'TEST_SCRIPT'
@@ -228,13 +228,13 @@ fi
 
 printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"godot_registry":{"last_fetched":0,"releases":[]},"release_capabilities":{"last_fetched":0,"entries":[]}}' > "$cache"
 
-if gdvm search --cache-only --filter 4 | grep -q 4.3-stable; then
+if gdvm search --cache-only --limit 0 --filter 4 | grep -q 4.3-stable; then
     echo "cache-only search unexpectedly found releases with empty cache"
     [[ -f "$backup" ]] && mv "$backup" "$cache"
     exit 1
 fi
 
-gdvm search --refresh --filter 4 | grep 4.3-stable
+gdvm search --refresh --limit 0 --filter 4 | grep 4.3-stable
 
 if ! grep -q '"tag_name"' "$cache"; then
     echo "cache was not repopulated with releases"
