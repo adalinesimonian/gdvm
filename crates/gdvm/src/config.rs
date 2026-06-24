@@ -24,12 +24,17 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token"];
+pub const KNOWN_KEYS: &[&str] = &[
+    "github.token",
+    "global.launch_shortcut",
+];
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub github_token: Option<String>,
+    #[serde(default)]
+    pub global_launch_shortcut: Option<bool>,
 }
 
 /// Get/set operations for configuration keys.
@@ -54,6 +59,7 @@ impl ConfigOps for Config {
     fn get_value(&self, key: &str) -> Option<String> {
         match key {
             "github.token" => self.github_token.clone(),
+            "global.launch_shortcut" => self.global_launch_shortcut.map(|v| v.to_string()),
             _ => None,
         }
     }
@@ -64,6 +70,14 @@ impl ConfigOps for Config {
                 self.github_token = Some(value.to_string());
                 Ok(())
             }
+            "global.launch_shortcut" => {
+                self.global_launch_shortcut = Some(
+                    value
+                        .parse()
+                        .map_err(|e| anyhow!("Failed to parse boolean value for {key}: {e}"))?,
+                );
+                Ok(())
+            }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
@@ -72,6 +86,10 @@ impl ConfigOps for Config {
         match key {
             "github.token" => {
                 self.github_token = None;
+                Ok(())
+            }
+            "global.installs_location" => {
+                self.global_installs_location = None;
                 Ok(())
             }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
@@ -86,6 +104,13 @@ impl ConfigOps for Config {
         let mut entries = Vec::new();
         if let Some(token) = self.github_token.as_ref() {
             entries.push(("github.token".to_string(), token.clone(), true));
+        }
+        if let Some(launch_shortcut) = self.global_launch_shortcut {
+            entries.push((
+                "global.launch_shortcut".to_string(),
+                launch_shortcut.to_string(),
+                false,
+            ));
         }
         entries
     }
