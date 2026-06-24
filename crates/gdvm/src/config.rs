@@ -88,10 +88,6 @@ impl ConfigOps for Config {
                 self.github_token = None;
                 Ok(())
             }
-            "global.installs_location" => {
-                self.global_installs_location = None;
-                Ok(())
-            }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
