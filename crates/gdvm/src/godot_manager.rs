@@ -1300,21 +1300,8 @@ impl<'a> GodotManager<'a> {
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
-        let link_name = Some(format!(
-            "Godot {} {}",
-            gv.to_display_str(),
-            &variant.unwrap_or("")
-        ));
-        let desktop_path = user_dir
-            .desktop_dir()
-            .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
-
-        let start_menu_path = base_dir
-            .data_dir()
-            .join("Microsoft")
-            .join("Windows")
-            .join("Start Menu")
-            .join("Godot");
+        let link_name =
+            format!("Godot {} {}", gv.to_display_str(), &variant.unwrap_or("")).to_string();
 
         let args = {
             if variant == Some("csharp") {
@@ -1328,17 +1315,23 @@ impl<'a> GodotManager<'a> {
         {
             let target = self.get_base_path().join("bin").join("gdvm.exe");
 
-            let shortcut_path = desktop_path.join(format!(
-                "{}.lnk",
-                link_name.as_ref().expect("cannot set name")
-            ));
+            let desktop_path = user_dir
+                .desktop_dir()
+                .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
 
-            let shortcut_start_menu_path = start_menu_path.join(format!(
-                "{}.lnk",
-                link_name.as_ref().expect("cannot set name")
-            ));
+            let start_menu_path = base_dir
+                .data_dir()
+                .join("Microsoft\\Windows\\Start Menu\\Godot");
 
-            if shortcut_path.exists() {
+            if !start_menu_path.exists() {
+                std::fs::create_dir_all(&start_menu_path)?;
+            }
+
+            let shortcut_path = desktop_path.join(format!("{}.lnk", &link_name));
+
+            let shortcut_start_menu_path = start_menu_path.join(format!("{}.lnk", &link_name));
+
+            if shortcut_path.exists() && shortcut_start_menu_path.exists() {
                 return Ok(());
             }
 
@@ -1351,7 +1344,7 @@ impl<'a> GodotManager<'a> {
                     .to_string(),
             ));
             lnk.set_arguments(Some(args));
-            lnk.set_name(link_name);
+            lnk.set_name(Some(link_name));
             lnk.create_lnk(shortcut_path)?;
             lnk.create_lnk(shortcut_start_menu_path)?;
         }
