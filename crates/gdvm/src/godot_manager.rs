@@ -1406,15 +1406,24 @@ impl<'a> GodotManager<'a> {
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
-        let desktop_path = user_dir
-            .desktop_dir()
-            .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
-
         #[cfg(target_os = "windows")]
         {
+            let desktop_path = user_dir
+                .desktop_dir()
+                .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
+
             let shortcut_path = desktop_path.join(format!("Godot {}.lnk", gv.to_display_str()));
+            let shortcut_start_menu_path = base_dir
+                .data_dir()
+                .join("Microsoft")
+                .join("Windows")
+                .join("Start Menu")
+                .join("Godot")
+                .join(format!("Godot {}.lnk", gv.to_display_str()));
+
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
+                std::fs::remove_file(shortcut_start_menu_path)?;
             }
         }
         #[cfg(target_os = "linux")]
