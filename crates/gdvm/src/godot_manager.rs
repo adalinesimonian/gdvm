@@ -1416,6 +1416,8 @@ impl<'a> GodotManager<'a> {
 
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
+            }
+            if shortcut_start_menu_path.exists() {
                 std::fs::remove_file(shortcut_start_menu_path)?;
             }
         }
