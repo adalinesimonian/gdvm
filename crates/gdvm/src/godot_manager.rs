@@ -1353,11 +1353,10 @@ impl<'a> GodotManager<'a> {
         {
             let target = self.get_base_path().join("bin").join("gdvm");
 
-            let shortcut_path = base_dir.data_local_dir().join("applications").join(
-                format!("{} {}.desktop", link_name, variant.unwrap_or(""))
-                    .trim()
-                    .to_string(),
-            );
+            let shortcut_path = base_dir
+                .data_local_dir()
+                .join("applications")
+                .join(format!("{}.desktop", link_name));
 
             if shortcut_path.exists() {
                 return Ok(());
