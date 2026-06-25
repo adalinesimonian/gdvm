@@ -1294,9 +1294,6 @@ impl<'a> GodotManager<'a> {
     fn create_shortcut(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
         use directories::UserDirs;
 
-        let user_dir =
-            UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
-
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
@@ -1314,6 +1311,9 @@ impl<'a> GodotManager<'a> {
 
         #[cfg(target_os = "windows")]
         {
+            let user_dir =
+                UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+
             let target = self.get_base_path().join("bin").join("gdvm.exe");
 
             let desktop_path = user_dir
@@ -1353,10 +1353,11 @@ impl<'a> GodotManager<'a> {
         {
             let target = self.get_base_path().join("bin").join("gdvm");
 
-            let shortcut_path = base_dir.data_local_dir().join("applications").join(format!(
-                "{}.desktop",
-                link_name.as_ref().expect("cannot get name")
-            ));
+            let shortcut_path = base_dir.data_local_dir().join("applications").join(
+                format!("{} {}.desktop", link_name, variant.unwrap_or(""))
+                    .trim()
+                    .to_string(),
+            );
 
             if shortcut_path.exists() {
                 return Ok(());
