@@ -1296,7 +1296,7 @@ impl<'a> GodotManager<'a> {
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
         let link_name = {
-            if variant == Some("default") {
+            if variant == Some("default") || variant.is_none() {
                 format!("Godot {}", gv.to_display_str())
             } else {
                 format!("Godot {} {}", gv.to_display_str(), variant.unwrap_or(""))
