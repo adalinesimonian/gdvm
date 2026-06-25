@@ -273,3 +273,8 @@ error-github-rate-limit = GitHub API rate limit exceeded.
   Note: The token will be stored in plaintext in your home directory. Please ensure you keep it secure.
   It is recommended to regularly review and rotate your tokens for security purposes.
 
+error-copy-file-failed = Failed to copy file: { $error }
+error-move-file-failed = Failed to move file: { $error }
+error-user-dir-not-found = Failed to create shortcut: User directory not found
+error-desktop-not-found = Failed to create shortcut: Desktop directory not found
+help-launch-shortcut = Creates a shortcut for quick access to running instances of Godot (on the desktop and in the Start menu for Windows; in the ~/.local/share/applications directory for Linux; in the Applications folder for macOS).
