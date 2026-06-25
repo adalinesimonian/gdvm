@@ -33,7 +33,7 @@ Thank you for considering contributing to GDVM! Here are some guidelines to help
    git checkout -b my-feature-branch
    ```
 4. **Make your changes**: Implement your feature or fix the bug.
-5. **Commit your changes**: Commit your changes with a clear and concise commit message.
+5. **Commit your changes**: Commit your changes with a clear and concise commit message. All commits must be [signed](#signing-your-commits).
    ```sh
    git add .
    git commit -m "Description of your changes"
@@ -43,6 +43,28 @@ Thank you for considering contributing to GDVM! Here are some guidelines to help
    git push origin my-feature-branch
    ```
 7. **Create a Pull Request**: Open a pull request to the main repository. Provide a detailed description of your changes.
+
+## Signing Your Commits
+
+All commits in this repository must be signed and verified. Pull requests containing unsigned commits can't be merged, so you'll be asked to re-sign them before review can be completed.
+
+You can sign commits with either an SSH or a GPG key. SSH is the quickest to set up. GitHub's documentation covers the full process in [About commit signature verification](https://docs.github.com/authentication/managing-commit-signature-verification/about-commit-signature-verification) and [Telling Git about your signing key](https://docs.github.com/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key).
+
+### Quick Start with an SSH Key
+
+```sh
+# Reuse an existing SSH key, or create one:
+ssh-keygen -t ed25519 -C "your@commit-email-address.com"
+
+# Tell Git to sign commits with it:
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+git config --global commit.gpgsign true
+```
+
+Then add the public key to GitHub under Settings -> SSH and GPG keys -> New SSH key. Make sure you choose "Signing Key" as the key type.
+
+Signing and authentication keys are tracked separately, so you need to add it here even if the same key is already used in your account for authentication.
 
 ## Building GDVM for Development
 
