@@ -1295,9 +1295,13 @@ impl<'a> GodotManager<'a> {
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
-        let link_name = format!("Godot {} {}", gv.to_display_str(), &variant.unwrap_or(""))
-            .trim()
-            .to_string();
+        let link_name = {
+            if variant == Some("default") {
+                format!("Godot {}", gv.to_display_str())
+            } else {
+                format!("Godot {} {}", gv.to_display_str(), variant.unwrap_or(""))
+            }
+        };
 
         let args = {
             if variant == Some("csharp") {
@@ -1395,6 +1399,14 @@ impl<'a> GodotManager<'a> {
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
+        let link_name = {
+            if variant == Some("default") {
+                format!("Godot {}", gv.to_display_str())
+            } else {
+                format!("Godot {} {}", gv.to_display_str(), variant.unwrap_or(""))
+            }
+        };
+
         #[cfg(target_os = "windows")]
         {
             use directories::UserDirs;
@@ -1406,22 +1418,11 @@ impl<'a> GodotManager<'a> {
                 .desktop_dir()
                 .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
 
-            let link_name = format!(
-                "Godot {} {}.lnk",
-                gv.to_display_str(),
-                variant.unwrap_or("")
-            )
-            .trim()
-            .to_string();
-
             let shortcut_path = desktop_path.join(&link_name);
             let shortcut_start_menu_path = base_dir
                 .data_dir()
-                .join("Microsoft")
-                .join("Windows")
-                .join("Start Menu")
-                .join("Godot")
-                .join(link_name);
+                .join("Microsoft\\Windows\\Start Menu\\Godot")
+                .join(format!("{}.lnk", link_name));
 
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
@@ -1432,15 +1433,10 @@ impl<'a> GodotManager<'a> {
         }
         #[cfg(target_os = "linux")]
         {
-            let shortcut_path = base_dir.data_local_dir().join("applications").join(
-                format!(
-                    "Godot {} {}.desktop",
-                    gv.to_display_str(),
-                    variant.unwrap_or("")
-                )
-                .trim()
-                .to_string(),
-            );
+            let shortcut_path = base_dir
+                .data_local_dir()
+                .join("applications")
+                .join(format!("{}.desktop", link_name));
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
             }
