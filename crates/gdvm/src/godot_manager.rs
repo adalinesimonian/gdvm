@@ -1374,8 +1374,7 @@ impl<'a> GodotManager<'a> {
         }
         #[cfg(target_os = "macos")]
         {
-            // i don't have any device with MacOS installed, so i can't code and test this feature.
-            eprintln_i18n!((self.i18n, "warning-shortcut-macos-not-supported"));
+            // TODO: MacOS shortcuts. We'll have to create .app bundles in the Applications folder.
         }
         Ok(())
     }
@@ -1405,7 +1404,7 @@ impl<'a> GodotManager<'a> {
         }
         #[cfg(target_os = "macos")]
         {
-            // TODO: MacOS shortcuts. We'll have to create .app bundles in the Applications folder.
+            // TODO: MacOS shortcuts. We'll have to remove .app bundles in the Applications folder.
         }
         Ok(())
     }
