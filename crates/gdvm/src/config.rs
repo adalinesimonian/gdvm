@@ -24,10 +24,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &[
-    "github.token",
-    "global.launch_shortcut",
-];
+pub const KNOWN_KEYS: &[&str] = &["github.token", "global.launch_shortcut"];
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
