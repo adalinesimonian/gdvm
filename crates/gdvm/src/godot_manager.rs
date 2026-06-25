@@ -29,6 +29,7 @@ use anyhow::{Result, anyhow};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
 use digest_io::IoWrapper;
+use directories::BaseDirs;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
 #[cfg(target_os = "windows")]
@@ -1295,6 +1296,10 @@ impl<'a> GodotManager<'a> {
 
         let user_dir =
             UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+
+        let base_dir =
+            BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
+
         let link_name = Some(format!(
             "Godot {} {}",
             gv.to_display_str(),
@@ -1303,6 +1308,13 @@ impl<'a> GodotManager<'a> {
         let desktop_path = user_dir
             .desktop_dir()
             .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
+
+        let start_menu_path = base_dir
+            .data_dir()
+            .join("Microsoft")
+            .join("Windows")
+            .join("Start Menu")
+            .join("Godot");
 
         let args = {
             if variant == Some("csharp") {
@@ -1317,6 +1329,11 @@ impl<'a> GodotManager<'a> {
             let target = self.get_base_path().join("bin").join("gdvm.exe");
 
             let shortcut_path = desktop_path.join(format!(
+                "{}.lnk",
+                link_name.as_ref().expect("cannot set name")
+            ));
+
+            let shortcut_start_menu_path = start_menu_path.join(format!(
                 "{}.lnk",
                 link_name.as_ref().expect("cannot set name")
             ));
@@ -1336,6 +1353,7 @@ impl<'a> GodotManager<'a> {
             lnk.set_arguments(Some(args));
             lnk.set_name(link_name);
             lnk.create_lnk(shortcut_path)?;
+            lnk.create_lnk(shortcut_start_menu_path)?;
         }
         #[cfg(target_os = "linux")]
         {
@@ -1384,6 +1402,10 @@ impl<'a> GodotManager<'a> {
 
         let user_dir =
             UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+
+        let base_dir =
+            BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
+
         let desktop_path = user_dir
             .desktop_dir()
             .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
