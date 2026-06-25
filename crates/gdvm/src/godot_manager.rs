@@ -513,7 +513,7 @@ impl<'a> GodotManager<'a> {
                 self.unset_default()?;
             }
             fs::remove_dir_all(path)?;
-            self.remove_shortcut(gv)?;
+            self.remove_shortcut(gv, variant)?;
             Ok(())
         } else {
             Err(anyhow!(t_w!(self.i18n, "error-version-not-found")))
@@ -1391,7 +1391,7 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    fn remove_shortcut(&self, gv: &GodotVersionDeterminate) -> Result<()> {
+    fn remove_shortcut(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
         use directories::UserDirs;
 
         let user_dir =
@@ -1406,14 +1406,22 @@ impl<'a> GodotManager<'a> {
                 .desktop_dir()
                 .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
 
-            let shortcut_path = desktop_path.join(format!("Godot {}.lnk", gv.to_display_str()));
+            let link_name = format!(
+                "Godot {} {}.lnk",
+                gv.to_display_str(),
+                variant.unwrap_or("")
+            )
+            .trim()
+            .to_string();
+
+            let shortcut_path = desktop_path.join(&link_name);
             let shortcut_start_menu_path = base_dir
                 .data_dir()
                 .join("Microsoft")
                 .join("Windows")
                 .join("Start Menu")
                 .join("Godot")
-                .join(format!("Godot {}.lnk", gv.to_display_str()));
+                .join(link_name);
 
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
