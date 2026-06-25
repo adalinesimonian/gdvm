@@ -1433,11 +1433,15 @@ impl<'a> GodotManager<'a> {
         }
         #[cfg(target_os = "linux")]
         {
-            let shortcut_path = base_dir.data_local_dir().join("applications").join(format!(
-                "Godot {} {}.desktop",
-                gv.to_display_str(),
-                variant.unwrap_or("").trim().to_string()
-            ));
+            let shortcut_path = base_dir.data_local_dir().join("applications").join(
+                format!(
+                    "Godot {} {}.desktop",
+                    gv.to_display_str(),
+                    variant.unwrap_or("")
+                )
+                .trim()
+                .to_string(),
+            );
             if shortcut_path.exists() {
                 std::fs::remove_file(shortcut_path)?;
             }
