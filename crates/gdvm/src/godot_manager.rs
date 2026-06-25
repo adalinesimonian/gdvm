@@ -1300,8 +1300,9 @@ impl<'a> GodotManager<'a> {
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
-        let link_name =
-            format!("Godot {} {}", gv.to_display_str(), &variant.unwrap_or("")).to_string();
+        let link_name = format!("Godot {} {}", gv.to_display_str(), &variant.unwrap_or(""))
+            .trim()
+            .to_string();
 
         let args = {
             if variant == Some("csharp") {
