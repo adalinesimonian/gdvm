@@ -1292,8 +1292,6 @@ impl<'a> GodotManager<'a> {
     }
 
     fn create_shortcut(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
-        use directories::UserDirs;
-
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
@@ -1311,6 +1309,8 @@ impl<'a> GodotManager<'a> {
 
         #[cfg(target_os = "windows")]
         {
+            use directories::UserDirs;
+
             let user_dir =
                 UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
 
@@ -1371,7 +1371,7 @@ impl<'a> GodotManager<'a> {
                 Name={}
                 Exec={}
                 Icon={}",
-                link_name.as_ref().expect("cannot get name"),
+                link_name,
                 exec_args,
                 self.get_base_path().join("bin").join("godot.svg").display()
             );
@@ -1393,16 +1393,16 @@ impl<'a> GodotManager<'a> {
     }
 
     fn remove_shortcut(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
-        use directories::UserDirs;
-
-        let user_dir =
-            UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
-
         let base_dir =
             BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
 
         #[cfg(target_os = "windows")]
         {
+            use directories::UserDirs;
+
+            let user_dir =
+                UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+
             let desktop_path = user_dir
                 .desktop_dir()
                 .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
