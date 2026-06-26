@@ -1,18 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const skip = new Set([".git", ".vscode", ".wrangler"]);
+const skip = new Set([".git", ".vscode", ".wrangler", "package.json"]);
 
 function formatSize(bytes) {
   if (bytes < 0) {
     return ["-", ""];
   }
 
-  if (bytes < 1024) {
-    return [String(bytes), "B"];
-  }
-
-  const units = ["KiB", "MiB", "GiB"];
+  const units = ["B", "KiB", "MiB", "GiB"];
   let remain = 0;
   let unit = 0;
 
@@ -22,7 +18,7 @@ function formatSize(bytes) {
     unit++;
   }
 
-  if (bytes < 10) {
+  if (unit > 0 && bytes < 10) {
     // Round up the last 0.1.
     let frac = Math.floor((remain * 5 + 256) / 512);
 
