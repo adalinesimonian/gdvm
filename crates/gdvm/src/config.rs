@@ -15,21 +15,35 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{eprintln_i18n, i18n, t_w};
+use crate::{eprintln_i18n, i18n, t};
 use anyhow::{Result, anyhow};
 use directories::BaseDirs;
 use i18n::I18n;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &["github.token"];
 
+/// A machine-level registry config.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RegistryConfig {
+    pub url: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub github_token: Option<String>,
+    /// Registry configs keyed by alias.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub registries: HashMap<String, RegistryConfig>,
+    /// Base URLs of unofficial registries the user has confirmed they trust,
+    /// keyed by URL.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trusted_registries: Vec<String>,
 }
 
 /// Get/set operations for configuration keys.
@@ -91,6 +105,68 @@ impl ConfigOps for Config {
     }
 }
 
+/// Validate a registry alias.
+pub fn validate_registry_name(name: &str) -> Result<()> {
+    if name.is_empty()
+        || name == crate::registry::OFFICIAL_REGISTRY
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains("..")
+        || name.contains(':')
+    {
+        return Err(anyhow!("Invalid registry name: {name}"));
+    }
+    Ok(())
+}
+
+impl Config {
+    /// Get registries as `(name, url)` pairs.
+    pub fn registry_pairs(&self) -> Vec<(String, String)> {
+        self.registries
+            .iter()
+            .map(|(name, cfg)| (name.clone(), cfg.url.clone()))
+            .collect()
+    }
+
+    /// The URL configured for a registry alias, if present.
+    pub fn registry_url(&self, name: &str) -> Option<&str> {
+        self.registries.get(name).map(|cfg| cfg.url.as_str())
+    }
+
+    /// Store a registry in config.
+    pub fn add_registry(&mut self, name: &str, url: &str) -> Result<()> {
+        validate_registry_name(name)?;
+        crate::registry::RegistryUrl::parse(url)?;
+        self.registries.insert(
+            name.to_string(),
+            RegistryConfig {
+                url: url.to_string(),
+            },
+        );
+        Ok(())
+    }
+
+    /// Remove a registry from config.
+    pub fn remove_registry(&mut self, name: &str) -> Result<()> {
+        if self.registries.remove(name).is_none() {
+            return Err(anyhow!("Registry '{name}' is not configured"));
+        }
+        Ok(())
+    }
+
+    /// True when the registry at `url` has been trusted by the user.
+    pub fn is_registry_trusted(&self, url: &str) -> bool {
+        self.trusted_registries.iter().any(|u| u == url)
+    }
+
+    /// Trust the registry at `url`.
+    pub fn trust_registry(&mut self, url: &str) {
+        if !self.is_registry_trusted(url) {
+            self.trusted_registries.push(url.to_string());
+        }
+    }
+}
+
 pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
     #[cfg(feature = "integration-tests")]
     {
@@ -100,7 +176,7 @@ pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
         }
     }
 
-    let base_dirs = BaseDirs::new().ok_or(anyhow!(t_w!(i18n, "error-find-user-dirs")))?;
+    let base_dirs = BaseDirs::new().ok_or(anyhow!(t!(i18n, "error-find-user-dirs")))?;
     Ok(base_dirs.home_dir().to_path_buf())
 }
 
@@ -156,5 +232,61 @@ mod tests {
         assert!(cfg.get_value("github.token").is_none());
         assert!(cfg.set_value("unknown", "val").is_err());
         assert!(cfg.unset_value("unknown").is_err());
+    }
+
+    #[test]
+    fn test_registry_add_remove() {
+        let mut cfg = Config::default();
+
+        cfg.add_registry("mybuilds", "https://example.com/godot")
+            .unwrap();
+        assert_eq!(
+            cfg.registry_url("mybuilds"),
+            Some("https://example.com/godot")
+        );
+        assert_eq!(
+            cfg.registry_pairs(),
+            vec![(
+                "mybuilds".to_string(),
+                "https://example.com/godot".to_string()
+            )]
+        );
+
+        cfg.add_registry("mybuilds", "https://example.com/godot2")
+            .unwrap();
+        assert_eq!(
+            cfg.registry_url("mybuilds"),
+            Some("https://example.com/godot2")
+        );
+
+        cfg.remove_registry("mybuilds").unwrap();
+        assert!(cfg.registry_url("mybuilds").is_none());
+        assert!(cfg.remove_registry("mybuilds").is_err());
+    }
+
+    #[test]
+    fn test_registry_validation() {
+        let mut cfg = Config::default();
+        assert!(cfg.add_registry("official", "https://example.com").is_err());
+        assert!(cfg.add_registry("a/b", "https://example.com").is_err());
+        assert!(cfg.add_registry("..", "https://example.com").is_err());
+        assert!(cfg.add_registry("a:b", "https://example.com").is_err());
+        assert!(cfg.add_registry("ok", "ftp://example.com").is_err());
+        assert!(cfg.add_registry("ok", "https://example.com").is_ok());
+        assert!(cfg.add_registry("local", "file:///tmp/reg").is_ok());
+    }
+
+    #[test]
+    fn test_registries_toml_roundtrip() {
+        let mut cfg = Config::default();
+        cfg.add_registry("mybuilds", "https://example.com/godot")
+            .unwrap();
+
+        let toml_str = toml::to_string(&cfg).unwrap();
+        let parsed: Config = toml::from_str(&toml_str).unwrap();
+        assert_eq!(
+            parsed.registry_url("mybuilds"),
+            Some("https://example.com/godot")
+        );
     }
 }

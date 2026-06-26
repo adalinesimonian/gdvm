@@ -20,13 +20,15 @@ use std::path::{Path, PathBuf};
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 
-use crate::version_utils::{GodotVersion, GodotVersionDeterminate};
-use crate::{eprintln_i18n, i18n::I18n, t, t_w};
+use crate::version_utils::{
+    DeterminateSelection, GodotVersion, GodotVersionDeterminate, Variant, VersionSelection,
+};
+use crate::{eprintln_i18n, i18n::I18n, t};
 
 #[async_trait(?Send)]
 pub trait RunVersionSource {
-    async fn get_pinned_version(&self) -> Option<(GodotVersion, Option<String>)>;
-    async fn get_default(&self) -> Result<Option<(GodotVersionDeterminate, Option<String>)>>;
+    async fn get_pinned_version(&self) -> Option<VersionSelection>;
+    async fn get_default(&self) -> Result<Option<DeterminateSelection>>;
     async fn determine_version<P: AsRef<Path> + Send + Sync>(
         &self,
         path: Option<P>,
@@ -35,6 +37,7 @@ pub trait RunVersionSource {
         &self,
         gv: &T,
         variant: Option<&str>,
+        registry: Option<&str>,
         include_pre: bool,
     ) -> Result<GodotVersionDeterminate>
     where
@@ -43,6 +46,7 @@ pub trait RunVersionSource {
         &self,
         gv: &T,
         variant: Option<&str>,
+        registry: Option<&str>,
     ) -> Result<GodotVersionDeterminate>
     where
         T: Into<GodotVersion> + Clone + Send + Sync;
@@ -56,16 +60,45 @@ pub struct RunVersionResolver<'a, S: RunVersionSource> {
 #[derive(Debug)]
 pub struct RunResolutionResult {
     pub version: GodotVersionDeterminate,
-    pub variant: Option<String>,
+    pub variant: Variant,
+    pub registry: Option<String>,
 }
 
 pub struct RunResolutionRequest<'a> {
     pub explicit: Option<GodotVersion>,
     pub variant: Option<String>,
+    pub registry: Option<String>,
     pub include_pre: bool,
     pub possible_paths: &'a [&'a str],
     pub force_on_mismatch: bool,
     pub install_if_missing: bool,
+}
+
+impl RunResolutionRequest<'_> {
+    fn path_bufs(&self) -> Vec<PathBuf> {
+        self.possible_paths
+            .iter()
+            .map(|p| PathBuf::from(*p))
+            .collect()
+    }
+}
+
+/// Which kind of source was the one that got selected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunSource {
+    Explicit,
+    Pin,
+    Project,
+    Default,
+}
+
+/// The result of selecting which source to use.
+#[derive(Debug, Clone)]
+pub struct RunSelection {
+    pub source: RunSource,
+    pub version: GodotVersion,
+    pub variant: Option<String>,
+    pub registry: Option<String>,
 }
 
 impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
@@ -73,123 +106,131 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
         Self { source, i18n }
     }
 
-    /// Resolve the Godot version to use based on the provided request.
-    pub async fn resolve(&self, request: RunResolutionRequest<'_>) -> Result<RunResolutionResult> {
-        let path_bufs: Vec<PathBuf> = request
-            .possible_paths
-            .iter()
-            .map(|p| PathBuf::from(*p))
-            .collect();
-
-        if let Some(requested_version) = request.explicit {
-            let variant = request.variant.clone();
-
-            if warn_project_version_mismatch::<S, PathBuf>(
-                self.source,
-                self.i18n,
-                &requested_version,
-                false,
-                Some(&path_bufs),
-            )
-            .await
-                && !request.force_on_mismatch
-            {
-                return Err(anyhow!(t_w!(
-                    self.i18n,
-                    "error-project-version-mismatch",
-                    pinned = 0
-                )));
-            }
-
-            let version = if request.install_if_missing {
-                self.source
-                    .auto_install_version(
-                        &requested_version,
-                        variant.as_deref(),
-                        request.include_pre,
-                    )
-                    .await?
-            } else {
-                self.source
-                    .ensure_installed_version(&requested_version, variant.as_deref())
-                    .await?
-            };
-            return Ok(RunResolutionResult { version, variant });
+    /// Determine which source to use for the Godot version.
+    pub async fn select(&self, request: &RunResolutionRequest<'_>) -> Result<Option<RunSelection>> {
+        if let Some(version) = &request.explicit {
+            return Ok(Some(RunSelection {
+                source: RunSource::Explicit,
+                version: version.clone(),
+                variant: request.variant.clone(),
+                registry: request.registry.clone(),
+            }));
         }
 
-        if let Some((pinned, pinned_variant)) = self.source.get_pinned_version().await {
-            // Explicit variant from request takes precedence.
-            let variant = request.variant.clone().or(pinned_variant);
-
-            if warn_project_version_mismatch::<S, PathBuf>(
-                self.source,
-                self.i18n,
-                &pinned,
-                true,
-                None,
-            )
-            .await
-                && !request.force_on_mismatch
-            {
-                return Err(anyhow!(t_w!(
-                    self.i18n,
-                    "error-project-version-mismatch",
-                    pinned = 1
-                )));
-            }
-
-            let version = if request.install_if_missing {
-                self.source
-                    .auto_install_version(&pinned, variant.as_deref(), request.include_pre)
-                    .await?
-            } else {
-                self.source
-                    .ensure_installed_version(&pinned, variant.as_deref())
-                    .await?
-            };
-            return Ok(RunResolutionResult { version, variant });
+        if let Some(selection) = self.source.get_pinned_version().await {
+            return Ok(Some(RunSelection {
+                source: RunSource::Pin,
+                version: selection.version,
+                variant: request.variant.clone().or(selection.variant),
+                registry: request.registry.clone().or(selection.registry),
+            }));
         }
 
+        let path_bufs = request.path_bufs();
         if let Some((project_version, project_variant)) =
             self.detect_project_version(&path_bufs).await
         {
-            // Explicit variant from request takes precedence.
-            let variant = request.variant.clone().or(project_variant);
-
-            eprintln_i18n!(
-                self.i18n,
-                "warning-using-project-version",
-                version = project_version.to_display_str()
-            );
-            let version = if request.install_if_missing {
-                self.source
-                    .auto_install_version(&project_version, variant.as_deref(), request.include_pre)
-                    .await?
-            } else {
-                self.source
-                    .ensure_installed_version(&project_version, variant.as_deref())
-                    .await?
-            };
-            return Ok(RunResolutionResult { version, variant });
+            return Ok(Some(RunSelection {
+                source: RunSource::Project,
+                version: project_version,
+                variant: request.variant.clone().or(project_variant),
+                registry: request.registry.clone(),
+            }));
         }
 
-        if let Some((default_ver, default_variant)) = self.source.get_default().await? {
-            // Explicit variant from request takes precedence.
-            let variant = request.variant.clone().or(default_variant);
-
-            let version = if request.install_if_missing {
-                self.source
-                    .auto_install_version(&default_ver, variant.as_deref(), request.include_pre)
-                    .await?
-            } else {
-                self.source
-                    .ensure_installed_version(&default_ver, variant.as_deref())
-                    .await?
-            };
-            return Ok(RunResolutionResult { version, variant });
+        if let Some(selection) = self.source.get_default().await? {
+            return Ok(Some(RunSelection {
+                source: RunSource::Default,
+                version: selection.version.into(),
+                variant: request
+                    .variant
+                    .clone()
+                    .or_else(|| Some(selection.variant.as_str().to_string())),
+                registry: request.registry.clone().or(selection.registry),
+            }));
         }
 
-        Err(anyhow!(t!(self.i18n, "no-default-set")))
+        Ok(None)
+    }
+
+    /// Resolve the Godot version to use. Installs it if requested.
+    pub async fn resolve(&self, request: RunResolutionRequest<'_>) -> Result<RunResolutionResult> {
+        let Some(selection) = self.select(&request).await? else {
+            return Err(anyhow!(t!(self.i18n, "no-default-set")));
+        };
+
+        match selection.source {
+            RunSource::Explicit => {
+                let path_bufs = request.path_bufs();
+                if warn_project_version_mismatch::<S, PathBuf>(
+                    self.source,
+                    self.i18n,
+                    &selection.version,
+                    false,
+                    Some(&path_bufs),
+                )
+                .await
+                    && !request.force_on_mismatch
+                {
+                    return Err(anyhow!(t!(
+                        self.i18n,
+                        "error-project-version-mismatch",
+                        pinned = 0
+                    )));
+                }
+            }
+            RunSource::Pin => {
+                if warn_project_version_mismatch::<S, PathBuf>(
+                    self.source,
+                    self.i18n,
+                    &selection.version,
+                    true,
+                    None,
+                )
+                .await
+                    && !request.force_on_mismatch
+                {
+                    return Err(anyhow!(t!(
+                        self.i18n,
+                        "error-project-version-mismatch",
+                        pinned = 1
+                    )));
+                }
+            }
+            RunSource::Project => {
+                eprintln_i18n!(
+                    self.i18n,
+                    "warning-using-project-version",
+                    version = selection.version.to_display_str()
+                );
+            }
+            RunSource::Default => {}
+        }
+
+        let version = if request.install_if_missing {
+            self.source
+                .auto_install_version(
+                    &selection.version,
+                    selection.variant.as_deref(),
+                    selection.registry.as_deref(),
+                    request.include_pre,
+                )
+                .await?
+        } else {
+            self.source
+                .ensure_installed_version(
+                    &selection.version,
+                    selection.variant.as_deref(),
+                    selection.registry.as_deref(),
+                )
+                .await?
+        };
+
+        Ok(RunResolutionResult {
+            version,
+            variant: Variant::from_option(selection.variant.as_deref()),
+            registry: selection.registry,
+        })
     }
 
     async fn detect_project_version(
@@ -255,6 +296,7 @@ mod tests {
 
     struct FakeSource {
         pinned: Option<GodotVersion>,
+        pin_registry: Option<String>,
         project_versions: HashMap<String, GodotVersion>,
         default: Option<GodotVersionDeterminate>,
         auto_result: Option<GodotVersionDeterminate>,
@@ -264,6 +306,7 @@ mod tests {
         fn new() -> Self {
             Self {
                 pinned: None,
+                pin_registry: None,
                 project_versions: HashMap::new(),
                 default: None,
                 auto_result: None,
@@ -280,6 +323,11 @@ mod tests {
             self
         }
 
+        fn with_pin_registry(mut self, registry: &str) -> Self {
+            self.pin_registry = Some(registry.to_string());
+            self
+        }
+
         fn with_default(mut self, gv: GodotVersionDeterminate) -> Self {
             self.default = Some(gv);
             self
@@ -293,12 +341,20 @@ mod tests {
 
     #[async_trait::async_trait(?Send)]
     impl RunVersionSource for FakeSource {
-        async fn get_pinned_version(&self) -> Option<(GodotVersion, Option<String>)> {
-            self.pinned.clone().map(|v| (v, None))
+        async fn get_pinned_version(&self) -> Option<VersionSelection> {
+            self.pinned.clone().map(|version| VersionSelection {
+                version,
+                variant: None,
+                registry: self.pin_registry.clone(),
+            })
         }
 
-        async fn get_default(&self) -> Result<Option<(GodotVersionDeterminate, Option<String>)>> {
-            Ok(self.default.clone().map(|v| (v, None)))
+        async fn get_default(&self) -> Result<Option<DeterminateSelection>> {
+            Ok(self.default.clone().map(|version| DeterminateSelection {
+                version,
+                variant: Variant::default(),
+                registry: None,
+            }))
         }
 
         async fn determine_version<P: AsRef<Path> + Send + Sync>(
@@ -323,6 +379,7 @@ mod tests {
             &self,
             gv: &T,
             _variant: Option<&str>,
+            _registry: Option<&str>,
             _include_pre: bool,
         ) -> Result<GodotVersionDeterminate>
         where
@@ -339,6 +396,7 @@ mod tests {
             &self,
             gv: &T,
             _variant: Option<&str>,
+            _registry: Option<&str>,
         ) -> Result<GodotVersionDeterminate>
         where
             T: Into<GodotVersion> + Clone + Send + Sync,
@@ -372,7 +430,7 @@ mod tests {
     }
 
     fn intl() -> I18n {
-        I18n::new(80).expect("i18n init")
+        I18n::new().expect("i18n init")
     }
 
     #[tokio::test]
@@ -387,6 +445,7 @@ mod tests {
         let request = RunResolutionRequest {
             explicit: Some(explicit),
             variant: None,
+            registry: None,
             include_pre: false,
             possible_paths: &[],
             force_on_mismatch: false,
@@ -409,6 +468,7 @@ mod tests {
             .resolve(RunResolutionRequest {
                 explicit: None,
                 variant: None,
+                registry: None,
                 include_pre: false,
                 possible_paths: &[],
                 force_on_mismatch: false,
@@ -432,6 +492,7 @@ mod tests {
             .resolve(RunResolutionRequest {
                 explicit: None,
                 variant: None,
+                registry: None,
                 include_pre: false,
                 possible_paths: &["/proj"],
                 force_on_mismatch: false,
@@ -453,6 +514,7 @@ mod tests {
             .resolve(RunResolutionRequest {
                 explicit: None,
                 variant: None,
+                registry: None,
                 include_pre: false,
                 possible_paths: &[],
                 force_on_mismatch: false,
@@ -475,6 +537,7 @@ mod tests {
             .resolve(RunResolutionRequest {
                 explicit: Some(requested.clone()),
                 variant: None,
+                registry: None,
                 include_pre: false,
                 possible_paths: &[],
                 force_on_mismatch: false,
@@ -488,6 +551,7 @@ mod tests {
             .resolve(RunResolutionRequest {
                 explicit: Some(requested.clone()),
                 variant: None,
+                registry: None,
                 include_pre: false,
                 possible_paths: &[],
                 force_on_mismatch: true,
@@ -497,5 +561,49 @@ mod tests {
             .unwrap();
 
         assert_eq!(resolved.version.major, requested.major.unwrap());
+    }
+
+    #[tokio::test]
+    async fn select_explicit_version_ignores_pinned_registry() {
+        let source = FakeSource::new()
+            .with_pinned(gv(4, 3, "stable"))
+            .with_pin_registry("mybuilds");
+        let intl = intl();
+        let resolver = RunVersionResolver::new(&source, &intl);
+        let request = RunResolutionRequest {
+            explicit: Some(gv(4, 4, "stable")),
+            variant: None,
+            registry: None,
+            include_pre: false,
+            possible_paths: &[],
+            force_on_mismatch: false,
+            install_if_missing: true,
+        };
+
+        let selection = resolver.select(&request).await.unwrap().unwrap();
+        assert_eq!(selection.source, RunSource::Explicit);
+        assert_eq!(selection.registry, None);
+    }
+
+    #[tokio::test]
+    async fn select_inherits_pinned_registry_without_explicit() {
+        let source = FakeSource::new()
+            .with_pinned(gv(4, 3, "stable"))
+            .with_pin_registry("mybuilds");
+        let intl = intl();
+        let resolver = RunVersionResolver::new(&source, &intl);
+        let request = RunResolutionRequest {
+            explicit: None,
+            variant: None,
+            registry: None,
+            include_pre: false,
+            possible_paths: &[],
+            force_on_mismatch: false,
+            install_if_missing: true,
+        };
+
+        let selection = resolver.select(&request).await.unwrap().unwrap();
+        assert_eq!(selection.source, RunSource::Pin);
+        assert_eq!(selection.registry.as_deref(), Some("mybuilds"));
     }
 }

@@ -25,6 +25,7 @@ help-gdvm-version = Vis versjonen av Godot-versjonsbehandlaren
 help-install = Installer ein ny Godot-versjon
 help-run = Køyr ein spesifikk Godot-versjon
 help-show = Vis stien til den køyrberre fila for den gjevne Godot-versjonen
+help-cache-path = Vis stigen til nedlastingsarkivet i cachen for den oppgjevne Godot-versjonen
 help-link = Opprett ei lenkje frå ein Godot-versjon si køyrbare fil til ein oppgjeven stig
 help-list = List alle installerte Godot-versjonar
 help-remove = Fjern ein installert Godot-versjon
@@ -74,6 +75,7 @@ cache-metadata-removed = Cache-metadataet vart fjerna.
 error-cache-metadata-empty = Feil: Cache-metadataet er tomt, må hente utgjevingar først.
 no-cache-files-found = Ingen cache-filer funne.
 no-cache-metadata-found = Inkje cache-metadata funne.
+gdvm-toml-malformed = {"\u001b"}[33mÅtvaring: ignorerer gdvm.toml på { $path } fordi han ikkje kunne tolkast: { $error }{"\u001b"}[0m
 
 help-console = Køyr Godot med konsoll tilkopla. Standard er false på Windows, true på andre plattformer.
 
@@ -119,6 +121,7 @@ error-fetching-releases = Feil ved henting av utgjevingar: { $error }
 warning-fetching-releases-using-cache = Feil ved henting av utgjevingar: { $error }. Brukar hurtigbuffer i staden.
 
 error-version-not-found = Versjonen vart ikkje funnen.
+error-archive-not-cached = Fann ikkje noko arkiv i cachen for {$version}. Installer han fyrst for å fylle cachen.
 error-multiple-versions-found = Fleire versjonar samsvarar med førespurnaden:
 
 running-version = Køyrer versjon {$version}
@@ -134,8 +137,6 @@ godot-executable-not-found = Godot-køyrberr fil vart ikkje funnen for versjon {
 error-link-exists = Stigen {$path} finst allereie. Bruk --force for å overskrive.
 error-link-symlink = Klarte ikkje å opprette lenkje frå {$link} til {$target}: {$error}
 error-link-copy = Klarte ikkje å kopiere køyrbar: {$error}
-error-link-godotsharp-target = Klarte ikkje å finne GodotSharp-målsti.
-error-link-godotsharp-missing = GodotSharp-katalogen manglar ved sidan av den løyste køyrbare.
 
 error-no-stable-releases-found = Ingen stabile utgivelser funne.
 
@@ -271,3 +272,52 @@ error-github-rate-limit = GitHub API si rate-grense overskriden.
 
   Merk: Tokenet vil verta lagra i klårtekst i heimemappa di. Ver venleg å sørgje for at du held det sikkert.
   Det er tilrådd å regelmessig gjennomgå og rotere tokena dine for tryggleiksføremål.
+
+help-registry = Administrer register å installere Godot-bygg frå
+help-registry-add = Legg til eit register
+help-registry-remove = Fjern eit register
+help-registry-list = List opp konfigurerte register
+help-registry-refresh = Oppdater hurtigbufferen for eitt eller alle register
+help-registry-name = Registernamnet
+help-registry-url = Register-URL-en. Kan vera ein http(s)://- eller file://-URL.
+
+registry-added = La til registeret { $registry } ({ $url }).
+registry-removed = Fjerna registeret { $registry }.
+registry-list-header = Konfigurerte register:
+registry-tag-official = offisielt
+registry-error = Registerfeil: { $error }
+
+error-invalid-registry-subcommand = Ugyldig register-underkommando. Bruk «add», «remove», «list» eller «refresh».
+registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) er eit eigendefinert register, ikkje det offisielle. gdvm sjekkar at nedlastingar stemmer med det registeret oppgjev, men kan ikkje vite om dei er trygge å køyre. Installer frå det berre om du stolar på dei som driv det.{"\u001b"}[0m
+registry-trust-prompt = Stoler du på dette registeret og vil halde fram? (ja/nei):
+registry-trust-bypass = {"\u001b"}[1;31mHoppar over tillitssjekken for { $registry } ({ $url }) fordi du brukte --yes. gdvm kan ikkje vite om filene er trygge å køyre. Tek ein kort pause; trykk Ctrl+C no for å stoppe.{"\u001b"}[0m
+registry-trust-aborted = Avbrote: registeret er ikkje klarert.
+registry-project-override-conflict = {"\u001b"}[33mProsjektet sin gdvm.toml omdefinerer registeret { $registry } (konfigurasjonen din: { $machine_url }) som { $project_url }. Prosjektet sin definisjon har forrang.{"\u001b"}[0m
+
+help-registry-init = Initialiser ei ny registermappe
+help-registry-add-build = Legg til eit bygg i eit register
+help-registry-remove-build = Fjern eit bygg frå eit register
+help-registry-validate = Valider ei registermappe
+help-registry-dir = Registermappa
+help-registry-init-name = Registernamnet. Standard er mappenamnet.
+
+help-registry-build-version = Versjonsetiketten, t.d. 4.4-stable.
+help-registry-build-variant = Variantnamnet. Standard er «default».
+help-registry-build-platform = Plattformnøkkelen, t.d. linux-x86_64.
+help-registry-build-file = Sti til byggarkivet som skal hashast
+help-registry-build-store = Kopier arkivet inn i registeret og registrer ein relativ URL
+help-registry-build-url = URL-en der arkivet skal serverast (når --store ikkje vert brukt)
+help-registry-build-sha512 = SHA-512 til arkivet, i staden for å rekne det ut. Krev --size.
+help-registry-build-size = Storleiken på arkivet i byte, i staden for å måle det. Krev --sha512.
+
+registry-init-success = Initialiserte registeret { $name } i { $path }.
+registry-build-added = La til bygget { $version } for { $platform }.
+registry-build-removed = Fjerna bygget { $version }.
+registry-build-downloading = Lastar ned { $url } for å rekne ut storleik og SHA-512 …
+registry-build-warn-local-hash = {"\u001b"}[33mHashar den lokale fila og går ut frå at ho samsvarar med { $url }. gdvm lastar ikkje ned URL-en for å stadfeste det.{"\u001b"}[0m
+registry-build-warn-unverified = {"\u001b"}[33mBrukar SHA-512 og storleiken du oppgav utan å laste ned artefakten for å stadfeste dei. Sjå til at dei er rette.{"\u001b"}[0m
+registry-build-warn-explicit-store = {"\u001b"}[33mBrukar SHA-512 og/eller storleiken du oppgav i staden for å måle det lagra arkivet.{"\u001b"}[0m
+registry-build-sha-mismatch = Oppgjeve SHA-512 ({ $expected }) samsvarar ikkje med artefakten ({ $actual }).
+registry-build-size-mismatch = Oppgjeven storleik ({ $expected }) samsvarar ikkje med artefakten ({ $actual }).
+registry-validate-ok = Registeret er gyldig ({ $count } artefaktar kontrollerte).
+registry-validate-failed = Validering av registeret feila:

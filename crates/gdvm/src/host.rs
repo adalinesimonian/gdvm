@@ -17,7 +17,7 @@
 
 use anyhow::{Result, anyhow};
 
-use crate::{i18n::I18n, t_w};
+use crate::{i18n::I18n, t};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostOs {
@@ -50,7 +50,7 @@ impl HostPlatform {
             (HostOs::Linux, HostArch::X86) => Ok("i686-unknown-linux-gnu"),
             (HostOs::Macos, HostArch::Aarch64) => Ok("aarch64-apple-darwin"),
             (HostOs::Macos, HostArch::X86_64) => Ok("x86_64-apple-darwin"),
-            _ => Err(anyhow!(t_w!(i18n, "unsupported-architecture"))),
+            _ => Err(anyhow!(t!(i18n, "unsupported-architecture"))),
         }
     }
 }
@@ -63,7 +63,7 @@ pub fn detect_host(i18n: &I18n) -> Result<HostPlatform> {
     } else if cfg!(target_os = "linux") {
         HostOs::Linux
     } else {
-        return Err(anyhow!(t_w!(i18n, "unsupported-platform")));
+        return Err(anyhow!(t!(i18n, "unsupported-platform")));
     };
 
     let arch = if cfg!(target_arch = "x86_64") {
@@ -73,7 +73,7 @@ pub fn detect_host(i18n: &I18n) -> Result<HostPlatform> {
     } else if cfg!(target_arch = "aarch64") {
         HostArch::Aarch64
     } else {
-        return Err(anyhow!(t_w!(i18n, "unsupported-architecture")));
+        return Err(anyhow!(t!(i18n, "unsupported-architecture")));
     };
 
     Ok(HostPlatform { os, arch })

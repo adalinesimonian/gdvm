@@ -25,6 +25,7 @@ help-gdvm-version = Afficher la version du Gestionnaire de Versions Godot
 help-install = Installer une nouvelle version de Godot
 help-run = Exécuter une version spécifique de Godot
 help-show = Afficher le chemin de l'exécutable pour la version de Godot indiquée
+help-cache-path = Afficher le chemin de l'archive de téléchargement en cache pour la version de Godot indiquée
 help-link = Lier l'exécutable d'une version de Godot à un chemin spécifié
 help-list = Lister toutes les versions installées de Godot
 help-remove = Supprimer une version installée de Godot
@@ -74,6 +75,7 @@ cache-metadata-removed = Les métadonnées de cache ont été supprimées avec s
 error-cache-metadata-empty = Erreur : Les métadonnées de cache sont vides, les versions doivent être récupérées.
 no-cache-files-found = Aucun fichier de cache trouvé.
 no-cache-metadata-found = Aucune métadonnée de cache trouvée.
+gdvm-toml-malformed = {"\u001b"}[33mAvertissement : gdvm.toml à { $path } ignoré, car il n'a pas pu être analysé : { $error }{"\u001b"}[0m
 
 help-console = Exécuter Godot avec la console attachée. Par défaut false sur Windows, true sur les autres plateformes.
 
@@ -119,6 +121,7 @@ error-fetching-releases = Erreur lors de la récupération des versions : { $err
 warning-fetching-releases-using-cache = Erreur lors de la récupération des versions : { $error }. Utilisation des versions en cache à la place.
 
 error-version-not-found = Version introuvable.
+error-archive-not-cached = Aucune archive en cache trouvée pour {$version}. Installez-la d'abord pour remplir le cache.
 error-multiple-versions-found = Plusieurs versions correspondent à votre demande :
 
 running-version = Exécution de la version {$version}
@@ -134,8 +137,6 @@ godot-executable-not-found = Exécutable Godot introuvable pour la version {$ver
 error-link-exists = Le chemin {$path} existe déjà. Utilisez --force pour écraser.
 error-link-symlink = Échec de la création du lien de {$link} vers {$target} : {$error}
 error-link-copy = Échec de la copie de l'exécutable : {$error}
-error-link-godotsharp-target = Impossible de déterminer le chemin cible GodotSharp.
-error-link-godotsharp-missing = Le répertoire GodotSharp est manquant à côté de l'exécutable résolu.
 
 error-no-stable-releases-found = Aucune version stable trouvée.
 
@@ -271,3 +272,51 @@ error-github-rate-limit = Limite d'utilisation de l'API GitHub dépassée.
   Note : Le jeton sera stocké en texte brut dans votre répertoire personnel. Veuillez vous assurer de le garder sécurisé.
   Il est recommandé de régulièrement examiner et faire tourner vos jetons pour des raisons de sécurité.
 
+help-registry = Gérer les registres depuis lesquels installer des builds de Godot
+help-registry-add = Ajouter un registre
+help-registry-remove = Supprimer un registre
+help-registry-list = Lister les registres configurés
+help-registry-refresh = Actualiser le cache d'un registre ou de tous
+help-registry-name = Le nom du registre
+help-registry-url = L'URL du registre. Peut être une URL http(s):// ou file://.
+
+registry-added = Registre { $registry } ajouté ({ $url }).
+registry-removed = Registre { $registry } supprimé.
+registry-list-header = Registres configurés :
+registry-tag-official = officiel
+registry-error = Erreur de registre : { $error }
+
+error-invalid-registry-subcommand = Sous-commande de registre invalide. Utilisez « add », « remove », « list » ou « refresh ».
+registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) est un registre personnalisé, pas le registre officiel. gdvm vérifie que les téléchargements correspondent à ce que le registre annonce, mais il ne peut pas savoir s'ils sont sûrs à exécuter. Ne l'utilisez que si vous faites confiance à la personne qui le gère.{"\u001b"}[0m
+registry-trust-prompt = Faites-vous confiance à ce registre et voulez-vous continuer ? (oui/non) :
+registry-trust-bypass = {"\u001b"}[1;31mVérification de confiance ignorée pour { $registry } ({ $url }) parce que vous avez utilisé --yes. gdvm ne peut pas savoir si ses fichiers sont sûrs à exécuter. Petite pause ; appuyez sur Ctrl+C maintenant pour arrêter.{"\u001b"}[0m
+registry-trust-aborted = Annulé : registre non approuvé.
+registry-project-override-conflict = {"\u001b"}[33mLe fichier gdvm.toml du projet redéfinit le registre { $registry } (votre configuration : { $machine_url }) en { $project_url }. La définition du projet prévaut.{"\u001b"}[0m
+
+help-registry-init = Initialiser un nouveau répertoire de registre
+help-registry-add-build = Ajouter un build à un registre
+help-registry-remove-build = Supprimer un build d'un registre
+help-registry-validate = Valider un répertoire de registre
+help-registry-dir = Le répertoire du registre
+help-registry-init-name = Le nom du registre. Par défaut le nom du répertoire.
+
+help-registry-build-version = L'étiquette de version, p. ex. 4.4-stable.
+help-registry-build-variant = Le nom de la variante. Par défaut « default ».
+help-registry-build-platform = La clé de plateforme, p. ex. linux-x86_64.
+help-registry-build-file = Chemin de l'archive de build à hacher
+help-registry-build-store = Copier l'archive dans le registre et enregistrer une URL relative
+help-registry-build-url = L'URL où l'archive sera servie (si --store n'est pas utilisé)
+help-registry-build-sha512 = Le SHA-512 de l'archive, au lieu de le calculer. Nécessite --size.
+help-registry-build-size = La taille de l'archive en octets, au lieu de la mesurer. Nécessite --sha512.
+
+registry-init-success = Registre { $name } initialisé dans { $path }.
+registry-build-added = Build { $version } ajouté pour { $platform }.
+registry-build-removed = Build { $version } supprimé.
+registry-build-downloading = Téléchargement de { $url } pour calculer sa taille et son SHA-512…
+registry-build-warn-local-hash = {"\u001b"}[33mHachage du fichier local en supposant qu'il correspond à { $url }. gdvm ne télécharge pas l'URL pour le vérifier.{"\u001b"}[0m
+registry-build-warn-unverified = {"\u001b"}[33mUtilisation du SHA-512 et de la taille que vous avez fournis sans télécharger l'artefact pour les vérifier. Vérifiez qu'ils sont corrects.{"\u001b"}[0m
+registry-build-warn-explicit-store = {"\u001b"}[33mUtilisation du SHA-512 et/ou de la taille que vous avez fournis au lieu de mesurer l'archive stockée.{"\u001b"}[0m
+registry-build-sha-mismatch = Le SHA-512 fourni ({ $expected }) ne correspond pas à l'artefact ({ $actual }).
+registry-build-size-mismatch = La taille fournie ({ $expected }) ne correspond pas à l'artefact ({ $actual }).
+registry-validate-ok = Le registre est valide ({ $count } artefacts vérifiés).
+registry-validate-failed = Échec de la validation du registre :

@@ -34,7 +34,7 @@ fn test_extract_zip_basic() {
     }
 
     let out_dir = dir.path().join("out");
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     extract_zip(&zip_path, &out_dir, &i18n).unwrap();
     let extracted = std::fs::read_to_string(out_dir.join("folder/file.txt")).unwrap();
     assert_eq!(extracted, "hello");

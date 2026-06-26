@@ -15,21 +15,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod artifact_cache;
-pub mod config;
-pub mod date_utils;
-pub mod download_utils;
-pub mod godot_manager;
-pub mod host;
-pub mod i18n;
-pub mod metadata_cache;
-pub mod migrations;
-pub mod paths;
-pub mod project_version_detector;
-pub mod registry;
-pub mod registry_store;
-pub mod registry_version_resolver;
-pub mod releases;
-pub mod run_version_resolver;
-pub mod version_utils;
-pub mod zip_utils;
+pub fn now_iso8601() -> String {
+    jiff::Timestamp::now()
+        .strftime("%Y-%m-%dT%H:%M:%S.%3fZ")
+        .to_string()
+}

@@ -18,34 +18,24 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     fs,
     io::{self, Write},
     path::{Path, PathBuf},
 };
 
+use crate::registry::ReleaseRef;
 use crate::version_utils::{GodotVersion, GodotVersionDeterminate, GodotVersionDeterminateVecExt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 /// Metadata for a single Godot release stored in the registry cache.
 pub struct ReleaseCache {
-    pub id: u64,
     pub tag_name: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-/// Cached capability info for a single release.
-pub struct ReleaseCapabilitiesEntry {
-    pub tag_name: String,
-    pub variants: Vec<String>,
-    pub platforms: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-/// Cache for per-release capability lookups.
-pub struct ReleaseCapabilitiesCache {
-    /// Unix timestamp aligned to the registry index fetch that these entries depend on.
-    pub last_fetched: u64,
-    pub entries: Vec<ReleaseCapabilitiesEntry>,
+    /// Map of variant names to platform keys, e.g. `linux-x86_64`.
+    #[serde(default)]
+    pub variants: Option<HashMap<String, Vec<String>>>,
+    /// How to address this release's download metadata file.
+    pub source: ReleaseRef,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -70,9 +60,8 @@ pub struct FullCache {
     /// Cache for GDVM metadata
     pub gdvm: GdvmCache,
     /// Cache for Godot releases
-    pub godot_registry: RegistryReleasesCache,
-    /// Cache for per-release capabilities
-    pub release_capabilities: ReleaseCapabilitiesCache,
+    #[serde(default)]
+    pub registries: HashMap<String, RegistryReleasesCache>,
 }
 
 impl Default for FullCache {
@@ -83,11 +72,7 @@ impl Default for FullCache {
                 new_version: None,
                 new_major_version: None,
             },
-            godot_registry: RegistryReleasesCache {
-                last_fetched: 0,
-                releases: vec![],
-            },
-            release_capabilities: ReleaseCapabilitiesCache::default(),
+            registries: HashMap::new(),
         }
     }
 }
@@ -136,14 +121,21 @@ impl CacheStore {
         self.save_full_cache(&full)
     }
 
-    pub fn load_registry_cache(&self) -> Result<RegistryReleasesCache> {
+    pub fn load_registry_cache(&self, registry: &str) -> Result<RegistryReleasesCache> {
         let full = self.load_full_cache()?;
-        Ok(full.godot_registry)
+        Ok(full
+            .registries
+            .get(registry)
+            .cloned()
+            .unwrap_or_else(|| RegistryReleasesCache {
+                last_fetched: 0,
+                releases: vec![],
+            }))
     }
 
-    pub fn save_registry_cache(&self, cache: &RegistryReleasesCache) -> Result<()> {
+    pub fn save_registry_cache(&self, registry: &str, cache: &RegistryReleasesCache) -> Result<()> {
         self.update_full_cache(|full| {
-            full.godot_registry = cache.clone();
+            full.registries.insert(registry.to_string(), cache.clone());
         })
     }
 
@@ -163,24 +155,6 @@ impl CacheStore {
             last_update_check,
             new_version: None,
             new_major_version: None,
-        })
-    }
-
-    pub fn load_capabilities_cache(&self) -> Result<ReleaseCapabilitiesCache> {
-        let full = self.load_full_cache()?;
-        Ok(full.release_capabilities)
-    }
-
-    pub fn save_capabilities_cache(&self, cache: &ReleaseCapabilitiesCache) -> Result<()> {
-        self.update_full_cache(|full| {
-            full.release_capabilities = cache.clone();
-        })
-    }
-
-    pub fn clear_capabilities_cache(&self, last_fetched: u64) -> Result<()> {
-        self.save_capabilities_cache(&ReleaseCapabilitiesCache {
-            last_fetched,
-            entries: Vec::new(),
         })
     }
 }
