@@ -271,3 +271,8 @@ error-github-rate-limit = Limite d'utilisation de l'API GitHub dépassée.
   Note : Le jeton sera stocké en texte brut dans votre répertoire personnel. Veuillez vous assurer de le garder sécurisé.
   Il est recommandé de régulièrement examiner et faire tourner vos jetons pour des raisons de sécurité.
 
+error-copy-file-failed = Échec de la copie du fichier : { $error }
+error-move-file-failed = Échec du déplacement du fichier : { $error }
+error-user-dir-not-found = Impossible de créer le raccourci : répertoire utilisateur introuvable
+error-desktop-not-found = Impossible de créer le raccourci : répertoire Bureau introuvable
+warning-shortcut-macos-not-supported = Pour le moment, la création de raccourcis sous macOS n'est pas prise en charge ; par conséquent, aucun raccourci ne sera créé.
