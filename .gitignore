@@ -30,3 +30,4 @@
 .DS_Store
 *.log
 **/*.github_token
+index.html
