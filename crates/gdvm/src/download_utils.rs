@@ -27,6 +27,17 @@ pub async fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
     // Print downloading URL message
     eprintln_i18n!(i18n, "operation-downloading-url", url = url);
 
+    // Copy from local file if the registry is on disk.
+    if let Some(path) = url.strip_prefix("file://") {
+        let src = Path::new(path);
+        if !src.is_file() {
+            return Err(anyhow!(t!(i18n, "error-file-not-found")));
+        }
+        fs::copy(src, dest).await?;
+        eprintln_i18n!(i18n, "operation-download-complete");
+        return Ok(());
+    }
+
     let client = reqwest::ClientBuilder::new().user_agent("gdvm").build()?;
     let response = client.get(url).send().await?;
 

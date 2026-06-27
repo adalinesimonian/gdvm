@@ -21,6 +21,20 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### Breaking Changes
+
+- Terminal output, aside from help text, is no longer wrapped to a fixed width, and instead relies on the terminal to wrap text. This resolves issues with scripts that parse gdvm output, such as URLs being split across multiple lines.
+
+### New Features
+
+- Custom registries are now supported. Registries can be created using `gdvm registry init` and builds can be added to them with `gdvm registry add-build`. One can configure gdvm to use a custom registry with `gdvm registry add` or by configuring `gdvm.toml`. See the [README](README.md#custom-registries) for more information.
+- If a `gdvm.toml` file is malformed, gdvm will now print a warning instead of silently ignoring it.
+- `gdvm cache-path <version>` will now print the path to the cached download archive for a given version. This is useful for scripts that need to access the archive directly.
+
+### Fixed
+
+- Version tags with multiple hyphens, e.g. `1.2-alpha-something`, are now correctly parsed and resolved.
+
 ### Changed
 
 - Switch away from `raw.githubusercontent.com` to `registry.gdvm.io` for the Godot build registry.

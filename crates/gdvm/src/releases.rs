@@ -17,15 +17,16 @@
 
 use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
+use std::collections::HashMap;
+use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::i18n::I18n;
 use crate::metadata_cache::{
-    CacheStore, RegistryReleasesCache, ReleaseCache, ReleaseCapabilitiesEntry,
-    filter_cached_releases,
+    CacheStore, RegistryReleasesCache, ReleaseCache, filter_cached_releases,
 };
-use crate::registry::{Registry, ReleaseMetadata};
-use crate::t_w;
+use crate::registry::{OFFICIAL_REGISTRY, Registry, ReleaseMetadata};
+use crate::t;
 use crate::version_utils::{GodotVersion, GodotVersionDeterminate};
 
 const CACHE_TTL: Duration = Duration::from_secs(48 * 3600); // 48 hours
@@ -44,6 +45,16 @@ impl ReleaseCatalog {
         }
     }
 
+    /// The name of the registry this catalog is scoped to.
+    pub fn registry_name(&self) -> &str {
+        self.registry.name()
+    }
+
+    /// A display string for the registry's base URL.
+    pub fn registry_base_url(&self) -> String {
+        self.registry.base_url_display()
+    }
+
     /// List available releases, optionally filtering with a partial GodotVersion. Respects cache-
     /// only mode and refreshes the registry index when stale.
     pub async fn list_releases(
@@ -52,16 +63,11 @@ impl ReleaseCatalog {
         use_cache_only: bool,
         i18n: &I18n,
     ) -> Result<Vec<GodotVersionDeterminate>> {
-        let mut cache = self.cache_store.load_registry_cache()?;
+        let registry = self.registry.cache_key();
+        let mut cache = self.cache_store.load_registry_cache(&registry)?;
         let now = now_seconds()?;
         let cache_age = now - cache.last_fetched;
         let should_refresh = cache_age > CACHE_TTL.as_secs();
-
-        // Drop per-release capability cache when the index is stale so it can be rebuilt on demand.
-        if should_refresh {
-            self.cache_store
-                .clear_capabilities_cache(cache.last_fetched)?;
-        }
 
         if should_refresh
             && !use_cache_only
@@ -82,40 +88,35 @@ impl ReleaseCatalog {
         Ok(filter_cached_releases(&cache, filter))
     }
 
-    /// Fetch capabilities for a given tag, caching results.
-    pub async fn capabilities_for(
+    /// Get the platforms available for a release's variants.
+    pub async fn platforms_by_variant(
         &self,
         tag: &str,
         i18n: &I18n,
-    ) -> Result<ReleaseCapabilitiesEntry> {
-        let mut caps_cache = self.cache_store.load_capabilities_cache()?;
-        if let Some(entry) = caps_cache.entries.iter().find(|c| c.tag_name == tag) {
-            return Ok(entry.clone());
-        }
+    ) -> Result<HashMap<String, Vec<String>>> {
+        let key = self.registry.cache_key();
+        let mut cache = self.cache_store.load_registry_cache(&key)?;
 
-        let registry_cache = self.cache_store.load_registry_cache()?;
-        let release = registry_cache
+        let release = cache
             .releases
             .iter()
             .find(|r| r.tag_name == tag)
             .cloned()
-            .ok_or_else(|| anyhow!(t_w!(i18n, "error-version-not-found")))?;
+            .ok_or_else(|| anyhow!(t!(i18n, "error-version-not-found")))?;
 
-        // Fetch metadata once, then derive capabilities.
-        let metadata = self
-            .registry
-            .fetch_release(release.id, &release.tag_name)
-            .await?;
+        if let Some(variants) = release.variants {
+            return Ok(variants);
+        }
 
-        let capabilities = derive_capabilities(tag, &metadata);
+        let metadata = self.registry.fetch_release(&release.source).await?;
+        let variants = derive_variants(&metadata);
 
-        // Store in cache, aligning its timestamp to the registry cache so TTL matches the index.
-        caps_cache.entries.retain(|c| c.tag_name != tag);
-        caps_cache.entries.push(capabilities.clone());
-        caps_cache.last_fetched = registry_cache.last_fetched;
-        self.cache_store.save_capabilities_cache(&caps_cache)?;
+        if let Some(entry) = cache.releases.iter_mut().find(|r| r.tag_name == tag) {
+            entry.variants = Some(variants.clone());
+            self.cache_store.save_registry_cache(&key, &cache)?;
+        }
 
-        Ok(capabilities)
+        Ok(variants)
     }
 
     /// Retrieve release metadata for an exact version, refreshing the cache if needed.
@@ -125,22 +126,26 @@ impl ReleaseCatalog {
         i18n: &I18n,
     ) -> Result<ReleaseMetadata> {
         let tag = gv.to_remote_str();
-        let mut cache = self.cache_store.load_registry_cache()?;
+        let mut cache = self
+            .cache_store
+            .load_registry_cache(&self.registry.cache_key())?;
 
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(entry.id, &entry.tag_name).await;
+            return self.registry.fetch_release(&entry.source).await;
         }
 
         self.update_cache(&mut cache, i18n).await?;
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(entry.id, &entry.tag_name).await;
+            return self.registry.fetch_release(&entry.source).await;
         }
 
-        Err(anyhow!(t_w!(i18n, "error-version-not-found")))
+        Err(anyhow!(t!(i18n, "error-version-not-found")))
     }
 
     pub async fn refresh_cache(&self, i18n: &I18n) -> Result<()> {
-        let mut cache = self.cache_store.load_registry_cache()?;
+        let mut cache = self
+            .cache_store
+            .load_registry_cache(&self.registry.cache_key())?;
         self.update_cache(&mut cache, i18n).await
     }
 
@@ -152,58 +157,133 @@ impl ReleaseCatalog {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
         pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message(t_w!(i18n, "fetching-releases"));
+        pb.set_message(t!(i18n, "fetching-releases"));
 
         let index = self.registry.fetch_index().await?;
 
-        pb.finish_with_message(t_w!(i18n, "releases-fetched"));
+        pb.finish_with_message(t!(i18n, "releases-fetched"));
 
         cache.releases = index
             .into_iter()
             .map(|r| ReleaseCache {
-                id: r.id,
-                tag_name: r.name,
+                tag_name: r.version,
+                variants: r.variants,
+                source: r.source,
             })
             .collect();
         cache.last_fetched = now_seconds()?;
 
-        self.cache_store.save_registry_cache(cache)?;
-        // Index has been refreshed, align capability cache TTL and clear stale entries.
         self.cache_store
-            .clear_capabilities_cache(cache.last_fetched)?;
+            .save_registry_cache(&self.registry.cache_key(), cache)?;
 
         Ok(())
     }
 }
 
-fn derive_capabilities(tag: &str, metadata: &ReleaseMetadata) -> ReleaseCapabilitiesEntry {
-    let mut platforms = Vec::new();
-    let mut variants = Vec::new();
+/// Holds a `ReleaseCatalog` per registry.
+pub struct CatalogSet {
+    catalogs: HashMap<String, ReleaseCatalog>,
+}
 
-    for (platform_key, arches) in &metadata.binaries {
-        // Extract variant from platform key, e.g. "csharp" from "linux-csharp".
-        let variant = match platform_key.split_once('-') {
-            Some((_os, variant)) => variant,
-            None => crate::version_utils::DEFAULT_VARIANT,
-        };
+/// Summary information about a configured registry.
+#[derive(Debug, Clone)]
+pub struct RegistryInfo {
+    pub name: String,
+    pub url: String,
+    pub is_official: bool,
+}
 
-        if !variants.iter().any(|v: &String| v == variant) {
-            variants.push(variant.to_string());
+impl CatalogSet {
+    /// Build a catalog set from configured registries.
+    pub fn new(cache_index: &Path, registries: &[(String, String)]) -> Result<Self> {
+        let mut catalogs = HashMap::new();
+
+        catalogs.insert(
+            OFFICIAL_REGISTRY.to_string(),
+            ReleaseCatalog::new(
+                Registry::official()?,
+                CacheStore::new(cache_index.to_path_buf()),
+            ),
+        );
+
+        for (name, url) in registries {
+            if name == OFFICIAL_REGISTRY {
+                // The official registry cannot be redefined.
+                continue;
+            }
+
+            let registry = Registry::new(name, url)?;
+
+            catalogs.insert(
+                name.clone(),
+                ReleaseCatalog::new(registry, CacheStore::new(cache_index.to_path_buf())),
+            );
         }
-        for arch_key in arches.keys() {
-            platforms.push(format!("{platform_key}-{arch_key}"));
-        }
+
+        Ok(Self { catalogs })
     }
 
-    platforms.sort();
-    platforms.dedup();
-    variants.sort();
-
-    ReleaseCapabilitiesEntry {
-        tag_name: tag.to_string(),
-        variants,
-        platforms,
+    /// True when registry is the official registry.
+    pub fn is_official(&self, registry: Option<&str>) -> bool {
+        registry.unwrap_or(OFFICIAL_REGISTRY) == OFFICIAL_REGISTRY
     }
+
+    /// Select a catalog by registry name. Falls back to the official registry.
+    pub fn catalog(&self, registry: Option<&str>) -> Result<&ReleaseCatalog> {
+        let name = registry.unwrap_or(OFFICIAL_REGISTRY);
+        self.catalogs
+            .get(name)
+            .ok_or_else(|| anyhow!("Unknown registry '{name}'"))
+    }
+
+    /// The official registry's release catalog.
+    pub fn official(&self) -> &ReleaseCatalog {
+        self.catalogs
+            .get(OFFICIAL_REGISTRY)
+            .expect("official registry catalog is always present")
+    }
+
+    /// All configured registry names. The official one comes first.
+    pub fn names(&self) -> Vec<&str> {
+        let mut names: Vec<&str> = self
+            .catalogs
+            .keys()
+            .map(|s| s.as_str())
+            .filter(|n| *n != OFFICIAL_REGISTRY)
+            .collect();
+        names.sort_unstable();
+        names.insert(0, OFFICIAL_REGISTRY);
+        names
+    }
+
+    /// Summaries of all configured registries. The official one comes first.
+    pub fn list(&self) -> Vec<RegistryInfo> {
+        self.names()
+            .into_iter()
+            .map(|name| RegistryInfo {
+                name: name.to_string(),
+                url: self
+                    .catalogs
+                    .get(name)
+                    .map(|c| c.registry_base_url())
+                    .unwrap_or_default(),
+                is_official: name == OFFICIAL_REGISTRY,
+            })
+            .collect()
+    }
+}
+
+/// Get the variant to platform map from a release's metadata.
+fn derive_variants(metadata: &ReleaseMetadata) -> HashMap<String, Vec<String>> {
+    let mut variants: HashMap<String, Vec<String>> = HashMap::new();
+
+    for (variant, platforms) in &metadata.variants {
+        let mut keys: Vec<String> = platforms.keys().cloned().collect();
+        keys.sort();
+        variants.insert(variant.clone(), keys);
+    }
+
+    variants
 }
 
 fn now_seconds() -> Result<u64> {
@@ -216,11 +296,10 @@ fn now_seconds() -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::metadata_cache::FullCache;
     use tempfile::TempDir;
 
     fn i18n() -> I18n {
-        I18n::new(80).expect("i18n init")
+        I18n::new().expect("i18n init")
     }
 
     fn make_catalog_with_cache(tags: &[&str], last_fetched: u64) -> (ReleaseCatalog, TempDir) {
@@ -229,31 +308,25 @@ mod tests {
 
         let releases: Vec<ReleaseCache> = tags
             .iter()
-            .enumerate()
-            .map(|(id, tag)| ReleaseCache {
-                id: id as u64,
+            .map(|tag| ReleaseCache {
                 tag_name: (*tag).to_string(),
+                variants: None,
+                source: crate::registry::ReleaseRef::V2 {
+                    path: format!("releases/{tag}.json"),
+                },
             })
             .collect();
 
-        let full = FullCache {
-            gdvm: crate::metadata_cache::GdvmCache {
-                last_update_check: 0,
-                new_version: None,
-                new_major_version: None,
-            },
-            godot_registry: RegistryReleasesCache {
-                last_fetched,
-                releases,
-            },
-            release_capabilities: Default::default(),
+        let cache = RegistryReleasesCache {
+            last_fetched,
+            releases,
         };
+        let registry = Registry::official().expect("registry client");
         // Persist cache so ReleaseCatalog reads it.
         cache_store
-            .save_registry_cache(&full.godot_registry)
+            .save_registry_cache(&registry.cache_key(), &cache)
             .expect("write cache");
 
-        let registry = Registry::new().expect("registry client");
         (ReleaseCatalog::new(registry, cache_store), tmp)
     }
 
@@ -294,5 +367,77 @@ mod tests {
 
         assert_eq!(releases.len(), 1);
         assert_eq!(releases[0].to_remote_str(), "4.2-rc1");
+    }
+
+    fn cache_path() -> (TempDir, std::path::PathBuf) {
+        let tmp = TempDir::new().expect("tempdir");
+        let path = tmp.path().join("cache.json");
+        (tmp, path)
+    }
+
+    #[test]
+    fn catalog_set_defaults_to_official() {
+        let (_tmp, cache) = cache_path();
+        let set = CatalogSet::new(&cache, &[]).expect("catalog set");
+
+        assert!(set.is_official(None));
+        assert_eq!(set.catalog(None).unwrap().registry_name(), "official");
+        assert_eq!(set.names(), vec!["official"]);
+    }
+
+    #[test]
+    fn catalog_set_routes_by_name() {
+        let (_tmp, cache) = cache_path();
+        let registries = vec![
+            (
+                "mybuilds".to_string(),
+                "https://example.com/godot".to_string(),
+            ),
+            ("local".to_string(), "file:///tmp/reg".to_string()),
+        ];
+        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
+
+        assert!(set.is_official(None));
+        assert!(set.is_official(Some("official")));
+        assert!(!set.is_official(Some("mybuilds")));
+        assert_eq!(set.catalog(None).unwrap().registry_name(), "official");
+        assert_eq!(
+            set.catalog(Some("mybuilds")).unwrap().registry_name(),
+            "mybuilds"
+        );
+        assert_eq!(set.catalog(Some("local")).unwrap().registry_name(), "local");
+        assert!(set.catalog(Some("missing")).is_err());
+        assert_eq!(set.names()[0], "official");
+    }
+
+    #[test]
+    fn catalog_set_cannot_redefine_official() {
+        let (_tmp, cache) = cache_path();
+        let registries = vec![(
+            "official".to_string(),
+            "https://evil.example.com".to_string(),
+        )];
+        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
+
+        assert_eq!(set.names(), vec!["official"]);
+        assert_ne!(
+            set.catalog(None).unwrap().registry_base_url(),
+            "https://evil.example.com"
+        );
+    }
+
+    #[test]
+    fn catalog_set_later_registry_wins_for_duplicate_alias() {
+        let (_tmp, cache) = cache_path();
+        let registries = vec![
+            ("a".to_string(), "https://machine.example.com".to_string()),
+            ("a".to_string(), "https://project.example.com".to_string()),
+        ];
+        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
+
+        assert_eq!(
+            set.catalog(Some("a")).unwrap().registry_base_url(),
+            "https://project.example.com"
+        );
     }
 }
