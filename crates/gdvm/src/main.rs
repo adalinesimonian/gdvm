@@ -16,7 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use gdvm::config::{self, ConfigOps};
-use gdvm::godot_manager::{GodotManager, InstallOutcome};
+use gdvm::godot_manager::{GodotManager, InstallOutcome, PruneOptions};
 use gdvm::i18n::I18n;
 use gdvm::registry;
 use gdvm::run_version_resolver::{
@@ -431,6 +431,35 @@ async fn main() -> Result<()> {
         .subcommand(Command::new("clear-cache").about(t!(i18n, "help-clear-cache")))
         .subcommand(Command::new("refresh").about(t!(i18n, "help-refresh")))
         .subcommand(
+            Command::new("prune")
+                .about(t!(i18n, "help-prune"))
+                .long_about(t!(
+                    i18n,
+                    "help-prune-long",
+                    default_days = config::DEFAULT_PRUNE_MAX_AGE_DAYS
+                ))
+                .arg(
+                    Arg::new("all")
+                        .long("all")
+                        .short('a')
+                        .num_args(0)
+                        .help(t!(i18n, "help-prune-all")),
+                )
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .short('f')
+                        .num_args(0)
+                        .help(t!(i18n, "help-prune-force")),
+                )
+                .arg(
+                    Arg::new("dry-run")
+                        .long("dry-run")
+                        .num_args(0)
+                        .help(t!(i18n, "help-prune-dry-run")),
+                ),
+        )
+        .subcommand(
             Command::new("use")
                 .about(t!(i18n, "help-default"))
                 .arg(
@@ -690,6 +719,7 @@ async fn main() -> Result<()> {
         Some(("search", sub_m)) => sub_search(&i18n, &manager, sub_m).await?,
         Some(("clear-cache", _)) => sub_clear_cache(&i18n, &manager)?,
         Some(("refresh", _)) => sub_refresh(&i18n, &manager).await?,
+        Some(("prune", sub_m)) => sub_prune(&i18n, &manager, sub_m)?,
         Some(("use", sub_m)) => sub_use(&i18n, &manager, sub_m).await?,
         Some(("upgrade", sub_m)) => sub_upgrade(&manager, sub_m).await?,
         Some(("pin", sub_m)) => sub_pin(&i18n, &manager, sub_m).await?,
@@ -967,6 +997,14 @@ async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
         resolved.registry.as_deref(),
     );
 
+    // Key used to track this link against its install, so prune can preserve
+    // installs that still have a live link.
+    let install_key = manager.install_key(
+        &resolved.version,
+        &resolved.variant,
+        resolved.registry.as_deref(),
+    )?;
+
     let link_path = PathBuf::from(link_path_raw);
     if let Some(parent) = link_path.parent().filter(|p| !p.as_os_str().is_empty()) {
         fs::create_dir_all(parent)?;
@@ -985,6 +1023,7 @@ async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
                 path = link_path.display().to_string()
             );
         } else {
+            manager.record_link(&link_path, &install_key)?;
             println_i18n!(
                 i18n,
                 "link-created",
@@ -1025,6 +1064,7 @@ async fn sub_link(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches)
             path = link_path.display().to_string()
         );
     } else {
+        manager.record_link(&link_path, &install_key)?;
         println_i18n!(
             i18n,
             "link-created",
@@ -1433,6 +1473,91 @@ fn sub_clear_cache(i18n: &I18n, manager: &GodotManager) -> Result<()> {
 async fn sub_refresh(i18n: &I18n, manager: &GodotManager<'_>) -> Result<()> {
     manager.refresh_cache().await?;
     println_i18n!(i18n, "cache-refreshed");
+    Ok(())
+}
+
+/// Format a byte count into a short user-friendly string.
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let mut value = bytes as f64;
+    let mut unit = 0;
+
+    while value >= 1024.0 && unit < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit += 1;
+    }
+
+    if unit == 0 {
+        format!("{bytes} {}", UNITS[unit])
+    } else {
+        format!("{value:.1} {}", UNITS[unit])
+    }
+}
+
+/// Handle the 'prune' subcommand
+fn sub_prune(i18n: &I18n, manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+    let opts = PruneOptions {
+        all: matches.get_flag("all"),
+        force: matches.get_flag("force"),
+        dry_run: matches.get_flag("dry-run"),
+    };
+
+    let config = config::Config::load(i18n).unwrap_or_default();
+    let max_age_secs = config.prune_max_age_days().saturating_mul(24 * 60 * 60);
+
+    let report = manager.prune(max_age_secs, opts)?;
+
+    if report.is_empty() {
+        if report.dry_run {
+            println_i18n!(i18n, "prune-nothing-dry-run");
+        } else {
+            println_i18n!(i18n, "prune-nothing-removed");
+        }
+        if report.preserved_by_link > 0 {
+            println_i18n!(
+                i18n,
+                "prune-preserved-by-link",
+                count = report.preserved_by_link
+            );
+        }
+        return Ok(());
+    }
+
+    if report.dry_run {
+        println_i18n!(i18n, "prune-dry-run-header");
+    } else {
+        println_i18n!(i18n, "prune-removed-header");
+    }
+
+    if !report.installs.is_empty() {
+        println_i18n!(i18n, "prune-installs-header");
+        for item in &report.installs {
+            println!("- {} ({})", item.label, format_bytes(item.freed_bytes));
+        }
+    }
+
+    if !report.archives.is_empty() {
+        println_i18n!(i18n, "prune-archives-header");
+        for item in &report.archives {
+            println!("- {} ({})", item.label, format_bytes(item.freed_bytes));
+        }
+    }
+
+    if report.preserved_by_link > 0 {
+        println_i18n!(
+            i18n,
+            "prune-preserved-by-link",
+            count = report.preserved_by_link
+        );
+    }
+
+    let size = format_bytes(report.freed_bytes);
+    if report.dry_run {
+        println_i18n!(i18n, "prune-would-free", size = size);
+    } else {
+        println_i18n!(i18n, "prune-freed", size = size);
+    }
+
     Ok(())
 }
 
@@ -1881,12 +2006,16 @@ fn sub_config(i18n: &I18n, matches: &clap::ArgMatches) -> anyhow::Result<()> {
             if config.is_sensitive_key(key) {
                 eprintln_i18n!(i18n, "warning-setting-sensitive");
             }
-            match config.set_value(key, &value) {
-                Ok(()) => {
-                    config.save(i18n)?;
-                    println_i18n!(i18n, "config-set-success");
+            if !config::KNOWN_KEYS.contains(&key.as_str()) {
+                eprintln_i18n!(i18n, "error-unknown-config-key");
+            } else {
+                match config.set_value(key, &value) {
+                    Ok(()) => {
+                        config.save(i18n)?;
+                        println_i18n!(i18n, "config-set-success");
+                    }
+                    Err(_) => eprintln_i18n!(i18n, "error-invalid-config-value", key = key),
                 }
-                Err(_) => eprintln_i18n!(i18n, "error-unknown-config-key"),
             }
         }
         Some(("unset", sub_m)) => {

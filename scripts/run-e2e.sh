@@ -942,4 +942,64 @@ list_out="$(gdvm registry list)"
 assert_not_contains "$list_out" e2ereg "registry should have been removed"
 TEST_SCRIPT
 
+test "prune --dry-run does not change installed versions" <<'TEST_SCRIPT'
+set -euo pipefail
+
+before="$(gdvm list)"
+gdvm prune --dry-run >/dev/null
+after="$(gdvm list)"
+assert_eq "$before" "$after" "dry run must not change installed versions"
+TEST_SCRIPT
+
+test "prune never removes the default install" <<'TEST_SCRIPT'
+set -euo pipefail
+
+gdvm install 4.3.0 >/dev/null
+gdvm use 4.3.0
+
+gdvm prune --all --force
+
+list_out="$(gdvm list)"
+assert_imatches "$list_out" '4\.3' "default install must survive prune --all --force"
+assert_run_contains 4.3.stable.official -- gdvm run --console=true -- --version
+
+gdvm use unset
+TEST_SCRIPT
+
+test "prune --all keeps a linked install and removes others" <<'TEST_SCRIPT'
+set -euo pipefail
+
+gdvm install 4.3.0 >/dev/null
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+target="$(link_target "$tmpdir/godot-link")"
+gdvm link 4.3.0 "$target"
+gdvm install 4.4.0 >/dev/null
+
+gdvm prune --all
+
+list_out="$(gdvm list)"
+assert_imatches "$list_out" '4\.3' "linked 4.3 must survive prune --all"
+assert_not_matches "$list_out" '4\.4\.0' \
+    "unlinked 4.4.0 should be removed by prune --all"
+TEST_SCRIPT
+
+test "prune --all --force removes even a linked install" <<'TEST_SCRIPT'
+set -euo pipefail
+
+gdvm install 4.3.0 >/dev/null
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+target="$(link_target "$tmpdir/godot-link")"
+gdvm link 4.3.0 "$target"
+
+gdvm prune --all --force
+
+list_out="$(gdvm list)"
+assert_not_matches "$list_out" '4\.3' \
+    "prune --all --force must remove even a linked install"
+TEST_SCRIPT
+
 summarize_tests

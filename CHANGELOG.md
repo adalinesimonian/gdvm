@@ -30,6 +30,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - Custom registries are now supported. Registries can be created using `gdvm registry init` and builds can be added to them with `gdvm registry add-build`. One can configure gdvm to use a custom registry with `gdvm registry add` or by configuring `gdvm.toml`. See the [README](README.md#custom-registries) for more information.
 - If a `gdvm.toml` file is malformed, gdvm will now print a warning instead of silently ignoring it.
 - `gdvm cache-path <version>` will now print the path to the cached download archive for a given version. This is useful for scripts that need to access the archive directly.
+- `gdvm prune` removes installs and cached download archives that are no longer in use. By default it only removes things that have been idle longer than a configurable threshold (settable with `gdvm config set prune.max-age-days <days>`, default 30 days) while preserving any install that still has a link pointing into it, as well as the global install.
 
 ### Fixed
 

@@ -55,6 +55,24 @@ help-clear-cache = Tøm utgivelsescachen
 help-refresh = Oppdater utgivelsescachen fra registeret
 help-refresh-flag = Oppdater utgivelsescachen før denne kommandoen kjøres
 
+help-prune = Fjern installasjoner og cacha arkiv som ikke lenger er i bruk
+help-prune-long = { help-prune }
+
+    Som standard fjerner prune installasjoner som ikke har vært brukt på en stund, og cacha nedlastingsarkiv som har blitt for gamle, mens installasjoner som fortsatt har en aktiv lenke inn i seg blir bevart. Installasjonen som er satt som standard blir aldri fjerna, uansett hvilke flagg som gis. Aldersgrensa kan settes med «gdvm config set prune.max-age-days <dager>» (standard { $default_days } dager).
+help-prune-all = Fjern alle installasjoner og cacha arkiv uavhengig av alder. Installasjoner som fortsatt har en aktiv lenke beholdes med mindre --force også er gitt.
+help-prune-force = Ignorer lenker, slik at installasjoner som bare er referert av en lenke også kan fjernes.
+help-prune-dry-run = Vis hva som ville blitt fjerna uten å slette noe.
+
+prune-dry-run-header = Følgende ville blitt fjerna (tørrkjøring):
+prune-removed-header = Fjerna følgende:
+prune-installs-header = Installasjoner:
+prune-archives-header = Cacha arkiv:
+prune-nothing-dry-run = Ingenting ville blitt fjerna.
+prune-nothing-removed = Ingenting å fjerne; alt er i bruk eller innenfor aldersgrensa.
+prune-preserved-by-link = Beholdt { $count } installasjon(er) som fortsatt er referert av en lenke.
+prune-freed = Frigjorde omtrent { $size }.
+prune-would-free = Ville frigjort omtrent { $size }.
+
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
 help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i cachen.
 help-yes = Hopp over bekreftelsesprompt for fjerning
@@ -257,6 +275,7 @@ config-set-success = Konfigurasjonen ble oppdatert.
 config-unset-success = Konfigurasjonsnøkkelen { $key } ble fjernet vellykket.
 config-key-not-set = Konfigurasjonsnøkkel ikke satt.
 error-unknown-config-key = Ukjent konfigurasjonsnøkkel.
+error-invalid-config-value = Ugyldig verdi for konfigurasjonsnøkkelen { $key }.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk "get", "set" eller "list".
 error-parse-config = Kunne ikke tolke konfigurasjonsfila: { $error }
 error-parse-config-using-default = {"\u001b"}[33mBruker standard konfigurasjonsverdier.{"\u001b"}[0m

@@ -55,6 +55,24 @@ help-clear-cache = Vide le cache des versions
 help-refresh = Actualiser le cache des versions depuis le registre
 help-refresh-flag = Actualiser le cache des versions avant d'exécuter cette commande
 
+help-prune = Supprimer les installations et les archives en cache qui ne sont plus utilisées
+help-prune-long = { help-prune }
+
+    Par défaut, prune supprime les installations qui n'ont pas été utilisées depuis un certain temps ainsi que les archives de téléchargement en cache devenues trop anciennes, tout en préservant toute installation encore référencée par un lien. L'installation définie comme défaut n'est jamais supprimée, quels que soient les drapeaux fournis. Le seuil d'ancienneté est configurable avec « gdvm config set prune.max-age-days <jours> » (par défaut { $default_days } jours).
+help-prune-all = Supprimer toutes les installations et archives en cache quel que soit leur âge. Les installations encore référencées par un lien actif sont conservées sauf si --force est également fourni.
+help-prune-force = Ignorer les liens, afin que les installations référencées uniquement par un lien puissent aussi être supprimées.
+help-prune-dry-run = Afficher ce qui serait supprimé sans rien supprimer.
+
+prune-dry-run-header = Les éléments suivants seraient supprimés (simulation) :
+prune-removed-header = Éléments supprimés :
+prune-installs-header = Installations :
+prune-archives-header = Archives en cache :
+prune-nothing-dry-run = Rien ne serait supprimé.
+prune-nothing-removed = Rien à supprimer ; tout est utilisé ou dans le seuil d'ancienneté.
+prune-preserved-by-link = { $count } installation(s) conservée(s) car encore référencée(s) par un lien.
+prune-freed = Environ { $size } libéré(s).
+prune-would-free = Environ { $size } seraient libéré(s).
+
 help-force = Forcer la réinstallation même si la version est déjà installée.
 help-redownload = Retélécharger la version même si elle est déjà présente dans le cache.
 help-yes = Ignorer la confirmation de suppression
@@ -257,6 +275,7 @@ config-set-success = Configuration mise à jour avec succès.
 config-unset-success = Clé de configuration { $key } supprimée avec succès.
 config-key-not-set = Clé de configuration non définie.
 error-unknown-config-key = Clé de configuration inconnue.
+error-invalid-config-value = Valeur invalide pour la clé de configuration { $key }.
 error-invalid-config-subcommand = Sous-commande de configuration invalide. Utilisez « get », « set », ou « list ».
 error-parse-config = Échec de l'analyse du fichier de configuration : { $error }
 error-parse-config-using-default = {"\u001b"}[33mUtilisation des valeurs de configuration par défaut.{"\u001b"}[0m

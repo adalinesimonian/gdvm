@@ -25,7 +25,11 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token"];
+pub const KNOWN_KEYS: &[&str] = &["github.token", "prune.max-age-days"];
+
+/// The default maximum age, in days, before an unused asset becomes eligible
+/// for pruning, unless `prune.max-age-days` is configured.
+pub const DEFAULT_PRUNE_MAX_AGE_DAYS: u64 = 30;
 
 /// A machine-level registry config.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -37,6 +41,10 @@ pub struct RegistryConfig {
 pub struct Config {
     #[serde(default)]
     pub github_token: Option<String>,
+    /// Maximum age, in days, before an unused asset becomes eligible for
+    /// pruning. When unset, `DEFAULT_PRUNE_MAX_AGE_DAYS` is used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prune_max_age_days: Option<u64>,
     /// Registry configs keyed by alias.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub registries: HashMap<String, RegistryConfig>,
@@ -68,6 +76,7 @@ impl ConfigOps for Config {
     fn get_value(&self, key: &str) -> Option<String> {
         match key {
             "github.token" => self.github_token.clone(),
+            "prune.max-age-days" => self.prune_max_age_days.map(|d| d.to_string()),
             _ => None,
         }
     }
@@ -78,6 +87,13 @@ impl ConfigOps for Config {
                 self.github_token = Some(value.to_string());
                 Ok(())
             }
+            "prune.max-age-days" => {
+                let days: u64 = value
+                    .parse()
+                    .map_err(|_| anyhow!("Invalid value for {key}: {value} (expected a number)"))?;
+                self.prune_max_age_days = Some(days);
+                Ok(())
+            }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
@@ -86,6 +102,10 @@ impl ConfigOps for Config {
         match key {
             "github.token" => {
                 self.github_token = None;
+                Ok(())
+            }
+            "prune.max-age-days" => {
+                self.prune_max_age_days = None;
                 Ok(())
             }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
@@ -100,6 +120,9 @@ impl ConfigOps for Config {
         let mut entries = Vec::new();
         if let Some(token) = self.github_token.as_ref() {
             entries.push(("github.token".to_string(), token.clone(), true));
+        }
+        if let Some(days) = self.prune_max_age_days {
+            entries.push(("prune.max-age-days".to_string(), days.to_string(), false));
         }
         entries
     }
@@ -157,6 +180,12 @@ impl Config {
     /// True when the registry at `url` has been trusted by the user.
     pub fn is_registry_trusted(&self, url: &str) -> bool {
         self.trusted_registries.iter().any(|u| u == url)
+    }
+
+    /// The configured prune max age in days, or the default when unset.
+    pub fn prune_max_age_days(&self) -> u64 {
+        self.prune_max_age_days
+            .unwrap_or(DEFAULT_PRUNE_MAX_AGE_DAYS)
     }
 
     /// Trust the registry at `url`.
@@ -274,6 +303,42 @@ mod tests {
         assert!(cfg.add_registry("ok", "ftp://example.com").is_err());
         assert!(cfg.add_registry("ok", "https://example.com").is_ok());
         assert!(cfg.add_registry("local", "file:///tmp/reg").is_ok());
+    }
+
+    #[test]
+    fn test_prune_max_age_days_get_set_unset_and_default() {
+        let mut cfg = Config::default();
+
+        assert!(cfg.get_value("prune.max-age-days").is_none());
+        assert_eq!(cfg.prune_max_age_days(), DEFAULT_PRUNE_MAX_AGE_DAYS);
+
+        assert!(cfg.set_value("prune.max-age-days", "7").is_ok());
+        assert_eq!(cfg.get_value("prune.max-age-days"), Some("7".to_string()));
+        assert_eq!(cfg.prune_max_age_days(), 7);
+        assert!(!cfg.is_sensitive_key("prune.max-age-days"));
+        assert!(cfg.list_set_keys().contains(&(
+            "prune.max-age-days".to_string(),
+            "7".to_string(),
+            false
+        )));
+
+        assert!(cfg.set_value("prune.max-age-days", "soon").is_err());
+
+        assert!(cfg.unset_value("prune.max-age-days").is_ok());
+        assert!(cfg.get_value("prune.max-age-days").is_none());
+        assert_eq!(cfg.prune_max_age_days(), DEFAULT_PRUNE_MAX_AGE_DAYS);
+
+        assert!(KNOWN_KEYS.contains(&"prune.max-age-days"));
+    }
+
+    #[test]
+    fn test_prune_max_age_days_toml_roundtrip() {
+        let mut cfg = Config::default();
+        cfg.set_value("prune.max-age-days", "14").unwrap();
+        let toml_str = toml::to_string(&cfg).unwrap();
+        let parsed: Config = toml::from_str(&toml_str).unwrap();
+        assert_eq!(parsed.prune_max_age_days, Some(14));
+        assert_eq!(parsed.prune_max_age_days(), 14);
     }
 
     #[test]

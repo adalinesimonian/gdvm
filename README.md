@@ -75,6 +75,7 @@ gdvm run csharp:3.5  # Run Godot 3.5 with C#.
 gdvm remove 3.5      # Removes Godot 3.5 without C#.
 gdvm list            # List installed versions.
 gdvm search 4        # Search available 4.x versions.
+gdvm prune           # Remove idle installs and cached archives.
 gdvm upgrade         # Upgrade gdvm.
 ```
 
