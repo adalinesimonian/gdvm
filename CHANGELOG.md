@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### Changed
+
+- Switch away from `raw.githubusercontent.com` to `registry.gdvm.io` for the Godot build registry.
+
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.1...main
 
 ## v0.12.1

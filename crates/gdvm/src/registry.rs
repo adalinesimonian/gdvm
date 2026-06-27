@@ -21,8 +21,7 @@ use std::collections::HashMap;
 
 use crate::host::{HostArch, HostOs, HostPlatform};
 
-const BASE_URL: &str =
-    "https://raw.githubusercontent.com/adalinesimonian/gdvm/refs/heads/registry/v1";
+const BASE_URL: &str = "https://registry.gdvm.io/v1";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct IndexEntry {
