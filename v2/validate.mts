@@ -18,7 +18,6 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { releaseTypeFor } from "./lib.mts";
 
 const releasesDir = "releases";
 const downloadPrefix =
@@ -174,17 +173,8 @@ for (const [i, raw] of indexReleases.entries()) {
     continue;
   }
 
-  const releaseType = raw.release_type;
-
-  if (typeof releaseType !== "string") {
-    pushErr(ctx, "`release_type` must be string");
-  } else if (releaseType !== releaseTypeFor(version)) {
-    pushErr(
-      ctx,
-      `release_type "${releaseType}" does not match expected "${releaseTypeFor(
-        version,
-      )}"`,
-    );
+  if (!/^[0-9][0-9.]*-[a-z][a-z0-9-]*$/.test(version)) {
+    pushErr(ctx, `invalid version format "${version}"`);
   }
 
   const rawVariants = raw.variants;

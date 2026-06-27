@@ -26,12 +26,11 @@ import {
   parentPort,
   workerData,
 } from "node:worker_threads";
-import {
-  releaseTypeFor,
-  type V2Release,
-  type V2ReleaseIndex,
-  type V2ReleaseVariants,
-  type V2RegistryManifest,
+import type {
+  V2Release,
+  V2ReleaseIndex,
+  V2ReleaseVariants,
+  V2RegistryManifest,
 } from "./lib.mts";
 
 interface UpdateWorkerData {
@@ -1108,7 +1107,6 @@ async function runParent() {
   let finalIndex: V2ReleaseIndex = { schema: 2, releases: [] };
   await Promise.all(
     Array.from(Object.keys(state)).map(async (version) => {
-      const releaseType = releaseTypeFor(version);
       const variants: Record<string, string[]> = {};
       const filePath = path.posix.join(
         outDir,
@@ -1141,7 +1139,6 @@ async function runParent() {
 
       finalIndex.releases.push({
         version,
-        release_type: releaseType,
         variants,
         path: relPath,
       });

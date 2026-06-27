@@ -22,7 +22,6 @@ interface Index {
   schema: 2;
   releases: {
     version: string;
-    release_type: string;
     variants: Record<string, string[]>;
     path: string;
   }[];

@@ -38,7 +38,6 @@ export interface V2Release {
 
 export interface V2ReleaseIndexEntry {
   version: string;
-  release_type: string;
   variants: Record<string, string[]>;
   path: string;
 }
@@ -54,10 +53,4 @@ export interface V2RegistryManifest {
   description: string;
   /** ISO 8601 timestamp. */
   updated_at: string;
-}
-
-export function releaseTypeFor(version: string) {
-  const match = version.match(/^[0-9][0-9.]*-(.+)$/);
-
-  return match ? match[1] : "stable";
 }
