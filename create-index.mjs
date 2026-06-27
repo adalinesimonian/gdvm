@@ -18,7 +18,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const skip = new Set([".git", ".vscode", ".wrangler", "package.json"]);
+const skip = new Set([
+  ".git",
+  ".vscode",
+  ".wrangler",
+  "package.json",
+  "package-lock.json",
+  "tsconfig.json",
+  ".state.json",
+]);
 
 function formatSize(bytes) {
   if (bytes < 0) {

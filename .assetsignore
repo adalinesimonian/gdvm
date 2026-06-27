@@ -19,7 +19,9 @@
 !*/
 .vscode/
 !*.json
+.state.json
 package.json
+package-lock.json
 tsconfig.json
 .state.json
 !index.html
