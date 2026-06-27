@@ -31,3 +31,4 @@
 *.log
 **/*.github_token
 index.html
+node_modules/

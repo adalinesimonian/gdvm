@@ -1,0 +1,13 @@
+{
+  "name": "gdvm-registry-v2",
+  "private": true,
+  "version": "2.0.0",
+  "description": "v2 registry for Godot release versions",
+  "type": "module",
+  "volta": {
+    "node": "26.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1"
+  }
+}

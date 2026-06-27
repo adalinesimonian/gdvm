@@ -1,5 +1,11 @@
 {
   "editor.rulers": [80, 120],
   "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  },
+  "files.associations": {
+    ".assetsignore": "ignore"
+  }
 }

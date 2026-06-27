@@ -19,4 +19,7 @@
 !*/
 .vscode/
 !*.json
+package.json
+tsconfig.json
+.state.json
 !index.html

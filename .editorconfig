@@ -25,5 +25,14 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.{md,yml,yaml,json,webmanifest,js,mjs}]
+[*.{md,yml,yaml,json,webmanifest,js,mjs,ts,mts}]
 indent_size = 2
+
+[**/releases/*.json]
+indent_style = tab
+
+[**/index.json]
+indent_style = tab
+
+[**/registry.json]
+indent_style = tab

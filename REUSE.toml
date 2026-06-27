@@ -22,6 +22,9 @@ path = [
     ".prettierrc",
     ".vscode/**",
     "v1/package.json",
+    "v2/package.json",
+    "v2/package-lock.json",
+    "v2/tsconfig.json",
 ]
 SPDX-FileCopyrightText = "Copyright (C) 2025 Adaline Simonian"
 SPDX-License-Identifier = "GPL-3.0-or-later"
@@ -30,6 +33,10 @@ SPDX-License-Identifier = "GPL-3.0-or-later"
 path = [
     "v1/index.json",
     "v1/releases/**",
+    "v2/registry.json",
+    "v2/index.json",
+    "v2/releases/**",
+    "v2/.state.json",
 ]
 SPDX-FileCopyrightText = "Copyright (C) 2025 Adaline Simonian"
 SPDX-License-Identifier = "CC0-1.0"
