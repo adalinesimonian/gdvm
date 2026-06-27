@@ -19,6 +19,7 @@ use anyhow::{Result, anyhow, bail};
 use digest_io::IoWrapper;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde_json::{Serializer, ser::PrettyFormatter};
 use sha2::{Digest, Sha512};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -512,9 +513,14 @@ fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let mut json = serde_json::to_string_pretty(value)?;
-    json.push('\n');
-    fs::write(path, json)?;
+
+    let fmt = PrettyFormatter::with_indent(b"\t");
+    let mut buf = Vec::new();
+    let mut ser = Serializer::with_formatter(&mut buf, fmt);
+
+    value.serialize(&mut ser)?;
+    buf.push(b'\n');
+    fs::write(path, buf)?;
     Ok(())
 }
 
