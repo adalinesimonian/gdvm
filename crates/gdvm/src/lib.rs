@@ -31,5 +31,6 @@ pub mod registry_store;
 pub mod registry_version_resolver;
 pub mod releases;
 pub mod run_version_resolver;
+pub mod usage_tracker;
 pub mod version_utils;
 pub mod zip_utils;

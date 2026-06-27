@@ -55,6 +55,24 @@ help-clear-cache = Tøm utgjevingscachen
 help-refresh = Oppdater utgjevingscachen frå registeret
 help-refresh-flag = Oppdater utgjevingscachen før denne kommandoen vert køyrd
 
+help-prune = Fjern installasjonar og cacha arkiv som ikkje lenger er i bruk
+help-prune-long = { help-prune }
+
+    Som standard fjernar prune installasjonar som ikkje har vore bruka på ei stund, og cacha nedlastingsarkiv som har vorte for gamle, medan installasjonar som framleis har ei lenkje inn i seg vert tekne vare på. Installasjonen som er sett som standard vert aldri fjerna, uansett kva flagg som vert gjeve. Aldersgrensa kan setjast med «gdvm config set prune.max-age-days <dagar>» (standard { $default_days } dagar).
+help-prune-all = Fjern alle installasjonar og cacha arkiv uavhengig av alder. Installasjonar som framleis har ei aktiv lenkje vert tekne vare på med mindre --force òg er gjeve.
+help-prune-force = Ignorer lenkjer, slik at installasjonar som berre er refererte av ei lenkje òg kan fjernast.
+help-prune-dry-run = Vis kva som ville vorte fjerna utan å sletta noko.
+
+prune-dry-run-header = Følgjande ville vorte fjerna (tørrkøyring):
+prune-removed-header = Fjerna følgjande:
+prune-installs-header = Installasjonar:
+prune-archives-header = Cacha arkiv:
+prune-nothing-dry-run = Ingenting ville vorte fjerna.
+prune-nothing-removed = Ingenting å fjerna; alt er i bruk eller innanfor aldersgrensa.
+prune-preserved-by-link = Tok vare på { $count } installasjon(ar) som framleis er refererte av ei lenkje.
+prune-freed = Frigjorde omtrent { $size }.
+prune-would-free = Ville frigjort omtrent { $size }.
+
 help-force = Tving installasjon på nytt sjølv om versjonen alt er installert.
 help-redownload = Last ned versjonen på nytt sjølv om han alt er lasta ned i cachen.
 help-yes = Hopp over stadfestingsprompt for fjerning
@@ -258,6 +276,7 @@ config-set-success = Konfigurasjonen vart oppdatert.
 config-unset-success = Konfigurasjonsnykelen { $key } vart fjerna vellukka.
 config-key-not-set = Konfigurasjonsnykel ikkje sett.
 error-unknown-config-key = Ukjend konfigurasjonsnykel.
+error-invalid-config-value = Ugyldig verdi for konfigurasjonsnykelen { $key }.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk «get», «set» eller «list».
 error-parse-config = Kunne ikkje tolke konfigurasjonsfila: { $error }
 error-parse-config-using-default = {"\u001b"}[33mBrukar standard konfigurasjonsverdiar.{"\u001b"}[0m

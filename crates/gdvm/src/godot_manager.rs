@@ -17,6 +17,7 @@
 
 use crate::artifact_cache::ArtifactCache;
 use crate::config::Config;
+use crate::date_utils::{modified_unix_secs, now_unix_secs};
 use crate::host::{HostPlatform, detect_host};
 use crate::metadata_cache::{CacheStore, GdvmCache};
 #[cfg(test)]
@@ -33,6 +34,7 @@ use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
 use semver::{Version, VersionReq};
 use sha2::{Digest, Sha256, Sha512};
+use std::collections::HashSet;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -42,6 +44,7 @@ use std::{env, fs};
 use crate::download_utils::download_file;
 use crate::migrations;
 use crate::registry_version_resolver::RegistryVersionResolver;
+use crate::usage_tracker::{UsageState, UsageTracker};
 use crate::version_utils::GodotVersion;
 use crate::version_utils::{DeterminateSelection, Variant, VersionSelection};
 use crate::zip_utils;
@@ -61,6 +64,49 @@ pub struct InstalledVersion {
     pub version: GodotVersionDeterminate,
     pub variant: Variant,
     pub registry: Option<String>,
+}
+
+/// Options controlling how `GodotManager::prune` behaves.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PruneOptions {
+    /// Remove all installs and cached archives regardless of age. Installs that
+    /// still have an active link are preserved unless `force` is also set.
+    pub all: bool,
+    /// Ignore links entirely, allowing linked installs to be removed.
+    pub force: bool,
+    /// Report what would be removed without deleting anything.
+    pub dry_run: bool,
+}
+
+/// A single asset removed by prune.
+#[derive(Debug, Clone)]
+pub struct PrunedItem {
+    /// A user-friendly label for the asset.
+    pub label: String,
+    /// Approximate bytes freed by removing the asset.
+    pub freed_bytes: u64,
+}
+
+/// The outcome of a prune operation.
+#[derive(Debug, Clone, Default)]
+pub struct PruneReport {
+    /// Installs that were removed.
+    pub installs: Vec<PrunedItem>,
+    /// Cached archives that were removed.
+    pub archives: Vec<PrunedItem>,
+    /// Number of installs preserved because they still have an active link.
+    pub preserved_by_link: usize,
+    /// Total approximate bytes freed.
+    pub freed_bytes: u64,
+    /// Whether this was a dry run.
+    pub dry_run: bool,
+}
+
+impl PruneReport {
+    /// True when nothing was removed.
+    pub fn is_empty(&self) -> bool {
+        self.installs.is_empty() && self.archives.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -114,6 +160,8 @@ pub struct GodotManager<'a> {
     artifact_cache: ArtifactCache,
     /// Metadata cache.
     cache_store: CacheStore,
+    /// Tracks when prunable assets were last used.
+    usage_tracker: UsageTracker,
     /// Release catalogs for fetching Godot versions.
     catalogs: CatalogSet,
     /// Client for GitHub API requests
@@ -330,6 +378,27 @@ fn find_macos_app_executable(app_path: &Path) -> Option<PathBuf> {
     None
 }
 
+/// Compute the approximate size of a file or directory in bytes.
+fn dir_size(path: &Path) -> u64 {
+    let Ok(meta) = fs::symlink_metadata(path) else {
+        return 0;
+    };
+    if meta.file_type().is_symlink() {
+        return 0;
+    }
+    if meta.is_file() {
+        return meta.len();
+    }
+
+    let mut total = 0;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            total += dir_size(&entry.path());
+        }
+    }
+    total
+}
+
 /// Get registry information from the nearest gdvm.toml in the current directory or its parents.
 fn project_registry_pairs(i18n: &I18n) -> Vec<(String, String)> {
     let Ok(mut current) = std::env::current_dir() else {
@@ -431,12 +500,14 @@ impl<'a> GodotManager<'a> {
         registries.extend(project);
         let catalogs = CatalogSet::new(paths.cache_index(), &registries)?;
         let cache_store = CacheStore::new(paths.cache_index().to_path_buf());
+        let usage_tracker = UsageTracker::new(paths.usage_index().to_path_buf());
         let host = detect_host(i18n)?;
 
         let manager = GodotManager {
             paths,
             artifact_cache,
             cache_store,
+            usage_tracker,
             catalogs,
             client,
             host,
@@ -467,6 +538,39 @@ impl<'a> GodotManager<'a> {
     fn install_store_key(&self, registry: Option<&str>) -> Result<String> {
         let base_url = self.catalog(registry)?.registry_base_url();
         Ok(crate::registry::store_dir_name(&base_url))
+    }
+
+    /// A unique key for an install path.
+    pub fn install_key(
+        &self,
+        gv: &GodotVersionDeterminate,
+        variant: &Variant,
+        registry: Option<&str>,
+    ) -> Result<String> {
+        Ok(crate::version_utils::install_dir_subpath(
+            &self.install_store_key(registry)?,
+            &gv.to_remote_str(),
+            variant,
+        ))
+    }
+
+    /// Record that an install was run or referenced.
+    fn track_install_use(&self, install_key: &str) -> Result<()> {
+        self.usage_tracker.record_install(install_key)
+    }
+
+    /// Record that a cached archive was used.
+    fn track_archive_use(&self, archive_path: &Path) -> Result<()> {
+        if let Some(name) = archive_path.file_name().and_then(|n| n.to_str()) {
+            self.usage_tracker.record_archive(name)?;
+        }
+        Ok(())
+    }
+
+    /// Record that a link was created at `link_path` pointing into the install
+    /// identified by `install_key`.
+    pub fn record_link(&self, link_path: &Path, install_key: &str) -> Result<()> {
+        self.usage_tracker.record_link(link_path, install_key)
     }
 
     /// The label to display for a registry.
@@ -524,6 +628,7 @@ impl<'a> GodotManager<'a> {
                 version = gv.to_display_str()
             ));
         }
+        self.track_archive_use(&path)?;
         Ok(path)
     }
 
@@ -604,12 +709,16 @@ impl<'a> GodotManager<'a> {
 
         fs::create_dir_all(&version_path)?;
 
+        self.track_archive_use(&cache_zip_path)?;
+
         // Extract from cache_zip_path
         zip_utils::extract_zip(&cache_zip_path, &version_path, self.i18n)?;
 
         let base_url = self.catalog(registry)?.registry_base_url();
         let store_dir = self.paths.installs().join(&store_key);
         crate::registry_store::upsert(&store_dir, &base_url, registry, None)?;
+
+        self.track_install_use(&install_str)?;
 
         Ok(InstallOutcome::Installed)
     }
@@ -751,6 +860,7 @@ impl<'a> GodotManager<'a> {
                 self.unset_default()?;
             }
             fs::remove_dir_all(path)?;
+            self.usage_tracker.forget_install(&install_name)?;
             Ok(())
         } else {
             Err(anyhow!(t!(self.i18n, "error-version-not-found")))
@@ -824,13 +934,17 @@ impl<'a> GodotManager<'a> {
 
         let godot_executable = find_godot_executable(&version_dir, console)?;
 
-        godot_executable.ok_or_else(|| {
+        let godot_executable = godot_executable.ok_or_else(|| {
             anyhow!(t!(
                 self.i18n,
                 "godot-executable-not-found",
                 version = &gv.to_display_str(),
             ))
-        })
+        })?;
+
+        self.track_install_use(&install_name)?;
+
+        Ok(godot_executable)
     }
 
     /// Fetch available releases with caching.
@@ -927,6 +1041,238 @@ impl<'a> GodotManager<'a> {
             println_i18n!(self.i18n, "no-cache-files-found");
         }
         Ok(())
+    }
+
+    /// Remove installs and cached archives that are no longer needed.
+    pub fn prune(&self, max_age_secs: u64, opts: PruneOptions) -> Result<PruneReport> {
+        let now = now_unix_secs();
+        let mut state = self.usage_tracker.load()?;
+
+        let default_install_key: Option<String> =
+            self.get_default().ok().flatten().and_then(|def| {
+                self.install_key(&def.version, &def.variant, def.registry.as_deref())
+                    .ok()
+            });
+
+        let protected: HashSet<String> = if opts.force {
+            HashSet::new()
+        } else {
+            self.live_link_install_keys(&state)
+        };
+
+        let mut report = PruneReport {
+            dry_run: opts.dry_run,
+            ..Default::default()
+        };
+
+        for (key, path) in self.collect_prunable_installs() {
+            if default_install_key.as_deref() == Some(key.as_str()) {
+                continue;
+            }
+
+            if !opts.force && protected.contains(&key) {
+                report.preserved_by_link += 1;
+                continue;
+            }
+
+            let should_remove = if opts.all {
+                true
+            } else {
+                let last_used = self.effective_install_last_used(&key, &path, &state);
+                now.saturating_sub(last_used) >= max_age_secs
+            };
+
+            if !should_remove {
+                continue;
+            }
+
+            let freed = dir_size(&path);
+            if !opts.dry_run {
+                fs::remove_dir_all(&path)?;
+            }
+            report.freed_bytes += freed;
+            report.installs.push(PrunedItem {
+                label: self.install_label(&key),
+                freed_bytes: freed,
+            });
+        }
+
+        for path in self.collect_cached_archives() {
+            let should_remove = if opts.all {
+                true
+            } else {
+                let last_used = self.effective_archive_last_used(&path, &state);
+                now.saturating_sub(last_used) >= max_age_secs
+            };
+
+            if !should_remove {
+                continue;
+            }
+
+            let freed = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            if !opts.dry_run {
+                fs::remove_file(&path)?;
+            }
+            report.freed_bytes += freed;
+            report.archives.push(PrunedItem {
+                label: path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                freed_bytes: freed,
+            });
+        }
+
+        if opts.dry_run {
+            return Ok(report);
+        }
+
+        let installs_dir = self.paths.installs().to_path_buf();
+        let cache_dir = self.artifact_cache.dir().to_path_buf();
+        state.installs.retain(|k, _| installs_dir.join(k).exists());
+        state
+            .archives
+            .retain(|name, _| cache_dir.join(name).exists());
+        state
+            .links
+            .retain(|path_str, rec| self.link_is_live(Path::new(path_str), &rec.install_key));
+        self.usage_tracker.save(&state)?;
+
+        Ok(report)
+    }
+
+    /// The set of install keys that still have at least one symlink.
+    fn live_link_install_keys(&self, state: &UsageState) -> HashSet<String> {
+        let mut protected = HashSet::new();
+        for (path_str, rec) in &state.links {
+            if self.link_is_live(Path::new(path_str), &rec.install_key) {
+                protected.insert(rec.install_key.clone());
+            }
+        }
+        protected
+    }
+
+    /// True when `link_path` is a symlink that resolves into the install
+    /// directory identified by `install_key`.
+    fn link_is_live(&self, link_path: &Path, install_key: &str) -> bool {
+        let Ok(meta) = fs::symlink_metadata(link_path) else {
+            return false;
+        };
+        if !meta.file_type().is_symlink() {
+            return false;
+        }
+        let install_dir = self.paths.installs().join(install_key);
+        let (Ok(target), Ok(install_canon)) =
+            (fs::canonicalize(link_path), fs::canonicalize(&install_dir))
+        else {
+            return false;
+        };
+        target.starts_with(install_canon)
+    }
+
+    /// Enumerate every install directory as `(install_key, path)`.
+    fn collect_prunable_installs(&self) -> Vec<(String, PathBuf)> {
+        let installs = self.paths.installs();
+        let mut out = Vec::new();
+        let Ok(tops) = fs::read_dir(installs) else {
+            return out;
+        };
+        for top in tops.flatten() {
+            if !top.file_type().is_ok_and(|ft| ft.is_dir()) {
+                continue;
+            }
+            let top_name = top.file_name().to_string_lossy().to_string();
+            let Ok(mids) = fs::read_dir(top.path()) else {
+                continue;
+            };
+            for mid in mids.flatten() {
+                if !mid.file_type().is_ok_and(|ft| ft.is_dir()) {
+                    continue;
+                }
+                let mid_name = mid.file_name().to_string_lossy().to_string();
+                if GodotVersion::from_install_str(&mid_name).is_ok() {
+                    // Legacy variant/version layout.
+                    out.push((format!("{top_name}/{mid_name}"), mid.path()));
+                    continue;
+                }
+                let Ok(leaves) = fs::read_dir(mid.path()) else {
+                    continue;
+                };
+                for leaf in leaves.flatten() {
+                    if !leaf.file_type().is_ok_and(|ft| ft.is_dir()) {
+                        continue;
+                    }
+                    let leaf_name = leaf.file_name().to_string_lossy().to_string();
+                    if GodotVersion::from_install_str(&leaf_name).is_ok() {
+                        out.push((format!("{top_name}/{mid_name}/{leaf_name}"), leaf.path()));
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// Enumerate every file in the artifact cache directory.
+    fn collect_cached_archives(&self) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        let Ok(entries) = fs::read_dir(self.artifact_cache.dir()) else {
+            return out;
+        };
+        for entry in entries.flatten() {
+            if entry.file_type().is_ok_and(|ft| ft.is_file()) {
+                out.push(entry.path());
+            }
+        }
+        out
+    }
+
+    /// The most recent recorded use of an install, falling back to the
+    /// directory's modification time when no usage is tracked.
+    fn effective_install_last_used(&self, key: &str, path: &Path, state: &UsageState) -> u64 {
+        if let Some(usage) = state.installs.get(key) {
+            usage.last_used
+        } else {
+            modified_unix_secs(path).unwrap_or(0)
+        }
+    }
+
+    /// The most recent recorded use of a cached archive, falling back to the
+    /// file's modification time when no usage is tracked.
+    fn effective_archive_last_used(&self, path: &Path, state: &UsageState) -> u64 {
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if let Some(usage) = state.archives.get(&name) {
+            usage.last_used
+        } else {
+            modified_unix_secs(path).unwrap_or(0)
+        }
+    }
+
+    /// Get a user-friendly label for an install key.
+    fn install_label(&self, key: &str) -> String {
+        let parts: Vec<&str> = key.split('/').collect();
+        let (registry, variant, version) = match parts.as_slice() {
+            [store, variant, version] => {
+                let registry = crate::registry_store::read(&self.paths.installs().join(store))
+                    .ok()
+                    .flatten()
+                    .and_then(|m| self.display_registry_for_url(&m.url, m.display_name.as_deref()));
+                (registry, (*variant).to_string(), (*version).to_string())
+            }
+            [variant, version] => (None, (*variant).to_string(), (*version).to_string()),
+            _ => return key.to_string(),
+        };
+
+        match GodotVersion::from_install_str(&version) {
+            Ok(gv) => crate::version_utils::display_version(
+                &gv.to_determinate().to_display_str(),
+                &Variant::from_option(Some(&variant)),
+                registry.as_deref(),
+            ),
+            Err(_) => key.to_string(),
+        }
     }
 
     /// Refresh the gdvm release cache by re-downloading the registry index.
@@ -1032,6 +1378,8 @@ impl<'a> GodotManager<'a> {
         if !version_path.exists() {
             return Err(anyhow!(t!(self.i18n, "error-version-not-found")));
         }
+
+        self.track_install_use(&install_name)?;
 
         // Write pinned-format string to .gdvm/default
         let default_path = self.paths.default_file();

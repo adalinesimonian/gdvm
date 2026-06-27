@@ -57,6 +57,24 @@ help-clear-cache = Clears the release cache
 help-refresh = Refresh the release cache from the registry
 help-refresh-flag = Refresh the release cache before running this command
 
+help-prune = Remove installs and cached archives that are no longer in use
+help-prune-long = { help-prune }
+
+    By default, prune removes installs that have not been used in a while and cached download archives that have aged out, while preserving any install that still has a link pointing into it. The install set as the default is never removed, whatever flags are given. The age threshold is configurable with "gdvm config set prune.max-age-days <days>" (default { $default_days } days).
+help-prune-all = Remove all installs and cached archives regardless of age. Installs that still have a live link are kept unless --force is also given.
+help-prune-force = Ignore links, so installs referenced only by a link may also be removed.
+help-prune-dry-run = Show what would be removed without deleting anything.
+
+prune-dry-run-header = The following would be removed (dry run):
+prune-removed-header = Removed the following:
+prune-installs-header = Installs:
+prune-archives-header = Cached archives:
+prune-nothing-dry-run = Nothing would be removed.
+prune-nothing-removed = Nothing to remove; everything is in use or within the age threshold.
+prune-preserved-by-link = Kept { $count } install(s) still referenced by a link.
+prune-freed = Freed approximately { $size }.
+prune-would-free = Would free approximately { $size }.
+
 help-force = Force reinstall even if the version is already installed.
 help-redownload = Redownload the version even if it's already downloaded in the cache.
 help-yes = Skip confirmation prompt for removal
@@ -259,6 +277,7 @@ config-set-success = Configuration updated successfully.
 config-unset-success = Configuration key { $key } unset successfully.
 config-key-not-set = Configuration key not set.
 error-unknown-config-key = Unknown configuration key.
+error-invalid-config-value = Invalid value for configuration key { $key }.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
 error-parse-config = Failed to parse configuration file: { $error }
 error-parse-config-using-default = {"\u001b"}[33mUsing default configuration values.{"\u001b"}[0m
