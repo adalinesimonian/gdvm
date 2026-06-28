@@ -278,3 +278,4 @@ error-move-file-failed = Не удалось переместить файл: { 
 error-user-dir-not-found = Не удалось создать ярлык: Директория пользователя не обнаружена
 error-desktop-not-found = Не удалось создать ярлык: Директория рабочего стола не обнаружена
 help-launch-shortcut = Создает ярлык для быстрого доступа к запускаемым экземплярам Godot (На рабочем столе и меню "Пуск" для Windows; в директории ~/.local/share/applications для Linux; папка Applications для MacOS)
+error-base-dir-not-found = Домашняя директория не найдена

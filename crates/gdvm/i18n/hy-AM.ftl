@@ -276,3 +276,4 @@ error-move-file-failed = Ֆայլը չհաջողվեց տեղափոխել՝ { $e
 error-user-dir-not-found = Չհաջողվեց ստեղծել կարճուղի. օգտատիրոջ գրացուցակը չի գտնվել
 error-desktop-not-found = Չհաջողվեց ստեղծել դյուրանցում. աշխատասեղանի գրացուցակը չի գտնվել
 help-launch-shortcut = Ստեղծում է կարճ ճանապարհ՝ Godot-ի աշխատող օրինակներին արագ մուտք գործելու համար (Windows-ի աշխատասեղանին և «Սկսել» ցանկում, Linux-ի՝ ~/.local/share/applications գրացուցակում, macOS-ի՝ «Applications» պանակում):
+error-base-dir-not-found = Հիմնական պանակը չի գտնվել

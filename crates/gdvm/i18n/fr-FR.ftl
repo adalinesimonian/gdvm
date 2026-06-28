@@ -276,3 +276,4 @@ error-move-file-failed = Échec du déplacement du fichier : { $error }
 error-user-dir-not-found = Impossible de créer le raccourci : répertoire utilisateur introuvable
 error-desktop-not-found = Impossible de créer le raccourci : répertoire Bureau introuvable
 help-launch-shortcut = Crée un raccourci pour un accès rapide aux instances de Godot en cours d'exécution (sur le bureau et dans le menu Démarrer sous Windows ; dans le répertoire ~/.local/share/applications sous Linux ; dans le dossier Applications sous macOS).
+error-base-dir-not-found = Dossier de base non trouvé

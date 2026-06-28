@@ -278,3 +278,4 @@ error-move-file-failed = Failed to move file: { $error }
 error-user-dir-not-found = Failed to create shortcut: User directory not found
 error-desktop-not-found = Failed to create shortcut: Desktop directory not found
 help-launch-shortcut = Creates a shortcut for quick access to running instances of Godot (on the desktop and in the Start menu for Windows; in the ~/.local/share/applications directory for Linux; in the Applications folder for macOS).
+error-base-dir-not-found = Base directory not found
