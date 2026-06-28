@@ -1418,7 +1418,8 @@ impl<'a> GodotManager<'a> {
                 .desktop_dir()
                 .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
 
-            let shortcut_path = desktop_path.join(&link_name);
+            let shortcut_path = desktop_path.join(format!("{}.lnk", &link_name));
+
             let shortcut_start_menu_path = base_dir
                 .data_dir()
                 .join("Microsoft\\Windows\\Start Menu\\Godot")
