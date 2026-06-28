@@ -50,12 +50,12 @@ where
 #[serial]
 fn test_load_save_roundtrip() {
     let dir = tempdir().unwrap();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
 
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token1".into()),
-            global_installs_location: None,
+            ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
@@ -66,7 +66,7 @@ fn test_load_save_roundtrip() {
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token2".into()),
-            global_installs_location: None,
+            ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });

@@ -19,10 +19,12 @@ use anyhow::{Result, anyhow};
 
 use crate::host::HostPlatform;
 use crate::i18n::I18n;
-use crate::registry::{registry_arch_key, registry_platform_key};
+use crate::registry::{registry_arch_key, registry_os_key};
 use crate::releases::ReleaseCatalog;
-use crate::t_w;
-use crate::version_utils::{GodotVersion, GodotVersionDeterminate, GodotVersionDeterminateVecExt};
+use crate::t;
+use crate::version_utils::{
+    GodotVersion, GodotVersionDeterminate, GodotVersionDeterminateVecExt, Variant,
+};
 
 /// Provides an API for resolving Godot versions against installed and available releases.
 pub struct RegistryVersionResolver<'a> {
@@ -46,6 +48,8 @@ pub enum ResolveMode<'a> {
 pub struct ResolveRequest<'a> {
     pub query: GodotVersion,
     pub variant: Option<String>,
+    /// The registry this request targets. `None` for gdvm's own registry.
+    pub registry: Option<String>,
     pub include_pre: bool,
     pub mode: ResolveMode<'a>,
 }
@@ -62,6 +66,7 @@ impl<'a> ResolveRequest<'a> {
         Self {
             query,
             variant: None,
+            registry: None,
             include_pre: false,
             mode: ResolveMode::Installed { installed },
         }
@@ -75,6 +80,7 @@ impl<'a> ResolveRequest<'a> {
         Self {
             query,
             variant,
+            registry: None,
             include_pre: false,
             mode: ResolveMode::Installed { installed },
         }
@@ -84,6 +90,7 @@ impl<'a> ResolveRequest<'a> {
         Self {
             query,
             variant,
+            registry: None,
             include_pre: false,
             mode: ResolveMode::Available { use_cache_only },
         }
@@ -93,6 +100,7 @@ impl<'a> ResolveRequest<'a> {
         Self {
             query,
             variant,
+            registry: None,
             include_pre: false,
             mode: ResolveMode::AutoInstall,
         }
@@ -197,7 +205,7 @@ impl<'a> RegistryVersionResolver<'a> {
         request.include_pre = include_pre;
         match self.resolve(request).await? {
             ResolveOutcome::Determinate(gv) => Ok(gv),
-            ResolveOutcome::NotFound => Err(anyhow!(t_w!(self.i18n, "error-version-not-found"))),
+            ResolveOutcome::NotFound => Err(anyhow!(t!(self.i18n, "error-version-not-found"))),
             ResolveOutcome::Candidates(_) => unreachable!("auto-install never yields candidates"),
         }
     }
@@ -223,7 +231,7 @@ impl<'a> RegistryVersionResolver<'a> {
             .iter()
             .find(|r| r.release_type == "stable")
             .cloned()
-            .ok_or_else(|| anyhow!(t_w!(self.i18n, "error-no-stable-releases-found")))
+            .ok_or_else(|| anyhow!(t!(self.i18n, "error-no-stable-releases-found")))
     }
 
     async fn resolve_available_impl(
@@ -292,26 +300,22 @@ impl<'a> RegistryVersionResolver<'a> {
         gv: &GodotVersionDeterminate,
         variant: Option<&str>,
     ) -> Result<bool> {
-        let caps = self
+        let platforms_per_variant = self
             .catalog
-            .capabilities_for(&gv.to_remote_str(), self.i18n)
+            .platforms_by_variant(&gv.to_remote_str(), self.i18n)
             .await?;
 
-        if let Some(v) = variant
-            && !caps.variants.iter().any(|cv| cv == v)
-        {
+        let variant = Variant::from_option(variant);
+        let Some(platforms) = platforms_per_variant.get(variant.as_str()) else {
             return Ok(false);
-        }
+        };
 
-        let platform_key = registry_platform_key(self.host, variant);
+        let os_key = registry_os_key(self.host);
         let arch_key = registry_arch_key(self.host);
-        let exact = format!("{platform_key}-{arch_key}");
-        let universal = format!("{platform_key}-universal");
+        let exact = format!("{os_key}-{arch_key}");
+        let universal = format!("{os_key}-universal");
 
-        Ok(caps
-            .platforms
-            .iter()
-            .any(|p| p == &exact || p == &universal))
+        Ok(platforms.iter().any(|p| p == &exact || p == &universal))
     }
 }
 
@@ -319,26 +323,34 @@ impl<'a> RegistryVersionResolver<'a> {
 mod tests {
     use super::*;
     use crate::host::{HostArch, HostOs, HostPlatform};
-    use crate::metadata_cache::{
-        CacheStore, FullCache, RegistryReleasesCache, ReleaseCache, ReleaseCapabilitiesCache,
-        ReleaseCapabilitiesEntry,
-    };
+    use crate::metadata_cache::{CacheStore, RegistryReleasesCache, ReleaseCache};
+    use std::collections::HashMap;
     use tempfile::TempDir;
 
     fn i18n() -> I18n {
-        I18n::new(80).expect("i18n init")
+        I18n::new().expect("i18n init")
     }
 
     fn catalog_with_tags(tags: &[&str]) -> (ReleaseCatalog, TempDir) {
         let tmp = TempDir::new().expect("tempdir");
         let cache_store = CacheStore::new(tmp.path().join("cache.json"));
 
+        let variants = HashMap::from([
+            (
+                "default".to_string(),
+                vec!["linux-x86_64".to_string(), "linux-universal".to_string()],
+            ),
+            ("csharp".to_string(), vec!["linux-x86_64".to_string()]),
+        ]);
+
         let releases: Vec<ReleaseCache> = tags
             .iter()
-            .enumerate()
-            .map(|(id, tag)| ReleaseCache {
-                id: id as u64,
+            .map(|tag| ReleaseCache {
                 tag_name: (*tag).to_string(),
+                variants: Some(variants.clone()),
+                source: crate::registry::ReleaseRef::V2 {
+                    path: format!("releases/{tag}.json"),
+                },
             })
             .collect();
 
@@ -347,40 +359,15 @@ mod tests {
             .map(|d| d.as_secs())
             .unwrap_or(0);
 
-        let full = FullCache {
-            gdvm: crate::metadata_cache::GdvmCache {
-                last_update_check: 0,
-                new_version: None,
-                new_major_version: None,
-            },
-            godot_registry: RegistryReleasesCache {
-                last_fetched,
-                releases,
-            },
-            release_capabilities: ReleaseCapabilitiesCache {
-                last_fetched,
-                entries: tags
-                    .iter()
-                    .map(|tag| ReleaseCapabilitiesEntry {
-                        tag_name: (*tag).to_string(),
-                        variants: vec!["csharp".to_string(), "default".to_string()],
-                        platforms: vec![
-                            "linux-csharp-x86_64".to_string(),
-                            "linux-x86_64".to_string(),
-                            "linux-universal".to_string(),
-                        ],
-                    })
-                    .collect(),
-            },
+        let registry_cache = RegistryReleasesCache {
+            last_fetched,
+            releases,
         };
+        let registry = crate::registry::Registry::official().expect("registry client");
         cache_store
-            .save_registry_cache(&full.godot_registry)
+            .save_registry_cache(&registry.cache_key(), &registry_cache)
             .expect("write cache");
-        cache_store
-            .save_capabilities_cache(&full.release_capabilities)
-            .expect("write caps cache");
 
-        let registry = crate::registry::Registry::new().expect("registry client");
         (ReleaseCatalog::new(registry, cache_store), tmp)
     }
 

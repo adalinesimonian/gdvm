@@ -28,6 +28,7 @@ pub struct GdvmPaths {
     installs: PathBuf,
     cache_dir: PathBuf,
     cache_index: PathBuf,
+    usage_index: PathBuf,
     bin_dir: PathBuf,
 }
 
@@ -44,6 +45,7 @@ impl GdvmPaths {
 
         let cache_dir = base.join("cache");
         let cache_index = base.join("cache.json");
+        let usage_index = base.join("usage.json");
         let bin_dir = base.join("bin");
 
         fs::create_dir_all(&installs)?;
@@ -55,6 +57,7 @@ impl GdvmPaths {
             installs,
             cache_dir,
             cache_index,
+            usage_index,
             bin_dir,
         })
     }
@@ -75,6 +78,10 @@ impl GdvmPaths {
         &self.cache_index
     }
 
+    pub fn usage_index(&self) -> &Path {
+        &self.usage_index
+    }
+
     pub fn bin_dir(&self) -> &Path {
         &self.bin_dir
     }
@@ -92,6 +99,7 @@ impl GdvmPaths {
         let installs = base.join("installs");
         let cache_dir = base.join("cache");
         let cache_index = base.join("cache.json");
+        let usage_index = base.join("usage.json");
         let bin_dir = base.join("bin");
 
         fs::create_dir_all(&installs)?;
@@ -103,6 +111,7 @@ impl GdvmPaths {
             installs,
             cache_dir,
             cache_index,
+            usage_index,
             bin_dir,
         })
     }
@@ -152,6 +161,7 @@ mod tests {
 
         // Derived files live under base.
         assert_eq!(paths.default_file(), paths.base().join("default"));
+        assert_eq!(paths.usage_index(), paths.base().join("usage.json"));
         assert_eq!(
             paths.current_godot_symlink(),
             paths.bin_dir().join("current_godot")

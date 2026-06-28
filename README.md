@@ -75,6 +75,7 @@ gdvm run csharp:3.5  # Run Godot 3.5 with C#.
 gdvm remove 3.5      # Removes Godot 3.5 without C#.
 gdvm list            # List installed versions.
 gdvm search 4        # Search available 4.x versions.
+gdvm prune           # Remove idle installs and cached archives.
 gdvm upgrade         # Upgrade gdvm.
 ```
 
@@ -95,6 +96,80 @@ For more information, run `gdvm --help`.
 While for most purposes it is more than enough to run `godot`, the shim provided by gdvm, or `gdvm run` directly, debuggers often need to attach directly to the Godot process. To do so, they typically require a path to the Godot binary to launch or attach to.
 
 See the dedicated guide for details and examples (including a Visual Studio Code debugger configuration): [Using gdvm with debuggers](docs/debuggers.md).
+
+## Registries
+
+gdvm installs official Godot builds by default. Custom registries let you install from anywhere else, such as builds from your own CI pipeline or wherever else.
+
+A version can be qualified by registry and variant, as `registry/variant:version`:
+
+```bash
+gdvm install 4.4               # Official registry, default variant.
+gdvm install csharp:4.4        # Official registry, C# variant.
+gdvm install mybuilds/4.4      # "mybuilds" registry, default variant.
+gdvm install mybuilds/web:4.4  # "mybuilds" registry, "web" variant.
+```
+
+If you don't specify a registry, gdvm uses the official one. Similarly, if you don't specify a variant, gdvm uses the `default` variant.
+
+You must add a registry to your gdvm configuration before installing from it:
+
+```bash
+gdvm registry add mybuilds https://builds.example.com/godot
+# You can also add a registry on your local filesystem:
+gdvm registry add mybuilds file:///home/user/godot-builds
+
+gdvm registry list     # Show configured registries.
+gdvm registry refresh  # Refresh cached index of all registries.
+
+gdvm registry remove mybuilds
+```
+
+> [!WARNING]
+> A custom registry can serve anything, even potentially malicious payloads. gdvm checks that a download matches the registry's `sha512`, but cannot guarantee the safety of anything it runs from it.
+>
+> Therefore, you must confirm that you trust the source of any registry the first time it's used. You will also be warned on every use of it later. You can use `-y` or `--yes` to skip the prompt in scripts. However, **make sure that you trust the source of any custom registry you add.**
+
+### Sharing with a project
+
+You can point to a custom registry in `gdvm.toml`. This way, everyone who clones the repo and runs `gdvm` in it will automatically use the right build from the right registry, without needing to configure it themselves.
+
+```toml
+[godot]
+version = "mybuilds/4.4-stable"
+
+[registries.mybuilds]
+url = "https://builds.example.com/godot"
+```
+
+Keep in mind that when you run `gdvm pin mybuilds/4.4-stable`, it only writes the version. **You must also add a `[registries]` section to make the alias resolve for others.** Otherwise, it will use whatever `mybuilds` registry is configured in their gdvm config, or fail if they don't have one.
+
+The first time you clone a repo with a pinned registry, gdvm will prompt you to confirm that you trust it.
+
+### Hosting your own
+
+A registry is essentially just a bunch of static JSON files (and optionally, the archives themselves). You can host one on any web server or keep one on the filesystem and point to it with a `file://` URL.
+
+gdvm can build one from archives you already have:
+
+```bash
+gdvm registry init ./my-registry --name "My Builds"
+
+# Add a build from a URL, such as a GitHub release or S3 bucket:
+gdvm registry add-build ./my-registry --version 4.4-stable \
+    --platform linux-x86_64 \
+    --url https://builds.example.com/godot/Godot_v4.4-stable_linux.x86_64.zip
+
+# Add a build from a local file and store it in the registry:
+gdvm registry add-build ./my-registry --version 4.4-stable \
+    --platform linux-x86_64 \
+    --store \
+    --file ./Godot_v4.4-stable_linux.x86_64.zip
+
+gdvm registry validate ./my-registry  # Non-zero exit code if invalid.
+```
+
+You can combine this with a CI pipeline that builds Godot to your needs to automatically add the build to a registry. Then you can share that registry with your team or the public, and they can use it with gdvm without needing to build Godot themselves.
 
 ## Contributing
 

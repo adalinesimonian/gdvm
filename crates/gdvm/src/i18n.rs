@@ -18,8 +18,6 @@
 use anyhow::Result;
 use fluent_bundle::{FluentBundle, FluentResource, FluentValue};
 use std::env;
-use terminal_size::terminal_size;
-use textwrap::{Options, WordSeparator, wrap};
 use unic_langid::langid;
 
 // Include the Fluent translation files as static strings
@@ -34,14 +32,11 @@ use std::collections::HashMap;
 
 pub struct I18n {
     bundles: HashMap<String, FluentBundle<FluentResource>>,
-    /// The maximum length of a line when wrapping text. If 0, wrapping is only limited by the
-    /// terminal width.
-    max_length: usize,
 }
 
 impl I18n {
     /// Create a new I18n instance and load the translation resources
-    pub fn new(max_length: usize) -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let resources = [
             (langid!("en-US"), EN_US_FTL),
             (langid!("fr-FR"), FR_FR_FTL),
@@ -62,10 +57,7 @@ impl I18n {
             bundles.insert(locale.to_string(), bundle);
         }
 
-        Ok(Self {
-            bundles,
-            max_length,
-        })
+        Ok(Self { bundles })
     }
 
     /// Translate a key without arguments
@@ -153,36 +145,6 @@ impl I18n {
 
         value.to_string()
     }
-
-    /// Wraps a string to the terminal width, taking into account the maximum length. Uses Unicode
-    /// properties for multi-lingual support. If the terminal width cannot be determined, a width of
-    /// 80 is used. If the maximum length is 0, wrapping is only limited by the terminal width.
-    pub fn wrap(&self, text: &str) -> String {
-        let (terminal_width, _) =
-            terminal_size().unwrap_or((terminal_size::Width(80), terminal_size::Height(24)));
-
-        let width = if self.max_length > 0 {
-            std::cmp::min(self.max_length, terminal_width.0 as usize)
-        } else {
-            terminal_width.0 as usize
-        };
-
-        let options = Options::new(width)
-            .break_words(false)
-            .word_separator(WordSeparator::UnicodeBreakProperties);
-
-        wrap(text, &options).join("\n")
-    }
-
-    /// Translate a key without arguments and wrap the result
-    pub fn t_w(&self, key: &str) -> String {
-        self.wrap(self.t(key).as_str())
-    }
-
-    /// Translate a key with arguments and wrap the result
-    pub fn t_args_w(&self, key: &str, args: &[(&str, FluentValue)]) -> String {
-        self.wrap(self.t_args(key, args).as_str())
-    }
 }
 
 #[macro_export]
@@ -214,24 +176,11 @@ macro_rules! t {
 }
 
 #[macro_export]
-macro_rules! t_w {
-    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
-        $crate::i18n_generic!(
-            $i18n,
-            t_w,
-            t_args_w,
-            $key
-            $(, $( $arg_key = $arg_val ),* )?
-        )
-    };
-}
-
-#[macro_export]
 macro_rules! i18n_print {
     ($print_fn:ident, $i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
         $print_fn!(
             "{}",
-            $crate::t_w!(
+            $crate::t!(
                 $i18n,
                 $key
                 $(, $( $arg_key = $arg_val ),* )?

@@ -91,4 +91,5 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GDVM_E2E_TARGET: ${{ inputs.target }}
         run: bash scripts/run-e2e.sh

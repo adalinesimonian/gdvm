@@ -16,7 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::i18n::I18n;
-use crate::{eprintln_i18n, t, t_w};
+use crate::{eprintln_i18n, t};
 use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;
@@ -71,7 +71,7 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
                 }
             }
         } else {
-            return Err(anyhow!(t_w!(i18n, "error-invalid-file-name")));
+            return Err(anyhow!(t!(i18n, "error-invalid-file-name")));
         }
 
         if !file.is_dir() {
@@ -131,7 +131,7 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
         })?;
         let path = file
             .enclosed_name()
-            .ok_or_else(|| anyhow!(t_w!(i18n, "error-invalid-file-name")))?;
+            .ok_or_else(|| anyhow!(t!(i18n, "error-invalid-file-name")))?;
 
         // Skip empty or root entries to avoid creating files at extract_to
         if path.as_os_str().is_empty() || path == Path::new(".") {
@@ -143,14 +143,14 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
             // Ensure the file path starts with the prefix
             let stripped_path = path
                 .strip_prefix(prefix)
-                .map_err(|_| anyhow!(t_w!(i18n, "error-strip-prefix")))?;
+                .map_err(|_| anyhow!(t!(i18n, "error-strip-prefix")))?;
 
             // Prevent extracting files outside the target directory
             if stripped_path
                 .components()
                 .any(|c| c == std::path::Component::ParentDir)
             {
-                return Err(anyhow!(t_w!(i18n, "error-invalid-file-name")));
+                return Err(anyhow!(t!(i18n, "error-invalid-file-name")));
             }
 
             extract_to.join(stripped_path)
@@ -236,6 +236,6 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
         }
     }
 
-    pb.finish_with_message(t_w!(i18n, "operation-extract-complete"));
+    pb.finish_with_message(t!(i18n, "operation-extract-complete"));
     Ok(())
 }

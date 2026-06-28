@@ -35,9 +35,8 @@ directories = "=6.0.0"
 # For i18n:
 fluent-bundle = "=0.16.0"
 unic-langid = { version = "=0.9.6", features = ["unic-langid-macros"] }
-anyhow = "=1.0.102"
+anyhow = "=1.0.103"
 terminal_size = "=0.4.4"
-textwrap = "=0.16.2"
 
 # For downloading files:
 reqwest = { version = "=0.13.4", features = [
@@ -70,6 +69,9 @@ toml = "=1.1.2"
 rpassword = "=7.5.4"
 dotenvy = "=0.15.7"
 
+# For timestamps:
+jiff = "=0.2.29"
+
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "=0.3.9", features = ["winbase"] }
@@ -80,6 +82,7 @@ daemonize = "=0.5.0"
 [dev-dependencies]
 tempfile = "=3.27.0"
 serial_test = "=3.5.0"
+zip = "=8.6.0"
 
 [features]
 integration-tests = []
