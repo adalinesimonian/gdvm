@@ -25,6 +25,18 @@ fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+    let shim_name = if target.contains("windows") {
+        "shim.exe"
+    } else {
+        "shim"
+    };
+
+    println!("cargo:rerun-if-env-changed=GDVM_PREBUILT_SHIM");
+    if let Ok(prebuilt) = env::var("GDVM_PREBUILT_SHIM") {
+        fs::copy(&prebuilt, out_dir.join(shim_name)).expect("failed to copy prebuilt shim binary");
+        println!("cargo:rerun-if-changed={prebuilt}");
+        return;
+    }
 
     let status = Command::new("cargo")
         .arg("build")
@@ -46,11 +58,6 @@ fn main() {
 
     assert!(status.success());
 
-    let shim_name = if target.contains("windows") {
-        "shim.exe"
-    } else {
-        "shim"
-    };
     let shim_source = workspace_root
         .join("intermediate")
         .join(&target)

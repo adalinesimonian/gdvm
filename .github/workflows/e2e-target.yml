@@ -28,6 +28,11 @@ on:
         description: "Rust target triple under test"
         required: true
         type: string
+      verify_signature:
+        description: "Verify the macOS Developer ID signature of the binary."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -49,6 +54,16 @@ jobs:
 
       - name: Extract binary artifact
         run: tar -xvf binary.tar
+
+      - name: Verify code signature (macOS)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'macos') }}
+        run: |
+          set -euo pipefail
+          codesign --verify --strict --verbose=2 gdvm
+          codesign -dvvv gdvm 2>&1 | tee /tmp/codesign.txt
+          grep -q "Authority=Developer ID Application" /tmp/codesign.txt
+          grep -qE "flags=0x[0-9a-f]*\(.*runtime.*\)" /tmp/codesign.txt
+          echo "Signature OK"
 
       - name: Install 32-bit runtime libraries (Ubuntu i686)
         if: contains(inputs.os, 'ubuntu') && contains(inputs.target, 'i686')
@@ -85,6 +100,19 @@ jobs:
           cp ./gdvm.exe ~/.gdvm/bin/gdvm.exe
           echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
           ~/.gdvm/bin/gdvm.exe --version
+
+      - name: Verify shim code signature (macOS)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'macos') }}
+        run: |
+          set -euo pipefail
+          ~/.gdvm/bin/gdvm --version
+          shim="$HOME/.gdvm/bin/godot"
+          test -x "$shim"
+          codesign --verify --strict --verbose=2 "$shim"
+          codesign -dvvv "$shim" 2>&1 | tee /tmp/codesign-shim.txt
+          grep -q "Authority=Developer ID Application" /tmp/codesign-shim.txt
+          grep -qE "flags=0x[0-9a-f]*\(.*runtime.*\)" /tmp/codesign-shim.txt
+          echo "Shim signature OK"
 
       - name: Run end-to-end tests
         shell: bash
