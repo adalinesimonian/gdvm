@@ -120,7 +120,7 @@ impl GdvmPaths {
     pub fn from_config_installs_for_tests(base: PathBuf) -> Result<Self> {
         let config = Config {
             global_installs_location: Some(base.join("test_installs")),
-            github_token: None,
+            ..Default::default()
         };
         let installs = config
             .global_installs_location
@@ -128,6 +128,7 @@ impl GdvmPaths {
             .unwrap_or_else(|| base.join("installs"));
         let cache_dir = base.join("cache");
         let cache_index = base.join("cache.json");
+        let usage_index = base.join("usage.json");
         let bin_dir = base.join("bin");
 
         fs::create_dir_all(&installs)?;
@@ -140,6 +141,7 @@ impl GdvmPaths {
             cache_dir,
             cache_index,
             bin_dir,
+            usage_index,
         })
     }
 }
