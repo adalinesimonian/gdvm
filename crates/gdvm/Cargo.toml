@@ -70,7 +70,7 @@ rpassword = "=7.5.4"
 dotenvy = "=0.15.7"
 
 # For timestamps:
-jiff = "=0.2.29"
+jiff = "=0.2.31"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
