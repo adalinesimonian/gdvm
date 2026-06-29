@@ -16,14 +16,13 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{eprintln_i18n, i18n, t};
-use anyhow::{Ok, Result, anyhow};
+use anyhow::{Result, anyhow};
 use directories::BaseDirs;
 use i18n::I18n;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::result::Result::Ok as IsOk;
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &[
@@ -244,7 +243,7 @@ impl Config {
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
             match toml::from_str(&contents) {
-                IsOk(config) => Ok(config),
+                Ok(config) => Ok(config),
                 Err(e) => {
                     eprintln_i18n!(i18n, "error-parse-config", error = e.to_string());
                     eprintln_i18n!(i18n, "error-parse-config-using-default");
