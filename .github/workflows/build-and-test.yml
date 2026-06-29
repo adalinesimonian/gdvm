@@ -39,6 +39,11 @@ on:
         description: "Ref to check out and build. Defaults to the triggering ref."
         required: false
         type: string
+      sign:
+        description: "Sign binaries."
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.event_name }}-${{ github.event.number || github.run_id }}
@@ -101,6 +106,30 @@ jobs:
       target: aarch64-apple-darwin
       ref: ${{ inputs.ref }}
 
+  sign-macos-x86_64:
+    if: ${{ inputs.sign }}
+    needs: build-macos-x86_64
+    uses: ./.github/workflows/sign-target.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      os: macos-latest
+      target: x86_64-apple-darwin
+      ref: ${{ inputs.ref }}
+
+  sign-macos-arm64:
+    if: ${{ inputs.sign }}
+    needs: build-macos-arm64
+    uses: ./.github/workflows/sign-target.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      os: macos-latest
+      target: aarch64-apple-darwin
+      ref: ${{ inputs.ref }}
+
   e2e-linux-x86_64:
     needs: build-linux-x86_64
     uses: ./.github/workflows/e2e-target.yml
@@ -156,22 +185,26 @@ jobs:
       target: aarch64-pc-windows-msvc
 
   e2e-macos-x86_64:
-    needs: build-macos-x86_64
+    needs: [build-macos-x86_64, sign-macos-x86_64]
+    if: ${{ !cancelled() && needs.build-macos-x86_64.result == 'success' && needs.sign-macos-x86_64.result != 'failure' }}
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
     with:
       os: macos-latest
       target: x86_64-apple-darwin
+      verify_signature: ${{ needs.sign-macos-x86_64.result == 'success' }}
 
   e2e-macos-arm64:
-    needs: build-macos-arm64
+    needs: [build-macos-arm64, sign-macos-arm64]
+    if: ${{ !cancelled() && needs.build-macos-arm64.result == 'success' && needs.sign-macos-arm64.result != 'failure' }}
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
     with:
       os: macos-latest
       target: aarch64-apple-darwin
+      verify_signature: ${{ needs.sign-macos-arm64.result == 'success' }}
 
   delete-artifacts:
     name: Delete Artifacts (standalone runs)
