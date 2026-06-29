@@ -780,7 +780,7 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
             registry,
             force_reinstall,
             redownload,
-            launch_shortcut
+            launch_shortcut,
         )
         .await?
     {
