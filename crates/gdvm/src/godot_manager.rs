@@ -49,7 +49,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 
 use crate::download_utils::download_file;
-use crate::migrations;
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::usage_tracker::{UsageState, UsageTracker};
 use crate::version_utils::GodotVersion;
@@ -57,6 +56,7 @@ use crate::version_utils::{DeterminateSelection, Variant, VersionSelection};
 use crate::zip_utils;
 use crate::{eprintln_i18n, println_i18n};
 use crate::{i18n, project_version_detector, t};
+use crate::{migrations, version_utils};
 
 use crate::version_utils::GodotVersionDeterminate;
 
@@ -1571,7 +1571,7 @@ impl<'a> GodotManager<'a> {
                 registry,
                 false,
                 false,
-                config.global_launch_shortcut.is_some()
+                config.global_launch_shortcut.is_some(),
             )
             .await?;
         }
@@ -1964,20 +1964,23 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    fn create_shortcut(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
-        let base_dir =
-            BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
+    fn create_shortcut(
+        &self,
+        gv: &GodotVersionDeterminate,
+        variant: &version_utils::Variant,
+    ) -> Result<()> {
+        let base_dir = BaseDirs::new().ok_or(anyhow!(t!(self.i18n, "error-base-dir-not-found")))?;
 
         let link_name = {
-            if variant == Some("default") || variant.is_none() {
+            if variant.is_default() {
                 format!("Godot {}", gv.to_display_str())
             } else {
-                format!("Godot {} {}", gv.to_display_str(), variant.unwrap_or(""))
+                format!("Godot {} {}", gv.to_display_str(), variant.as_str())
             }
         };
 
         let args = {
-            if variant == Some("csharp") {
+            if variant.as_str() == "csharp" {
                 format!("run csharp:{}", gv.to_display_str())
             } else {
                 format!("run {}", gv.to_display_str())
@@ -1989,13 +1992,13 @@ impl<'a> GodotManager<'a> {
             use directories::UserDirs;
 
             let user_dir =
-                UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+                UserDirs::new().ok_or(anyhow!(t!(self.i18n, "error-user-dir-not-found")))?;
 
             let target = self.get_base_path().join("bin").join("gdvm.exe");
 
             let desktop_path = user_dir
                 .desktop_dir()
-                .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
+                .ok_or(anyhow!(t!(self.i18n, "error-desktop-not-found")))?;
             let start_menu_path = base_dir
                 .data_dir()
                 .join("Microsoft\\Windows\\Start Menu\\Godot");
@@ -2066,15 +2069,18 @@ impl<'a> GodotManager<'a> {
         Ok(())
     }
 
-    fn remove_shortcut(&self, gv: &GodotVersionDeterminate, variant: Option<&str>) -> Result<()> {
-        let base_dir =
-            BaseDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-base-dir-not-found")))?;
+    fn remove_shortcut(
+        &self,
+        gv: &GodotVersionDeterminate,
+        variant: &version_utils::Variant,
+    ) -> Result<()> {
+        let base_dir = BaseDirs::new().ok_or(anyhow!(t!(self.i18n, "error-base-dir-not-found")))?;
 
         let link_name = {
-            if variant == Some("default") || variant.is_none() {
+            if variant.is_default() {
                 format!("Godot {}", gv.to_display_str())
             } else {
-                format!("Godot {} {}", gv.to_display_str(), variant.unwrap_or(""))
+                format!("Godot {} {}", gv.to_display_str(), variant.as_str())
             }
         };
 
@@ -2083,10 +2089,10 @@ impl<'a> GodotManager<'a> {
             use directories::UserDirs;
 
             let user_dir =
-                UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
+                UserDirs::new().ok_or(anyhow!(t!(self.i18n, "error-user-dir-not-found")))?;
             let desktop_path = user_dir
                 .desktop_dir()
-                .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
+                .ok_or(anyhow!(t!(self.i18n, "error-desktop-not-found")))?;
 
             let shortcut_path = desktop_path.join(format!("{}.lnk", &link_name));
             let shortcut_start_menu_path = base_dir
