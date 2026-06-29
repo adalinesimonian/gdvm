@@ -1323,7 +1323,6 @@ impl<'a> GodotManager<'a> {
             let desktop_path = user_dir
                 .desktop_dir()
                 .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
-
             let start_menu_path = base_dir
                 .data_dir()
                 .join("Microsoft\\Windows\\Start Menu\\Godot");
@@ -1333,7 +1332,6 @@ impl<'a> GodotManager<'a> {
             }
 
             let shortcut_path = desktop_path.join(format!("{}.lnk", &link_name));
-
             let shortcut_start_menu_path = start_menu_path.join(format!("{}.lnk", &link_name));
 
             if shortcut_path.exists() && shortcut_start_menu_path.exists() {
@@ -1386,7 +1384,7 @@ impl<'a> GodotManager<'a> {
             perms.set_mode(0o755); // make the .desktop file executable
             std::fs::set_permissions(&shortcut_path, perms)?;
 
-            std::fs::write(&shortcut_path, shortcut_content)?;
+            std::fs::write(shortcut_path, shortcut_content)?;
         }
         #[cfg(target_os = "macos")]
         {
@@ -1413,13 +1411,11 @@ impl<'a> GodotManager<'a> {
 
             let user_dir =
                 UserDirs::new().ok_or(anyhow!(t_w!(self.i18n, "error-user-dir-not-found")))?;
-
             let desktop_path = user_dir
                 .desktop_dir()
                 .ok_or(anyhow!(t_w!(self.i18n, "error-desktop-not-found")))?;
 
             let shortcut_path = desktop_path.join(format!("{}.lnk", &link_name));
-
             let shortcut_start_menu_path = base_dir
                 .data_dir()
                 .join("Microsoft\\Windows\\Start Menu\\Godot")

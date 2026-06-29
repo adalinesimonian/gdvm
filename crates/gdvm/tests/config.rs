@@ -55,7 +55,7 @@ fn test_load_save_roundtrip() {
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token1".into()),
-            global_launch_shortcut: None,
+            ..Default.default()
         };
         cfg.save(&i18n).unwrap();
     });
@@ -66,7 +66,7 @@ fn test_load_save_roundtrip() {
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token2".into()),
-            global_launch_shortcut: None,
+            ..Default.default()
         };
         cfg.save(&i18n).unwrap();
     });
@@ -83,8 +83,8 @@ fn test_change_launch_shortcut_config() {
 
     with_test_home(dir.path(), || {
         let cfg = Config {
-            github_token: None,
             global_launch_shortcut: Some(true),
+            ..Default.default()
         };
         cfg.save(&i18n).unwrap();
     });
