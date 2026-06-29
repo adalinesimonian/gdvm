@@ -16,16 +16,21 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{eprintln_i18n, i18n, t};
-use anyhow::{Result, anyhow};
+use anyhow::{Ok, Result, anyhow};
 use directories::BaseDirs;
 use i18n::I18n;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::result::Result::Ok as IsOk;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token", "global.launch_shortcut", "prune.max-age-days"];
+pub const KNOWN_KEYS: &[&str] = &[
+    "github.token",
+    "global.launch_shortcut",
+    "prune.max-age-days",
+];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -96,6 +101,8 @@ impl ConfigOps for Config {
                         .parse()
                         .map_err(|e| anyhow!("Failed to parse boolean value for {key}: {e}"))?,
                 );
+                Ok(())
+            }
             "prune.max-age-days" => {
                 let days: u64 = value
                     .parse()
@@ -117,6 +124,10 @@ impl ConfigOps for Config {
                 self.prune_max_age_days = None;
                 Ok(())
             }
+            "global.launch_shortcut" => {
+                self.global_launch_shortcut = None;
+                Ok(())
+            }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
@@ -136,6 +147,7 @@ impl ConfigOps for Config {
                 launch_shortcut.to_string(),
                 false,
             ));
+        }
         if let Some(days) = self.prune_max_age_days {
             entries.push(("prune.max-age-days".to_string(), days.to_string(), false));
         }
@@ -232,7 +244,7 @@ impl Config {
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
             match toml::from_str(&contents) {
-                Ok(config) => Ok(config),
+                IsOk(config) => Ok(config),
                 Err(e) => {
                     eprintln_i18n!(i18n, "error-parse-config", error = e.to_string());
                     eprintln_i18n!(i18n, "error-parse-config-using-default");
