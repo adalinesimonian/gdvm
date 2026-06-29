@@ -49,9 +49,11 @@ jobs:
 
       - name: Validate release version against Cargo.toml and CHANGELOG.md
         shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
         run: |
           set -euo pipefail
-          crate_version="${{ github.event.inputs.release_tag }}"
+          crate_version="$RELEASE_TAG"
           expected_version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' crates/gdvm/Cargo.toml | head -1)
 
           if [[ "$crate_version" != "v$expected_version" ]]; then
@@ -72,11 +74,9 @@ jobs:
     permissions:
       contents: read
       actions: write
-      id-token: write
     uses: ./.github/workflows/build-and-test.yml
     with:
       ref: ${{ github.event.inputs.release_tag }}
-    secrets: inherit
 
   prepare-release:
     name: Prepare Release Content
@@ -151,6 +151,8 @@ jobs:
     environment: release-approval
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     env:
       EXPECTED_TARGETS: |
         x86_64-unknown-linux-gnu
@@ -197,6 +199,11 @@ jobs:
             fi
           done <<< "$EXPECTED_TARGETS"
 
+      - name: Attest build provenance
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: dist/*
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
@@ -218,50 +225,62 @@ jobs:
       - name: Load post text
         id: post_text
         shell: bash
+        env:
+          POST_TEXT: ${{ needs['prepare-release'].outputs.post_text }}
         run: |
-          cat << 'EOF' > post_text.txt
-          ${{ needs['prepare-release'].outputs.post_text }}
-          EOF
+          printf '%s\n' "$POST_TEXT" > post_text.txt
           {
             echo 'text<<EOF'
             cat post_text.txt
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Post release update to BlueSky
+      - name: Authenticate with Bluesky
+        id: bsky_auth
         continue-on-error: true
+        env:
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
         run: |
-          echo "Authenticating with Bluesky..."
+          set -uo pipefail
+          auth_payload=$(jq -n --arg id "gdvm.io" --arg pw "$BLUESKY_PASSWORD" \
+            '{identifier: $id, password: $pw}')
           session_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.server.createSession" \
             -H "Content-Type: application/json" \
-            -d '{
-              "identifier": "gdvm.io",
-              "password": "${{ secrets.BLUESKY_PASSWORD }}"
-            }')
+            --data-binary "$auth_payload")
 
-          access_token=$(echo "$session_response" | jq -r '.accessJwt')
-          did=$(echo "$session_response" | jq -r '.did')
+          access_token=$(printf '%s' "$session_response" | jq -r '.accessJwt // empty')
+          did=$(printf '%s' "$session_response" | jq -r '.did // empty')
 
-          if [ "$access_token" = "null" ] || [ "$did" = "null" ]; then
+          if [ -z "$access_token" ] || [ -z "$did" ]; then
             echo "❌ Failed to authenticate with Bluesky"
-            echo "Response: $session_response"
             exit 1
           fi
+
+          echo "::add-mask::$access_token"
+          {
+            echo "token=$access_token"
+            echo "did=$did"
+          } >> "$GITHUB_OUTPUT"
           echo "Successfully authenticated with Bluesky."
 
+      - name: Post release update to Bluesky
+        continue-on-error: true
+        if: ${{ steps.bsky_auth.outputs.token != '' }}
+        env:
+          BSKY_TOKEN: ${{ steps.bsky_auth.outputs.token }}
+          BSKY_DID: ${{ steps.bsky_auth.outputs.did }}
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+        run: |
           timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
 
-          post_text=$(cat << 'EOF' | jq -R -s '.'
-          ${{ steps.post_text.outputs.text }}
-          EOF
-          )
+          post_text=$(jq -R -s '.' < post_text.txt)
 
-          release_url="https://github.com/adalinesimonian/gdvm/releases/tag/${{ github.event.inputs.release_tag }}"
+          release_url="https://github.com/adalinesimonian/gdvm/releases/tag/${RELEASE_TAG}"
           html_content=$(curl -s "$release_url")
 
           og_title=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:title"[^>]*content="\K[^"]*' | head -1)
           if [ -z "$og_title" ]; then
-            og_title="gdvm ${{ github.event.inputs.release_tag }} Release"
+            og_title="gdvm ${RELEASE_TAG} Release"
           fi
 
           og_description=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:description"[^>]*content="\K[^"]*' | head -1)
@@ -287,7 +306,7 @@ jobs:
             image_content_type=$(curl -s -I "$og_image" | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r\n')
 
             blob_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.uploadBlob" \
-              -H "Authorization: Bearer $access_token" \
+              -H "Authorization: Bearer $BSKY_TOKEN" \
               -H "Content-Type: $image_content_type" \
               --data-binary "@$temp_image")
 
@@ -306,7 +325,7 @@ jobs:
           fi
 
           jq -n \
-            --arg repo "$did" \
+            --arg repo "$BSKY_DID" \
             --arg collection "app.bsky.feed.post" \
             --arg type "app.bsky.feed.post" \
             --argjson text "$post_text" \
@@ -328,7 +347,7 @@ jobs:
             }' > /tmp/post_payload.json
 
           post_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.createRecord" \
-            -H "Authorization: Bearer $access_token" \
+            -H "Authorization: Bearer $BSKY_TOKEN" \
             -H "Content-Type: application/json; charset=utf-8" \
             --data-binary "@/tmp/post_payload.json")
 

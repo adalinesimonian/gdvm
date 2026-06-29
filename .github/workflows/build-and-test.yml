@@ -51,7 +51,6 @@ jobs:
       os: ubuntu-latest
       target: x86_64-unknown-linux-gnu
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   build-linux-i686:
     uses: ./.github/workflows/build-target.yml
@@ -59,7 +58,6 @@ jobs:
       os: ubuntu-latest
       target: i686-unknown-linux-gnu
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   build-linux-aarch64:
     uses: ./.github/workflows/build-target.yml
@@ -67,7 +65,6 @@ jobs:
       os: ubuntu-24.04-arm
       target: aarch64-unknown-linux-gnu
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   build-windows-x86_64:
     uses: ./.github/workflows/build-target.yml
@@ -75,7 +72,6 @@ jobs:
       os: windows-latest
       target: x86_64-pc-windows-msvc
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   build-windows-i686:
     uses: ./.github/workflows/build-target.yml
@@ -83,7 +79,6 @@ jobs:
       os: windows-latest
       target: i686-pc-windows-msvc
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   build-windows-arm64:
     uses: ./.github/workflows/build-target.yml
@@ -91,7 +86,6 @@ jobs:
       os: windows-11-arm
       target: aarch64-pc-windows-msvc
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   build-macos-x86_64:
     uses: ./.github/workflows/build-target.yml
@@ -99,7 +93,6 @@ jobs:
       os: macos-latest
       target: x86_64-apple-darwin
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   build-macos-arm64:
     uses: ./.github/workflows/build-target.yml
@@ -107,95 +100,78 @@ jobs:
       os: macos-latest
       target: aarch64-apple-darwin
       ref: ${{ inputs.ref }}
-    secrets: inherit
 
   e2e-linux-x86_64:
     needs: build-linux-x86_64
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: ubuntu-latest
       target: x86_64-unknown-linux-gnu
-    secrets: inherit
 
   e2e-linux-i686:
     needs: build-linux-i686
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: ubuntu-latest
       target: i686-unknown-linux-gnu
-    secrets: inherit
 
   e2e-linux-aarch64:
     needs: build-linux-aarch64
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: ubuntu-24.04-arm
       target: aarch64-unknown-linux-gnu
-    secrets: inherit
 
   e2e-windows-x86_64:
     needs: build-windows-x86_64
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: windows-latest
       target: x86_64-pc-windows-msvc
-    secrets: inherit
 
   e2e-windows-i686:
     needs: build-windows-i686
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: windows-latest
       target: i686-pc-windows-msvc
-    secrets: inherit
 
   e2e-windows-arm64:
     needs: build-windows-arm64
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: windows-11-arm
       target: aarch64-pc-windows-msvc
-    secrets: inherit
 
   e2e-macos-x86_64:
     needs: build-macos-x86_64
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: macos-latest
       target: x86_64-apple-darwin
-    secrets: inherit
 
   e2e-macos-arm64:
     needs: build-macos-arm64
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
-      id-token: write
     with:
       os: macos-latest
       target: aarch64-apple-darwin
-    secrets: inherit
 
   delete-artifacts:
     name: Delete Artifacts (standalone runs)
