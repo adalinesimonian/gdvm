@@ -79,12 +79,12 @@ fn test_load_save_roundtrip() {
 #[serial]
 fn test_change_installs_location_config() {
     let dir = tempdir().unwrap();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
 
     with_test_home(dir.path(), || {
         let cfg = Config {
-            github_token: None,
             global_installs_location: Some(dir.path().join("test_installs")),
+            ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
