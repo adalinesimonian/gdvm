@@ -25,7 +25,11 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token", "prune.max-age-days", "global.installs_location"];
+pub const KNOWN_KEYS: &[&str] = &[
+    "github.token",
+    "prune.max-age-days",
+    "global.installs_location",
+];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -95,6 +99,8 @@ impl ConfigOps for Config {
             }
             "global.installs_location" => {
                 self.global_installs_location = Some(PathBuf::from(value));
+                Ok(())
+            }
             "prune.max-age-days" => {
                 let days: u64 = value
                     .parse()
@@ -114,6 +120,8 @@ impl ConfigOps for Config {
             }
             "global.installs_location" => {
                 self.global_installs_location = None;
+                Ok(())
+            }
             "prune.max-age-days" => {
                 self.prune_max_age_days = None;
                 Ok(())
@@ -137,6 +145,7 @@ impl ConfigOps for Config {
                 installs_location.to_string_lossy().into_owned(),
                 false,
             ));
+        }
         if let Some(days) = self.prune_max_age_days {
             entries.push(("prune.max-age-days".to_string(), days.to_string(), false));
         }
