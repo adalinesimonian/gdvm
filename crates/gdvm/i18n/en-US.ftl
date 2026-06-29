@@ -25,6 +25,7 @@ help-gdvm-version = Display the version of Godot Version Manager
 help-install = Install a new Godot version
 help-run = Run a specific Godot version
 help-show = Show the path to the executable for the given version of Godot
+help-cache-path = Show the path to the cached download archive for the given version of Godot
 help-link = Link the executable of a Godot version to a specified path
 help-list = List all installed Godot versions
 help-remove = Remove an installed Godot version
@@ -56,6 +57,24 @@ help-clear-cache = Clears the release cache
 help-refresh = Refresh the release cache from the registry
 help-refresh-flag = Refresh the release cache before running this command
 
+help-prune = Remove installs and cached archives that are no longer in use
+help-prune-long = { help-prune }
+
+    By default, prune removes installs that have not been used in a while and cached download archives that have aged out, while preserving any install that still has a link pointing into it. The install set as the default is never removed, whatever flags are given. The age threshold is configurable with "gdvm config set prune.max-age-days <days>" (default { $default_days } days).
+help-prune-all = Remove all installs and cached archives regardless of age. Installs that still have a live link are kept unless --force is also given.
+help-prune-force = Ignore links, so installs referenced only by a link may also be removed.
+help-prune-dry-run = Show what would be removed without deleting anything.
+
+prune-dry-run-header = The following would be removed (dry run):
+prune-removed-header = Removed the following:
+prune-installs-header = Installs:
+prune-archives-header = Cached archives:
+prune-nothing-dry-run = Nothing would be removed.
+prune-nothing-removed = Nothing to remove; everything is in use or within the age threshold.
+prune-preserved-by-link = Kept { $count } install(s) still referenced by a link.
+prune-freed = Freed approximately { $size }.
+prune-would-free = Would free approximately { $size }.
+
 help-force = Force reinstall even if the version is already installed.
 help-redownload = Redownload the version even if it's already downloaded in the cache.
 help-yes = Skip confirmation prompt for removal
@@ -76,6 +95,7 @@ cache-metadata-removed = Cache metadata has been successfully removed.
 error-cache-metadata-empty = Error: Cache metadata is empty, need to fetch releases first.
 no-cache-files-found = No cache files were found.
 no-cache-metadata-found = No cache metadata was found.
+gdvm-toml-malformed = {"\u001b"}[33mWarning: ignoring gdvm.toml at { $path } because it could not be parsed: { $error }{"\u001b"}[0m
 
 help-console = Run Godot with the console attached. Defaults to false on Windows, true on other platforms.
 
@@ -121,6 +141,7 @@ error-fetching-releases = Error fetching releases: { $error }
 warning-fetching-releases-using-cache = Error fetching releases: { $error }. Using cached releases instead.
 
 error-version-not-found = Version not found.
+error-archive-not-cached = No cached archive found for {$version}. Install it first to populate the cache.
 error-multiple-versions-found = Multiple versions match your request:
 
 running-version = Running version {$version}
@@ -136,8 +157,6 @@ godot-executable-not-found = Godot executable not found for version {$version}.
 error-link-exists = Path {$path} already exists. Use --force to overwrite.
 error-link-symlink = Failed to create link from {$link} to {$target}: {$error}
 error-link-copy = Failed to copy executable: {$error}
-error-link-godotsharp-target = Failed to determine GodotSharp target path.
-error-link-godotsharp-missing = GodotSharp directory is missing next to the resolved executable.
 
 error-no-stable-releases-found = No stable releases found.
 
@@ -258,6 +277,7 @@ config-set-success = Configuration updated successfully.
 config-unset-success = Configuration key { $key } unset successfully.
 config-key-not-set = Configuration key not set.
 error-unknown-config-key = Unknown configuration key.
+error-invalid-config-value = Invalid value for configuration key { $key }.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
 error-parse-config = Failed to parse configuration file: { $error }
 error-parse-config-using-default = {"\u001b"}[33mUsing default configuration values.{"\u001b"}[0m
@@ -279,3 +299,51 @@ error-user-dir-not-found = Failed to create shortcut: User directory not found
 error-desktop-not-found = Failed to create shortcut: Desktop directory not found
 help-launch-shortcut = Creates a shortcut for quick access to running instances of Godot (on the desktop and in the Start menu for Windows; in the ~/.local/share/applications directory for Linux; in the Applications folder for macOS).
 error-base-dir-not-found = Base directory not found
+help-registry = Manage registries to install Godot builds from
+help-registry-add = Add a registry
+help-registry-remove = Remove a registry
+help-registry-list = List configured registries
+help-registry-refresh = Refresh one or all registry caches
+help-registry-name = The registry name
+help-registry-url = The registry URL. Can be an http(s):// or file:// URL.
+
+registry-added = Added registry { $registry } ({ $url }).
+registry-removed = Removed registry { $registry }.
+registry-list-header = Configured registries:
+registry-tag-official = official
+registry-error = Registry error: { $error }
+
+error-invalid-registry-subcommand = Invalid registry subcommand. Use "add", "remove", "list", or "refresh".
+registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) is a custom registry, not the official one. gdvm makes sure downloads match what the registry says to expect, but it can't tell whether they are safe to run. Only install from it if you trust whoever runs it.{"\u001b"}[0m
+registry-trust-prompt = Do you trust this registry and want to continue? (yes/no):
+registry-trust-bypass = {"\u001b"}[1;31mSkipping the trust check for { $registry } ({ $url }) because you used --yes. gdvm can't tell whether its files are safe to run. Pausing for a moment; press Ctrl+C now to stop.{"\u001b"}[0m
+registry-trust-aborted = Aborted: registry not trusted.
+registry-project-override-conflict = {"\u001b"}[33mThe project's gdvm.toml redefines the registry { $registry } (your configuration: { $machine_url }) as { $project_url }. The project's definition takes precedence.{"\u001b"}[0m
+
+help-registry-init = Initialize a new registry directory
+help-registry-add-build = Add a build to a registry
+help-registry-remove-build = Remove a build from a registry
+help-registry-validate = Validate a registry directory
+help-registry-dir = The registry directory
+help-registry-init-name = The registry name. Defaults to the directory name.
+
+help-registry-build-version = The version tag, e.g. 4.4-stable.
+help-registry-build-variant = The variant name. Defaults to "default".
+help-registry-build-platform = The platform key, e.g. linux-x86_64.
+help-registry-build-file = Path to the build archive to hash
+help-registry-build-store = Copy the archive into the registry and record a relative URL
+help-registry-build-url = The URL where the archive will be served (when not using --store)
+help-registry-build-sha512 = The archive's SHA-512, in lieu of computing it. Requires --size.
+help-registry-build-size = The archive's size in bytes, in lieu of measuring it. Requires --sha512.
+
+registry-init-success = Initialized registry { $name } at { $path }.
+registry-build-added = Added build { $version } for { $platform }.
+registry-build-removed = Removed build { $version }.
+registry-build-downloading = Downloading { $url } to compute its size and SHA-512…
+registry-build-warn-local-hash = {"\u001b"}[33mHashing the local file and assuming it matches { $url }. gdvm is not downloading the URL to verify it.{"\u001b"}[0m
+registry-build-warn-unverified = {"\u001b"}[33mUsing the SHA-512 and size you provided without downloading the artifact to verify them. Make sure they are correct.{"\u001b"}[0m
+registry-build-warn-explicit-store = {"\u001b"}[33mUsing the SHA-512 and/or size you provided instead of measuring the stored archive.{"\u001b"}[0m
+registry-build-sha-mismatch = The provided SHA-512 ({ $expected }) does not match the artifact ({ $actual }).
+registry-build-size-mismatch = The provided size ({ $expected }) does not match the artifact ({ $actual }).
+registry-validate-ok = Registry is valid ({ $count } artifacts checked).
+registry-validate-failed = Registry validation failed:

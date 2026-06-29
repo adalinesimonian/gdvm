@@ -25,6 +25,7 @@ help-gdvm-version = Vis versjonen av Godot-versjonsbehandleren
 help-install = Installer en ny Godot-versjon
 help-run = Kjør en spesifikk Godot-versjon
 help-show = Vis stien til den kjørbare fila for den angitte Godot-versjonen
+help-cache-path = Vis stien til nedlastingsarkivet i cachen for den oppgitte Godot-versjonen
 help-link = Opprett ei lenke frå ein Godot-versjon si kjørbar fil til  til en angitt sti
 help-list = List alle installerte Godot-versjoner
 help-remove = Fjern en installert Godot-versjon
@@ -54,6 +55,24 @@ help-clear-cache = Tøm utgivelsescachen
 help-refresh = Oppdater utgivelsescachen fra registeret
 help-refresh-flag = Oppdater utgivelsescachen før denne kommandoen kjøres
 
+help-prune = Fjern installasjoner og cacha arkiv som ikke lenger er i bruk
+help-prune-long = { help-prune }
+
+    Som standard fjerner prune installasjoner som ikke har vært brukt på en stund, og cacha nedlastingsarkiv som har blitt for gamle, mens installasjoner som fortsatt har en aktiv lenke inn i seg blir bevart. Installasjonen som er satt som standard blir aldri fjerna, uansett hvilke flagg som gis. Aldersgrensa kan settes med «gdvm config set prune.max-age-days <dager>» (standard { $default_days } dager).
+help-prune-all = Fjern alle installasjoner og cacha arkiv uavhengig av alder. Installasjoner som fortsatt har en aktiv lenke beholdes med mindre --force også er gitt.
+help-prune-force = Ignorer lenker, slik at installasjoner som bare er referert av en lenke også kan fjernes.
+help-prune-dry-run = Vis hva som ville blitt fjerna uten å slette noe.
+
+prune-dry-run-header = Følgende ville blitt fjerna (tørrkjøring):
+prune-removed-header = Fjerna følgende:
+prune-installs-header = Installasjoner:
+prune-archives-header = Cacha arkiv:
+prune-nothing-dry-run = Ingenting ville blitt fjerna.
+prune-nothing-removed = Ingenting å fjerne; alt er i bruk eller innenfor aldersgrensa.
+prune-preserved-by-link = Beholdt { $count } installasjon(er) som fortsatt er referert av en lenke.
+prune-freed = Frigjorde omtrent { $size }.
+prune-would-free = Ville frigjort omtrent { $size }.
+
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
 help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i cachen.
 help-yes = Hopp over bekreftelsesprompt for fjerning
@@ -74,6 +93,7 @@ cache-metadata-removed = Cache-metadataet ble fjerna.
 error-cache-metadata-empty = Feil: Cache-metadataet er tomt, må hente utgivelser først.
 no-cache-files-found = Ingen cache-filer funnet.
 no-cache-metadata-found = Ingen cache-metadata funnet.
+gdvm-toml-malformed = {"\u001b"}[33mAdvarsel: ignorerer gdvm.toml på { $path } fordi den ikke kunne tolkes: { $error }{"\u001b"}[0m
 
 help-console = Kjør Godot med konsoll tilkobla. Standard er false på Windows, true på andre plattformer.
 
@@ -119,6 +139,7 @@ error-fetching-releases = Feil ved henting av utgivelser: { $error }
 warning-fetching-releases-using-cache = Feil ved henting av utgivelser: { $error }. Bruker hurtigbuffer i stedet.
 
 error-version-not-found = Versjonen ble ikke funnet.
+error-archive-not-cached = Fant ingen arkiv i cachen for {$version}. Installer den først for å fylle cachen.
 error-multiple-versions-found = Flere versjoner samsvarer med forespørselen:
 
 running-version = Kjører versjon {$version}
@@ -134,8 +155,6 @@ godot-executable-not-found = Godot-kjørbar fil ble ikke funnet for versjon {$ve
 error-link-exists = Stien {$path} finnes allerede. Bruk --force for å overskrive.
 error-link-symlink = Klarte ikke å opprette lenke fra {$link} til {$target}: {$error}
 error-link-copy = Klarte ikke å kopiere kjørbar: {$error}
-error-link-godotsharp-target = Klarte ikke å finne GodotSharp-målsti.
-error-link-godotsharp-missing = GodotSharp-katalogen mangler ved siden av den løste kjørbaren.
 
 error-no-stable-releases-found = Ingen stabile versjoner funnet.
 
@@ -256,6 +275,7 @@ config-set-success = Konfigurasjonen ble oppdatert.
 config-unset-success = Konfigurasjonsnøkkelen { $key } ble fjernet vellykket.
 config-key-not-set = Konfigurasjonsnøkkel ikke satt.
 error-unknown-config-key = Ukjent konfigurasjonsnøkkel.
+error-invalid-config-value = Ugyldig verdi for konfigurasjonsnøkkelen { $key }.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk "get", "set" eller "list".
 error-parse-config = Kunne ikke tolke konfigurasjonsfila: { $error }
 error-parse-config-using-default = {"\u001b"}[33mBruker standard konfigurasjonsverdier.{"\u001b"}[0m
@@ -277,3 +297,51 @@ error-user-dir-not-found = Kunne ikke opprette snarvei: Brukerkatalogen ble ikke
 error-desktop-not-found = Kunne ikke opprette snarvei: Skrivebordskatalogen ble ikke funnet
 help-launch-shortcut = Oppretter en snarvei for rask tilgang til kjørende forekomster av Godot (på skrivebordet og i Start-menyen for Windows; i ~/.local/share/applications-katalogen for Linux; i Programmer-mappen for macOS).
 error-base-dir-not-found = Base-mappe ikke funnet
+help-registry = Administrer registre å installere Godot-bygg fra
+help-registry-add = Legg til et register
+help-registry-remove = Fjern et register
+help-registry-list = List opp konfigurerte registre
+help-registry-refresh = Oppdater hurtigbufferen for ett eller alle registre
+help-registry-name = Registernavnet
+help-registry-url = Register-URL-en. Kan være en http(s)://- eller file://-URL.
+
+registry-added = La til registeret { $registry } ({ $url }).
+registry-removed = Fjernet registeret { $registry }.
+registry-list-header = Konfigurerte registre:
+registry-tag-official = offisielt
+registry-error = Registerfeil: { $error }
+
+error-invalid-registry-subcommand = Ugyldig register-underkommando. Bruk «add», «remove», «list» eller «refresh».
+registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) er et egendefinert register, ikke det offisielle. gdvm sjekker at nedlastinger stemmer med det registeret oppgir, men kan ikke vite om de er trygge å kjøre. Installer fra det bare hvis du stoler på de som driver det.{"\u001b"}[0m
+registry-trust-prompt = Stoler du på dette registeret og vil fortsette? (ja/nei):
+registry-trust-bypass = {"\u001b"}[1;31mHopper over tillitssjekken for { $registry } ({ $url }) fordi du brukte --yes. gdvm kan ikke vite om filene er trygge å kjøre. Tar en kort pause; trykk Ctrl+C nå for å stoppe.{"\u001b"}[0m
+registry-trust-aborted = Avbrutt: registeret er ikke betrodd.
+registry-project-override-conflict = {"\u001b"}[33mProsjektets gdvm.toml omdefinerer registeret { $registry } (din konfigurasjon: { $machine_url }) som { $project_url }. Prosjektets definisjon har forrang.{"\u001b"}[0m
+
+help-registry-init = Initialiser en ny registermappe
+help-registry-add-build = Legg til et bygg i et register
+help-registry-remove-build = Fjern et bygg fra et register
+help-registry-validate = Valider en registermappe
+help-registry-dir = Registermappen
+help-registry-init-name = Registernavnet. Standard er mappenavnet.
+
+help-registry-build-version = Versjonsetiketten, f.eks. 4.4-stable.
+help-registry-build-variant = Variantnavnet. Standard er «default».
+help-registry-build-platform = Plattformnøkkelen, f.eks. linux-x86_64.
+help-registry-build-file = Sti til byggarkivet som skal hashes
+help-registry-build-store = Kopier arkivet inn i registeret og registrer en relativ URL.
+help-registry-build-url = URL-en der arkivet skal serveres (når --store ikke brukes).
+help-registry-build-sha512 = Arkivets SHA-512, i stedet for å beregne det. Krever --size.
+help-registry-build-size = Arkivets størrelse i byte, i stedet for å måle det. Krever --sha512.
+
+registry-init-success = Initialiserte registeret { $name } i { $path }.
+registry-build-added = La til bygget { $version } for { $platform }.
+registry-build-removed = Fjerna bygget { $version }.
+registry-build-downloading = Laster ned { $url } for å beregne størrelse og SHA-512 …
+registry-build-warn-local-hash = {"\u001b"}[33mHasher den lokale fila og antar at den samsvarer med { $url }. gdvm laster ikke ned URL-en for å verifisere den.{"\u001b"}[0m
+registry-build-warn-unverified = {"\u001b"}[33mBruker SHA-512 og størrelsen du oppga uten å laste ned artefakten for å verifisere dem. Kontroller at de er riktige.{"\u001b"}[0m
+registry-build-warn-explicit-store = {"\u001b"}[33mBruker SHA-512 og/eller størrelsen du oppga i stedet for å måle det lagra arkivet.{"\u001b"}[0m
+registry-build-sha-mismatch = Oppgitt SHA-512 ({ $expected }) samsvarer ikke med artefakten ({ $actual }).
+registry-build-size-mismatch = Oppgitt størrelse ({ $expected }) samsvarer ikke med artefakten ({ $actual }).
+registry-validate-ok = Registeret er gyldig ({ $count } artefakter kontrollert).
+registry-validate-failed = Validering av registeret mislyktes:

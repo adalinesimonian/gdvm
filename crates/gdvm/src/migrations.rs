@@ -108,7 +108,7 @@ define_migrations! {
                 installs.join("csharp").join(base)
             } else if crate::version_utils::GodotVersion::from_install_str(&dir_name).is_ok() {
                 installs
-                    .join(crate::version_utils::DEFAULT_VARIANT)
+                    .join(crate::version_utils::Variant::DEFAULT)
                     .join(&dir_name)
             } else {
                 // Not a recognized install, ignore.
@@ -140,6 +140,53 @@ define_migrations! {
                     error = &err.to_string(),
                 );
             }
+        }
+
+        Ok(())
+    },
+    3 => |base_path, i18n| {
+        // Migrate install stores so that they're keyed by registry URL.
+        let installs = base_path.join("installs");
+        if !installs.is_dir() {
+            return Ok(());
+        }
+
+        let dst_store = installs.join(crate::registry::official_store_dir_name());
+
+        let tops: Vec<PathBuf> = fs::read_dir(&installs)?
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                // Ignore symlinks from v2 migration.
+                e.metadata().map(|m| m.is_dir()).unwrap_or(false)
+                    && !e.file_type().map(|t| t.is_symlink()).unwrap_or(false)
+            })
+            .map(|e| e.path())
+            .collect();
+
+        let mut migrated_any = false;
+        for top in tops {
+            if top.join(crate::registry_store::STORE_META_FILE).is_file() {
+                continue;
+            }
+            if !dir_holds_versions(&top) {
+                continue;
+            }
+            let Some(variant) = top.file_name().map(|n| n.to_os_string()) else {
+                continue;
+            };
+            let dst_variant = dst_store.join(&variant);
+            move_versions_into(&top, &dst_variant)?;
+            finish_legacy_top(&top, &dst_variant, i18n);
+            migrated_any = true;
+        }
+
+        if migrated_any {
+            crate::registry_store::upsert(
+                &dst_store,
+                crate::registry::OFFICIAL_BASE_URL,
+                None,
+                None,
+            )?;
         }
 
         Ok(())
@@ -252,4 +299,141 @@ fn create_symlink(target: &Path, link: &Path) -> std::io::Result<()> {
 #[cfg(target_family = "windows")]
 fn create_symlink(target: &Path, link: &Path) -> std::io::Result<()> {
     std::os::windows::fs::symlink_dir(target, link)
+}
+
+/// True when a directory's immediate children include version directories.
+fn dir_holds_versions(dir: &Path) -> bool {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return false;
+    };
+    entries.flatten().any(|e| {
+        e.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
+            && crate::version_utils::GodotVersion::from_install_str(
+                &e.file_name().to_string_lossy(),
+            )
+            .is_ok()
+    })
+}
+
+/// Move every `{version}` directory from `src` into `dst`.
+fn move_versions_into(src: &Path, dst: &Path) -> Result<()> {
+    let Ok(entries) = fs::read_dir(src) else {
+        return Ok(());
+    };
+    for entry in entries.flatten() {
+        if !entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+            continue;
+        }
+        let target = dst.join(entry.file_name());
+        if target.exists() {
+            continue;
+        }
+        fs::create_dir_all(dst)?;
+        match fs::rename(entry.path(), &target) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(())
+}
+
+/// Remove a legacy top directory and replace it with a symlink to its new
+/// location.
+fn finish_legacy_top(old: &Path, new_target: &Path, i18n: &I18n) {
+    let _ = fs::remove_dir(old);
+    if old.exists() {
+        return;
+    }
+    if let Err(err) = create_symlink(new_target, old) {
+        eprintln_i18n!(
+            i18n,
+            "error-link-symlink",
+            target = &old.to_string_lossy().to_string(),
+            link = &new_target.to_string_lossy().to_string(),
+            error = &err.to_string(),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run_migrations;
+    use crate::i18n::I18n;
+    use std::fs;
+    use std::path::Path;
+    use tempfile::TempDir;
+
+    fn make_version(base: &Path, rel: &str) {
+        let dir = base.join("installs").join(rel);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("Godot_v_bin"), b"bin").unwrap();
+    }
+
+    #[test]
+    fn migration_v3_rekeys_official_installs_by_url() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+
+        make_version(base, "default/4.4-stable");
+        make_version(base, "csharp/4.3-stable");
+
+        #[cfg(target_family = "unix")]
+        std::os::unix::fs::symlink(
+            base.join("installs/default/4.4-stable"),
+            base.join("installs/4.4-stable"),
+        )
+        .unwrap();
+
+        fs::write(base.join("data_version"), "2\n").unwrap();
+
+        let i18n = I18n::new().unwrap();
+        run_migrations(base, &i18n).unwrap();
+
+        let store = base
+            .join("installs")
+            .join(crate::registry::official_store_dir_name());
+
+        assert!(store.join("default/4.4-stable/Godot_v_bin").is_file());
+        assert!(store.join("csharp/4.3-stable/Godot_v_bin").is_file());
+
+        let meta = crate::registry_store::read(&store).unwrap().unwrap();
+        assert_eq!(
+            crate::registry::normalize_url(&meta.url),
+            crate::registry::normalize_url(crate::registry::OFFICIAL_BASE_URL)
+        );
+
+        #[cfg(target_family = "unix")]
+        {
+            let old_default = base.join("installs/default");
+            assert!(
+                fs::symlink_metadata(&old_default)
+                    .unwrap()
+                    .file_type()
+                    .is_symlink()
+            );
+            assert!(old_default.join("4.4-stable/Godot_v_bin").is_file());
+        }
+
+        let dv = fs::read_to_string(base.join("data_version")).unwrap();
+        assert!(dv.lines().any(|l| l.trim() == "3"));
+    }
+
+    #[test]
+    fn migration_v3_does_not_renest_an_existing_store() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+        make_version(base, "default/4.4-stable");
+        fs::write(base.join("data_version"), "2\n").unwrap();
+        let i18n = I18n::new().unwrap();
+        run_migrations(base, &i18n).unwrap();
+
+        fs::write(base.join("data_version"), "2\n").unwrap();
+        run_migrations(base, &i18n).unwrap();
+
+        let official = crate::registry::official_store_dir_name();
+        let store = base.join("installs").join(&official);
+        assert!(store.join("default/4.4-stable/Godot_v_bin").is_file());
+        assert!(!store.join(&official).exists());
+    }
 }

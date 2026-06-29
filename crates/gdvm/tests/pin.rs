@@ -17,7 +17,7 @@
 
 use gdvm::godot_manager::GodotManager;
 use gdvm::i18n::I18n;
-use gdvm::version_utils::{GodotVersion, GodotVersionDeterminate};
+use gdvm::version_utils::{GodotVersion, GodotVersionDeterminate, Variant};
 use serial_test::serial;
 use std::fs;
 use std::path::Path;
@@ -48,7 +48,7 @@ impl PinTestEnv {
         fs::write(
             gdvm_dir.join("cache.json"),
             format!(
-                r#"{{"gdvm":{{"last_update_check":{now},"new_version":null,"new_major_version":null}},"godot_registry":{{"last_fetched":0,"releases":[]}},"release_capabilities":{{"last_fetched":0,"entries":[]}}}}"#
+                r#"{{"gdvm":{{"last_update_check":{now},"new_version":null,"new_major_version":null}},"godot_registry":{{"last_fetched":0,"releases":[]}}}}"#
             ),
         )
         .unwrap();
@@ -107,10 +107,10 @@ async fn manager(i18n: &I18n) -> GodotManager<'_> {
 #[serial]
 async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     let mgr = manager(&i18n).await;
 
-    mgr.pin_version(&determinate("4.3-stable"), None, false)
+    mgr.pin_version(&determinate("4.3-stable"), &Variant::default(), None, false)
         .unwrap();
 
     let toml = fs::read_to_string(env.project_dir().join("gdvm.toml")).unwrap();
@@ -127,11 +127,16 @@ async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
 #[serial]
 async fn pin_csharp_writes_variant_formats() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     let mgr = manager(&i18n).await;
 
-    mgr.pin_version(&determinate("4.3-stable"), Some("csharp"), false)
-        .unwrap();
+    mgr.pin_version(
+        &determinate("4.3-stable"),
+        &Variant::from_option(Some("csharp")),
+        None,
+        false,
+    )
+    .unwrap();
 
     let toml = fs::read_to_string(env.project_dir().join("gdvm.toml")).unwrap();
     assert!(
@@ -147,10 +152,10 @@ async fn pin_csharp_writes_variant_formats() {
 #[serial]
 async fn pin_no_legacy_skips_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     let mgr = manager(&i18n).await;
 
-    mgr.pin_version(&determinate("4.3-stable"), None, true)
+    mgr.pin_version(&determinate("4.3-stable"), &Variant::default(), None, true)
         .unwrap();
 
     assert!(
@@ -167,7 +172,7 @@ async fn pin_no_legacy_skips_gdvmrc() {
 #[serial]
 async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     let mgr = manager(&i18n).await;
 
     fs::write(
@@ -177,7 +182,9 @@ async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
     .unwrap();
     fs::write(env.project_dir().join(".gdvmrc"), "4.3.0-stable").unwrap();
 
-    let (gv, variant) = mgr.get_pinned_version().expect("a pinned version");
+    let pinned = mgr.get_pinned_version().expect("a pinned version");
+    let gv = pinned.version;
+    let variant = pinned.variant;
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(4), "gdvm.toml (4.4) must win over .gdvmrc");
     assert!(variant.is_none());
@@ -187,12 +194,14 @@ async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
 #[serial]
 async fn get_pinned_falls_back_to_legacy_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     let mgr = manager(&i18n).await;
 
     fs::write(env.project_dir().join(".gdvmrc"), "4.3.0-stable-csharp").unwrap();
 
-    let (gv, variant) = mgr.get_pinned_version().expect("a pinned version");
+    let pinned = mgr.get_pinned_version().expect("a pinned version");
+    let gv = pinned.version;
+    let variant = pinned.variant;
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(3));
     assert_eq!(variant.as_deref(), Some("csharp"));
@@ -202,7 +211,7 @@ async fn get_pinned_falls_back_to_legacy_gdvmrc() {
 #[serial]
 async fn get_pinned_walks_up_parent_directories() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     let mgr = manager(&i18n).await;
 
     fs::write(
@@ -215,7 +224,7 @@ async fn get_pinned_walks_up_parent_directories() {
     fs::create_dir_all(&nested).unwrap();
     std::env::set_current_dir(&nested).unwrap();
 
-    let (gv, _variant) = mgr.get_pinned_version().expect("a pinned version");
+    let gv = mgr.get_pinned_version().expect("a pinned version").version;
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(3));
 }
@@ -225,13 +234,20 @@ async fn get_pinned_walks_up_parent_directories() {
 async fn pin_then_get_roundtrips_variant() {
     let env = PinTestEnv::new();
     let _ = env.project_dir();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
     let mgr = manager(&i18n).await;
 
-    mgr.pin_version(&determinate("4.3-stable"), Some("csharp"), false)
-        .unwrap();
+    mgr.pin_version(
+        &determinate("4.3-stable"),
+        &Variant::from_option(Some("csharp")),
+        None,
+        false,
+    )
+    .unwrap();
 
-    let (gv, variant) = mgr.get_pinned_version().expect("a pinned version");
+    let pinned = mgr.get_pinned_version().expect("a pinned version");
+    let gv = pinned.version;
+    let variant = pinned.variant;
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(3));
     assert_eq!(variant.as_deref(), Some("csharp"));

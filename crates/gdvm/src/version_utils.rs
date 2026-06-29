@@ -16,18 +16,34 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
 /// The gdvm pin file.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GdvmToml {
-    pub godot: GdvmTomlGodot,
+    /// The pinned Godot version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub godot: Option<GdvmTomlGodot>,
+    /// Registries defined in the pin file, keyed by alias.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub registries: Option<HashMap<String, GdvmTomlRegistry>>,
+    /// Preserve keys written by newer gdvm versions.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, toml::Value>,
 }
 
 /// The `[godot]` section of `gdvm.toml`.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GdvmTomlGodot {
     pub version: String,
+}
+
+/// A `[registries.<alias>]` entry in `gdvm.toml`.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GdvmTomlRegistry {
+    pub url: String,
 }
 
 /// A fully parsed version specifier from the specifier format
@@ -114,50 +130,126 @@ pub fn validate_version_spec(s: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
-/// The variant name to pull from the registry when the user doesn't explicitly
-/// specify a variant.
-pub const DEFAULT_VARIANT: &str = "default";
+/// A resolved Godot build variant.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Variant(String);
 
-/// Returns true if `variant` is `None` or refers to the default variant.
-pub fn is_default_variant(variant: Option<&str>) -> bool {
-    matches!(variant, None | Some(DEFAULT_VARIANT))
-}
+impl Variant {
+    /// The default variant name.
+    pub const DEFAULT: &str = "default";
 
-/// Return the variant string for a given variant specifier, e.g. `None` becomes
-/// `default`, `Some("csharp")` returns `csharp`.
-pub fn normalize_variant(variant: Option<&str>) -> &str {
-    match variant {
-        Some(v) if v != DEFAULT_VARIANT => v,
-        _ => DEFAULT_VARIANT,
+    /// Normalize optional user input into a variant. `None` and `"default"`
+    /// both resolve to the default variant. Any other name is treated as the
+    /// variant name.
+    pub fn from_option(input: Option<&str>) -> Self {
+        match input {
+            Some(v) if v != Self::DEFAULT => Self(v.to_string()),
+            _ => Self(Self::DEFAULT.to_string()),
+        }
+    }
+
+    /// The variant name.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// True when this is the default variant.
+    pub fn is_default(&self) -> bool {
+        self.0 == Self::DEFAULT
+    }
+
+    /// Decorate a version string with the variant, unless the variant is the
+    /// default one. Produces a string like `4.4` or `4.4 (csharp)`.
+    fn decorate(&self, version_str: &str) -> String {
+        if self.is_default() {
+            version_str.to_string()
+        } else {
+            format!("{version_str} ({})", self.0)
+        }
     }
 }
 
-/// Get a user-friendly name to use when displaying the Godot version. If the
-/// variant is default, omits the variant from the output.
-pub fn display_with_variant(version_str: &str, variant: Option<&str>) -> String {
-    if is_default_variant(variant) {
-        version_str.to_string()
-    } else {
-        format!("{version_str} ({})", variant.unwrap())
+impl Default for Variant {
+    fn default() -> Self {
+        Self::from_option(None)
+    }
+}
+
+impl fmt::Display for Variant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+/// A resolved selection of a determinate version.
+#[derive(Debug, Clone)]
+pub struct DeterminateSelection {
+    pub version: GodotVersionDeterminate,
+    pub variant: Variant,
+    pub registry: Option<String>,
+}
+
+/// An unresolved selection of a version, which may be indeterminate.
+#[derive(Debug, Clone)]
+pub struct VersionSelection {
+    pub version: GodotVersion,
+    pub variant: Option<String>,
+    pub registry: Option<String>,
+}
+
+/// Returns true if the registry refers to the official gdvm registry.
+pub fn is_official_registry(registry: Option<&str>) -> bool {
+    match registry {
+        None => true,
+        Some(r) => r == crate::registry::OFFICIAL_REGISTRY,
+    }
+}
+
+/// Normalize a registry name to `None` for the official registry, or
+/// `Some(name)` for a custom registry.
+pub fn normalize_registry(registry: Option<&str>) -> Option<&str> {
+    match registry {
+        Some(r) if r != crate::registry::OFFICIAL_REGISTRY => Some(r),
+        _ => None,
+    }
+}
+
+/// Display a version.
+pub fn display_version(version_str: &str, variant: &Variant, registry: Option<&str>) -> String {
+    let base = variant.decorate(version_str);
+    match normalize_registry(registry) {
+        Some(r) => format!("{r}/{base}"),
+        None => base,
     }
 }
 
 /// Get the install directory subpath for a given version and variant.
-pub fn install_dir_subpath(version_str: &str, variant: Option<&str>) -> String {
-    format!("{}/{version_str}", normalize_variant(variant))
+pub fn install_dir_subpath(store_key: &str, version_str: &str, variant: &Variant) -> String {
+    format!("{store_key}/{}/{version_str}", variant.as_str())
 }
 
 /// Build a pinned version string.
-pub fn pinned_str(version_str: &str, variant: Option<&str>) -> String {
-    format!("{}:{version_str}", normalize_variant(variant))
+pub fn pinned_str(registry: Option<&str>, version_str: &str, variant: &Variant) -> String {
+    let base = format!("{}:{version_str}", variant.as_str());
+    match normalize_registry(registry) {
+        Some(r) => format!("{r}/{base}"),
+        None => base,
+    }
 }
 
-/// Parse a pinned string back into (variant, version_string).
-/// Supports both new format `csharp:4.4.0-stable` and legacy `4.4.0-stable-csharp`.
-pub fn parse_pinned_str(s: &str) -> (Option<String>, String) {
-    // New format: variant:version (variant doesn't start with digit)
-    if let Some(pos) = s.find(':') {
-        let candidate_variant = &s[..pos];
+/// Parse a pinned string back into `(registry, variant, version_string)`.
+/// Supports `[registry/][variant:]version` and legacy `4.4.0-stable-csharp`.
+pub fn parse_pinned_str(s: &str) -> (Option<String>, Option<String>, String) {
+    // Optional leading registry. A registry segment never contains ':' (which would
+    // indicate a `variant:version` pair that happened to be preceded by a slash).
+    let (registry, rest) = match s.split_once('/') {
+        Some((reg, rest)) if !reg.is_empty() && !reg.contains(':') => (Some(reg.to_string()), rest),
+        _ => (None, s),
+    };
+
+    // New format: variant:version (variant doesn't start with digit).
+    if let Some(pos) = rest.find(':') {
+        let candidate_variant = &rest[..pos];
         if !candidate_variant.is_empty()
             && !candidate_variant
                 .chars()
@@ -166,26 +258,31 @@ pub fn parse_pinned_str(s: &str) -> (Option<String>, String) {
                 .is_ascii_digit()
         {
             return (
+                registry,
                 Some(candidate_variant.to_string()),
-                s[pos + 1..].to_string(),
+                rest[pos + 1..].to_string(),
             );
         }
     }
 
-    // Legacy format: version-csharp
-    if let Some(version_part) = s.strip_suffix("-csharp") {
-        return (Some("csharp".to_string()), version_part.to_string());
+    // Legacy format: version-csharp.
+    if let Some(version_part) = rest.strip_suffix("-csharp") {
+        return (
+            registry,
+            Some("csharp".to_string()),
+            version_part.to_string(),
+        );
     }
 
-    (None, s.to_string())
+    (registry, None, rest.to_string())
 }
 
 /// Build a legacy `.gdvmrc` pin string in the old pre-refactor format.
 /// Produces the format that old gdvm versions understand:
 /// `4.3.0-stable-csharp` (zero-padded, `-csharp` suffix) or `4.3.0-stable`.
-pub fn legacy_pinned_str(gv: &GodotVersionDeterminate, variant: Option<&str>) -> String {
+pub fn legacy_pinned_str(gv: &GodotVersionDeterminate, variant: &Variant) -> String {
     let mut base = gv.to_pinned_str();
-    if variant == Some("csharp") {
+    if variant.as_str() == "csharp" {
         base.push_str("-csharp");
     }
     base
@@ -194,9 +291,11 @@ pub fn legacy_pinned_str(gv: &GodotVersionDeterminate, variant: Option<&str>) ->
 /// Serialize a `GdvmToml` to a TOML string.
 pub fn serialize_gdvm_toml(version_specifier: &str) -> String {
     let gdvm_toml = GdvmToml {
-        godot: GdvmTomlGodot {
+        godot: Some(GdvmTomlGodot {
             version: version_specifier.to_string(),
-        },
+        }),
+        registries: None,
+        extra: BTreeMap::new(),
     };
     toml::to_string(&gdvm_toml).expect("GdvmToml serialization should never fail")
 }
@@ -371,7 +470,7 @@ impl GodotVersion {
 
     fn parse_version_and_pre_release(raw: &str) -> Result<Self, anyhow::Error> {
         // Read the pre-release identifier, if present.
-        let (version_part, pre_release) = match raw.rfind('-') {
+        let (version_part, pre_release) = match raw.find('-') {
             Some(index) => (&raw[..index], Some(raw[index + 1..].to_string())),
             None => (raw, None),
         };
@@ -581,26 +680,42 @@ pub fn get_pre_release_priority(pre_release: &str) -> i32 {
     }
 }
 
+/// Compare two determinate versions, oldest to newest, ascending. Orders by
+/// major, minor, patch, subpatch, then pre-release type.
+pub fn cmp_godot_version(a: &GodotVersionDeterminate, b: &GodotVersionDeterminate) -> Ordering {
+    a.major
+        .cmp(&b.major)
+        .then(a.minor.cmp(&b.minor))
+        .then(a.patch.cmp(&b.patch))
+        .then(a.subpatch.cmp(&b.subpatch))
+        .then(
+            get_pre_release_priority(a.release_type.as_str())
+                .cmp(&get_pre_release_priority(b.release_type.as_str())),
+        )
+}
+
+/// Compare two remote version tags so that the newest sorts first.
+pub fn cmp_versions_newest_first(a: &str, b: &str) -> Ordering {
+    let parsed = |s: &str| {
+        GodotVersion::from_remote_str(s)
+            .ok()
+            .map(|gv| gv.to_determinate())
+    };
+    match (parsed(a), parsed(b)) {
+        (Some(a), Some(b)) => cmp_godot_version(&a, &b).reverse(),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => b.cmp(a),
+    }
+}
+
 pub trait GodotVersionDeterminateVecExt {
     fn sort_by_version(&mut self);
 }
 
 impl GodotVersionDeterminateVecExt for Vec<GodotVersionDeterminate> {
     fn sort_by_version(&mut self) {
-        self.sort_by(|a, b| {
-            {
-                a.major
-                    .cmp(&b.major)
-                    .then(a.minor.cmp(&b.minor))
-                    .then(a.patch.cmp(&b.patch))
-                    .then(a.subpatch.cmp(&b.subpatch))
-                    .then(
-                        get_pre_release_priority(a.release_type.as_str())
-                            .cmp(&get_pre_release_priority(b.release_type.as_str())),
-                    )
-            }
-            .reverse()
-        });
+        self.sort_by(|a, b| cmp_godot_version(a, b).reverse());
     }
 }
 
@@ -635,6 +750,25 @@ mod tests {
         assert_eq!(gv.major, Some(3));
         assert_eq!(gv.minor, Some(5));
         assert!(gv.is_stable());
+    }
+
+    #[test]
+    fn test_multi_part_release_type() {
+        let gv = GodotVersion::from_remote_str("3.2-alpha0-unofficial").unwrap();
+        assert_eq!(gv.major, Some(3));
+        assert_eq!(gv.minor, Some(2));
+        assert_eq!(gv.patch, None);
+        assert_eq!(gv.release_type.as_deref(), Some("alpha0-unofficial"));
+        assert!(!gv.is_stable());
+
+        let determinate = gv.to_determinate();
+        assert_eq!(determinate.to_remote_str(), "3.2-alpha0-unofficial");
+
+        let from_install = GodotVersion::from_install_str("3.2-alpha0-unofficial").unwrap();
+        assert_eq!(
+            from_install.release_type.as_deref(),
+            Some("alpha0-unofficial")
+        );
     }
 
     #[test]
@@ -830,9 +964,10 @@ mod tests {
             VersionTarget::Pattern(gv) => gv.to_remote_str().unwrap(),
             _ => panic!("expected pattern"),
         };
+        let variant = Variant::from_option(spec.variant.as_deref());
         assert_eq!(
-            install_dir_subpath(&ver_str, spec.variant.as_deref()),
-            "default/4.1.1-stable"
+            install_dir_subpath("official-abc123", &ver_str, &variant),
+            "official-abc123/default/4.1.1-stable"
         );
 
         let spec = VersionSpec::parse("csharp:4.1.1-stable").unwrap();
@@ -840,46 +975,48 @@ mod tests {
             VersionTarget::Pattern(gv) => gv.to_remote_str().unwrap(),
             _ => panic!("expected pattern"),
         };
+        let variant = Variant::from_option(spec.variant.as_deref());
         assert_eq!(
-            install_dir_subpath(&ver_str, spec.variant.as_deref()),
-            "csharp/4.1.1-stable"
+            install_dir_subpath("official-abc123", &ver_str, &variant),
+            "official-abc123/csharp/4.1.1-stable"
+        );
+
+        assert_eq!(
+            install_dir_subpath("mybuilds-deadbe", &ver_str, &variant),
+            "mybuilds-deadbe/csharp/4.1.1-stable"
         );
     }
 
     #[test]
-    fn test_default_variant() {
-        assert!(is_default_variant(None));
-        assert!(is_default_variant(Some("default")));
-        assert!(!is_default_variant(Some("csharp")));
+    fn test_variant() {
+        assert!(Variant::from_option(None).is_default());
+        assert!(Variant::from_option(Some("default")).is_default());
+        assert!(!Variant::from_option(Some("csharp")).is_default());
 
-        assert_eq!(normalize_variant(None), "default");
-        assert_eq!(normalize_variant(Some("default")), "default");
-        assert_eq!(normalize_variant(Some("csharp")), "csharp");
+        assert_eq!(Variant::from_option(None).as_str(), "default");
+        assert_eq!(Variant::from_option(Some("default")).as_str(), "default");
+        assert_eq!(Variant::from_option(Some("csharp")).as_str(), "csharp");
+        assert_eq!(Variant::default().as_str(), "default");
 
         let spec = VersionSpec::parse("default:4.1.1-stable").unwrap();
         assert_eq!(spec.variant.as_deref(), Some("default"));
 
+        let default = Variant::default();
         assert_eq!(
-            install_dir_subpath("4.1.1-stable", None),
-            "default/4.1.1-stable"
+            install_dir_subpath("official-abc123", "4.1.1-stable", &default),
+            "official-abc123/default/4.1.1-stable"
         );
         assert_eq!(
-            install_dir_subpath("4.1.1-stable", Some("default")),
-            "default/4.1.1-stable"
-        );
-
-        assert_eq!(pinned_str("4.1.1-stable", None), "default:4.1.1-stable");
-        assert_eq!(
-            pinned_str("4.1.1-stable", Some("default")),
+            pinned_str(None, "4.1.1-stable", &default),
             "default:4.1.1-stable"
         );
-        assert_eq!(display_with_variant("4.1.1-stable", None), "4.1.1-stable");
+
         assert_eq!(
-            display_with_variant("4.1.1-stable", Some("default")),
+            display_version("4.1.1-stable", &default, None),
             "4.1.1-stable"
         );
         assert_eq!(
-            display_with_variant("4.1.1-stable", Some("csharp")),
+            display_version("4.1.1-stable", &Variant::from_option(Some("csharp")), None),
             "4.1.1-stable (csharp)"
         );
     }
@@ -891,10 +1028,15 @@ mod tests {
             VersionTarget::Pattern(gv) => gv.to_remote_str().unwrap(),
             _ => panic!("expected pattern"),
         };
-        let pinned = pinned_str(&ver_str, spec.variant.as_deref());
+        let pinned = pinned_str(
+            None,
+            &ver_str,
+            &Variant::from_option(spec.variant.as_deref()),
+        );
         assert_eq!(pinned, "csharp:4.1.1-stable");
 
-        let (parsed_variant, parsed_ver) = parse_pinned_str(&pinned);
+        let (parsed_registry, parsed_variant, parsed_ver) = parse_pinned_str(&pinned);
+        assert!(parsed_registry.is_none());
         assert_eq!(parsed_variant.as_deref(), Some("csharp"));
         let gv = GodotVersion::from_install_str(&parsed_ver).unwrap();
         assert_eq!(gv.major, Some(4));
@@ -904,13 +1046,30 @@ mod tests {
             VersionTarget::Pattern(gv) => gv.to_remote_str().unwrap(),
             _ => panic!("expected pattern"),
         };
-        let pinned = pinned_str(&ver_str, None);
+        let pinned = pinned_str(None, &ver_str, &Variant::default());
         assert_eq!(pinned, "default:4.1.1-stable");
 
-        let (parsed_variant, parsed_ver) = parse_pinned_str(&pinned);
+        let (parsed_registry, parsed_variant, parsed_ver) = parse_pinned_str(&pinned);
+        assert!(parsed_registry.is_none());
         assert_eq!(parsed_variant.as_deref(), Some("default"));
         let gv = GodotVersion::from_install_str(&parsed_ver).unwrap();
         assert_eq!(gv.major, Some(4));
+
+        let pinned = pinned_str(
+            Some("mybuilds"),
+            "4.1.1-stable",
+            &Variant::from_option(Some("csharp")),
+        );
+        assert_eq!(pinned, "mybuilds/csharp:4.1.1-stable");
+        let (parsed_registry, parsed_variant, parsed_ver) = parse_pinned_str(&pinned);
+        assert_eq!(parsed_registry.as_deref(), Some("mybuilds"));
+        assert_eq!(parsed_variant.as_deref(), Some("csharp"));
+        assert_eq!(parsed_ver, "4.1.1-stable");
+
+        let (parsed_registry, parsed_variant, parsed_ver) = parse_pinned_str("4.3.0-stable-csharp");
+        assert!(parsed_registry.is_none());
+        assert_eq!(parsed_variant.as_deref(), Some("csharp"));
+        assert_eq!(parsed_ver, "4.3.0-stable");
     }
 
     #[test]
@@ -918,26 +1077,32 @@ mod tests {
         let gv = GodotVersion::from_install_str("4.3-stable")
             .unwrap()
             .to_determinate();
-        assert_eq!(legacy_pinned_str(&gv, None), "4.3.0-stable");
+        assert_eq!(legacy_pinned_str(&gv, &Variant::default()), "4.3.0-stable");
 
         let gv = GodotVersion::from_install_str("4.3-stable")
             .unwrap()
             .to_determinate();
         assert_eq!(
-            legacy_pinned_str(&gv, Some("csharp")),
+            legacy_pinned_str(&gv, &Variant::from_option(Some("csharp"))),
             "4.3.0-stable-csharp"
         );
 
         let gv = GodotVersion::from_install_str("4.3.1-rc1")
             .unwrap()
             .to_determinate();
-        assert_eq!(legacy_pinned_str(&gv, None), "4.3.1-rc1");
-        assert_eq!(legacy_pinned_str(&gv, Some("csharp")), "4.3.1-rc1-csharp");
+        assert_eq!(legacy_pinned_str(&gv, &Variant::default()), "4.3.1-rc1");
+        assert_eq!(
+            legacy_pinned_str(&gv, &Variant::from_option(Some("csharp"))),
+            "4.3.1-rc1-csharp"
+        );
 
         let gv = GodotVersion::from_install_str("4.3-stable")
             .unwrap()
             .to_determinate();
-        assert_eq!(legacy_pinned_str(&gv, Some("web")), "4.3.0-stable");
+        assert_eq!(
+            legacy_pinned_str(&gv, &Variant::from_option(Some("web"))),
+            "4.3.0-stable"
+        );
     }
 
     #[test]
@@ -951,11 +1116,23 @@ mod tests {
     fn test_deserialize_gdvm_toml() {
         let input = "[godot]\nversion = \"csharp:4.3-stable\"\n";
         let parsed = deserialize_gdvm_toml(input).unwrap();
-        assert_eq!(parsed.godot.version, "csharp:4.3-stable");
+        assert_eq!(parsed.godot.unwrap().version, "csharp:4.3-stable");
 
         let input = "[godot]\nversion = \"4.3-stable\"\n";
         let parsed = deserialize_gdvm_toml(input).unwrap();
-        assert_eq!(parsed.godot.version, "4.3-stable");
+        assert_eq!(parsed.godot.unwrap().version, "4.3-stable");
+    }
+
+    #[test]
+    fn test_gdvm_toml_registries_only_without_pin() {
+        let input = "[registries.mybuilds]\nurl = \"https://example.com/godot\"\n";
+        let parsed = deserialize_gdvm_toml(input).unwrap();
+        assert!(parsed.godot.is_none());
+        let registries = parsed.registries.expect("registries present");
+        assert_eq!(
+            registries.get("mybuilds").map(|r| r.url.as_str()),
+            Some("https://example.com/godot")
+        );
     }
 
     #[test]
@@ -963,22 +1140,43 @@ mod tests {
         let specifier = "csharp:4.3-stable";
         let toml_str = serialize_gdvm_toml(specifier);
         let parsed = deserialize_gdvm_toml(&toml_str).unwrap();
-        assert_eq!(parsed.godot.version, specifier);
+        assert_eq!(parsed.godot.unwrap().version, specifier);
     }
 
     #[test]
     fn test_gdvm_toml_ignores_unknown_keys() {
         let input = "[godot]\nversion = \"4.3-stable\"\n\n[registries.mybuilds]\nurl = \"https://example.com\"\n";
         let parsed = deserialize_gdvm_toml(input).unwrap();
-        assert_eq!(parsed.godot.version, "4.3-stable");
+        assert_eq!(parsed.godot.unwrap().version, "4.3-stable");
+    }
+
+    #[test]
+    fn test_gdvm_toml_parses_project_registries() {
+        let input = "[godot]\nversion = \"mybuilds/4.3-stable\"\n\n[registries.mybuilds]\nurl = \"https://example.com/godot\"\n";
+        let parsed = deserialize_gdvm_toml(input).unwrap();
+        assert_eq!(
+            parsed.godot.as_ref().map(|g| g.version.as_str()),
+            Some("mybuilds/4.3-stable")
+        );
+        let registries = parsed.registries.expect("registries present");
+        assert_eq!(
+            registries.get("mybuilds").map(|r| r.url.as_str()),
+            Some("https://example.com/godot")
+        );
+    }
+
+    #[test]
+    fn test_gdvm_toml_no_registries_section_omitted_on_serialize() {
+        let toml_str = serialize_gdvm_toml("4.3-stable");
+        assert!(!toml_str.contains("registries"));
     }
 
     #[test]
     fn test_deserialize_gdvm_toml_invalid() {
-        let input = "version = \"4.3-stable\"\n";
+        let input = "not valid toml {{{}";
         assert!(deserialize_gdvm_toml(input).is_err());
 
-        let input = "not valid toml {{{}";
+        let input = "[godot]\nversion = 4\n";
         assert!(deserialize_gdvm_toml(input).is_err());
     }
 }

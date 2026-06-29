@@ -50,12 +50,12 @@ where
 #[serial]
 fn test_load_save_roundtrip() {
     let dir = tempdir().unwrap();
-    let i18n = I18n::new(80).unwrap();
+    let i18n = I18n::new().unwrap();
 
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token1".into()),
-            ..Default.default()
+            ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
@@ -66,7 +66,7 @@ fn test_load_save_roundtrip() {
     with_test_home(dir.path(), || {
         let cfg = Config {
             github_token: Some("token2".into()),
-            ..Default.default()
+            ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
@@ -84,7 +84,7 @@ fn test_change_launch_shortcut_config() {
     with_test_home(dir.path(), || {
         let cfg = Config {
             global_launch_shortcut: Some(true),
-            ..Default.default()
+            ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
