@@ -28,7 +28,7 @@ use std::path::PathBuf;
 pub const KNOWN_KEYS: &[&str] = &[
     "github.token",
     "prune.max-age-days",
-    "global.installs_location",
+    "install.path",
 ];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
