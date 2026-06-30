@@ -1,4 +1,3 @@
-use crate::config::Config;
 // SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
@@ -16,7 +15,7 @@ use crate::config::Config;
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::config::get_home_dir;
+use crate::config::{Config, get_home_dir};
 use crate::i18n::I18n;
 use anyhow::Result;
 use std::fs;
