@@ -74,3 +74,21 @@ fn test_load_save_roundtrip() {
     let loaded2 = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
     assert_eq!(loaded2.github_token, Some("token2".to_string()));
 }
+
+#[test]
+#[serial]
+fn test_change_install_path_config() {
+    let dir = tempdir().unwrap();
+    let i18n = I18n::new().unwrap();
+
+    with_test_home(dir.path(), || {
+        let cfg = Config {
+            install_path: Some(dir.path().join("test_installs")),
+            ..Default::default()
+        };
+        cfg.save(&i18n).unwrap();
+    });
+
+    let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    assert_eq!(loaded.install_path, Some(dir.path().join("test_installs")));
+}

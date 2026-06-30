@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::config::get_home_dir;
+use crate::config::{Config, get_home_dir};
 use crate::i18n::I18n;
 use anyhow::Result;
 use std::fs;
@@ -35,9 +35,16 @@ impl GdvmPaths {
     /// Construct paths rooted at the GDVM base directory, ~/.gdvm, and ensure the base, installs,
     /// cache, and bin directories exist.
     pub fn new(i18n: &I18n) -> Result<Self> {
-        let base = get_home_dir(i18n)?.join(".gdvm");
-        let installs = base.join("installs");
-        let cache_dir = base.join("cache");
+        let base = get_home_dir(i18n)?.join(".gdvm"); // Ensure config can be loaded/saved before creating directories.
+        let config = Config::load(i18n)?;
+        let installs = config
+            .install_path
+            .clone()
+            .unwrap_or_else(|| base.join("installs"));
+        let cache_dir = config
+            .cache_path
+            .clone()
+            .unwrap_or_else(|| base.join("cache"));
         let cache_index = base.join("cache.json");
         let usage_index = base.join("usage.json");
         let bin_dir = base.join("bin");
