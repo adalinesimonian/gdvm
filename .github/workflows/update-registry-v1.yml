@@ -41,7 +41,6 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: write
-      id-token: write
 
     steps:
       - name: Checkout registry

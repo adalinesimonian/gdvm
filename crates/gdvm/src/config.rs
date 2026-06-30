@@ -28,7 +28,7 @@ use std::path::PathBuf;
 pub const KNOWN_KEYS: &[&str] = &[
     "github.token",
     "prune.max-age-days",
-    "global.installs_location",
+    "install.path",
 ];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
@@ -46,7 +46,7 @@ pub struct Config {
     #[serde(default)]
     pub github_token: Option<String>,
     #[serde(default)]
-    pub global_installs_location: Option<PathBuf>,
+    pub install_path: Option<PathBuf>,
     /// Maximum age, in days, before an unused asset becomes eligible for
     /// pruning. When unset, `DEFAULT_PRUNE_MAX_AGE_DAYS` is used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
