@@ -77,7 +77,7 @@ fn test_load_save_roundtrip() {
 
 #[test]
 #[serial]
-fn test_change_installs_location_config() {
+fn test_change_install_path_config() {
     let dir = tempdir().unwrap();
     let i18n = I18n::new().unwrap();
 
