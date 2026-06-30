@@ -25,11 +25,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &[
-    "github.token",
-    "prune.max-age-days",
-    "install.path",
-];
+pub const KNOWN_KEYS: &[&str] = &["github.token", "prune.max-age-days", "install.path"];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -82,8 +78,8 @@ impl ConfigOps for Config {
     fn get_value(&self, key: &str) -> Option<String> {
         match key {
             "github.token" => self.github_token.clone(),
-            "global.installs_location" => self
-                .global_installs_location
+            "install.path" => self
+                .install_path
                 .clone()
                 .map(|p| p.to_string_lossy().into_owned()),
             "prune.max-age-days" => self.prune_max_age_days.map(|d| d.to_string()),
@@ -97,8 +93,8 @@ impl ConfigOps for Config {
                 self.github_token = Some(value.to_string());
                 Ok(())
             }
-            "global.installs_location" => {
-                self.global_installs_location = Some(PathBuf::from(value));
+            "install.path" => {
+                self.install_path = Some(PathBuf::from(value));
                 Ok(())
             }
             "prune.max-age-days" => {
@@ -118,8 +114,8 @@ impl ConfigOps for Config {
                 self.github_token = None;
                 Ok(())
             }
-            "global.installs_location" => {
-                self.global_installs_location = None;
+            "install.path" => {
+                self.install_path = None;
                 Ok(())
             }
             "prune.max-age-days" => {
@@ -139,9 +135,9 @@ impl ConfigOps for Config {
         if let Some(token) = self.github_token.as_ref() {
             entries.push(("github.token".to_string(), token.clone(), true));
         }
-        if let Some(installs_location) = self.global_installs_location.as_ref() {
+        if let Some(installs_location) = self.install_path.as_ref() {
             entries.push((
-                "global.installs_location".to_string(),
+                "install.path".to_string(),
                 installs_location.to_string_lossy().into_owned(),
                 false,
             ));

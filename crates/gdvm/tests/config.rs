@@ -83,15 +83,12 @@ fn test_change_installs_location_config() {
 
     with_test_home(dir.path(), || {
         let cfg = Config {
-            global_installs_location: Some(dir.path().join("test_installs")),
+            install_path: Some(dir.path().join("test_installs")),
             ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
 
     let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
-    assert_eq!(
-        loaded.global_installs_location,
-        Some(dir.path().join("test_installs"))
-    );
+    assert_eq!(loaded.install_path, Some(dir.path().join("test_installs")));
 }

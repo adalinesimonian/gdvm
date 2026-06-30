@@ -38,7 +38,7 @@ impl GdvmPaths {
         let base = get_home_dir(i18n)?.join(".gdvm"); // Ensure config can be loaded/saved before creating directories.
         let config = Config::load(i18n)?;
         let installs = config
-            .global_installs_location
+            .install_path
             .clone()
             .unwrap_or_else(|| base.join("installs"));
 
@@ -118,11 +118,11 @@ impl GdvmPaths {
     #[cfg(test)]
     pub fn from_config_installs_for_tests(base: PathBuf) -> Result<Self> {
         let config = Config {
-            global_installs_location: Some(base.join("test_installs")),
+            install_path: Some(base.join("test_installs")),
             ..Default::default()
         };
         let installs = config
-            .global_installs_location
+            .install_path
             .clone()
             .unwrap_or_else(|| base.join("installs"));
         let cache_dir = base.join("cache");
