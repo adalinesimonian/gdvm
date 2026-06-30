@@ -25,7 +25,12 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token", "prune.max-age-days", "install.path"];
+pub const KNOWN_KEYS: &[&str] = &[
+    "github.token",
+    "prune.max-age-days",
+    "install.path",
+    "cache.path",
+];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -43,6 +48,8 @@ pub struct Config {
     pub github_token: Option<String>,
     #[serde(default)]
     pub install_path: Option<PathBuf>,
+    #[serde(default)]
+    pub cache_path: Option<PathBuf>,
     /// Maximum age, in days, before an unused asset becomes eligible for
     /// pruning. When unset, `DEFAULT_PRUNE_MAX_AGE_DAYS` is used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -82,6 +89,10 @@ impl ConfigOps for Config {
                 .install_path
                 .clone()
                 .map(|p| p.to_string_lossy().into_owned()),
+            "cache.path" => self
+                .cache_path
+                .clone()
+                .map(|p| p.to_string_lossy().into_owned()),
             "prune.max-age-days" => self.prune_max_age_days.map(|d| d.to_string()),
             _ => None,
         }
@@ -95,6 +106,10 @@ impl ConfigOps for Config {
             }
             "install.path" => {
                 self.install_path = Some(PathBuf::from(value));
+                Ok(())
+            }
+            "cache.path" => {
+                self.cache_path = Some(PathBuf::from(value));
                 Ok(())
             }
             "prune.max-age-days" => {
@@ -118,6 +133,10 @@ impl ConfigOps for Config {
                 self.install_path = None;
                 Ok(())
             }
+            "cache.path" => {
+                self.cache_path = None;
+                Ok(())
+            }
             "prune.max-age-days" => {
                 self.prune_max_age_days = None;
                 Ok(())
@@ -139,6 +158,13 @@ impl ConfigOps for Config {
             entries.push((
                 "install.path".to_string(),
                 installs_location.to_string_lossy().into_owned(),
+                false,
+            ));
+        }
+        if let Some(cache_path) = self.cache_path.as_ref() {
+            entries.push((
+                "cache.path".to_string(),
+                cache_path.to_string_lossy().into_owned(),
                 false,
             ));
         }
