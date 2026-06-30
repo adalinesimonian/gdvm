@@ -41,8 +41,10 @@ impl GdvmPaths {
             .install_path
             .clone()
             .unwrap_or_else(|| base.join("installs"));
-
-        let cache_dir = base.join("cache");
+        let cache_dir = config
+            .cache_path
+            .clone()
+            .unwrap_or_else(|| base.join("cache"));
         let cache_index = base.join("cache.json");
         let usage_index = base.join("usage.json");
         let bin_dir = base.join("bin");
