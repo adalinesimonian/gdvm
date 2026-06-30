@@ -225,6 +225,13 @@ async fn main() -> Result<()> {
                         .num_args(0)
                         .help(t!(i18n, "help-redownload")),
                 )
+                .arg(
+                    Arg::new("launch-shortcut")
+                        .long("launch-shortcut")
+                        .short('l')
+                        .num_args(0)
+                        .help(t!(i18n, "help-launch-shortcut")),
+                )
                 .arg(deprecated_csharp_flag(&i18n))
                 .arg(include_pre_flag(&i18n))
                 .arg(refresh_flag(&i18n))
@@ -737,6 +744,8 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
     let refresh = matches.get_flag("refresh");
+    let launch_shortcut = matches.get_flag("launch-shortcut")
+        || config::Config::load(i18n)?.global_launch_shortcut.is_some();
     let include_pre = matches.get_flag("include-pre");
 
     refresh_cache_if_requested(manager, refresh).await?;
@@ -771,6 +780,7 @@ async fn sub_install(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatch
             registry,
             force_reinstall,
             redownload,
+            launch_shortcut,
         )
         .await?
     {

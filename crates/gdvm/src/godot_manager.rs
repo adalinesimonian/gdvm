@@ -30,11 +30,18 @@ use anyhow::{Result, anyhow, bail};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
 use digest_io::IoWrapper;
+use directories::BaseDirs;
 use i18n::I18n;
 use indicatif::{ProgressBar, ProgressStyle};
+#[cfg(target_os = "windows")]
+use mslnk::ShellLink;
 use semver::{Version, VersionReq};
 use sha2::{Digest, Sha256, Sha512};
 use std::collections::HashSet;
+#[cfg(target_family = "unix")]
+use std::fs::File;
+#[cfg(target_family = "unix")]
+use std::io::Write;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -42,7 +49,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 
 use crate::download_utils::download_file;
-use crate::migrations;
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::usage_tracker::{UsageState, UsageTracker};
 use crate::version_utils::GodotVersion;
@@ -50,6 +56,7 @@ use crate::version_utils::{DeterminateSelection, Variant, VersionSelection};
 use crate::zip_utils;
 use crate::{eprintln_i18n, println_i18n};
 use crate::{i18n, project_version_detector, t};
+use crate::{migrations, version_utils};
 
 use crate::version_utils::GodotVersionDeterminate;
 
@@ -638,6 +645,7 @@ impl<'a> GodotManager<'a> {
     /// - `registry`: Optional registry name, `None` uses gdvm's official registry.
     /// - `force`: If true, reinstall the version even if it's already installed.
     /// - `redownload`: If true, ignore cached zip files and download fresh ones.
+    /// - `launch_shortcut`: If true, add shortcuts for the installed version.
     pub async fn install(
         &self,
         gv: &GodotVersionDeterminate,
@@ -645,6 +653,7 @@ impl<'a> GodotManager<'a> {
         registry: Option<&str>,
         force: bool,
         redownload: bool,
+        launch_shortcut: bool,
     ) -> Result<InstallOutcome> {
         let store_key = self.install_store_key(registry)?;
         let install_str =
@@ -660,6 +669,9 @@ impl<'a> GodotManager<'a> {
                     version = gv.to_display_str(),
                 );
             } else {
+                if launch_shortcut {
+                    self.create_shortcut(gv, variant)?;
+                }
                 return Ok(InstallOutcome::AlreadyInstalled);
             }
         }
@@ -714,6 +726,10 @@ impl<'a> GodotManager<'a> {
         // Extract from cache_zip_path
         zip_utils::extract_zip(&cache_zip_path, &version_path, self.i18n)?;
 
+        // creates shortcut on desktop directory
+        if launch_shortcut {
+            self.create_shortcut(gv, variant)?;
+        }
         let base_url = self.catalog(registry)?.registry_base_url();
         let store_dir = self.paths.installs().join(&store_key);
         crate::registry_store::upsert(&store_dir, &base_url, registry, None)?;
@@ -860,6 +876,7 @@ impl<'a> GodotManager<'a> {
                 self.unset_default()?;
             }
             fs::remove_dir_all(path)?;
+            self.remove_shortcut(gv, variant)?;
             self.usage_tracker.forget_install(&install_name)?;
             Ok(())
         } else {
@@ -1547,12 +1564,14 @@ impl<'a> GodotManager<'a> {
                 "auto-installing-version",
                 version = &actual_version.to_display_str(),
             );
+            let config = Config::load(self.i18n)?;
             self.install(
                 &actual_version,
                 &Variant::from_option(variant),
                 registry,
                 false,
                 false,
+                config.global_launch_shortcut.is_some(),
             )
             .await?;
         }
@@ -1942,6 +1961,166 @@ impl<'a> GodotManager<'a> {
 
         println_i18n!(self.i18n, "upgrade-complete");
 
+        Ok(())
+    }
+
+    fn create_shortcut(
+        &self,
+        gv: &GodotVersionDeterminate,
+        variant: &version_utils::Variant,
+    ) -> Result<()> {
+        let base_dir = BaseDirs::new().ok_or(anyhow!(t!(self.i18n, "error-base-dir-not-found")))?;
+
+        let link_name = {
+            if variant.is_default() {
+                format!("Godot {}", gv.to_display_str())
+            } else {
+                format!("Godot {} {}", gv.to_display_str(), variant.as_str())
+            }
+        };
+
+        let args = {
+            if variant.as_str() == "csharp" {
+                format!("run csharp:{}", gv.to_display_str())
+            } else {
+                format!("run {}", gv.to_display_str())
+            }
+        };
+
+        #[cfg(target_os = "windows")]
+        {
+            use directories::UserDirs;
+
+            let user_dir =
+                UserDirs::new().ok_or(anyhow!(t!(self.i18n, "error-user-dir-not-found")))?;
+
+            let target = self.get_base_path().join("bin").join("gdvm.exe");
+
+            let desktop_path = user_dir
+                .desktop_dir()
+                .ok_or(anyhow!(t!(self.i18n, "error-desktop-not-found")))?;
+            let start_menu_path = base_dir
+                .data_dir()
+                .join("Microsoft\\Windows\\Start Menu\\Godot");
+
+            if !start_menu_path.exists() {
+                std::fs::create_dir_all(&start_menu_path)?;
+            }
+
+            let shortcut_path = desktop_path.join(format!("{}.lnk", &link_name));
+            let shortcut_start_menu_path = start_menu_path.join(format!("{}.lnk", &link_name));
+
+            if shortcut_path.exists() && shortcut_start_menu_path.exists() {
+                return Ok(());
+            }
+
+            let mut lnk = ShellLink::new(target)?;
+            lnk.set_icon_location(Some(
+                self.get_base_path()
+                    .join("bin")
+                    .join("godot.ico")
+                    .to_string_lossy()
+                    .to_string(),
+            ));
+            lnk.set_arguments(Some(args));
+            lnk.set_name(Some(link_name));
+            lnk.create_lnk(shortcut_path)?;
+            lnk.create_lnk(shortcut_start_menu_path)?;
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let target = self.get_base_path().join("bin").join("gdvm");
+
+            let shortcut_path = base_dir
+                .data_local_dir()
+                .join("applications")
+                .join(format!("{}.desktop", link_name));
+
+            if shortcut_path.exists() {
+                return Ok(());
+            }
+
+            let exec_args = format!("{} {}", target.display(), args);
+
+            let shortcut_content = format!(
+                "[Desktop Entry]
+                Type=Application
+                Name={}
+                Exec={}
+                Icon={}",
+                link_name,
+                exec_args,
+                self.get_base_path().join("bin").join("godot.svg").display()
+            );
+
+            let mut file = File::create(&shortcut_path)?;
+            file.write(shortcut_content.as_bytes())?;
+
+            let mut perms = file.metadata()?.permissions();
+            perms.set_mode(0o755); // make the .desktop file executable
+            std::fs::set_permissions(&shortcut_path, perms)?;
+
+            std::fs::write(shortcut_path, shortcut_content)?;
+        }
+        #[cfg(target_os = "macos")]
+        {
+            // TODO: MacOS shortcuts. We'll have to create .app bundles in the Applications folder.
+        }
+        Ok(())
+    }
+
+    fn remove_shortcut(
+        &self,
+        gv: &GodotVersionDeterminate,
+        variant: &version_utils::Variant,
+    ) -> Result<()> {
+        let base_dir = BaseDirs::new().ok_or(anyhow!(t!(self.i18n, "error-base-dir-not-found")))?;
+
+        let link_name = {
+            if variant.is_default() {
+                format!("Godot {}", gv.to_display_str())
+            } else {
+                format!("Godot {} {}", gv.to_display_str(), variant.as_str())
+            }
+        };
+
+        #[cfg(target_os = "windows")]
+        {
+            use directories::UserDirs;
+
+            let user_dir =
+                UserDirs::new().ok_or(anyhow!(t!(self.i18n, "error-user-dir-not-found")))?;
+            let desktop_path = user_dir
+                .desktop_dir()
+                .ok_or(anyhow!(t!(self.i18n, "error-desktop-not-found")))?;
+
+            let shortcut_path = desktop_path.join(format!("{}.lnk", &link_name));
+            let shortcut_start_menu_path = base_dir
+                .data_dir()
+                .join("Microsoft\\Windows\\Start Menu\\Godot")
+                .join(format!("{}.lnk", link_name));
+
+            if shortcut_path.exists() {
+                std::fs::remove_file(shortcut_path)?;
+            }
+            if shortcut_start_menu_path.exists() {
+                std::fs::remove_file(shortcut_start_menu_path)?;
+            }
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let shortcut_path = base_dir
+                .data_local_dir()
+                .join("applications")
+                .join(format!("{}.desktop", link_name));
+            if shortcut_path.exists() {
+                std::fs::remove_file(shortcut_path)?;
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            // TODO: MacOS shortcuts. We'll have to remove .app bundles in the Applications folder.
+        }
         Ok(())
     }
 }

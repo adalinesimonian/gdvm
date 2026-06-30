@@ -25,7 +25,11 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token", "prune.max-age-days"];
+pub const KNOWN_KEYS: &[&str] = &[
+    "github.token",
+    "global.launch_shortcut",
+    "prune.max-age-days",
+];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -41,6 +45,8 @@ pub struct RegistryConfig {
 pub struct Config {
     #[serde(default)]
     pub github_token: Option<String>,
+    #[serde(default)]
+    pub global_launch_shortcut: Option<bool>,
     /// Maximum age, in days, before an unused asset becomes eligible for
     /// pruning. When unset, `DEFAULT_PRUNE_MAX_AGE_DAYS` is used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -76,6 +82,7 @@ impl ConfigOps for Config {
     fn get_value(&self, key: &str) -> Option<String> {
         match key {
             "github.token" => self.github_token.clone(),
+            "global.launch_shortcut" => self.global_launch_shortcut.map(|v| v.to_string()),
             "prune.max-age-days" => self.prune_max_age_days.map(|d| d.to_string()),
             _ => None,
         }
@@ -85,6 +92,14 @@ impl ConfigOps for Config {
         match key {
             "github.token" => {
                 self.github_token = Some(value.to_string());
+                Ok(())
+            }
+            "global.launch_shortcut" => {
+                self.global_launch_shortcut = Some(
+                    value
+                        .parse()
+                        .map_err(|e| anyhow!("Failed to parse boolean value for {key}: {e}"))?,
+                );
                 Ok(())
             }
             "prune.max-age-days" => {
@@ -108,6 +123,10 @@ impl ConfigOps for Config {
                 self.prune_max_age_days = None;
                 Ok(())
             }
+            "global.launch_shortcut" => {
+                self.global_launch_shortcut = None;
+                Ok(())
+            }
             _ => Err(anyhow!("Unknown configuration key: {key}")),
         }
     }
@@ -120,6 +139,13 @@ impl ConfigOps for Config {
         let mut entries = Vec::new();
         if let Some(token) = self.github_token.as_ref() {
             entries.push(("github.token".to_string(), token.clone(), true));
+        }
+        if let Some(launch_shortcut) = self.global_launch_shortcut {
+            entries.push((
+                "global.launch_shortcut".to_string(),
+                launch_shortcut.to_string(),
+                false,
+            ));
         }
         if let Some(days) = self.prune_max_age_days {
             entries.push(("prune.max-age-days".to_string(), days.to_string(), false));

@@ -292,6 +292,12 @@ error-github-rate-limit = GitHub API si rate-grense overskriden.
   Merk: Tokenet vil verta lagra i klårtekst i heimemappa di. Ver venleg å sørgje for at du held det sikkert.
   Det er tilrådd å regelmessig gjennomgå og rotere tokena dine for tryggleiksføremål.
 
+error-copy-file-failed = Kunne ikke kopiere filen: { $error }
+error-move-file-failed = Kunne ikke flytte filen: { $error }
+error-user-dir-not-found = Kunne ikke opprette snarvei: Brukerkatalogen ble ikke funnet
+error-desktop-not-found = Kunne ikke opprette snarvei: Skrivebordskatalogen ble ikke funnet
+help-launch-shortcut = Oppretter en snarvei for rask tilgang til kjørende forekomster av Godot (på skrivebordet og i Start-menyen for Windows; i ~/.local/share/applications-katalogen for Linux; i Programmer-mappen for macOS).
+error-base-dir-not-found = Base-mappe ikke funnet
 help-registry = Administrer register å installere Godot-bygg frå
 help-registry-add = Legg til eit register
 help-registry-remove = Fjern eit register

@@ -168,7 +168,14 @@ async fn install_from_file_registry_extracts_build() {
         .to_determinate();
 
     let outcome = manager
-        .install(&gv, &Variant::default(), Some("localreg"), false, false)
+        .install(
+            &gv,
+            &Variant::default(),
+            Some("localreg"),
+            false,
+            false,
+            false,
+        )
         .await
         .expect("install should succeed from a file: registry");
     assert!(matches!(outcome, InstallOutcome::Installed));
@@ -197,14 +204,28 @@ async fn install_fails_closed_on_sha512_mismatch() {
         .to_determinate();
 
     manager
-        .install(&gv, &Variant::default(), Some("localreg"), false, false)
+        .install(
+            &gv,
+            &Variant::default(),
+            Some("localreg"),
+            false,
+            false,
+            false,
+        )
         .await
         .expect("initial install should succeed");
 
     fs::write(&stored, b"tampered contents that do not match the hash").unwrap();
 
     let result = manager
-        .install(&gv, &Variant::default(), Some("localreg"), true, true)
+        .install(
+            &gv,
+            &Variant::default(),
+            Some("localreg"),
+            true,
+            true,
+            false,
+        )
         .await;
     assert!(
         result.is_err(),
@@ -245,7 +266,7 @@ async fn project_gdvm_toml_registry_is_honored_over_machine() {
             .unwrap()
             .to_determinate();
         let outcome = manager
-            .install(&gv, &Variant::default(), Some("proj"), false, false)
+            .install(&gv, &Variant::default(), Some("proj"), false, false, false)
             .await
             .expect("install from project-defined registry should succeed");
         matches!(outcome, InstallOutcome::Installed)
