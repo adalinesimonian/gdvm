@@ -114,35 +114,6 @@ impl GdvmPaths {
             bin_dir,
         })
     }
-
-    #[cfg(test)]
-    pub fn from_config_installs_for_tests(base: PathBuf) -> Result<Self> {
-        let config = Config {
-            global_installs_location: Some(base.join("test_installs")),
-            ..Default::default()
-        };
-        let installs = config
-            .global_installs_location
-            .clone()
-            .unwrap_or_else(|| base.join("installs"));
-        let cache_dir = base.join("cache");
-        let cache_index = base.join("cache.json");
-        let usage_index = base.join("usage.json");
-        let bin_dir = base.join("bin");
-
-        fs::create_dir_all(&installs)?;
-        fs::create_dir_all(&cache_dir)?;
-        fs::create_dir_all(&bin_dir)?;
-
-        Ok(Self {
-            base,
-            installs,
-            cache_dir,
-            cache_index,
-            bin_dir,
-            usage_index,
-        })
-    }
 }
 
 #[cfg(test)]
