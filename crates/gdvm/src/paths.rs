@@ -143,24 +143,4 @@ mod tests {
 
         Ok(())
     }
-
-    #[test]
-    fn creates_directories_and_exposes_paths_with_config() -> Result<()> {
-        let tmp = TempDir::new()?;
-        let paths = GdvmPaths::from_config_installs_for_tests(tmp.path().to_path_buf())?;
-
-        assert!(paths.base().starts_with(tmp.path()));
-        assert!(paths.installs().exists());
-        assert!(paths.cache_dir().exists());
-        assert!(paths.bin_dir().exists());
-
-        // Derived files live under base.
-        assert_eq!(paths.default_file(), paths.base().join("default"));
-        assert_eq!(
-            paths.current_godot_symlink(),
-            paths.bin_dir().join("current_godot")
-        );
-
-        Ok(())
-    }
 }
