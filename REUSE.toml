@@ -25,6 +25,8 @@ path = [
     "v2/package.json",
     "v2/package-lock.json",
     "v2/tsconfig.json",
+    "gdvm/v1/package.json",
+    "gdvm/v1/tsconfig.json",
 ]
 SPDX-FileCopyrightText = "Copyright (C) 2025 Adaline Simonian"
 SPDX-License-Identifier = "GPL-3.0-or-later"
@@ -37,6 +39,7 @@ path = [
     "v2/index.json",
     "v2/releases/**",
     "v2/.state.json",
+    "gdvm/v1/releases.json",
 ]
 SPDX-FileCopyrightText = "Copyright (C) 2025 Adaline Simonian"
 SPDX-License-Identifier = "CC0-1.0"

@@ -1,0 +1,13 @@
+{
+  "name": "gdvm-registry-gdvm",
+  "private": true,
+  "version": "1.0.0",
+  "description": "gdvm self-update release registry",
+  "type": "module",
+  "volta": {
+    "node": "26.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0"
+  }
+}
