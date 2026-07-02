@@ -25,10 +25,8 @@ import {
   type GdvmBinary,
   type GdvmRelease,
   type GdvmReleasesManifest,
-  downloadUrl,
   isPrereleaseVersion,
   ownerRepo,
-  sha256File,
   sortReleasesDescending,
   targetFromAssetName,
   versionFromTag,
@@ -40,13 +38,11 @@ const relManifestPath = path.relative(repoRoot, manifestPath);
 
 interface Args {
   tag?: string;
-  dist?: string;
-  prerelease: boolean;
   backfill: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { prerelease: false, backfill: false };
+  const args: Args = { backfill: false };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -54,12 +50,6 @@ function parseArgs(argv: string[]): Args {
     switch (arg) {
       case "--tag":
         args.tag = argv[++i];
-        break;
-      case "--dist":
-        args.dist = argv[++i];
-        break;
-      case "--prerelease":
-        args.prerelease = true;
         break;
       case "--backfill":
         args.backfill = true;
@@ -115,47 +105,6 @@ async function writeManifest(manifest: GdvmReleasesManifest): Promise<boolean> {
   await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, "\t")}\n`);
 
   return true;
-}
-
-/** Build a release entry from locally built binaries in `dist`. */
-async function releaseFromDist(
-  tag: string,
-  dist: string,
-  prerelease: boolean,
-): Promise<GdvmRelease> {
-  const version = versionFromTag(tag);
-  const repo = ownerRepo();
-  const binaries: Record<string, GdvmBinary> = {};
-  const entries = await fs.readdir(dist);
-
-  for (const filename of entries.sort()) {
-    const target = targetFromAssetName(filename);
-
-    if (!target) {
-      continue;
-    }
-
-    const filePath = path.join(dist, filename);
-    const stat = await fs.stat(filePath);
-
-    binaries[target] = {
-      filename,
-      size: stat.size,
-      sha256: await sha256File(filePath),
-      urls: [downloadUrl(repo, tag, filename)],
-    };
-  }
-
-  if (Object.keys(binaries).length === 0) {
-    throw new Error(`No gdvm binaries found in ${dist}`);
-  }
-
-  return {
-    version,
-    tag,
-    prerelease: prerelease || isPrereleaseVersion(version),
-    binaries,
-  };
 }
 
 function upsertRelease(
@@ -237,6 +186,21 @@ async function fetchAndCacheAttestations(
   await fs.writeFile(outFile, lines.join("\n") + "\n");
 
   return `${tag}/${sha256hex}.jsonl`;
+}
+
+async function fetchReleaseByTag(
+  tag: string,
+  client: GitHubClient,
+): Promise<GitHubRelease> {
+  const repo = ownerRepo();
+  const url = `https://api.github.com/repos/${repo}/releases/tags/${tag}`;
+  const resp = await client.fetch(url);
+
+  if (!resp.ok) {
+    throw new Error(`GitHub API error ${resp.status}: ${await resp.text()}`);
+  }
+
+  return (await resp.json()) as GitHubRelease;
 }
 
 async function fetchAllReleases(
@@ -393,15 +357,21 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (!args.tag || !args.dist) {
-    console.error(
-      "Usage: update-gdvm-releases.mts --tag <tag> --dist <dir> [--prerelease] | --backfill",
-    );
+  if (!args.tag) {
+    console.error("Usage: update-gdvm-releases.mts --tag <tag> | --backfill");
+    process.exit(1);
+  }
+
+  const client = new GitHubClient({ token: process.env.GITHUB_TOKEN });
+  const gh = await fetchReleaseByTag(args.tag, client);
+  const release = await releaseFromGitHub(gh, client);
+
+  if (!release) {
+    console.error(`No matching assets found for tag ${args.tag}.`);
     process.exit(1);
   }
 
   const manifest = await loadManifest();
-  const release = await releaseFromDist(args.tag, args.dist, args.prerelease);
 
   upsertRelease(manifest, release);
 
