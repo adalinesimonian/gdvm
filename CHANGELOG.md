@@ -33,6 +33,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - `gdvm cache-path <version>` will now print the path to the cached download archive for a given version. This is useful for scripts that need to access the archive directly.
 - `gdvm prune` removes installs and cached download archives that are no longer in use. By default it only removes things that have been idle longer than a configurable threshold (settable with `gdvm config set prune.max-age-days <days>`, default 30 days) while preserving any install that still has a link pointing into it, as well as the global install.
 - `gdvm upgrade --pre` upgrades gdvm to the latest pre-release. Without the flag, `gdvm upgrade` only upgrades to stable releases, unless you are already running a pre-release and no newer stable release exists yet, in which case it moves to the latest pre-release of that same version.
+- gdvm binaries on macOS and Windows are now signed with a code signing certificate. This should prevent warnings about untrusted binaries when running gdvm on those platforms and help identify modified binaries.
 
 ### Fixed
 
