@@ -18,7 +18,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import snappy from "snappy";
 import {
+  GitHubClient,
   gdvmSchemaVersion,
   type GdvmBinary,
   type GdvmRelease,
@@ -85,14 +87,34 @@ async function loadManifest(): Promise<GdvmReleasesManifest> {
   }
 }
 
-async function writeManifest(manifest: GdvmReleasesManifest): Promise<void> {
+async function writeManifest(manifest: GdvmReleasesManifest): Promise<boolean> {
   sortReleasesDescending(manifest.releases);
+
+  try {
+    const existing = JSON.parse(
+      await fs.readFile(manifestPath, "utf8"),
+    ) as GdvmReleasesManifest;
+
+    if (Array.isArray(existing.releases)) {
+      sortReleasesDescending(existing.releases);
+
+      if (
+        JSON.stringify(manifest.releases) === JSON.stringify(existing.releases)
+      ) {
+        return false;
+      }
+    }
+  } catch {
+    // Something wrong with file.
+  }
 
   manifest.schema = gdvmSchemaVersion;
   manifest.updated_at = new Date().toISOString();
 
   await fs.mkdir(path.dirname(manifestPath), { recursive: true });
   await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, "\t")}\n`);
+
+  return true;
 }
 
 /** Build a release entry from locally built binaries in `dist`. */
@@ -163,23 +185,69 @@ interface GitHubRelease {
   assets: GitHubAsset[];
 }
 
-async function fetchAllReleases(): Promise<GitHubRelease[]> {
-  const repo = ownerRepo();
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-    "User-Agent": "gdvm-registry",
-  };
+interface GitHubAttestation {
+  bundle_url: string;
+}
 
-  if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+async function fetchAndCacheAttestations(
+  repo: string,
+  digest: string,
+  tag: string,
+  client: GitHubClient,
+): Promise<string | undefined> {
+  const apiUrl = `https://api.github.com/repos/${repo}/attestations/${digest}`;
+  const resp = await client.fetch(apiUrl);
+
+  if (!resp.ok) {
+    return undefined;
   }
 
+  const data = (await resp.json()) as { attestations?: GitHubAttestation[] };
+
+  if (!Array.isArray(data.attestations) || data.attestations.length === 0) {
+    return undefined;
+  }
+
+  const lines: string[] = [];
+
+  for (const attestation of data.attestations) {
+    const bundleResp = await fetch(attestation.bundle_url);
+
+    if (!bundleResp.ok) {
+      continue;
+    }
+
+    const compressed = Buffer.from(await bundleResp.arrayBuffer());
+    const raw = (await snappy.uncompress(compressed, {
+      asBuffer: false,
+    })) as string;
+
+    lines.push(JSON.stringify(JSON.parse(raw)));
+  }
+
+  if (lines.length === 0) {
+    return undefined;
+  }
+
+  const sha256hex = digest.slice("sha256:".length);
+  const outDir = path.join(import.meta.dirname, tag);
+  const outFile = path.join(outDir, `${sha256hex}.jsonl`);
+
+  await fs.mkdir(outDir, { recursive: true });
+  await fs.writeFile(outFile, lines.join("\n") + "\n");
+
+  return `${tag}/${sha256hex}.jsonl`;
+}
+
+async function fetchAllReleases(
+  client: GitHubClient,
+): Promise<GitHubRelease[]> {
+  const repo = ownerRepo();
   const releases: GitHubRelease[] = [];
 
   for (let page = 1; ; page++) {
     const url = `https://api.github.com/repos/${repo}/releases?per_page=100&page=${page}`;
-    const resp = await fetch(url, { headers });
+    const resp = await client.fetch(url);
 
     if (!resp.ok) {
       throw new Error(`GitHub API error ${resp.status}: ${await resp.text()}`);
@@ -197,8 +265,12 @@ async function fetchAllReleases(): Promise<GitHubRelease[]> {
 }
 
 /** Build a release entry from a GitHub Releases API object. */
-function releaseFromGitHub(gh: GitHubRelease): GdvmRelease | null {
+async function releaseFromGitHub(
+  gh: GitHubRelease,
+  client: GitHubClient,
+): Promise<GdvmRelease | null> {
   const version = versionFromTag(gh.tag_name);
+  const repo = ownerRepo();
   const binaries: Record<string, GdvmBinary> = {};
 
   for (const asset of gh.assets) {
@@ -216,6 +288,17 @@ function releaseFromGitHub(gh: GitHubRelease): GdvmRelease | null {
 
     if (asset.digest?.startsWith("sha256:")) {
       binary.sha256 = asset.digest.slice("sha256:".length);
+
+      const attestationUrl = await fetchAndCacheAttestations(
+        repo,
+        asset.digest,
+        gh.tag_name,
+        client,
+      );
+
+      if (attestationUrl) {
+        binary.provenance = { attestation_url: attestationUrl };
+      }
     }
 
     binaries[target] = binary;
@@ -237,31 +320,75 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.backfill) {
-    const githubReleases = await fetchAllReleases();
-    const releases: GdvmRelease[] = [];
+    const client = new GitHubClient({
+      token: process.env.GITHUB_TOKEN,
+      concurrency: 8,
+    });
+    const allReleases = await fetchAllReleases(client);
+    const publishedReleases: GitHubRelease[] = [];
+    let maxTagLength = 0;
 
-    for (const gh of githubReleases) {
-      if (gh.draft) {
-        continue;
-      }
+    for (const gh of allReleases) {
+      if (!gh.draft) {
+        publishedReleases.push(gh);
 
-      const release = releaseFromGitHub(gh);
-
-      if (release) {
-        releases.push(release);
+        if (gh.tag_name.length > maxTagLength) {
+          maxTagLength = gh.tag_name.length;
+        }
       }
     }
+
+    const total = publishedReleases.length;
+    const countWidth = `[${total}/${total}]`.length + 1;
+    const tagWidth = maxTagLength + 2;
+
+    console.log(
+      `Fetched ${allReleases.length} release(s) from GitHub (${total} published).`,
+    );
+
+    const releases: GdvmRelease[] = [];
+    let completed = 0;
+
+    await Promise.all(
+      publishedReleases.map(async (gh) => {
+        const release = await releaseFromGitHub(gh, client);
+        const n = ++completed;
+
+        if (release) {
+          releases.push(release);
+          const withAttestation = Object.values(release.binaries).filter(
+            (b) => b.provenance,
+          ).length;
+          const binaryCount = Object.keys(release.binaries).length;
+          const attestationNote =
+            withAttestation > 0
+              ? `, ${withAttestation}/${binaryCount} attested`
+              : "";
+          console.log(
+            `  ${`[${n}/${total}]`.padEnd(countWidth)}${gh.tag_name.padEnd(tagWidth)}${binaryCount} binaries${attestationNote}`,
+          );
+        } else {
+          console.log(
+            `  ${`[${n}/${total}]`.padEnd(countWidth)}${gh.tag_name.padEnd(tagWidth)}skipped, no matching assets`,
+          );
+        }
+      }),
+    );
 
     const manifest: GdvmReleasesManifest = {
       schema: gdvmSchemaVersion,
       releases,
     };
 
-    await writeManifest(manifest);
+    const written = await writeManifest(manifest);
 
-    console.log(
-      `Backfilled ${releases.length} release(s) into ${relManifestPath}.`,
-    );
+    if (written) {
+      console.log(
+        `Backfilled ${releases.length} release(s) into ${relManifestPath}.`,
+      );
+    } else {
+      console.log(`No changes detected. ${relManifestPath} not updated.`);
+    }
 
     return;
   }
@@ -277,13 +404,18 @@ async function main(): Promise<void> {
   const release = await releaseFromDist(args.tag, args.dist, args.prerelease);
 
   upsertRelease(manifest, release);
-  await writeManifest(manifest);
 
-  console.log(
-    `Updated ${relManifestPath} with ${release.version} (${
-      Object.keys(release.binaries).length
-    } binaries, prerelease=${release.prerelease}).`,
-  );
+  const written = await writeManifest(manifest);
+
+  if (written) {
+    console.log(
+      `Updated ${relManifestPath} with ${release.version} (${Object.keys(release.binaries).length} binaries, prerelease=${release.prerelease}).`,
+    );
+  } else {
+    console.log(
+      `No changes detected for ${release.version}. ${relManifestPath} not updated.`,
+    );
+  }
 }
 
 await main();

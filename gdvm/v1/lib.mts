@@ -183,3 +183,83 @@ export function sortReleasesDescending(releases: GdvmRelease[]): void {
 export function ownerRepo(): string {
   return process.env.GITHUB_REPOSITORY || "adalinesimonian/gdvm";
 }
+
+export class GitHubClient {
+  readonly headers: Record<string, string>;
+  readonly #concurrency: number;
+  readonly #queue: (() => void)[] = [];
+  #active = 0;
+  #rateLimitRemaining = Infinity;
+  #rateLimitResetMs = 0;
+
+  constructor(options: { token?: string; concurrency?: number } = {}) {
+    this.headers = {
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "gdvm-registry",
+    };
+
+    if (options.token) {
+      this.headers.Authorization = `Bearer ${options.token}`;
+    }
+
+    this.#concurrency = options.concurrency ?? 8;
+  }
+
+  async fetch(url: string): Promise<Response> {
+    await this.acquireSlot();
+
+    try {
+      if (this.#rateLimitRemaining <= 0) {
+        const waitMs = Math.max(0, this.#rateLimitResetMs - Date.now()) + 1000;
+
+        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+
+        this.#rateLimitRemaining = Infinity;
+      }
+
+      const resp = await fetch(url, { headers: this.headers });
+
+      this.applyRateLimitHeaders(resp.headers);
+
+      return resp;
+    } finally {
+      this.releaseSlot();
+    }
+  }
+
+  private applyRateLimitHeaders(headers: Headers): void {
+    const remaining = headers.get("x-ratelimit-remaining");
+    const reset = headers.get("x-ratelimit-reset");
+
+    if (remaining !== null) {
+      this.#rateLimitRemaining = Number(remaining);
+    }
+
+    if (reset !== null) {
+      this.#rateLimitResetMs = Number(reset) * 1000;
+    }
+  }
+
+  private acquireSlot(): Promise<void> {
+    if (this.#active < this.#concurrency) {
+      this.#active++;
+
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this.#queue.push(resolve);
+    });
+  }
+
+  private releaseSlot(): void {
+    const next = this.#queue.shift();
+
+    if (next) {
+      next();
+    } else {
+      this.#active--;
+    }
+  }
+}
