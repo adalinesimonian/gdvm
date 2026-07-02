@@ -68,6 +68,8 @@ $PostToBluesky = -not $NoBluesky
 $IsDryRun = [bool]$DryRun
 $HasBlockingIssues = $false
 $IsRerelease = [bool]$Rerelease
+$IsPreRelease = $Version -match '-'
+$PreReleaseFlag = if ($IsPreRelease) { "true" } else { "false" }
 
 # Records a warning during dry run, otherwise exits.
 function WarnOrExit {
@@ -104,19 +106,52 @@ function Exit-WithError {
 # Validates if a string is a valid semantic version.
 function Test-SemanticVersion {
     param([string]$VersionString)
-    return $VersionString -match '^\d+\.\d+\.\d+$'
+    return $VersionString -match '^\d+\.\d+\.\d+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'
 }
 
 # Compares two semantic versions.
 function Compare-SemanticVersion {
     param([string]$Version1, [string]$Version2)
 
-    $v1Parts = $Version1.Split('.') | ForEach-Object { [int]$_ }
-    $v2Parts = $Version2.Split('.') | ForEach-Object { [int]$_ }
+    $core1, $pre1 = $Version1 -split '-', 2
+    $core2, $pre2 = $Version2 -split '-', 2
+
+    $v1Parts = $core1.Split('.') | ForEach-Object { [int]$_ }
+    $v2Parts = $core2.Split('.') | ForEach-Object { [int]$_ }
 
     for ($i = 0; $i -lt 3; $i++) {
         if ($v1Parts[$i] -gt $v2Parts[$i]) { return 1 }
         if ($v1Parts[$i] -lt $v2Parts[$i]) { return -1 }
+    }
+
+    $hasPre1 = -not [string]::IsNullOrEmpty($pre1)
+    $hasPre2 = -not [string]::IsNullOrEmpty($pre2)
+
+    if (-not $hasPre1 -and -not $hasPre2) { return 0 }
+    if (-not $hasPre1) { return 1 }
+    if (-not $hasPre2) { return -1 }
+
+    $ids1 = $pre1.Split('.')
+    $ids2 = $pre2.Split('.')
+    $max = [Math]::Max($ids1.Length, $ids2.Length)
+    for ($i = 0; $i -lt $max; $i++) {
+        if ($i -ge $ids1.Length) { return -1 }
+        if ($i -ge $ids2.Length) { return 1 }
+        $a = $ids1[$i]; $b = $ids2[$i]
+        $aNum = $a -match '^\d+$'
+        $bNum = $b -match '^\d+$'
+        if ($aNum -and $bNum) {
+            $an = [int]$a; $bn = [int]$b
+            if ($an -gt $bn) { return 1 }
+            if ($an -lt $bn) { return -1 }
+        }
+        elseif ($aNum) { return -1 }
+        elseif ($bNum) { return 1 }
+        else {
+            $cmp = [string]::CompareOrdinal($a, $b)
+            if ($cmp -gt 0) { return 1 }
+            if ($cmp -lt 0) { return -1 }
+        }
     }
     return 0
 }
@@ -207,14 +242,14 @@ function Show-ReleasePlan {
 
 # Validate version format.
 if (-not (Test-SemanticVersion $Version)) {
-    Exit-WithError "Version must be in the format Major.Minor.Patch (e.g., 1.2.3)"
+    Exit-WithError "Version must be in the format Major.Minor.Patch or Major.Minor.Patch-prerelease (e.g., 1.2.3 or 1.2.3-pre.1)"
 }
 
 if ($IsRerelease) {
     $ReleaseTag = "v$Version"
 
     $ChangelogContent = Get-Content "CHANGELOG.md" -Raw
-    $LatestVersionMatch = [regex]::Match($ChangelogContent, '(?m)^##\s+(v\d+\.\d+\.\d+)')
+    $LatestVersionMatch = [regex]::Match($ChangelogContent, '(?m)^##\s+(v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)')
     if (-not $LatestVersionMatch.Success) {
         Exit-WithError "Could not find any version entries in CHANGELOG.md."
     }
@@ -245,6 +280,7 @@ if ($IsRerelease) {
 
     $RereleasePlan = @(
         "Trigger workflow release.yml with release_tag=$ReleaseTag",
+        "prerelease flag: $PreReleaseFlag",
         "post_to_bsky flag: $PostFlag"
     )
 
@@ -273,6 +309,7 @@ if ($IsRerelease) {
 
     gh workflow run release.yml `
         -f release_tag=$ReleaseTag `
+        -f prerelease=$PreReleaseFlag `
         -f "social_post=$SocialPostJson" `
         -f post_to_bsky=$PostFlag
 
@@ -372,7 +409,7 @@ $UnreleasedLines = $UnreleasedContent -split '\n' | Where-Object { $_ -notmatch 
 $UnreleasedText = ($UnreleasedLines | Where-Object { $_.Trim() }) -join "`n"
 
 # Find the previous version from the changelog.
-$PreviousVersionMatch = [regex]::Match($ChangelogContent, '## v(\d+\.\d+\.\d+)\s')
+$PreviousVersionMatch = [regex]::Match($ChangelogContent, '## v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s')
 if ($PreviousVersionMatch.Success) {
     $PreviousVersion = $PreviousVersionMatch.Groups[1].Value
 }
@@ -412,7 +449,7 @@ else {
 $ReleasePlan += @("Create commit: $CommitMessage",
     "Create annotated tag: $TagName",
     "Push commit to origin/main and push tag $TagName",
-    "Trigger workflow release.yml with release_tag=$TagName and post_to_bsky=$PostFlag")
+    "Trigger workflow release.yml with release_tag=$TagName, prerelease=$PreReleaseFlag and post_to_bsky=$PostFlag")
 
 Show-ReleasePlan -IsDryRun $IsDryRun -Items $ReleasePlan -SocialPostContent $SocialPostContent
 
@@ -575,6 +612,7 @@ Write-Host "Triggering release workflow on $TagName..." -ForegroundColor Green
 
 gh workflow run release.yml `
     -f release_tag=$TagName `
+    -f prerelease=$PreReleaseFlag `
     -f "social_post=$SocialPostJson" `
     -f post_to_bsky=$PostFlag
 

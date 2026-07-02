@@ -86,9 +86,6 @@ gdvm upgrade         # Upgrade gdvm.
 >
 > Your existing commands and `.gdvmrc` files still work. See [Migrating to the new version syntax](MIGRATION.md) for the details.
 
-> [!NOTE]
-> Hitting GitHub rate limits? Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with access to public repositories, and run `gdvm config set github.token` (stored plaintext in `~/.gdvm/config.toml`).
-
 For more information, run `gdvm --help`.
 
 ### Using gdvm with debuggers

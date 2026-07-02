@@ -54,23 +54,41 @@ fn test_load_save_roundtrip() {
 
     with_test_home(dir.path(), || {
         let cfg = Config {
-            github_token: Some("token1".into()),
+            prune_max_age_days: Some(7),
             ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
 
     let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
-    assert_eq!(loaded.github_token, Some("token1".to_string()));
+    assert_eq!(loaded.prune_max_age_days, Some(7));
 
     with_test_home(dir.path(), || {
         let cfg = Config {
-            github_token: Some("token2".into()),
+            prune_max_age_days: Some(14),
             ..Default::default()
         };
         cfg.save(&i18n).unwrap();
     });
 
     let loaded2 = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
-    assert_eq!(loaded2.github_token, Some("token2".to_string()));
+    assert_eq!(loaded2.prune_max_age_days, Some(14));
+}
+
+#[test]
+#[serial]
+fn test_legacy_config_option_is_ignored_on_load() {
+    let dir = tempdir().unwrap();
+    let i18n = I18n::new().unwrap();
+
+    let config_dir = dir.path().join(".gdvm");
+    std::fs::create_dir_all(&config_dir).unwrap();
+    std::fs::write(
+        config_dir.join("config.toml"),
+        "github_token = \"secret\"\nprune_max_age_days = 9\n",
+    )
+    .unwrap();
+
+    let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    assert_eq!(loaded.prune_max_age_days, Some(9));
 }

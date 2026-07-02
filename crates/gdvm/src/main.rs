@@ -473,13 +473,22 @@ async fn main() -> Result<()> {
                 .arg(yes_flag(&i18n)),
         )
         .subcommand(
-            Command::new("upgrade").about(t!(i18n, "help-upgrade")).arg(
-                Arg::new("major")
-                    .long("major")
-                    .short('m')
-                    .num_args(0)
-                    .help(t!(i18n, "help-upgrade-major")),
-            ),
+            Command::new("upgrade")
+                .about(t!(i18n, "help-upgrade"))
+                .arg(
+                    Arg::new("major")
+                        .long("major")
+                        .short('m')
+                        .num_args(0)
+                        .help(t!(i18n, "help-upgrade-major")),
+                )
+                .arg(
+                    Arg::new("pre")
+                        .long("pre")
+                        .short('p')
+                        .num_args(0)
+                        .help(t!(i18n, "help-upgrade-pre")),
+                ),
         )
         .subcommand(
             Command::new("pin")
@@ -1614,7 +1623,8 @@ async fn sub_use(i18n: &I18n, manager: &GodotManager<'_>, matches: &ArgMatches) 
 /// Handle the 'upgrade' subcommand
 async fn sub_upgrade(manager: &GodotManager<'_>, matches: &ArgMatches) -> Result<()> {
     let allow_major = matches.get_flag("major");
-    manager.upgrade(allow_major).await
+    let allow_pre = matches.get_flag("pre");
+    manager.upgrade(allow_major, allow_pre).await
 }
 
 /// Handle the 'pin' subcommand
