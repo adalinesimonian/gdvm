@@ -29,7 +29,7 @@ on:
         required: true
         type: string
       verify_signature:
-        description: "Verify the macOS Developer ID signature of the binary."
+        description: "Verify the code signature of the binaries."
         required: false
         type: boolean
         default: false
@@ -64,6 +64,23 @@ jobs:
           grep -q "Authority=Developer ID Application" /tmp/codesign.txt
           grep -qE "flags=0x[0-9a-f]*\(.*runtime.*\)" /tmp/codesign.txt
           echo "Signature OK"
+
+      - name: Verify code signature (Windows)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'windows') }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $sig = Get-AuthenticodeSignature ".\gdvm.exe"
+
+          if ($sig.Status -ne 'Valid') {
+            throw "gdvm.exe signature status: $($sig.Status)"
+          }
+
+          if (-not $sig.TimeStamperCertificate) {
+            throw "gdvm.exe is not timestamped"
+          }
+            
+          Write-Host "gdvm.exe signature OK: $($sig.SignerCertificate.Subject)"
 
       - name: Install 32-bit runtime libraries (Ubuntu i686)
         if: contains(inputs.os, 'ubuntu') && contains(inputs.target, 'i686')
@@ -113,6 +130,33 @@ jobs:
           grep -q "Authority=Developer ID Application" /tmp/codesign-shim.txt
           grep -qE "flags=0x[0-9a-f]*\(.*runtime.*\)" /tmp/codesign-shim.txt
           echo "Shim signature OK"
+
+      - name: Verify shim code signature (Windows)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'windows') }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          & "$HOME\.gdvm\bin\gdvm.exe" --version | Out-Null
+
+          foreach ($name in @("godot.exe", "godot_console.exe")) {
+            $p = Join-Path $HOME ".gdvm\bin\$name"
+
+            if (-not (Test-Path $p)) {
+              throw "shim not found: $p"
+            }
+
+            $sig = Get-AuthenticodeSignature $p
+
+            if ($sig.Status -ne 'Valid') {
+              throw "$name signature status: $($sig.Status)"
+            }
+              
+            if (-not $sig.TimeStamperCertificate) {
+              throw "$name is not timestamped"
+            }
+
+            Write-Host "$name signature OK: $($sig.SignerCertificate.Subject)"
+          }
 
       - name: Run end-to-end tests
         shell: bash
