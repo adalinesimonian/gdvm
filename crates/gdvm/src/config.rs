@@ -25,7 +25,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["github.token", "prune.max-age-days"];
+pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days"];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -39,8 +39,6 @@ pub struct RegistryConfig {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
-    #[serde(default)]
-    pub github_token: Option<String>,
     /// Maximum age, in days, before an unused asset becomes eligible for
     /// pruning. When unset, `DEFAULT_PRUNE_MAX_AGE_DAYS` is used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -75,7 +73,6 @@ pub trait ConfigOps {
 impl ConfigOps for Config {
     fn get_value(&self, key: &str) -> Option<String> {
         match key {
-            "github.token" => self.github_token.clone(),
             "prune.max-age-days" => self.prune_max_age_days.map(|d| d.to_string()),
             _ => None,
         }
@@ -83,10 +80,6 @@ impl ConfigOps for Config {
 
     fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
-            "github.token" => {
-                self.github_token = Some(value.to_string());
-                Ok(())
-            }
             "prune.max-age-days" => {
                 let days: u64 = value
                     .parse()
@@ -100,10 +93,6 @@ impl ConfigOps for Config {
 
     fn unset_value(&mut self, key: &str) -> Result<()> {
         match key {
-            "github.token" => {
-                self.github_token = None;
-                Ok(())
-            }
             "prune.max-age-days" => {
                 self.prune_max_age_days = None;
                 Ok(())
@@ -112,15 +101,13 @@ impl ConfigOps for Config {
         }
     }
 
-    fn is_sensitive_key(&self, key: &str) -> bool {
-        matches!(key, "github.token")
+    fn is_sensitive_key(&self, _key: &str) -> bool {
+        // No configuration keys are currently sensitive.
+        false
     }
 
     fn list_set_keys(&self) -> Vec<(String, String, bool)> {
         let mut entries = Vec::new();
-        if let Some(token) = self.github_token.as_ref() {
-            entries.push(("github.token".to_string(), token.clone(), true));
-        }
         if let Some(days) = self.prune_max_age_days {
             entries.push(("prune.max-age-days".to_string(), days.to_string(), false));
         }
@@ -248,19 +235,22 @@ mod tests {
     #[test]
     fn test_get_set_unset_list() {
         let mut cfg = Config::default();
-        assert!(cfg.get_value("github.token").is_none());
-        assert!(cfg.set_value("github.token", "abc").is_ok());
-        assert_eq!(cfg.get_value("github.token"), Some("abc".to_string()));
-        assert!(cfg.is_sensitive_key("github.token"));
+        assert!(cfg.get_value("prune.max-age-days").is_none());
+        assert!(cfg.set_value("prune.max-age-days", "5").is_ok());
+        assert_eq!(cfg.get_value("prune.max-age-days"), Some("5".to_string()));
+        assert!(!cfg.is_sensitive_key("prune.max-age-days"));
         let listed = cfg.list_set_keys();
         assert_eq!(
             listed,
-            vec![("github.token".to_string(), "abc".to_string(), true)]
+            vec![("prune.max-age-days".to_string(), "5".to_string(), false)]
         );
-        assert!(cfg.unset_value("github.token").is_ok());
-        assert!(cfg.get_value("github.token").is_none());
+        assert!(cfg.unset_value("prune.max-age-days").is_ok());
+        assert!(cfg.get_value("prune.max-age-days").is_none());
         assert!(cfg.set_value("unknown", "val").is_err());
         assert!(cfg.unset_value("unknown").is_err());
+        assert!(cfg.get_value("github.token").is_none());
+        assert!(cfg.set_value("github.token", "abc").is_err());
+        assert!(!KNOWN_KEYS.contains(&"github.token"));
     }
 
     #[test]
