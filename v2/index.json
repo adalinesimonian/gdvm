@@ -2,6 +2,30 @@
 	"schema": 2,
 	"releases": [
 		{
+			"version": "4.7.1-rc1",
+			"variants": {
+				"csharp": [
+					"linux-arm64",
+					"linux-x86",
+					"linux-x86_64",
+					"macos-universal",
+					"windows-arm64",
+					"windows-x86",
+					"windows-x86_64"
+				],
+				"default": [
+					"linux-arm64",
+					"linux-x86",
+					"linux-x86_64",
+					"macos-universal",
+					"windows-arm64",
+					"windows-x86",
+					"windows-x86_64"
+				]
+			},
+			"path": "releases/4.7.1-rc1.json"
+		},
+		{
 			"version": "4.7-stable",
 			"variants": {
 				"csharp": [
