@@ -81,18 +81,22 @@ const githubToken =
   "";
 
 let state: UpdateState = {};
+let saveQueue: Promise<void> = Promise.resolve();
 
-const saveState = async () => {
-  const sorted = Object.fromEntries(
-    Object.entries(state).sort(([, a], [, b]) => b.id - a.id),
-  );
+const saveState = (): Promise<void> => {
+  saveQueue = saveQueue.then(async () => {
+    const sorted = Object.fromEntries(
+      Object.entries(state).sort(([, a], [, b]) => b.id - a.id),
+    );
 
-  state = sorted;
+    state = sorted;
 
-  await fs.writeFile(
-    path.join(import.meta.dirname, ".state.json"),
-    JSON.stringify(state, null, "\t") + "\n",
-  );
+    await fs.writeFile(
+      path.join(import.meta.dirname, ".state.json"),
+      JSON.stringify(state, null, "\t") + "\n",
+    );
+  });
+  return saveQueue;
 };
 
 const updateRegistryManifest = async () => {
@@ -1052,6 +1056,7 @@ async function runParent() {
 
   console.log(`Using ${workers} worker threads with chunk size ${chunkSize}.`);
 
+  const releaseByTag = new Map(releases.map((r) => [r.tag_name, r]));
   let completed = 0;
   let anyChanged = false;
 
@@ -1083,6 +1088,18 @@ async function runParent() {
         if (msg.changed) {
           anyChanged = true;
         }
+        const rel = releaseByTag.get(msg.tag);
+
+        if (rel && state[rel.tag_name]?.id !== rel.id) {
+          state[rel.tag_name] = { id: rel.id };
+
+          saveState().catch((err) => {
+            const msg =
+              err instanceof Error ? (err.stack ?? err.message) : String(err);
+
+            progress.error(`Failed to save state: ${msg}`);
+          });
+        }
         progress.finish(msg.tag, completed);
       } else if (msg.type === "log") {
         progress.log(msg.tag, msg.line, msg.sticky);
@@ -1099,6 +1116,7 @@ async function runParent() {
   }
 
   await Promise.all(pool);
+  await saveState();
   progress.stop();
 
   // Write index.json with the release index.

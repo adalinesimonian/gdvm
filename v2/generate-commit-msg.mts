@@ -122,7 +122,9 @@ diff
       added.push({ id: newState[match[1]]?.id, name: match[1] });
     } else if (status === "D" && match) {
       removed.push({ id: oldState[match[1]]?.id, name: match[1] });
-    } else if (!/^v2\/releases\/|^v2\/index\.json$/.test(file)) {
+    } else if (
+      !/^v2\/releases\/|^v2\/(index|registry|\.state)\.json$/.test(file)
+    ) {
       otherLines.push(file);
     }
   });
