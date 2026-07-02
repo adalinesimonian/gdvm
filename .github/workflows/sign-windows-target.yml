@@ -1,0 +1,175 @@
+# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
+name: Sign Windows Target
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: "Runner OS for this signing job."
+        required: true
+        type: string
+      target:
+        description: "Rust target triple to sign."
+        required: true
+        type: string
+      ref:
+        description: "Ref to check out and build."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    name: Sign (${{ inputs.os }}, ${{ inputs.target }})
+    runs-on: ${{ inputs.os }}
+    environment: windows-signing
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      WORKSPACE_DIR: ${{ github.workspace }}
+      SIMPLYSIGN_DOWNLOAD_URL: https://files.certum.eu/software/SimplySignDesktop/Windows/9.4.4.92/SimplySignDesktop-9.4.4.92-64-bit-en.msi
+    steps:
+      - name: Check out code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup Dev Drive (Windows)
+        if: runner.os == 'Windows'
+        id: devdrive
+        uses: samypr100/setup-dev-drive@30f0f98ae5636b2b6501e181dfb3631b9974818d # v4
+        with:
+          drive-size: 5GB
+          drive-format: ReFS
+          drive-type: Fixed
+          workspace-copy: true
+          native-dev-drive: true
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
+      - name: Configure Windows environment for Dev Drive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "CARGO_TARGET_DIR=$($env:DEV_DRIVE_WORKSPACE)/target" >> $env:GITHUB_ENV
+
+      - name: Determine workspace root
+        shell: pwsh
+        run: |
+          $workspace = "${{ github.workspace }}"
+          if ($env:DEV_DRIVE_WORKSPACE) { $workspace = $env:DEV_DRIVE_WORKSPACE }
+          "WORKSPACE_DIR=$workspace" >> $env:GITHUB_ENV
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          target: ${{ inputs.target }}
+          rustflags: ""
+          cache-shared-key: ${{ inputs.target }}
+          cache-workspaces: ${{ env.WORKSPACE_DIR }}
+
+      - name: Locate signtool
+        shell: pwsh
+        run: |
+          # SimplySign only provides a 64-bit x86 binary, so we need the x64
+          # signtool.exe.
+          $arch = "x64"
+          $cand = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\$arch\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+
+          if (-not $cand) {
+            throw "signtool.exe not found for arch $arch"
+          }
+
+          "SIGNTOOL=$($cand.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "signtool: $($cand.FullName)"
+
+      - name: Cache SimplySign installer
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: simplysign-installer-${{ env.SIMPLYSIGN_DOWNLOAD_URL }}
+          path: SimplySignDesktop.msi
+
+      - name: Set up Certum SimplySign
+        uses: adalinesimonian/windows-app-signing-setup-action@dc0e20106cb44430a3f2cb6407adf3474f095edd
+        with:
+          certum-username: ${{ secrets.CERTUM_USER_ID }}
+          certum-otp-uri: ${{ secrets.CERTUM_OTP_URI }}
+          certum-key-id: ${{ secrets.CERTUM_CERT_SHA1 }}
+
+      - name: Build and sign
+        shell: pwsh
+        working-directory: ${{ env.WORKSPACE_DIR }}
+        env:
+          CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          $t = "${{ inputs.target }}"
+          $ts = "http://time.certum.pl/"
+
+          function Sign-File([string]$path) {
+            & $env:SIGNTOOL sign /sha1 $env:CERTUM_CERT_SHA1 `
+              /tr $ts /td sha256 /fd sha256 /v $path
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "signtool sign failed for $path"
+            }
+
+            & $env:SIGNTOOL verify /pa /v $path
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "signtool verify failed for $path"
+            }
+          }
+
+          cargo build --release --target $t `
+            --manifest-path crates/shim/Cargo.toml --target-dir intermediate
+          $shim = "intermediate/$t/release/shim.exe"
+          Sign-File $shim
+
+          $env:GDVM_PREBUILT_SHIM = (Resolve-Path $shim).Path
+          cargo build --release --target $t -p gdvm
+          $gdvm = "target/$t/release/gdvm.exe"
+          Sign-File $gdvm
+
+          Push-Location "target/$t/release"
+          tar -cvf binary.tar gdvm.exe
+          Copy-Item binary.tar "$env:GITHUB_WORKSPACE/"
+          Pop-Location
+
+      - name: Upload signed binary
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: binary-${{ inputs.target }}
+          path: binary.tar
+          overwrite: true
+          retention-days: 1
+
+      - name: Disconnect SimplySign
+        if: always()
+        shell: pwsh
+        run: |
+          Get-Process -Name "*SimplySign*" -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+          exit 0
