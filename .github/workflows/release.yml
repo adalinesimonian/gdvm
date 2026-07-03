@@ -252,6 +252,7 @@ jobs:
         with:
           node-version-file: "gdvm/v1/package.json"
           cache: npm
+          cache-dependency-path: "gdvm/v1/package-lock.json"
 
       - name: Install dependencies
         working-directory: gdvm/v1
@@ -402,24 +403,29 @@ jobs:
             fi
 
             temp_image="/tmp/og_image"
-            curl -s "$og_image" -o "$temp_image"
-            image_content_type=$(curl -s -I "$og_image" | grep -i "content-type:" | cut -d' ' -f2 | tr -d '\r\n')
+            curl -sL "$og_image" -o "$temp_image"
+            image_content_type=$(file -b --mime-type "$temp_image" 2>/dev/null || echo "application/octet-stream")
 
-            blob_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.uploadBlob" \
-              -H "Authorization: Bearer $BSKY_TOKEN" \
-              -H "Content-Type: $image_content_type" \
-              --data-binary "@$temp_image")
+            if [[ "$image_content_type" == image/* ]]; then
+              blob_response=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.repo.uploadBlob" \
+                -H "Authorization: Bearer $BSKY_TOKEN" \
+                -H "Content-Type: $image_content_type" \
+                --data-binary "@$temp_image")
+
+              blob_ref=$(echo "$blob_response" | jq '.blob')
+              blob_mime=$(echo "$blob_response" | jq -r '.blob.mimeType // empty')
+
+              if [ "$blob_ref" != "null" ] && [[ "$blob_mime" == image/* ]]; then
+                embed_external=$(echo "$embed_external" | jq --argjson thumb "$blob_ref" '. + {"thumb": $thumb}')
+                echo "✅ Image uploaded successfully ($blob_mime)."
+              else
+                echo "⚠️ Image blob not usable, is mimeType $blob_mime. Continuing without thumbnail."
+              fi
+            else
+              echo "⚠️ Fetched OpenGraph asset is not an image, is type $image_content_type. Continuing without thumbnail."
+            fi
 
             rm -f "$temp_image"
-
-            blob_ref=$(echo "$blob_response" | jq '.blob')
-
-            if [ "$blob_ref" != "null" ]; then
-              embed_external=$(echo "$embed_external" | jq --argjson thumb "$blob_ref" '. + {"thumb": $thumb}')
-              echo "✅ Image uploaded successfully."
-            else
-              echo "⚠️ Image upload failed, continuing without thumbnail."
-            fi
           else
             echo "⚠️ No OpenGraph image found, continuing without thumbnail."
           fi
