@@ -351,6 +351,31 @@ jobs:
           post_text=$(jq -R -s '.' < post_text.txt)
 
           release_url="https://github.com/adalinesimonian/gdvm/releases/tag/${RELEASE_TAG}"
+
+          facet_py='
+          import json, os
+
+          url = os.environ["RELEASE_URL"]
+
+          with open("post_text.txt", "rb") as fh:
+              tb = fh.read()
+            
+          urlbytes = url.encode("utf-8")
+          out, i = [], tb.find(urlbytes)
+
+          while i != -1:
+              out.append({"index": {"byteStart": i, "byteEnd": i + len(urlbytes)},
+                          "features": [{"$type": "app.bsky.richtext.facet#link", "uri": url}]})
+              i = tb.find(urlbytes, i + len(urlbytes))
+
+          print(json.dumps(out))
+          '
+          facets=$(RELEASE_URL="$release_url" python3 -c "$(printf '%s\n' "$facet_py" | sed 's/^          //')" || echo '[]')
+
+          if [ -z "$facets" ]; then
+            facets='[]'
+          fi
+
           html_content=$(curl -s "$release_url")
 
           og_title=$(echo "$html_content" | grep -oP '<meta[^>]*property="og:title"[^>]*content="\K[^"]*' | head -1)
@@ -405,6 +430,7 @@ jobs:
             --arg type "app.bsky.feed.post" \
             --argjson text "$post_text" \
             --arg createdAt "$timestamp" \
+            --argjson facets "$facets" \
             --arg embed_type "app.bsky.embed.external" \
             --argjson external "$embed_external" \
             '{
@@ -414,6 +440,7 @@ jobs:
                 "$type": $type,
                 text: $text,
                 createdAt: $createdAt,
+                facets: $facets,
                 embed: {
                   "$type": $embed_type,
                   external: $external
