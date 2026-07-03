@@ -25,7 +25,7 @@ use crate::i18n::I18n;
 use crate::t;
 
 /// URL to gdvm's own release manifest.
-pub const GDVM_RELEASES_URL: &str = "https://registry.gdvm.io/gdvm/releases.json";
+pub const GDVM_RELEASES_URL: &str = "https://registry.gdvm.io/gdvm/v1/releases.json";
 
 /// Environment variable that overrides `GDVM_RELEASES_URL`.
 pub const GDVM_RELEASES_URL_ENV_VAR: &str = "GDVM_RELEASES_URL";

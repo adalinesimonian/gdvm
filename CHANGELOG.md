@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### Fixed
+
+- An omission in the gdvm release URL caused gdvm's upgrade command to fail with a 404 error. This has been fixed, and gdvm can now upgrade itself again. If you were affected by this, you may need to reinstall gdvm to get the latest version.
+
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.0...main
 
 ## v0.13.0
