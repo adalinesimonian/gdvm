@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.0...main
+
+## v0.13.0
+
 ### Breaking Changes
 
 - Terminal output, aside from help text, is no longer wrapped to a fixed width, and instead relies on the terminal to wrap text. This resolves issues with scripts that parse gdvm output, such as URLs being split across multiple lines.
@@ -45,7 +49,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - Switch away from `raw.githubusercontent.com` to `registry.gdvm.io` for the Godot build registry.
 - gdvm now reads its own release information from `registry.gdvm.io` instead of the GitHub API, so update checks and `gdvm upgrade` no longer require GitHub API access or are affected by rate limits.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.1...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.1...v0.13.0
 
 ## v0.12.1
 
