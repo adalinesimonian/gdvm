@@ -273,7 +273,9 @@ jobs:
       - name: Detect changes
         id: changes
         run: |
-          git add gdvm/v1/releases.json
+          shopt -s nullglob # In case no files match.
+          files=(gdvm/v1/releases.json gdvm/v1/*/*.jsonl)
+          git add "${files[@]}"
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -287,6 +289,7 @@ jobs:
           commit_message: "chore(gdvm): publish ${{ github.event.inputs.release_tag }}"
           repo: ${{ github.repository }}
           branch: registry
+          file_pattern: "gdvm/v1/releases.json gdvm/v1/*/*.jsonl"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
