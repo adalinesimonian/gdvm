@@ -1,7 +1,7 @@
 #![cfg(feature = "integration-tests")]
 
 use gdvm::{
-    config::{Config, ConfigOps, get_absolute_path},
+    config::{Config, ConfigOps, get_absolute_path_to_directory},
     i18n::I18n,
     paths::GdvmPaths,
 };
@@ -36,7 +36,7 @@ where
 
 #[test]
 fn test_get_absolute_path_normalizes_relative_paths() {
-    let path = get_absolute_path("subdir/../installs").unwrap();
+    let path = get_absolute_path_to_directory("subdir/../installs").unwrap();
 
     assert!(path.is_absolute());
     assert!(
@@ -49,8 +49,8 @@ fn test_get_absolute_path_normalizes_relative_paths() {
 
 #[test]
 fn test_get_absolute_path_rejects_empty_strings() {
-    assert!(get_absolute_path("").is_err());
-    assert!(get_absolute_path("   ").is_err());
+    assert!(get_absolute_path_to_directory("").is_err());
+    assert!(get_absolute_path_to_directory("   ").is_err());
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn test_get_absolute_path_rejects_existing_files() {
     let file_path = dir.path().join("not_a_dir.txt");
     std::fs::write(&file_path, "data").unwrap();
 
-    assert!(get_absolute_path(file_path.to_string_lossy().as_ref()).is_err());
+    assert!(get_absolute_path_to_directory(file_path.to_string_lossy().as_ref()).is_err());
 }
 
 #[test]
