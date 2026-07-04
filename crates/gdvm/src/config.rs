@@ -244,35 +244,23 @@ pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
 }
 
 fn is_reserved_path(path: &Path) -> bool {
-    let mut current = path;
-    while let Some(parent) = current.parent() {
-        if parent == path {
-            break;
-        }
-        current = parent;
-    }
-
     let reserved_names = [".gdvm", "bin", "cache", "installs"];
     path.components().any(|component| {
         component
             .as_os_str()
             .to_string_lossy()
-            .split([std::path::MAIN_SEPARATOR, '/'])
+            .split(['/', '\\'])
             .any(|segment| reserved_names.contains(&segment))
     })
 }
 
 fn validate_path_relationships(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<()> {
-    if path == Path::new("") {
-        return Err(anyhow!("Path cannot be empty"));
-    }
-
-    if is_reserved_path(path) {
+    let path = absolute(path)?;
+    if is_reserved_path(&path) {
         return Err(anyhow!("Path is reserved for gdvm internals: {path:?}"));
     }
 
     if let Some(existing_path) = existing {
-        let path = absolute(path)?;
         let existing_path = absolute(existing_path)?;
         if path == existing_path
             || path.starts_with(&existing_path)
@@ -287,15 +275,15 @@ fn validate_path_relationships(path: &Path, key: &str, existing: Option<&PathBuf
 
 pub fn get_absolute_path_to_directory(path: &str) -> Result<PathBuf> {
     let p = PathBuf::from(path);
-    if p.is_file() {
-        return Err(anyhow!("Path points to a file, not a directory: {path}"));
-    }
     if p.to_string_lossy().trim().is_empty() {
         return Err(anyhow!("Path cannot be empty"));
     }
+    if p.is_file() {
+        return Err(anyhow!("Path points to a file, not a directory: {path}"));
+    }
     for item in p.components() {
         if item.as_os_str().to_string_lossy().trim().is_empty() {
-            Err(anyhow!("Path contains empty components: {path}"))?;
+            return Err(anyhow!("Path contains empty components: {path}"));
         }
     }
 
