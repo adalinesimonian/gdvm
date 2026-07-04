@@ -110,3 +110,60 @@ fn test_change_install_path_config() {
     let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
     assert_eq!(loaded.install_path, Some(dir.path().join("test_installs")));
 }
+
+#[test]
+#[serial]
+fn test_change_cache_path_config() {
+    let dir = tempdir().unwrap();
+    let i18n = I18n::new().unwrap();
+
+    with_test_home(dir.path(), || {
+        let cfg = Config {
+            cache_path: Some(dir.path().join("test_cache")),
+            ..Default::default()
+        };
+        cfg.save(&i18n).unwrap();
+    });
+
+    let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    assert_eq!(loaded.cache_path, Some(dir.path().join("test_cache")));
+}
+
+#[test]
+#[serial]
+fn test_config_rejects_reserved_install_path() {
+    let dir = tempdir().unwrap();
+    let i18n = I18n::new().unwrap();
+
+    with_test_home(dir.path(), || {
+        let mut cfg = Config::default();
+        let reserved = dir.path().join(".gdvm").join("bin");
+
+        assert!(
+            cfg.set_value("install.path", reserved.to_string_lossy().as_ref())
+                .is_err()
+        );
+        cfg.save(&i18n).unwrap();
+    });
+}
+
+#[test]
+#[serial]
+fn test_config_rejects_overlapping_install_and_cache_paths() {
+    let dir = tempdir().unwrap();
+    let i18n = I18n::new().unwrap();
+
+    with_test_home(dir.path(), || {
+        let mut cfg = Config::default();
+        let installs = dir.path().join("custom-installs");
+        let cache = installs.join("cache");
+
+        cfg.set_value("install.path", installs.to_string_lossy().as_ref())
+            .unwrap();
+        assert!(
+            cfg.set_value("cache.path", cache.to_string_lossy().as_ref())
+                .is_err()
+        );
+        cfg.save(&i18n).unwrap();
+    });
+}
