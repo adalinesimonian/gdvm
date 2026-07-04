@@ -76,7 +76,12 @@ async function build(dir) {
     .map((e) => e.name)
     .sort();
   const files = entries
-    .filter((e) => e.isFile() && e.name.endsWith(".json") && !skip.has(e.name))
+    .filter(
+      (e) =>
+        e.isFile() &&
+        (e.name.endsWith(".json") || e.name.endsWith(".jsonl")) &&
+        !skip.has(e.name),
+    )
     .map((e) => e.name)
     .sort();
 
