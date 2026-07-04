@@ -17,7 +17,7 @@
 
 #![cfg(feature = "integration-tests")]
 
-use gdvm::{config::Config, i18n::I18n};
+use gdvm::{config::Config, config::ConfigOps, i18n::I18n};
 use serial_test::serial;
 use tempfile::tempdir;
 

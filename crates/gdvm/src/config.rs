@@ -284,7 +284,7 @@ fn validate_path_relationships(path: &Path, key: &str, existing: Option<&PathBuf
     Ok(())
 }
 
-fn get_absolute_path_to_directory(path: &str) -> Result<PathBuf> {
+pub fn get_absolute_path_to_directory(path: &str) -> Result<PathBuf> {
     let p = PathBuf::from(path);
     if p.is_file() {
         return Err(anyhow!("Path points to a file, not a directory: {path}"));
