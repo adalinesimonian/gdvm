@@ -71,6 +71,7 @@ dotenvy = "=0.15.7"
 
 # For timestamps:
 jiff = "=0.2.31"
+path-clean = "1.0.1"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
