@@ -25,10 +25,7 @@ use std::fs;
 use std::path::{PathBuf, absolute};
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &[
-  "prune.max-age-days",
-  "install.path",
-  "cache.path",];
+pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days", "install.path", "cache.path"];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -245,6 +242,9 @@ pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
 
 pub fn get_absolute_path(path: &str) -> Result<PathBuf> {
     let p = PathBuf::from(path);
+    if p.is_file() {
+        return Err(anyhow!("Path points to a file, not a directory: {path}"));
+    }
     for item in p.components() {
         if item.as_os_str().to_string_lossy().trim().is_empty() {
             Err(anyhow!("Path contains empty components: {path}"))?;
