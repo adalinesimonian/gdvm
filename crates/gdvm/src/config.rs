@@ -93,13 +93,13 @@ impl ConfigOps for Config {
     fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
             "install.path" => {
-                let value = get_absolute_path(value)?;
+                let value = get_absolute_path_to_directory(value)?;
                 validate_path_relationships(&value, key, self.cache_path.as_ref())?;
                 self.install_path = Some(value);
                 Ok(())
             }
             "cache.path" => {
-                let value = get_absolute_path(value)?;
+                let value = get_absolute_path_to_directory(value)?;
                 validate_path_relationships(&value, key, self.install_path.as_ref())?;
                 self.cache_path = Some(value);
                 Ok(())
@@ -284,7 +284,7 @@ fn validate_path_relationships(path: &Path, key: &str, existing: Option<&PathBuf
     Ok(())
 }
 
-pub fn get_absolute_path(path: &str) -> Result<PathBuf> {
+fn get_absolute_path_to_directory(path: &str) -> Result<PathBuf> {
     let p = PathBuf::from(path);
     if p.is_file() {
         return Err(anyhow!("Path points to a file, not a directory: {path}"));
