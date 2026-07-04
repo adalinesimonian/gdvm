@@ -240,6 +240,25 @@ pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
     Ok(base_dirs.home_dir().to_path_buf())
 }
 
+fn is_reserved_path(path: &Path) -> bool {
+    let mut current = path;
+    while let Some(parent) = current.parent() {
+        if parent == path {
+            break;
+        }
+        current = parent;
+    }
+
+    let reserved_names = [".gdvm", "bin", "cache", "installs"];
+    path.components().any(|component| {
+        component
+            .as_os_str()
+            .to_string_lossy()
+            .split([std::path::MAIN_SEPARATOR, '/'])
+            .any(|segment| reserved_names.contains(&segment))
+    })
+}
+
 pub fn get_absolute_path(path: &str) -> Result<PathBuf> {
     let p = PathBuf::from(path);
     if p.is_file() {
