@@ -22,7 +22,7 @@ use i18n::I18n;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{PathBuf, absolute};
+use std::path::{Path, PathBuf, absolute};
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days", "install.path", "cache.path"];
@@ -94,11 +94,13 @@ impl ConfigOps for Config {
         match key {
             "install.path" => {
                 let value = get_absolute_path(value)?;
+                validate_path_relationships(&value, key, self.cache_path.as_ref())?;
                 self.install_path = Some(value);
                 Ok(())
             }
             "cache.path" => {
                 let value = get_absolute_path(value)?;
+                validate_path_relationships(&value, key, self.install_path.as_ref())?;
                 self.cache_path = Some(value);
                 Ok(())
             }
@@ -257,6 +259,29 @@ fn is_reserved_path(path: &Path) -> bool {
             .split([std::path::MAIN_SEPARATOR, '/'])
             .any(|segment| reserved_names.contains(&segment))
     })
+}
+
+fn validate_path_relationships(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<()> {
+    if path == Path::new("") {
+        return Err(anyhow!("Path cannot be empty"));
+    }
+
+    if is_reserved_path(path) {
+        return Err(anyhow!("Path is reserved for gdvm internals: {path:?}"));
+    }
+
+    if let Some(existing_path) = existing {
+        let path = absolute(path)?;
+        let existing_path = absolute(existing_path)?;
+        if path == existing_path
+            || path.starts_with(&existing_path)
+            || existing_path.starts_with(&path)
+        {
+            return Err(anyhow!("Configured paths must not overlap: {key}"));
+        }
+    }
+
+    Ok(())
 }
 
 pub fn get_absolute_path(path: &str) -> Result<PathBuf> {
