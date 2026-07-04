@@ -19,6 +19,7 @@ use crate::{eprintln_i18n, i18n, t};
 use anyhow::{Result, anyhow};
 use directories::BaseDirs;
 use i18n::I18n;
+use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -297,7 +298,8 @@ pub fn get_absolute_path_to_directory(path: &str) -> Result<PathBuf> {
             Err(anyhow!("Path contains empty components: {path}"))?;
         }
     }
-    Ok(absolute(p)?)
+
+    Ok(absolute(p.clean())?)
 }
 
 impl Config {
