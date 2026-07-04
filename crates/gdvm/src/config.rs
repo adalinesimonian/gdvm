@@ -264,6 +264,9 @@ pub fn get_absolute_path(path: &str) -> Result<PathBuf> {
     if p.is_file() {
         return Err(anyhow!("Path points to a file, not a directory: {path}"));
     }
+    if p.to_string_lossy().trim().is_empty() {
+        return Err(anyhow!("Path cannot be empty"));
+    }
     for item in p.components() {
         if item.as_os_str().to_string_lossy().trim().is_empty() {
             Err(anyhow!("Path contains empty components: {path}"))?;
