@@ -530,6 +530,30 @@ TEST_SCRIPT
 
 test "Install Godot 4.3" gdvm install 4.3
 
+test "Install uses a custom install path from config" <<'TEST_SCRIPT'
+custom_root="$HOME/.gdvm-e2e-installs"
+custom_installs="$custom_root/custom_installs"
+custom_cache="$custom_root/custom_cache"
+rm -rf "$custom_root"
+mkdir -p "$custom_installs" "$custom_cache"
+
+gdvm config set install.path "$custom_installs"
+gdvm config set cache.path "$custom_cache"
+
+gdvm install 4.3 >/tmp/gdvm-custom-path.log 2>&1
+
+assert_dir_exists "$custom_installs" "custom install directory was not created"
+assert_dir_exists "$custom_cache" "custom cache directory was not created"
+
+install_dir="$(find "$custom_installs" -type d -path '*/default/4.3-stable' | head -n 1)"
+if [[ -z "$install_dir" ]]; then
+    fail "Godot install was not found under the configured install path"
+fi
+assert_dir_exists "$install_dir" "Godot install directory was not created"
+
+cat /tmp/gdvm-custom-path.log
+TEST_SCRIPT
+
 # ARM lacks Godot 3.x builds, so the ARM matrix uses 4.4 instead of 3.x.
 if [[ "$arch" == "arm" ]]; then
     test "Install and use Godot 4.4.0 (ARM)" <<'TEST_SCRIPT'
