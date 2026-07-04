@@ -183,6 +183,7 @@ error-create-symlink-windows = Impossible de créer le lien symbolique. Veuillez
 
 help-upgrade = Mettre à jour gdvm vers la dernière version
 help-upgrade-major = Autoriser la mise à jour entre versions majeures
+help-upgrade-pre = Mettre à jour vers la dernière pré-version
 upgrade-starting = Démarrage de la mise à jour de gdvm...
 upgrade-downloading-latest = Téléchargement de la dernière version de gdvm...
 upgrade-complete = gdvm a été mis à jour avec succès !
@@ -195,10 +196,15 @@ upgrade-file-write-failed = Échec de l'écriture du fichier de mise à jour : {
 upgrade-install-dir-failed = Échec de la création du répertoire d'installation : { $error }
 upgrade-rename-failed = Échec du renommage de l'exécutable actuel : { $error }
 upgrade-replace-failed = Échec du remplacement de l'exécutable par le nouveau : { $error }
+upgrade-no-binary = Aucun binaire gdvm n'est disponible pour la version { $version } et la cible { $target }.
+error-fetching-gdvm-releases = Erreur lors de la récupération des versions de gdvm : { $error }
+error-parsing-gdvm-releases = Erreur lors de l'analyse des versions de gdvm : { $error }
+error-unsupported-gdvm-schema = Version de schéma du manifeste des versions de gdvm non prise en charge : { $schema }. Essayez de mettre à jour gdvm manuellement.
 checking-updates = Vérification des mises à jour de gdvm...
 upgrade-available = 💡 Une nouvelle version de gdvm est disponible : {$version}. Exécutez « gdvm upgrade » pour mettre à jour.
 upgrade-available-major = 💡 Une mise à jour de version majeure de gdvm est disponible : {$version}. Exécutez « gdvm upgrade -m » pour mettre à jour.
 upgrade-available-both = 💡 Une nouvelle version de gdvm est disponible : {$minor_version}. Une mise à jour de version majeure est également disponible : {$major_version}. Exécutez « gdvm upgrade » pour mettre à jour dans la version majeure actuelle, ou « gdvm upgrade -m » pour mettre à jour vers la dernière version.
+upgrade-prerelease-available = 💡 Une nouvelle pré-version de gdvm est disponible. Exécutez « gdvm upgrade --pre » pour l'installer.
 
 help-pin = Épingler une version de Godot au répertoire courant.
 help-pin-long = { help-pin }
@@ -263,9 +269,9 @@ help-config-get = Obtenir une valeur de configuration
 help-config-set = Définir une valeur de configuration
 help-config-unset = Supprimer une valeur de configuration
 help-config-list = Lister toutes les valeurs de configuration
-help-config-key = La clé de configuration (ex., github.token)
+help-config-key = La clé de configuration (ex., prune.max-age-days)
 help-config-value = La valeur à définir pour la clé de configuration
-help-config-unset-key = La clé de configuration à supprimer (ex., github.token)
+help-config-unset-key = La clé de configuration à supprimer (ex., prune.max-age-days)
 help-config-show-sensitive = Rendre visible les valeurs de configuration sensibles
 help-config-available = Lister toutes les clés de configuration disponibles et leurs valeurs, y compris les valeurs par défaut
 warning-setting-sensitive = {"\u001b"}[33mAvertissement : Vous définissez une valeur sensible qui sera stockée en texte brut dans votre répertoire personnel.{"\u001b"}[0m
@@ -279,17 +285,6 @@ error-invalid-config-value = Valeur invalide pour la clé de configuration { $ke
 error-invalid-config-subcommand = Sous-commande de configuration invalide. Utilisez « get », « set », ou « list ».
 error-parse-config = Échec de l'analyse du fichier de configuration : { $error }
 error-parse-config-using-default = {"\u001b"}[33mUtilisation des valeurs de configuration par défaut.{"\u001b"}[0m
-error-github-api = Erreur de l'API GitHub : { $error }
-error-github-rate-limit = Limite d'utilisation de l'API GitHub dépassée.
-
-  Pour résoudre cela, veuillez créer un jeton d'accès personnel sur GitHub en visitant https://github.com/settings/tokens.
-
-  Cliquez sur « Generate new token », sélectionnez uniquement les permissions minimales requises (ex. public_repo), puis définissez le jeton via la variable d'environnement GITHUB_TOKEN ou en exécutant :
-
-    gdvm config set github.token
-
-  Note : Le jeton sera stocké en texte brut dans votre répertoire personnel. Veuillez vous assurer de le garder sécurisé.
-  Il est recommandé de régulièrement examiner et faire tourner vos jetons pour des raisons de sécurité.
 
 help-registry = Gérer les registres depuis lesquels installer des builds de Godot
 help-registry-add = Ajouter un registre

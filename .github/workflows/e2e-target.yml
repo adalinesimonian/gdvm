@@ -28,6 +28,11 @@ on:
         description: "Rust target triple under test"
         required: true
         type: string
+      verify_signature:
+        description: "Verify the code signature of the binaries."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -49,6 +54,33 @@ jobs:
 
       - name: Extract binary artifact
         run: tar -xvf binary.tar
+
+      - name: Verify code signature (macOS)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'macos') }}
+        run: |
+          set -euo pipefail
+          codesign --verify --strict --verbose=2 gdvm
+          codesign -dvvv gdvm 2>&1 | tee /tmp/codesign.txt
+          grep -q "Authority=Developer ID Application" /tmp/codesign.txt
+          grep -qE "flags=0x[0-9a-f]*\(.*runtime.*\)" /tmp/codesign.txt
+          echo "Signature OK"
+
+      - name: Verify code signature (Windows)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'windows') }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $sig = Get-AuthenticodeSignature ".\gdvm.exe"
+
+          if ($sig.Status -ne 'Valid') {
+            throw "gdvm.exe signature status: $($sig.Status)"
+          }
+
+          if (-not $sig.TimeStamperCertificate) {
+            throw "gdvm.exe is not timestamped"
+          }
+            
+          Write-Host "gdvm.exe signature OK: $($sig.SignerCertificate.Subject)"
 
       - name: Install 32-bit runtime libraries (Ubuntu i686)
         if: contains(inputs.os, 'ubuntu') && contains(inputs.target, 'i686')
@@ -85,6 +117,46 @@ jobs:
           cp ./gdvm.exe ~/.gdvm/bin/gdvm.exe
           echo "$HOME/.gdvm/bin" >> $GITHUB_PATH
           ~/.gdvm/bin/gdvm.exe --version
+
+      - name: Verify shim code signature (macOS)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'macos') }}
+        run: |
+          set -euo pipefail
+          ~/.gdvm/bin/gdvm --version
+          shim="$HOME/.gdvm/bin/godot"
+          test -x "$shim"
+          codesign --verify --strict --verbose=2 "$shim"
+          codesign -dvvv "$shim" 2>&1 | tee /tmp/codesign-shim.txt
+          grep -q "Authority=Developer ID Application" /tmp/codesign-shim.txt
+          grep -qE "flags=0x[0-9a-f]*\(.*runtime.*\)" /tmp/codesign-shim.txt
+          echo "Shim signature OK"
+
+      - name: Verify shim code signature (Windows)
+        if: ${{ inputs.verify_signature && contains(inputs.os, 'windows') }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          & "$HOME\.gdvm\bin\gdvm.exe" --version | Out-Null
+
+          foreach ($name in @("godot.exe", "godot_console.exe")) {
+            $p = Join-Path $HOME ".gdvm\bin\$name"
+
+            if (-not (Test-Path $p)) {
+              throw "shim not found: $p"
+            }
+
+            $sig = Get-AuthenticodeSignature $p
+
+            if ($sig.Status -ne 'Valid') {
+              throw "$name signature status: $($sig.Status)"
+            }
+              
+            if (-not $sig.TimeStamperCertificate) {
+              throw "$name is not timestamped"
+            }
+
+            Write-Host "$name signature OK: $($sig.SignerCertificate.Subject)"
+          }
 
       - name: Run end-to-end tests
         shell: bash

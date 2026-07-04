@@ -185,6 +185,7 @@ error-create-symlink-windows = Could not create symlink. Please ensure {"\u001b"
 
 help-upgrade = Upgrade gdvm to the latest version
 help-upgrade-major = Allow upgrading across major versions
+help-upgrade-pre = Upgrade to the latest pre-release version
 upgrade-starting = Starting gdvm upgrade...
 upgrade-downloading-latest = Downloading the latest gdvm version...
 upgrade-complete = gdvm was successfully upgraded!
@@ -197,10 +198,15 @@ upgrade-file-write-failed = Failed to write to upgrade file: { $error }
 upgrade-install-dir-failed = Failed to create the installation directory: { $error }
 upgrade-rename-failed = Failed to rename the current executable: { $error }
 upgrade-replace-failed = Failed to replace the executable with the new one: { $error }
+upgrade-no-binary = No gdvm binary is available for version { $version } and target { $target }.
+error-fetching-gdvm-releases = Error fetching gdvm releases: { $error }
+error-parsing-gdvm-releases = Error parsing gdvm releases: { $error }
+error-unsupported-gdvm-schema = Unsupported gdvm release manifest schema version: { $schema }. Try upgrading gdvm manually.
 checking-updates = Checking for updates to gdvm...
 upgrade-available = 💡 A new version of gdvm is available: {$version}. Run "gdvm upgrade" to update.
 upgrade-available-major = 💡 A major version update of gdvm is available: {$version}. Run "gdvm upgrade -m" to update.
 upgrade-available-both = 💡 A new version of gdvm is available: {$minor_version}. A major version update is also available: {$major_version}. Run "gdvm upgrade" to update within the current major version, or "gdvm upgrade -m" to upgrade to the latest version.
+upgrade-prerelease-available = 💡 A newer pre-release of gdvm is available. Run "gdvm upgrade --pre" to install it.
 
 help-pin = Pin a version of Godot to the current directory.
 help-pin-long = { help-pin }
@@ -265,9 +271,9 @@ help-config-get = Get a configuration value
 help-config-set = Set a configuration value
 help-config-unset = Unset a configuration value
 help-config-list = List all configuration values
-help-config-key = The configuration key (e.g., github.token)
+help-config-key = The configuration key (e.g., prune.max-age-days)
 help-config-value = The value to set for the configuration key
-help-config-unset-key = The configuration key to unset (e.g., github.token)
+help-config-unset-key = The configuration key to unset (e.g., prune.max-age-days)
 help-config-show-sensitive = Show sensitive configuration values in plaintext
 help-config-available = List all available configuration keys and their values, including defaults
 warning-setting-sensitive = {"\u001b"}[33mWarning: You are setting a sensitive value which will be stored in plaintext in your home directory.{"\u001b"}[0m
@@ -281,17 +287,6 @@ error-invalid-config-value = Invalid value for configuration key { $key }.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
 error-parse-config = Failed to parse configuration file: { $error }
 error-parse-config-using-default = {"\u001b"}[33mUsing default configuration values.{"\u001b"}[0m
-error-github-api = GitHub API error: { $error }
-error-github-rate-limit = GitHub API rate limit exceeded.
-
-  To resolve this, please create a personal access token on GitHub by visiting https://github.com/settings/tokens.
-
-  Click "Generate new token", select only the minimal permissions required (e.g. public_repo), and then set the token via the GITHUB_TOKEN environment variable or by running:
-
-    gdvm config set github.token
-
-  Note: The token will be stored in plaintext in your home directory. Please ensure you keep it secure.
-  It is recommended to regularly review and rotate your tokens for security purposes.
 
 help-registry = Manage registries to install Godot builds from
 help-registry-add = Add a registry

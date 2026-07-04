@@ -39,6 +39,11 @@ on:
         description: "Ref to check out and build. Defaults to the triggering ref."
         required: false
         type: string
+      sign:
+        description: "Sign binaries."
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.event_name }}-${{ github.event.number || github.run_id }}
@@ -87,6 +92,42 @@ jobs:
       target: aarch64-pc-windows-msvc
       ref: ${{ inputs.ref }}
 
+  sign-windows-x86_64:
+    if: ${{ inputs.sign }}
+    needs: build-windows-x86_64
+    uses: ./.github/workflows/sign-windows-target.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      os: windows-latest
+      target: x86_64-pc-windows-msvc
+      ref: ${{ inputs.ref }}
+
+  sign-windows-i686:
+    if: ${{ inputs.sign }}
+    needs: build-windows-i686
+    uses: ./.github/workflows/sign-windows-target.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      os: windows-latest
+      target: i686-pc-windows-msvc
+      ref: ${{ inputs.ref }}
+
+  sign-windows-arm64:
+    if: ${{ inputs.sign }}
+    needs: build-windows-arm64
+    uses: ./.github/workflows/sign-windows-target.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      os: windows-11-arm
+      target: aarch64-pc-windows-msvc
+      ref: ${{ inputs.ref }}
+
   build-macos-x86_64:
     uses: ./.github/workflows/build-target.yml
     with:
@@ -96,6 +137,30 @@ jobs:
 
   build-macos-arm64:
     uses: ./.github/workflows/build-target.yml
+    with:
+      os: macos-latest
+      target: aarch64-apple-darwin
+      ref: ${{ inputs.ref }}
+
+  sign-macos-x86_64:
+    if: ${{ inputs.sign }}
+    needs: build-macos-x86_64
+    uses: ./.github/workflows/sign-macos-target.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      os: macos-latest
+      target: x86_64-apple-darwin
+      ref: ${{ inputs.ref }}
+
+  sign-macos-arm64:
+    if: ${{ inputs.sign }}
+    needs: build-macos-arm64
+    uses: ./.github/workflows/sign-macos-target.yml
+    permissions:
+      contents: read
+    secrets: inherit
     with:
       os: macos-latest
       target: aarch64-apple-darwin
@@ -129,49 +194,59 @@ jobs:
       target: aarch64-unknown-linux-gnu
 
   e2e-windows-x86_64:
-    needs: build-windows-x86_64
+    needs: [build-windows-x86_64, sign-windows-x86_64]
+    if: ${{ !cancelled() && needs.build-windows-x86_64.result == 'success' && needs.sign-windows-x86_64.result != 'failure' }}
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
     with:
       os: windows-latest
       target: x86_64-pc-windows-msvc
+      verify_signature: ${{ needs.sign-windows-x86_64.result == 'success' }}
 
   e2e-windows-i686:
-    needs: build-windows-i686
+    needs: [build-windows-i686, sign-windows-i686]
+    if: ${{ !cancelled() && needs.build-windows-i686.result == 'success' && needs.sign-windows-i686.result != 'failure' }}
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
     with:
       os: windows-latest
       target: i686-pc-windows-msvc
+      verify_signature: ${{ needs.sign-windows-i686.result == 'success' }}
 
   e2e-windows-arm64:
-    needs: build-windows-arm64
+    needs: [build-windows-arm64, sign-windows-arm64]
+    if: ${{ !cancelled() && needs.build-windows-arm64.result == 'success' && needs.sign-windows-arm64.result != 'failure' }}
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
     with:
       os: windows-11-arm
       target: aarch64-pc-windows-msvc
+      verify_signature: ${{ needs.sign-windows-arm64.result == 'success' }}
 
   e2e-macos-x86_64:
-    needs: build-macos-x86_64
+    needs: [build-macos-x86_64, sign-macos-x86_64]
+    if: ${{ !cancelled() && needs.build-macos-x86_64.result == 'success' && needs.sign-macos-x86_64.result != 'failure' }}
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
     with:
       os: macos-latest
       target: x86_64-apple-darwin
+      verify_signature: ${{ needs.sign-macos-x86_64.result == 'success' }}
 
   e2e-macos-arm64:
-    needs: build-macos-arm64
+    needs: [build-macos-arm64, sign-macos-arm64]
+    if: ${{ !cancelled() && needs.build-macos-arm64.result == 'success' && needs.sign-macos-arm64.result != 'failure' }}
     uses: ./.github/workflows/e2e-target.yml
     permissions:
       contents: read
     with:
       os: macos-latest
       target: aarch64-apple-darwin
+      verify_signature: ${{ needs.sign-macos-arm64.result == 'success' }}
 
   delete-artifacts:
     name: Delete Artifacts (standalone runs)

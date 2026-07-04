@@ -81,7 +81,7 @@ jobs:
         with:
           target: ${{ inputs.target }}
           rustflags: ""
-          cache-key: ${{ inputs.target }}
+          cache-shared-key: ${{ inputs.target }}
           cache-workspaces: ${{ env.WORKSPACE_DIR }}
           components: rustc, rust-std, cargo, rustfmt, clippy
 

@@ -190,6 +190,26 @@ define_migrations! {
         }
 
         Ok(())
+    },
+    4 => |base_path, _i18n| {
+        // Remove the legacy `github_token` value from config.toml to avoid
+        // secrets sticking around.
+        let config_path = base_path.join("config.toml");
+        if !config_path.is_file() {
+            return Ok(());
+        }
+
+        let contents = fs::read_to_string(&config_path)?;
+        let Ok(mut table) = contents.parse::<toml::Table>() else {
+            return Ok(());
+        };
+
+        if table.remove("github_token").is_some() {
+            let serialized = toml::to_string(&table)?;
+            fs::write(&config_path, serialized)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -416,7 +436,11 @@ mod tests {
         }
 
         let dv = fs::read_to_string(base.join("data_version")).unwrap();
-        assert!(dv.lines().any(|l| l.trim() == "3"));
+        assert!(
+            dv.lines()
+                .filter_map(|l| l.trim().parse::<u32>().ok())
+                .any(|v| v >= 3)
+        );
     }
 
     #[test]
@@ -435,5 +459,49 @@ mod tests {
         let store = base.join("installs").join(&official);
         assert!(store.join("default/4.4-stable/Godot_v_bin").is_file());
         assert!(!store.join(&official).exists());
+    }
+
+    #[test]
+    fn migration_v4_scrubs_legacy_github_token() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+
+        fs::write(
+            base.join("config.toml"),
+            "github_token = \"super-secret\"\nprune_max_age_days = 12\n",
+        )
+        .unwrap();
+        fs::write(base.join("data_version"), "3\n").unwrap();
+
+        let i18n = I18n::new().unwrap();
+        run_migrations(base, &i18n).unwrap();
+
+        let contents = fs::read_to_string(base.join("config.toml")).unwrap();
+        assert!(
+            !contents.contains("github_token"),
+            "github_token must be removed, got: {contents}"
+        );
+        assert!(
+            !contents.contains("super-secret"),
+            "token value must be removed, got: {contents}"
+        );
+        assert!(contents.contains("prune_max_age_days"));
+
+        let dv = fs::read_to_string(base.join("data_version")).unwrap();
+        assert!(dv.lines().any(|l| l.trim() == "4"));
+    }
+
+    #[test]
+    fn migration_v4_no_config_is_ok() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+        fs::write(base.join("data_version"), "3\n").unwrap();
+
+        let i18n = I18n::new().unwrap();
+        run_migrations(base, &i18n).unwrap();
+
+        assert!(!base.join("config.toml").exists());
+        let dv = fs::read_to_string(base.join("data_version")).unwrap();
+        assert!(dv.lines().any(|l| l.trim() == "4"));
     }
 }

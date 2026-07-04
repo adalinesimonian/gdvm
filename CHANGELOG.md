@@ -21,9 +21,22 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.1...main
+
+## v0.13.1
+
+### Fixed
+
+- An omission in the gdvm release URL caused gdvm's upgrade command to fail with a 404 error. This has been fixed, and gdvm can now upgrade itself again. If you were affected by this, you may need to reinstall gdvm to get the latest version.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.0...v0.13.1
+
+## v0.13.0
+
 ### Breaking Changes
 
 - Terminal output, aside from help text, is no longer wrapped to a fixed width, and instead relies on the terminal to wrap text. This resolves issues with scripts that parse gdvm output, such as URLs being split across multiple lines.
+- The `github.token` configuration setting has been removed. gdvm no longer uses the GitHub API for its own update checks or upgrades, so a token is no longer needed. Any token previously stored in `~/.gdvm/config.toml` is removed automatically the next time gdvm runs.
 
 ### New Features
 
@@ -31,6 +44,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - If a `gdvm.toml` file is malformed, gdvm will now print a warning instead of silently ignoring it.
 - `gdvm cache-path <version>` will now print the path to the cached download archive for a given version. This is useful for scripts that need to access the archive directly.
 - `gdvm prune` removes installs and cached download archives that are no longer in use. By default it only removes things that have been idle longer than a configurable threshold (settable with `gdvm config set prune.max-age-days <days>`, default 30 days) while preserving any install that still has a link pointing into it, as well as the global install.
+- `gdvm upgrade --pre` upgrades gdvm to the latest pre-release. Without the flag, `gdvm upgrade` only upgrades to stable releases, unless you are already running a pre-release and no newer stable release exists yet, in which case it moves to the latest pre-release of that same version.
+- gdvm binaries on macOS and Windows are now signed with a code signing certificate. This should prevent warnings about untrusted binaries when running gdvm on those platforms and help identify modified binaries.
+- All gdvm releases now provide a SHA256SUMS file with the checksums of all binaries in the release, signed by [sigstore](https://sigstore.dev/). This allows users to verify the integrity of the downloaded binaries and ensure they haven't been tampered with. Validation can be done by running `cosign verify-blob --bundle SHA256SUMS.bundle --certificate-identity-regexp '^https://github.com/adalinesimonian/gdvm/\.github/workflows/release\.yml@' --certificate-oidc-issuer https://token.actions.githubusercontent.com SHA256SUMS` to confirm the checksum file's signature, then `sha256sum --check --ignore-missing SHA256SUMS` to confirm the binaries against it.
 
 ### Fixed
 
@@ -39,8 +55,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 ### Changed
 
 - Switch away from `raw.githubusercontent.com` to `registry.gdvm.io` for the Godot build registry.
+- gdvm now reads its own release information from `registry.gdvm.io` instead of the GitHub API, so update checks and `gdvm upgrade` no longer require GitHub API access or are affected by rate limits.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.1...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.12.1...v0.13.0
 
 ## v0.12.1
 

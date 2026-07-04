@@ -183,6 +183,7 @@ error-create-symlink-windows = Kunne ikkje opprette symlink. Kontroller at {"\u0
 
 help-upgrade = Oppgrader gdvm til nyaste versjon
 help-upgrade-major = Tillat oppgradering på tvers av hovudversjonar
+help-upgrade-pre = Oppgrader til nyaste førehandsutgjeving
 upgrade-starting = Startar oppgradering av gdvm...
 upgrade-downloading-latest = Lastar ned nyaste gdvm...
 upgrade-complete = gdvm vart oppgradert!
@@ -195,10 +196,15 @@ upgrade-file-write-failed = Klarte ikkje å skrive til oppgraderingsfila: { $err
 upgrade-install-dir-failed = Klarte ikkje å opprette installasjonskatalogen: { $error }
 upgrade-rename-failed = Klarte ikkje å endre namnet på den noverande køyrberre fila: { $error }
 upgrade-replace-failed = Klarte ikkje å erstatte den køyrberre fila med den nye: { $error }
+upgrade-no-binary = Inga gdvm-binærfil er tilgjengeleg for versjon { $version } og målet { $target }.
+error-fetching-gdvm-releases = Feil ved henting av gdvm-utgjevingar: { $error }
+error-parsing-gdvm-releases = Feil ved tolking av gdvm-utgjevingar: { $error }
+error-unsupported-gdvm-schema = Skjemaversjon for gdvm-utgjevingsmanifestet er ikkje støtta: { $schema }. Prøv å oppgradere gdvm manuelt.
 checking-updates = Sjekkar etter oppdateringar til gdvm...
 upgrade-available = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade» for å oppdatere.
 upgrade-available-major = 💡 Ei hovudversjonsoppdatering av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade -m» for å oppdatere.
 upgrade-available-both = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$minor_version}. Ei hovudversjonsoppdatering er òg tilgjengeleg: {$major_version}. Køyr «gdvm upgrade» for å oppdatere innan gjeldande hovudversjon, eller «gdvm upgrade -m» for å oppgradere til aller siste versjon.
+upgrade-prerelease-available = 💡 Ei nyare førehandsutgjeving av gdvm er tilgjengeleg. Køyr «gdvm upgrade --pre» for å installere ho.
 
 help-pin = Fest ein versjon av Godot til gjeldande mappe.
 help-pin-long = { help-pin }
@@ -264,9 +270,9 @@ help-config-get = Hent ein konfigurasjonsverdi
 help-config-set = Set ein konfigurasjonsverdi
 help-config-unset = Fjern ein konfigurasjonsverdi
 help-config-list = List alle konfigurasjonsverdiar
-help-config-key = Konfigurasjonsnykelen (t.d. github.token)
+help-config-key = Konfigurasjonsnykelen (t.d. prune.max-age-days)
 help-config-value = Verdien som skal setjast for konfigurasjonsnykelen
-help-config-unset-key = Konfigurasjonsnykelen som skal fjernast (t.d. github.token)
+help-config-unset-key = Konfigurasjonsnykelen som skal fjernast (t.d. prune.max-age-days)
 help-config-show-sensitive = Vis sensitive konfigurasjonsverdiar i klårtekst
 help-config-available = List alle tilgjengelege konfigurasjonsnyklar og verdiar, inkludert standardverdiar
 warning-setting-sensitive = {"\u001b"}[33mÅtvaring: Du set ein sensitiv verdi som vil verta lagra i klårtekst i heimemappa di.{"\u001b"}[0m
@@ -280,17 +286,6 @@ error-invalid-config-value = Ugyldig verdi for konfigurasjonsnykelen { $key }.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk «get», «set» eller «list».
 error-parse-config = Kunne ikkje tolke konfigurasjonsfila: { $error }
 error-parse-config-using-default = {"\u001b"}[33mBrukar standard konfigurasjonsverdiar.{"\u001b"}[0m
-error-github-api = GitHub API-feil: { $error }
-error-github-rate-limit = GitHub API si rate-grense overskriden.
-
-  For å løyse dette, ver venleg og opprett eit personleg tilgangstoken på GitHub ved å vitja https://github.com/settings/tokens.
-
-  Klikk på «Generate new token», vel berre dei minimale løyva som krevst (t.d. public_repo), og set deretter tokenet via miljøvariabelen GITHUB_TOKEN eller ved å køyre:
-
-    gdvm config set github.token
-
-  Merk: Tokenet vil verta lagra i klårtekst i heimemappa di. Ver venleg å sørgje for at du held det sikkert.
-  Det er tilrådd å regelmessig gjennomgå og rotere tokena dine for tryggleiksføremål.
 
 help-registry = Administrer register å installere Godot-bygg frå
 help-registry-add = Legg til eit register
