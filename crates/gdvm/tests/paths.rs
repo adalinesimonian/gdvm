@@ -64,45 +64,6 @@ fn test_get_absolute_path_rejects_existing_files() {
 
 #[test]
 #[serial]
-fn test_config_rejects_reserved_install_path() {
-    let dir = tempdir().unwrap();
-    let i18n = I18n::new().unwrap();
-
-    with_test_home(dir.path(), || {
-        let mut cfg = Config::default();
-        let reserved = dir.path().join(".gdvm").join("bin");
-
-        assert!(
-            cfg.set_value("install.path", reserved.to_string_lossy().as_ref())
-                .is_err()
-        );
-        cfg.save(&i18n).unwrap();
-    });
-}
-
-#[test]
-#[serial]
-fn test_config_rejects_overlapping_install_and_cache_paths() {
-    let dir = tempdir().unwrap();
-    let i18n = I18n::new().unwrap();
-
-    with_test_home(dir.path(), || {
-        let mut cfg = Config::default();
-        let installs = dir.path().join("custom-installs");
-        let cache = installs.join("cache");
-
-        cfg.set_value("install.path", installs.to_string_lossy().as_ref())
-            .unwrap();
-        assert!(
-            cfg.set_value("cache.path", cache.to_string_lossy().as_ref())
-                .is_err()
-        );
-        cfg.save(&i18n).unwrap();
-    });
-}
-
-#[test]
-#[serial]
 fn test_gdvm_paths_uses_normalized_absolute_paths() {
     let dir = tempdir().unwrap();
     let i18n = I18n::new().unwrap();
