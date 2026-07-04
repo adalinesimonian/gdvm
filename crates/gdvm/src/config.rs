@@ -22,7 +22,7 @@ use i18n::I18n;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{PathBuf, absolute};
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &[
@@ -105,11 +105,13 @@ impl ConfigOps for Config {
                 Ok(())
             }
             "install.path" => {
-                self.install_path = Some(PathBuf::from(value));
+                let value = get_absolute_path(value)?;
+                self.install_path = Some(value);
                 Ok(())
             }
             "cache.path" => {
-                self.cache_path = Some(PathBuf::from(value));
+                let value = get_absolute_path(value)?;
+                self.cache_path = Some(value);
                 Ok(())
             }
             "prune.max-age-days" => {
@@ -254,6 +256,16 @@ pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
 
     let base_dirs = BaseDirs::new().ok_or(anyhow!(t!(i18n, "error-find-user-dirs")))?;
     Ok(base_dirs.home_dir().to_path_buf())
+}
+
+pub fn get_absolute_path(path: &str) -> Result<PathBuf> {
+    let p = PathBuf::from(path);
+    for item in p.components() {
+        if item.as_os_str().to_string_lossy().trim().is_empty() {
+            Err(anyhow!("Path contains empty components: {path}"))?;
+        }
+    }
+    Ok(absolute(p)?)
 }
 
 impl Config {
