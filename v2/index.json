@@ -2,6 +2,11 @@
 	"schema": 2,
 	"releases": [
 		{
+			"version": "4.8-dev1",
+			"variants": {},
+			"path": "releases/4.8-dev1.json"
+		},
+		{
 			"version": "4.7.1-rc1",
 			"variants": {
 				"csharp": [
