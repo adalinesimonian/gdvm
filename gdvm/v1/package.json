@@ -5,7 +5,7 @@
   "description": "gdvm self-update release registry",
   "type": "module",
   "volta": {
-    "node": "26.4.0"
+    "node": "26.5.0"
   },
   "dependencies": {
     "snappy": "^7.3.3"
