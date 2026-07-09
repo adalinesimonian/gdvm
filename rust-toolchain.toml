@@ -16,5 +16,5 @@
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
 [toolchain]
-channel = "1.96"
+channel = "1.97"
 components = ["rustc", "rust-std", "cargo", "rustfmt", "clippy"]
