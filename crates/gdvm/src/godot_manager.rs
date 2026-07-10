@@ -37,12 +37,13 @@ use semver::Version;
 use sha2::{Digest, Sha256, Sha512};
 use std::collections::HashSet;
 use std::fs;
+use std::io::Seek;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::download_utils::download_file;
+use crate::download_utils::download_to_file;
 use crate::migrations;
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::usage_tracker::{UsageState, UsageTracker};
@@ -142,11 +143,28 @@ pub struct GodotManager<'a> {
     catalogs: CatalogSet,
     /// Host platform
     host: HostPlatform,
+    /// Env vars from `.env` for passing to Godot.
+    dotenv_vars: Vec<(String, String)>,
     i18n: &'a I18n,
 }
 
+/// Get env vars from `.env` to pass to Godot.
+fn dotenv_vars() -> Vec<(String, String)> {
+    let Ok(iter) = dotenvy::dotenv_iter() else {
+        return Vec::new();
+    };
+    iter.filter_map(|item| item.ok())
+        .filter(|(key, _)| std::env::var_os(key).is_none())
+        .collect()
+}
+
 /// Verifies the SHA of a file against an expected hash.
-fn verify_sha(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
+fn verify_sha_file(
+    file: &mut fs::File,
+    expected: &str,
+    display_path: &Path,
+    i18n: &I18n,
+) -> Result<()> {
     let sha_type = ShaType::from_hash_length(expected).ok_or_else(|| {
         anyhow!(t!(
             i18n,
@@ -160,12 +178,12 @@ fn verify_sha(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_message(t!(i18n, "verifying-checksum"));
 
-    let mut f = fs::File::open(file_path)?;
+    file.rewind()?;
 
     let local_hash = match sha_type {
         ShaType::Sha256 => {
             let mut hasher = IoWrapper(Sha256::new());
-            std::io::copy(&mut f, &mut hasher)?;
+            std::io::copy(file, &mut hasher)?;
             hasher
                 .0
                 .finalize()
@@ -175,7 +193,7 @@ fn verify_sha(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
         }
         ShaType::Sha512 => {
             let mut hasher = IoWrapper(Sha512::new());
-            std::io::copy(&mut f, &mut hasher)?;
+            std::io::copy(file, &mut hasher)?;
             hasher
                 .0
                 .finalize()
@@ -193,7 +211,44 @@ fn verify_sha(file_path: &Path, expected: &str, i18n: &I18n) -> Result<()> {
         Err(anyhow!(t!(
             i18n,
             "error-checksum-mismatch",
-            file = file_path
+            file = display_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        )))
+    }
+}
+
+/// Checks streamed download digests against an expected hash, choosing SHA-256
+/// or SHA-512 based on the hash length.
+fn verify_download_digests(
+    digests: &crate::download_utils::DownloadDigests,
+    expected: &str,
+    display_path: &Path,
+    i18n: &I18n,
+) -> Result<()> {
+    let sha_type = ShaType::from_hash_length(expected).ok_or_else(|| {
+        anyhow!(t!(
+            i18n,
+            "error-invalid-sha-length",
+            length = expected.len()
+        ))
+    })?;
+
+    let actual = match sha_type {
+        ShaType::Sha256 => &digests.sha256,
+        ShaType::Sha512 => &digests.sha512,
+    };
+
+    if actual.eq_ignore_ascii_case(expected) {
+        eprintln_i18n!(i18n, "checksum-verified");
+        Ok(())
+    } else {
+        Err(anyhow!(t!(
+            i18n,
+            "error-checksum-mismatch",
+            file = display_path
                 .file_name()
                 .unwrap_or_default()
                 .to_string_lossy()
@@ -470,7 +525,7 @@ impl<'a> GodotManager<'a> {
             );
         }
         registries.extend(project);
-        let catalogs = CatalogSet::new(paths.cache_index(), &registries)?;
+        let catalogs = CatalogSet::new(paths.cache_index(), &registries, i18n)?;
         let cache_store = CacheStore::new(paths.cache_index().to_path_buf());
         let usage_tracker = UsageTracker::new(paths.usage_index().to_path_buf());
         let host = detect_host(i18n)?;
@@ -482,6 +537,7 @@ impl<'a> GodotManager<'a> {
             usage_tracker,
             catalogs,
             host,
+            dotenv_vars: dotenv_vars(),
             i18n,
         };
 
@@ -648,42 +704,64 @@ impl<'a> GodotManager<'a> {
         let download_url = binary.urls.first().unwrap();
         let cache_zip_path = self.artifact_cache.cached_zip_path(&binary.sha512);
 
-        let cache_hit = !redownload
-            && cache_zip_path.exists()
-            && verify_sha(&cache_zip_path, &binary.sha512, self.i18n).is_ok();
+        let mut cached_zip: Option<fs::File> = None;
 
-        if cache_hit {
+        if !redownload
+            && let Ok(mut file) = fs::File::open(&cache_zip_path)
+            && verify_sha_file(&mut file, &binary.sha512, &cache_zip_path, self.i18n).is_ok()
+        {
             eprintln_i18n!(self.i18n, "using-cached-zip");
-        } else {
-            if redownload && cache_zip_path.exists() {
-                eprintln_i18n!(self.i18n, "force-redownload", version = gv.to_display_str());
-            }
-
-            let tmp_file = self.artifact_cache.partial_path(&binary.sha512);
-
-            // Download the archive.
-            let staged = async {
-                download_file(download_url, &tmp_file, self.i18n).await?;
-                verify_sha(&tmp_file, &binary.sha512, self.i18n)?;
-                fs::rename(&tmp_file, &cache_zip_path)?;
-                anyhow::Ok(())
-            }
-            .await;
-
-            if let Err(err) = staged {
-                let _ = fs::remove_file(&tmp_file);
-                return Err(err);
-            }
-
-            eprintln_i18n!(self.i18n, "cached-zip-stored");
+            cached_zip = Some(file);
         }
+
+        let mut zip_file = match cached_zip {
+            Some(file) => file,
+            None => {
+                if redownload && cache_zip_path.exists() {
+                    eprintln_i18n!(self.i18n, "force-redownload", version = gv.to_display_str());
+                }
+
+                let tmp_file = tempfile::Builder::new()
+                    .prefix(".partial-")
+                    .suffix(".zip")
+                    .tempfile_in(self.artifact_cache.dir())?;
+
+                let mut async_file = tokio::fs::File::from_std(tmp_file.as_file().try_clone()?);
+                let digests = download_to_file(download_url, &mut async_file, self.i18n).await?;
+                drop(async_file);
+
+                verify_download_digests(&digests, &binary.sha512, &cache_zip_path, self.i18n)?;
+
+                if let Some(expected_size) = binary.size
+                    && digests.size != expected_size
+                {
+                    return Err(anyhow!(t!(
+                        self.i18n,
+                        "error-size-mismatch",
+                        file = cache_zip_path
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_string(),
+                        expected = expected_size,
+                        actual = digests.size
+                    )));
+                }
+
+                let file = tmp_file.persist(&cache_zip_path)?;
+
+                eprintln_i18n!(self.i18n, "cached-zip-stored");
+
+                file
+            }
+        };
 
         fs::create_dir_all(&version_path)?;
 
         self.track_archive_use(&cache_zip_path)?;
 
         // Extract from cache_zip_path
-        zip_utils::extract_zip(&cache_zip_path, &version_path, self.i18n)?;
+        zip_utils::extract_zip_from_file(&mut zip_file, &cache_zip_path, &version_path, self.i18n)?;
 
         let base_url = self.catalog(registry)?.registry_base_url();
         let store_dir = self.paths.installs().join(&store_key);
@@ -849,10 +927,16 @@ impl<'a> GodotManager<'a> {
     ) -> Result<()> {
         let path = self.get_executable_path(gv, variant, registry, console)?;
 
+        let dotenv_vars = self
+            .dotenv_vars
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()));
+
         if console {
             // Run the process attached to the terminal and wait for it to exit
             std::process::Command::new(&path)
                 .args(godot_args)
+                .envs(dotenv_vars)
                 .stdin(std::process::Stdio::inherit())
                 .stdout(std::process::Stdio::inherit())
                 .stderr(std::process::Stdio::inherit())
@@ -864,7 +948,10 @@ impl<'a> GodotManager<'a> {
                 Daemonize::new().start().map_err(|e| {
                     anyhow!(t!(self.i18n, "error-starting-godot", error = e.to_string(),))
                 })?;
-                std::process::Command::new(&path).args(godot_args).spawn()?;
+                std::process::Command::new(&path)
+                    .args(godot_args)
+                    .envs(dotenv_vars)
+                    .spawn()?;
             }
 
             #[cfg(target_family = "windows")]
@@ -873,6 +960,7 @@ impl<'a> GodotManager<'a> {
                 use winapi::um::winbase::DETACHED_PROCESS;
                 std::process::Command::new(&path)
                     .args(godot_args)
+                    .envs(dotenv_vars)
                     .creation_flags(DETACHED_PROCESS)
                     .spawn()?;
             }
@@ -985,7 +1073,7 @@ impl<'a> GodotManager<'a> {
                 true
             } else {
                 let last_used = self.effective_install_last_used(&key, &path, &state);
-                now.saturating_sub(last_used) >= max_age_secs
+                crate::date_utils::age_secs(now, last_used) >= max_age_secs
             };
 
             if !should_remove {
@@ -1008,7 +1096,7 @@ impl<'a> GodotManager<'a> {
                 true
             } else {
                 let last_used = self.effective_archive_last_used(&path, &state);
-                now.saturating_sub(last_used) >= max_age_secs
+                crate::date_utils::age_secs(now, last_used) >= max_age_secs
             };
 
             if !should_remove {
@@ -1496,7 +1584,7 @@ impl<'a> GodotManager<'a> {
             .map_err(|_| anyhow!("System time before UNIX EPOCH"))? // Should never fail.
             .as_secs();
         let cache_duration = Duration::from_secs(48 * 3600); // 48 hours
-        let cache_age = now - gdvm_cache.last_update_check;
+        let cache_age = crate::date_utils::age_secs(now, gdvm_cache.last_update_check);
 
         if cache_age > cache_duration.as_secs() {
             let progress = ProgressBar::new_spinner();
@@ -1725,44 +1813,88 @@ impl<'a> GodotManager<'a> {
             ))
         })?;
 
+        let expected_sha = binary
+            .sha256
+            .as_deref()
+            .ok_or_else(|| anyhow!(t!(self.i18n, "upgrade-checksum-required")))?;
+
         // Define install directory
         let install_dir = self.get_base_path().join("bin");
-        std::fs::create_dir_all(&install_dir)
-            .map_err(|_| anyhow!(t!(self.i18n, "upgrade-install-dir-failed")))?;
+        std::fs::create_dir_all(&install_dir).map_err(|e| {
+            anyhow!(t!(
+                self.i18n,
+                "upgrade-install-dir-failed",
+                error = e.to_string()
+            ))
+        })?;
 
-        let out_file = install_dir.join("gdvm.new");
+        let tmp_file = tempfile::Builder::new()
+            .prefix(".gdvm-upgrade-")
+            .tempfile_in(&install_dir)
+            .map_err(|e| {
+                anyhow!(t!(
+                    self.i18n,
+                    "upgrade-file-create-failed",
+                    error = e.to_string()
+                ))
+            })?;
 
-        // Download the new binary.
-        if let Err(err) = download_file(bin_url, &out_file, self.i18n).await {
-            eprintln_i18n!(self.i18n, "upgrade-download-failed");
-            return Err(err);
-        }
-
-        if let Some(digest) = &binary.sha256 {
-            if let Err(e) = verify_sha(&out_file, digest, self.i18n) {
-                let _ = std::fs::remove_file(&out_file);
-                return Err(e);
+        let mut async_file = tokio::fs::File::from_std(tmp_file.as_file().try_clone()?);
+        let digests = match download_to_file(bin_url, &mut async_file, self.i18n).await {
+            Ok(digests) => digests,
+            Err(err) => {
+                eprintln_i18n!(
+                    self.i18n,
+                    "upgrade-download-failed",
+                    error = err.to_string()
+                );
+                return Err(err);
             }
-        } else {
-            eprintln_i18n!(self.i18n, "warning-sha-sums-missing");
+        };
+        drop(async_file);
+
+        verify_download_digests(&digests, expected_sha, Path::new("gdvm"), self.i18n)?;
+
+        if let Some(expected_size) = binary.size
+            && digests.size != expected_size
+        {
+            return Err(anyhow!(t!(
+                self.i18n,
+                "error-size-mismatch",
+                file = "gdvm",
+                expected = expected_size,
+                actual = digests.size
+            )));
         }
 
         #[cfg(target_family = "unix")]
         {
             // Make the new binary executable
-            let mut perms = out_file.metadata()?.permissions();
-            perms.set_mode(perms.mode() | 0o111);
-            std::fs::set_permissions(&out_file, perms)?;
+            tmp_file
+                .as_file()
+                .set_permissions(fs::Permissions::from_mode(0o755))?;
         }
 
         // Rename current executable to .bak and replace it with the new file
         let current_exe = std::env::current_exe()?;
         let backup_exe = current_exe.with_extension("bak");
 
-        std::fs::rename(&current_exe, &backup_exe)
-            .map_err(|_| anyhow!(t!(self.i18n, "upgrade-rename-failed")))?;
-        std::fs::rename(&out_file, &current_exe)
-            .map_err(|_| anyhow!(t!(self.i18n, "upgrade-replace-failed")))?;
+        std::fs::rename(&current_exe, &backup_exe).map_err(|e| {
+            anyhow!(t!(
+                self.i18n,
+                "upgrade-rename-failed",
+                error = e.to_string()
+            ))
+        })?;
+
+        if let Err(err) = tmp_file.persist(&current_exe) {
+            let _ = std::fs::rename(&backup_exe, &current_exe);
+            return Err(anyhow!(t!(
+                self.i18n,
+                "upgrade-replace-failed",
+                error = err.to_string()
+            )));
+        }
 
         // Update gdvm cache
         let last_update_check = SystemTime::now()

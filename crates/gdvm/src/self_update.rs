@@ -227,7 +227,8 @@ pub async fn fetch_manifest(url: &str, timeout: Duration, i18n: &I18n) -> Result
             ))
         })?
     } else {
-        let client = reqwest::ClientBuilder::new().user_agent("gdvm").build()?;
+        crate::download_utils::ensure_url_scheme_allowed(url, i18n)?;
+        let client = crate::download_utils::http_client(i18n)?;
         let resp = client.get(url).timeout(timeout).send().await.map_err(|e| {
             anyhow!(t!(
                 i18n,
@@ -242,7 +243,13 @@ pub async fn fetch_manifest(url: &str, timeout: Duration, i18n: &I18n) -> Result
                 error = resp.status().to_string()
             )));
         }
-        resp.text().await.map_err(|e| {
+        crate::download_utils::response_text_limited(
+            resp,
+            crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
+            i18n,
+        )
+        .await
+        .map_err(|e| {
             anyhow!(t!(
                 i18n,
                 "error-fetching-gdvm-releases",

@@ -475,6 +475,14 @@ impl GodotVersion {
             None => (raw, None),
         };
 
+        if let Some(pre) = &pre_release
+            && !pre
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+'))
+        {
+            return Err(anyhow::anyhow!("Unrecognized version format: {raw}"));
+        }
+
         // Parse major/minor/patch from version_part, including special 2.0.4.1
         let pieces: Vec<&str> = version_part.split('.').collect();
         let (major, minor, patch, subpatch) = match pieces.len() {
@@ -750,6 +758,33 @@ mod tests {
         assert_eq!(gv.major, Some(3));
         assert_eq!(gv.minor, Some(5));
         assert!(gv.is_stable());
+    }
+
+    #[test]
+    fn test_rejects_path_unsafe_release_types() {
+        for tag in [
+            "4.4-x/../../evil",
+            "4.4-x\\evil",
+            "4.4-rc1/extra",
+            "4.4-rc1\0",
+        ] {
+            assert!(
+                GodotVersion::from_remote_str(tag).is_err(),
+                "tag {tag:?} must be rejected"
+            );
+        }
+
+        for tag in [
+            "4.4-stable",
+            "4.4-rc1",
+            "3.2-alpha0-unofficial",
+            "4.4-pre.1",
+        ] {
+            assert!(
+                GodotVersion::from_remote_str(tag).is_ok(),
+                "tag {tag:?} must parse"
+            );
+        }
     }
 
     #[test]

@@ -131,7 +131,12 @@ verifying-checksum = Verifying checksum...
 checksum-verified = Checksum verified.
 error-checksum-mismatch = Checksum mismatch for file { $file }
 error-invalid-sha-length = Invalid SHA length { $length }
-warning-sha-sums-missing = Checksum files not found for this release. Skipping verification.
+error-size-mismatch = Size mismatch for file { $file }: expected { $expected } bytes, got { $actual } bytes.
+error-insecure-url = Refusing to fetch { $url } over an unencrypted connection. Only https:// and file:// URLs are allowed. Set the GDVM_ALLOW_INSECURE_URLS environment variable to allow unencrypted http:// URLs.
+error-insecure-redirect = Refusing to follow a redirect from https:// to an unencrypted http:// URL. Set the GDVM_ALLOW_INSECURE_URLS environment variable to allow unencrypted http:// URLs.
+error-response-not-utf8 = The response from { $url } is not valid UTF-8: { $error }
+error-response-too-large = The response from { $url } exceeds the maximum allowed size of { $limit } bytes.
+error-too-many-redirects = Too many redirects.
 
 error-find-user-dirs = Failed to find user directories.
 
@@ -199,6 +204,7 @@ upgrade-install-dir-failed = Failed to create the installation directory: { $err
 upgrade-rename-failed = Failed to rename the current executable: { $error }
 upgrade-replace-failed = Failed to replace the executable with the new one: { $error }
 upgrade-no-binary = No gdvm binary is available for version { $version } and target { $target }.
+upgrade-checksum-required = The release manifest does not include a checksum for this gdvm binary. Refusing to upgrade.
 error-fetching-gdvm-releases = Error fetching gdvm releases: { $error }
 error-parsing-gdvm-releases = Error parsing gdvm releases: { $error }
 error-unsupported-gdvm-schema = Unsupported gdvm release manifest schema version: { $schema }. Try upgrading gdvm manually.

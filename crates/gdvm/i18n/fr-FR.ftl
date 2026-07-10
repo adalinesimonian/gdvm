@@ -129,7 +129,12 @@ verifying-checksum = Vérification de la somme de contrôle...
 checksum-verified = Somme de contrôle vérifiée.
 error-checksum-mismatch = Incompatibilité de somme de contrôle pour le fichier { $file }
 error-invalid-sha-length = Longueur SHA invalide { $length }
-warning-sha-sums-missing = Fichiers de somme de contrôle introuvables pour cette version. Vérification ignorée.
+error-size-mismatch = Taille incorrecte pour le fichier { $file } : { $expected } octets attendus, { $actual } octets reçus.
+error-insecure-url = Refus de récupérer { $url } via une connexion non chiffrée. Seules les URL https:// et file:// sont autorisées. Définissez la variable d'environnement GDVM_ALLOW_INSECURE_URLS pour autoriser les URL http:// non chiffrées.
+error-insecure-redirect = Refus de suivre une redirection de https:// vers une URL http:// non chiffrée. Définissez la variable d'environnement GDVM_ALLOW_INSECURE_URLS pour autoriser les URL http:// non chiffrées.
+error-response-not-utf8 = La réponse de { $url } n'est pas en UTF-8 valide : { $error }
+error-response-too-large = La réponse de { $url } dépasse la taille maximale autorisée de { $limit } octets.
+error-too-many-redirects = Trop de redirections.
 
 error-find-user-dirs = Échec de la recherche des répertoires utilisateur.
 
@@ -197,6 +202,7 @@ upgrade-install-dir-failed = Échec de la création du répertoire d'installatio
 upgrade-rename-failed = Échec du renommage de l'exécutable actuel : { $error }
 upgrade-replace-failed = Échec du remplacement de l'exécutable par le nouveau : { $error }
 upgrade-no-binary = Aucun binaire gdvm n'est disponible pour la version { $version } et la cible { $target }.
+upgrade-checksum-required = Le manifeste de publication ne contient pas de somme de contrôle pour ce binaire gdvm. Mise à niveau refusée.
 error-fetching-gdvm-releases = Erreur lors de la récupération des versions de gdvm : { $error }
 error-parsing-gdvm-releases = Erreur lors de l'analyse des versions de gdvm : { $error }
 error-unsupported-gdvm-schema = Version de schéma du manifeste des versions de gdvm non prise en charge : { $schema }. Essayez de mettre à jour gdvm manuellement.

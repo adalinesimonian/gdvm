@@ -27,7 +27,6 @@ use gdvm::{eprintln_i18n, println_i18n, t};
 
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgMatches, Command, value_parser};
-use dotenvy::dotenv;
 use std::{
     fs,
     io::{self, Write},
@@ -126,7 +125,6 @@ fn keyword_to_version_filter(keyword: &str) -> GodotVersion {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    dotenv().ok();
     let i18n = I18n::new()?;
     let manager = GodotManager::new(&i18n).await?;
 
@@ -1729,16 +1727,15 @@ async fn ensure_registry_trusted(
 
 /// Download `url` to a unique temporary file and return its path.
 async fn download_to_temp(i18n: &I18n, url: &str) -> Result<PathBuf> {
-    let unique = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let tmp = std::env::temp_dir().join(format!(
-        "gdvm-add-build-{}-{unique}.tmp",
-        std::process::id()
-    ));
-    gdvm::download_utils::download_file(url, &tmp, i18n).await?;
-    Ok(tmp)
+    let tmp = tempfile::Builder::new()
+        .prefix("gdvm-add-build-")
+        .suffix(".tmp")
+        .tempfile()?;
+    let mut file = tokio::fs::File::from_std(tmp.as_file().try_clone()?);
+    gdvm::download_utils::download_to_file(url, &mut file, i18n).await?;
+    drop(file);
+    let (_file, path) = tmp.keep()?;
+    Ok(path)
 }
 
 /// Error if an explicit override disagrees with the values measured from the
