@@ -129,7 +129,12 @@ verifying-checksum = Verifiserer sjekksum...
 checksum-verified = Sjekksum verifisert.
 error-checksum-mismatch = Sjekksumfeil for fila { $file }
 error-invalid-sha-length = Ugyldig SHA-lengde { $length }
-warning-sha-sums-missing = Sjekksumfiler ble ikke funnet for denne utgivelsen. Hopper over verifisering.
+error-size-mismatch = Størrelsesavvik for fila { $file }: forventa { $expected } byte, fikk { $actual } byte.
+error-insecure-url = Nekter å hente { $url } over ei ukryptert tilkobling. Bare https://- og file://-URL-er er tillatte. Sett miljøvariabelen GDVM_ALLOW_INSECURE_URLS for å tillate ukrypterte http://-URL-er.
+error-insecure-redirect = Nekter å følge ei omdirigering fra https:// til en ukryptert http://-URL. Sett miljøvariabelen GDVM_ALLOW_INSECURE_URLS for å tillate ukrypterte http://-URL-er.
+error-response-not-utf8 = Svaret fra { $url } er ikke gyldig UTF-8: { $error }
+error-response-too-large = Svaret fra { $url } overskrider den maksimale tillatte størrelsen på { $limit } byte.
+error-too-many-redirects = For mange omdirigeringer.
 
 error-find-user-dirs = Klarte ikke å finne brukermappene.
 
@@ -197,6 +202,7 @@ upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $
 upgrade-rename-failed = Klarte ikke å endre navnet på den nåværende kjørbare fila: { $error }
 upgrade-replace-failed = Klarte ikke å erstatte den kjørbare fila med den nye: { $error }
 upgrade-no-binary = Ingen gdvm-binærfil er tilgjengelig for versjon { $version } og målet { $target }.
+upgrade-checksum-required = Utgivelsesmanifestet inneholder ingen sjekksum for denne gdvm-binærfilen. Nekter å oppgradere.
 error-fetching-gdvm-releases = Feil ved henting av gdvm-utgivelser: { $error }
 error-parsing-gdvm-releases = Feil ved tolking av gdvm-utgivelser: { $error }
 error-unsupported-gdvm-schema = Skjemaversjon for gdvm-utgivelsesmanifestet støttes ikke: { $schema }. Prøv å oppgradere gdvm manuelt.

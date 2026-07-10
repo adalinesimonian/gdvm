@@ -363,7 +363,9 @@ mod tests {
             last_fetched,
             releases,
         };
-        let registry = crate::registry::Registry::official().expect("registry client");
+        let registry =
+            crate::registry::Registry::official(&crate::i18n::I18n::new().expect("i18n init"))
+                .expect("registry client");
         cache_store
             .save_registry_cache(&registry.cache_key(), &registry_cache)
             .expect("write cache");

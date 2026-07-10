@@ -131,7 +131,12 @@ verifying-checksum = Проверка контрольной суммы...
 checksum-verified = Контрольная сумма проверена.
 error-checksum-mismatch = Несоответствие контрольной суммы для файла { $file }
 error-invalid-sha-length = Неверная длина SHA { $length }
-warning-sha-sums-missing = Контрольные суммы не найдены для этого релиза. Пропуск проверки.
+error-size-mismatch = Несоответствие размера для файла { $file }: ожидалось { $expected } байт, получено { $actual } байт.
+error-insecure-url = Отказ в получении { $url } через незашифрованное соединение. Разрешены только URL-адреса https:// и file://. Установите переменную окружения GDVM_ALLOW_INSECURE_URLS, чтобы разрешить незашифрованные URL-адреса http://.
+error-insecure-redirect = Отказ в переходе по перенаправлению с https:// на незашифрованный URL-адрес http://. Установите переменную окружения GDVM_ALLOW_INSECURE_URLS, чтобы разрешить незашифрованные URL-адреса http://.
+error-response-not-utf8 = Ответ от { $url } не является корректным UTF-8: { $error }
+error-response-too-large = Ответ от { $url } превышает максимально допустимый размер { $limit } байт.
+error-too-many-redirects = Слишком много перенаправлений.
 
 error-find-user-dirs = Не удалось найти пользовательские каталоги.
 
@@ -199,6 +204,7 @@ upgrade-install-dir-failed = Не удалось создать директор
 upgrade-rename-failed = Не удалось переименовать текущий исполняемый файл: { $error }
 upgrade-replace-failed = Не удалось заменить исполняемый файл на новый: { $error }
 upgrade-no-binary = Нет доступного двоичного файла gdvm для версии { $version } и цели { $target }.
+upgrade-checksum-required = Манифест выпуска не содержит контрольную сумму для этого двоичного файла gdvm. Обновление отклонено.
 error-fetching-gdvm-releases = Ошибка получения релизов gdvm: { $error }
 error-parsing-gdvm-releases = Ошибка разбора релизов gdvm: { $error }
 error-unsupported-gdvm-schema = Неподдерживаемая версия схемы манифеста релизов gdvm: { $schema }. Попробуйте обновить gdvm вручную.

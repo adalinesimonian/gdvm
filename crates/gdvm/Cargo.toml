@@ -68,6 +68,7 @@ zip = "=8.6.0"
 toml = "=1.1.2"
 rpassword = "=7.5.4"
 dotenvy = "=0.15.7"
+tempfile = "=3.27.0"
 
 # For timestamps:
 jiff = "=0.2.32"
@@ -80,7 +81,6 @@ winapi = { version = "=0.3.9", features = ["winbase"] }
 daemonize = "=0.5.0"
 
 [dev-dependencies]
-tempfile = "=3.27.0"
 serial_test = "=3.5.0"
 zip = "=8.6.0"
 

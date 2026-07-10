@@ -18,27 +18,150 @@
 use anyhow::{Result, anyhow};
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
+use sha2::{Digest, Sha256, Sha512};
 use std::{path::Path, time::Duration};
-use tokio::{fs, io::AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{eprintln_i18n, i18n::I18n, t};
 
-pub async fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
+/// Allows opting into unencrypted HTTP for fetches.
+pub const ALLOW_INSECURE_URLS_ENV_VAR: &str = "GDVM_ALLOW_INSECURE_URLS";
+
+/// Check if the URL scheme is allowed.
+pub fn url_scheme_allowed(url: &str) -> bool {
+    url_scheme_allowed_with(url, std::env::var_os(ALLOW_INSECURE_URLS_ENV_VAR).is_some())
+}
+
+/// Check if the URL scheme is allowed. Allows setting whether or not insecure
+/// URLs are allowed.
+fn url_scheme_allowed_with(url: &str, allow_insecure: bool) -> bool {
+    url.starts_with("https://")
+        || url.starts_with("file://")
+        || (allow_insecure && url.starts_with("http://"))
+}
+
+/// Error if the URL scheme is not allowed. Returns `Ok(())` otherwise.
+pub fn ensure_url_scheme_allowed(url: &str, i18n: &I18n) -> Result<()> {
+    if url_scheme_allowed(url) {
+        Ok(())
+    } else {
+        Err(anyhow!(t!(
+            i18n,
+            "error-insecure-url",
+            url = url.to_string()
+        )))
+    }
+}
+
+/// The maximum number of redirects to follow.
+const MAX_REDIRECTS: usize = 10;
+
+/// Get a reusable HTTP client.
+pub fn http_client(i18n: &I18n) -> Result<reqwest::Client> {
+    let allow_insecure = std::env::var_os(ALLOW_INSECURE_URLS_ENV_VAR).is_some();
+    let too_many_redirects = t!(i18n, "error-too-many-redirects");
+    let insecure_redirect = t!(i18n, "error-insecure-redirect");
+
+    let policy = reqwest::redirect::Policy::custom(move |attempt| {
+        if attempt.previous().len() >= MAX_REDIRECTS {
+            return attempt.error(too_many_redirects.clone());
+        }
+        if !allow_insecure
+            && attempt.url().scheme() == "http"
+            && attempt.previous().iter().any(|url| url.scheme() == "https")
+        {
+            return attempt.error(insecure_redirect.clone());
+        }
+        attempt.follow()
+    });
+
+    Ok(reqwest::ClientBuilder::new()
+        .user_agent("gdvm")
+        .redirect(policy)
+        .build()?)
+}
+
+/// Digests and size of a completed download.
+#[derive(Debug, Clone)]
+pub struct DownloadDigests {
+    /// SHA 256 sum of the download.
+    pub sha256: String,
+    /// SHA 512 sum of the download.
+    pub sha512: String,
+    /// Total number of bytes written.
+    pub size: u64,
+}
+
+/// Incremental hasher used while streaming a download to disk.
+struct StreamHasher {
+    sha256: Sha256,
+    sha512: Sha512,
+    size: u64,
+}
+
+impl StreamHasher {
+    fn new() -> Self {
+        Self {
+            sha256: Sha256::new(),
+            sha512: Sha512::new(),
+            size: 0,
+        }
+    }
+
+    fn update(&mut self, chunk: &[u8]) {
+        self.sha256.update(chunk);
+        self.sha512.update(chunk);
+        self.size += chunk.len() as u64;
+    }
+
+    fn finish(self) -> DownloadDigests {
+        fn hex(bytes: &[u8]) -> String {
+            bytes.iter().map(|b| format!("{b:02x}")).collect()
+        }
+
+        DownloadDigests {
+            sha256: hex(&self.sha256.finalize()),
+            sha512: hex(&self.sha512.finalize()),
+            size: self.size,
+        }
+    }
+}
+
+/// Download `url` to the `dest` file handle.
+pub async fn download_to_file(
+    url: &str,
+    dest: &mut tokio::fs::File,
+    i18n: &I18n,
+) -> Result<DownloadDigests> {
+    ensure_url_scheme_allowed(url, i18n)?;
+
     // Print downloading URL message
     eprintln_i18n!(i18n, "operation-downloading-url", url = url);
 
+    let mut hasher = StreamHasher::new();
+
     // Copy from local file if the registry is on disk.
     if let Some(path) = url.strip_prefix("file://") {
-        let src = Path::new(path);
-        if !src.is_file() {
+        let src_path = Path::new(path);
+        if !src_path.is_file() {
             return Err(anyhow!(t!(i18n, "error-file-not-found")));
         }
-        fs::copy(src, dest).await?;
+        let mut src = tokio::fs::File::open(src_path).await?;
+        let mut buffer = vec![0u8; 64 * 1024];
+        loop {
+            let read = src.read(&mut buffer).await?;
+            if read == 0 {
+                break;
+            }
+            dest.write_all(&buffer[..read]).await?;
+            hasher.update(&buffer[..read]);
+        }
+        dest.flush().await?;
         eprintln_i18n!(i18n, "operation-download-complete");
-        return Ok(());
+        return Ok(hasher.finish());
     }
 
-    let client = reqwest::ClientBuilder::new().user_agent("gdvm").build()?;
+    let client = http_client(i18n)?;
     let response = client.get(url).send().await?;
 
     match response.status() {
@@ -63,18 +186,18 @@ pub async fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
 
             pb.enable_steady_tick(Duration::from_millis(100));
 
-            let mut file = fs::File::create(dest).await?;
-            let mut downloaded: u64 = 0;
             let mut stream = response.bytes_stream();
 
             while let Some(chunk) = stream.next().await {
                 let chunk = chunk?;
-                file.write_all(&chunk).await?;
-                downloaded += chunk.len() as u64;
+                dest.write_all(&chunk).await?;
+                hasher.update(&chunk);
                 if total_size.is_some() {
-                    pb.set_position(downloaded);
+                    pb.set_position(hasher.size);
                 }
             }
+
+            dest.flush().await?;
 
             pb.finish_with_message(t!(i18n, "operation-download-complete"));
         }
@@ -89,5 +212,103 @@ pub async fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<()> {
             )));
         }
     }
-    Ok(())
+
+    Ok(hasher.finish())
+}
+
+/// The maximum size accepted for responses from the registry, in bytes.
+pub const MAX_METADATA_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
+
+/// Read a response body as text. Refuses bodies larger than `max_bytes`.
+pub async fn response_text_limited(
+    response: reqwest::Response,
+    max_bytes: u64,
+    i18n: &I18n,
+) -> Result<String> {
+    let url = response.url().to_string();
+
+    let too_large = || {
+        anyhow!(t!(
+            i18n,
+            "error-response-too-large",
+            url = url.clone(),
+            limit = max_bytes
+        ))
+    };
+
+    if let Some(len) = response.content_length()
+        && len > max_bytes
+    {
+        return Err(too_large());
+    }
+
+    let mut buf: Vec<u8> = Vec::new();
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        if buf.len() as u64 + chunk.len() as u64 > max_bytes {
+            return Err(too_large());
+        }
+        buf.extend_from_slice(&chunk);
+    }
+
+    String::from_utf8(buf).map_err(|e| {
+        anyhow!(t!(
+            i18n,
+            "error-response-not-utf8",
+            url = url.clone(),
+            error = e.to_string()
+        ))
+    })
+}
+
+/// Download `url` to path at `dest`.
+pub async fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<DownloadDigests> {
+    let mut file = tokio::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(dest)
+        .await?;
+
+    match download_to_file(url, &mut file, i18n).await {
+        Ok(digests) => Ok(digests),
+        Err(err) => {
+            drop(file);
+            let _ = tokio::fs::remove_file(dest).await;
+            Err(err)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scheme_policy_allows_https_and_file_unconditionally() {
+        for allow_insecure in [false, true] {
+            assert!(url_scheme_allowed_with(
+                "https://example.com/x",
+                allow_insecure
+            ));
+            assert!(url_scheme_allowed_with("file:///tmp/x", allow_insecure));
+        }
+    }
+
+    #[test]
+    fn scheme_policy_gates_http_behind_override() {
+        assert!(!url_scheme_allowed_with("http://example.com/x", false));
+        assert!(url_scheme_allowed_with("http://example.com/x", true));
+    }
+
+    #[test]
+    fn scheme_policy_rejects_other_schemes() {
+        for allow_insecure in [false, true] {
+            assert!(!url_scheme_allowed_with(
+                "ftp://example.com/x",
+                allow_insecure
+            ));
+            assert!(!url_scheme_allowed_with("example.com/x", allow_insecure));
+        }
+    }
 }

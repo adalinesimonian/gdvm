@@ -66,7 +66,7 @@ impl ReleaseCatalog {
         let registry = self.registry.cache_key();
         let mut cache = self.cache_store.load_registry_cache(&registry)?;
         let now = now_seconds()?;
-        let cache_age = now - cache.last_fetched;
+        let cache_age = crate::date_utils::age_secs(now, cache.last_fetched);
         let should_refresh = cache_age > CACHE_TTL.as_secs();
 
         if should_refresh
@@ -108,7 +108,7 @@ impl ReleaseCatalog {
             return Ok(variants);
         }
 
-        let metadata = self.registry.fetch_release(&release.source).await?;
+        let metadata = self.registry.fetch_release(&release.source, i18n).await?;
         let variants = derive_variants(&metadata);
 
         if let Some(entry) = cache.releases.iter_mut().find(|r| r.tag_name == tag) {
@@ -131,12 +131,12 @@ impl ReleaseCatalog {
             .load_registry_cache(&self.registry.cache_key())?;
 
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(&entry.source).await;
+            return self.registry.fetch_release(&entry.source, i18n).await;
         }
 
         self.update_cache(&mut cache, i18n).await?;
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(&entry.source).await;
+            return self.registry.fetch_release(&entry.source, i18n).await;
         }
 
         Err(anyhow!(t!(i18n, "error-version-not-found")))
@@ -159,7 +159,7 @@ impl ReleaseCatalog {
         pb.enable_steady_tick(Duration::from_millis(100));
         pb.set_message(t!(i18n, "fetching-releases"));
 
-        let index = self.registry.fetch_index().await?;
+        let index = self.registry.fetch_index(i18n).await?;
 
         pb.finish_with_message(t!(i18n, "releases-fetched"));
 
@@ -195,13 +195,13 @@ pub struct RegistryInfo {
 
 impl CatalogSet {
     /// Build a catalog set from configured registries.
-    pub fn new(cache_index: &Path, registries: &[(String, String)]) -> Result<Self> {
+    pub fn new(cache_index: &Path, registries: &[(String, String)], i18n: &I18n) -> Result<Self> {
         let mut catalogs = HashMap::new();
 
         catalogs.insert(
             OFFICIAL_REGISTRY.to_string(),
             ReleaseCatalog::new(
-                Registry::official()?,
+                Registry::official(i18n)?,
                 CacheStore::new(cache_index.to_path_buf()),
             ),
         );
@@ -212,7 +212,7 @@ impl CatalogSet {
                 continue;
             }
 
-            let registry = Registry::new(name, url)?;
+            let registry = Registry::new(name, url, i18n)?;
 
             catalogs.insert(
                 name.clone(),
@@ -321,7 +321,8 @@ mod tests {
             last_fetched,
             releases,
         };
-        let registry = Registry::official().expect("registry client");
+        let i18n = I18n::new().expect("i18n init");
+        let registry = Registry::official(&i18n).expect("registry client");
         // Persist cache so ReleaseCatalog reads it.
         cache_store
             .save_registry_cache(&registry.cache_key(), &cache)
@@ -378,7 +379,8 @@ mod tests {
     #[test]
     fn catalog_set_defaults_to_official() {
         let (_tmp, cache) = cache_path();
-        let set = CatalogSet::new(&cache, &[]).expect("catalog set");
+        let set =
+            CatalogSet::new(&cache, &[], &I18n::new().expect("i18n init")).expect("catalog set");
 
         assert!(set.is_official(None));
         assert_eq!(set.catalog(None).unwrap().registry_name(), "official");
@@ -395,7 +397,8 @@ mod tests {
             ),
             ("local".to_string(), "file:///tmp/reg".to_string()),
         ];
-        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
+        let set = CatalogSet::new(&cache, &registries, &I18n::new().expect("i18n init"))
+            .expect("catalog set");
 
         assert!(set.is_official(None));
         assert!(set.is_official(Some("official")));
@@ -417,7 +420,8 @@ mod tests {
             "official".to_string(),
             "https://evil.example.com".to_string(),
         )];
-        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
+        let set = CatalogSet::new(&cache, &registries, &I18n::new().expect("i18n init"))
+            .expect("catalog set");
 
         assert_eq!(set.names(), vec!["official"]);
         assert_ne!(
@@ -433,7 +437,8 @@ mod tests {
             ("a".to_string(), "https://machine.example.com".to_string()),
             ("a".to_string(), "https://project.example.com".to_string()),
         ];
-        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
+        let set = CatalogSet::new(&cache, &registries, &I18n::new().expect("i18n init"))
+            .expect("catalog set");
 
         assert_eq!(
             set.catalog(Some("a")).unwrap().registry_base_url(),

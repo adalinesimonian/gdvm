@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs,
-    io::{self, Write},
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -166,22 +166,12 @@ fn atomic_write(path: &Path, data: String) -> Result<()> {
 
     fs::create_dir_all(parent)?;
 
-    let tmp_path = path.with_extension("tmp");
-    {
-        let mut tmp = fs::File::create(&tmp_path)?;
-        tmp.write_all(data.as_bytes())?;
-        tmp.sync_all()?;
-    }
+    let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
+    tmp.write_all(data.as_bytes())?;
+    tmp.as_file().sync_all()?;
+    tmp.persist(path)?;
 
-    match fs::rename(&tmp_path, path) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            fs::remove_file(path)?;
-            fs::rename(&tmp_path, path)?;
-            Ok(())
-        }
-        Err(e) => Err(e.into()),
-    }
+    Ok(())
 }
 
 pub fn filter_cached_releases(

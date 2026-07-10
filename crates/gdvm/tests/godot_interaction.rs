@@ -40,6 +40,37 @@ fn test_extract_zip_basic() {
     assert_eq!(extracted, "hello");
 }
 
+#[cfg(target_family = "unix")]
+#[test]
+fn test_extract_zip_strips_special_permission_bits() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempdir().unwrap();
+    let zip_path = dir.path().join("test.zip");
+    {
+        let file = std::fs::File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options = SimpleFileOptions::default().unix_permissions(0o6755);
+        zip.start_file("folder/evil", options).unwrap();
+        zip.write_all(b"#!/bin/sh\n").unwrap();
+        zip.finish().unwrap();
+    }
+
+    let out_dir = dir.path().join("out");
+    let i18n = I18n::new().unwrap();
+    extract_zip(&zip_path, &out_dir, &i18n).unwrap();
+
+    let mode = std::fs::metadata(out_dir.join("folder/evil"))
+        .unwrap()
+        .permissions()
+        .mode();
+
+    // Setuid, setgid, and sticky bits must not be applied, only the other
+    // permission bits.
+    assert_eq!(mode & 0o7000, 0);
+    assert_eq!(mode & 0o777, 0o755);
+}
+
 #[test]
 fn test_find_godot_executable() {
     let dir = tempdir().unwrap();

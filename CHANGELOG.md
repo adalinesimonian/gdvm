@@ -21,6 +21,25 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### Fixed
+
+- Downloaded files are now checksummed as they're written to disk, which prevents anything modifying the file before gdvm checks it.
+- Downloads are now checked against the size declared in the registry.
+- Temporary directories used for downloads are now randomized so that their names cannot be guessed. This prevents planting files in the directory in advance to trick gdvm into using them.
+- When extracting files, gdvm now checks that the file's decompressed size does not exceed the size declared in the registry, and will reject files that do, to help mitigate zip bombs.
+- When extracting files, setuid, setgid, and sticky permission bits are no longer applied when extracting, so downloads can no longer create privileged executables on the local system.
+- Corrupted timestamps or ones set to future dates no longer cause an integer underflow when computing the age of gdvm's caches.
+- Crashes or early exits no longer leave metadata in a partially written state, and no longer leave downloaded files partially written.
+- Version tags are now more strictly validated. It is no longer possible to use a version tag that could trick gdvm into placing an install outside of gdvm's data directory by using a version tag such as `4.4-x/../../evil`.
+- Environment variables in `.env` files meant for Godot no longer bleed into gdvm's own environment, which could have been used to silently change gdvm's behavior.
+- Registry responses are now limited to 64 MiB, so a compromised or misbehaving server can no longer blow up memory with a huge response.
+
+### Changed
+
+- gdvm will no longer follow redirects from `https://` to unencrypted `http://` URLs, which could silently downgrade a secure connection. `GDVM_ALLOW_INSECURE_URLS` can be set to bypass this check.
+- `gdvm upgrade` now treats a missing checksum in the release manifest as an error, and will not install the binary.
+- gdvm now refuses plain `http://` URLs for all requests. Set the `GDVM_ALLOW_INSECURE_URLS` environment variable to allow unencrypted `http://` URLs. Do not do this unless you are in the middle of developing gdvm or a custom registry. Otherwise, you are putting your system at risk by letting gdvm fetch data over an unencrypted connection.
+
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.1...main
 
 ## v0.13.1

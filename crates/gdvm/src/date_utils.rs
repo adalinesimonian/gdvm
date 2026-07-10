@@ -38,3 +38,26 @@ pub fn modified_unix_secs(path: &std::path::Path) -> Option<u64> {
         .ok()
         .map(|d| d.as_secs())
 }
+
+/// The number of whole seconds elapsed between an earlier Unix timestamp and
+/// `now`.
+pub fn age_secs(now: u64, earlier: u64) -> u64 {
+    now.saturating_sub(earlier)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn age_secs_computes_elapsed_seconds() {
+        assert_eq!(age_secs(100, 40), 60);
+        assert_eq!(age_secs(100, 100), 0);
+    }
+
+    #[test]
+    fn age_secs_saturates_on_future_dated_timestamps() {
+        assert_eq!(age_secs(100, 200), 0);
+        assert_eq!(age_secs(0, u64::MAX), 0);
+    }
+}

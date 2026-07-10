@@ -21,16 +21,12 @@ use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
 pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()> {
-    // Print extracting message
-    eprintln_i18n!(i18n, "operation-extracting");
-
-    // First pass: Calculate total uncompressed size and collect top-level entries
-    let file = fs::File::open(zip_path).map_err(|e| {
+    let mut file = fs::File::open(zip_path).map_err(|e| {
         anyhow!(t!(
             i18n,
             "error-open-zip",
@@ -38,7 +34,30 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
             error = e.to_string(),
         ))
     })?;
-    let mut archive = ZipArchive::new(&file).map_err(|e| {
+
+    extract_zip_from_file(&mut file, zip_path, extract_to, i18n)
+}
+
+/// Extract a ZIP archive from the given file handle.
+pub fn extract_zip_from_file(
+    file: &mut fs::File,
+    zip_path: &Path,
+    extract_to: &Path,
+    i18n: &I18n,
+) -> Result<()> {
+    // Print extracting message
+    eprintln_i18n!(i18n, "operation-extracting");
+
+    // First pass: Calculate total uncompressed size and collect top-level entries
+    file.rewind().map_err(|e| {
+        anyhow!(t!(
+            i18n,
+            "error-open-zip",
+            path = zip_path.display().to_string(),
+            error = e.to_string(),
+        ))
+    })?;
+    let mut archive = ZipArchive::new(&*file).map_err(|e| {
         anyhow!(t!(
             i18n,
             "error-read-zip",
@@ -102,8 +121,7 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
     pb.enable_steady_tick(std::time::Duration::from_millis(100));
 
     // Second pass: Extract files and update progress
-    // Re-open the ZIP archive for extraction
-    let file = fs::File::open(zip_path).map_err(|e| {
+    file.rewind().map_err(|e| {
         anyhow!(t!(
             i18n,
             "error-reopen-zip",
@@ -111,7 +129,7 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
             error = e.to_string(),
         ))
     })?;
-    let mut archive = ZipArchive::new(&file).map_err(|e| {
+    let mut archive = ZipArchive::new(&*file).map_err(|e| {
         anyhow!(t!(
             i18n,
             "error-read-zip",
@@ -193,6 +211,8 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
         })?;
 
         // Read from the ZIP file and write to the output file in chunks
+        let declared_size = file.size();
+        let mut written: u64 = 0;
         let mut buffer = [0; 8192]; // 8 KB buffer
         let reader = &mut file;
         loop {
@@ -206,6 +226,16 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
             })?;
             if bytes_read == 0 {
                 break; // Extraction complete for this file
+            }
+            written += bytes_read as u64;
+            if written > declared_size {
+                return Err(anyhow!(t!(
+                    i18n,
+                    "error-size-mismatch",
+                    file = reader.name().to_string(),
+                    expected = declared_size,
+                    actual = written
+                )));
             }
             outfile.write_all(&buffer[..bytes_read]).map_err(|e| {
                 anyhow!(t!(
@@ -224,7 +254,7 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path, i18n: &I18n) -> Result<()
             use std::fs::Permissions;
             use std::os::unix::fs::PermissionsExt;
 
-            let permissions = Permissions::from_mode(mode);
+            let permissions = Permissions::from_mode(mode & 0o777);
             fs::set_permissions(&out_path, permissions).map_err(|e| {
                 anyhow!(t!(
                     i18n,
