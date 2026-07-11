@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.14.0...main
+
+## v0.14.0
+
 ### Fixed
 
 - Downloaded files are now checksummed as they're written to disk, which prevents anything modifying the file before gdvm checks it.
@@ -41,7 +45,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - `gdvm upgrade` now treats a missing checksum in the release manifest as an error, and will not install the binary.
 - gdvm now refuses plain `http://` URLs for all requests. Set the `GDVM_ALLOW_INSECURE_URLS` environment variable to allow unencrypted `http://` URLs. Do not do this unless you are in the middle of developing gdvm or a custom registry. Otherwise, you are putting your system at risk by letting gdvm fetch data over an unencrypted connection.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.1...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.1...v0.14.0
 
 ## v0.13.1
 
