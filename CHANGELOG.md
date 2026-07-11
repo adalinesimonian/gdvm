@@ -33,6 +33,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - Version tags are now more strictly validated. It is no longer possible to use a version tag that could trick gdvm into placing an install outside of gdvm's data directory by using a version tag such as `4.4-x/../../evil`.
 - Environment variables in `.env` files meant for Godot no longer bleed into gdvm's own environment, which could have been used to silently change gdvm's behavior.
 - Registry responses are now limited to 64 MiB, so a compromised or misbehaving server can no longer blow up memory with a huge response.
+- Some user-facing text that was inadvertently left hardcoded in English is now localized.
 
 ### Changed
 

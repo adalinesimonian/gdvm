@@ -218,7 +218,7 @@ impl CatalogSet {
         let name = registry.unwrap_or(OFFICIAL_REGISTRY);
         self.catalogs
             .get(name)
-            .ok_or_else(|| anyhow!("Unknown registry '{name}'"))
+            .ok_or_else(|| anyhow!(t!("error-registry-unknown", name = name)))
     }
 
     /// The official registry's release catalog.
@@ -274,7 +274,7 @@ fn derive_variants(metadata: &ReleaseMetadata) -> HashMap<String, Vec<String>> {
 fn now_seconds() -> Result<u64> {
     Ok(SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
+        .map_err(|_| anyhow!(t!("error-system-time")))?
         .as_secs())
 }
 

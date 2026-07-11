@@ -80,13 +80,13 @@ impl ConfigOps for Config {
     fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
             "prune.max-age-days" => {
-                let days: u64 = value
-                    .parse()
-                    .map_err(|_| anyhow!("Invalid value for {key}: {value} (expected a number)"))?;
+                let days: u64 = value.parse().map_err(|_| {
+                    anyhow!(t!("error-config-invalid-number", key = key, value = value))
+                })?;
                 self.prune_max_age_days = Some(days);
                 Ok(())
             }
-            _ => Err(anyhow!("Unknown configuration key: {key}")),
+            _ => Err(anyhow!(t!("error-config-unknown-key", key = key))),
         }
     }
 
@@ -96,7 +96,7 @@ impl ConfigOps for Config {
                 self.prune_max_age_days = None;
                 Ok(())
             }
-            _ => Err(anyhow!("Unknown configuration key: {key}")),
+            _ => Err(anyhow!(t!("error-config-unknown-key", key = key))),
         }
     }
 
@@ -123,7 +123,7 @@ pub fn validate_registry_name(name: &str) -> Result<()> {
         || name.contains("..")
         || name.contains(':')
     {
-        return Err(anyhow!("Invalid registry name: {name}"));
+        return Err(anyhow!(t!("error-registry-invalid-name", name = name)));
     }
     Ok(())
 }
@@ -158,7 +158,7 @@ impl Config {
     /// Remove a registry from config.
     pub fn remove_registry(&mut self, name: &str) -> Result<()> {
         if self.registries.remove(name).is_none() {
-            return Err(anyhow!("Registry '{name}' is not configured"));
+            return Err(anyhow!(t!("error-registry-not-configured", name = name)));
         }
         Ok(())
     }

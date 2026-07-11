@@ -16,6 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use super::resolved::ResolvedVersion;
+use crate::t;
 use std::fmt;
 
 #[derive(Debug, Default)]
@@ -148,33 +149,41 @@ impl VersionQuery {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+'))
         {
-            return Err(anyhow::anyhow!("Unrecognized version format: {raw}"));
+            return Err(anyhow::anyhow!(t!(
+                "error-unrecognized-version-format",
+                input = raw
+            )));
         }
 
         // Parse major/minor/patch from version_part, including special 2.0.4.1
         let pieces: Vec<&str> = version_part.split('.').collect();
+        let component = |i: usize| -> Result<u32, anyhow::Error> {
+            pieces[i]
+                .parse()
+                .map_err(|_| anyhow::anyhow!(t!("error-unrecognized-version-format", input = raw)))
+        };
         let (major, minor, patch, subpatch) = match pieces.len() {
             0 => (None, None, None, None),
-            1 => (Some(pieces[0].parse()?), None, None, None),
-            2 => (
-                Some(pieces[0].parse()?),
-                Some(pieces[1].parse()?),
-                None,
-                None,
-            ),
+            1 => (Some(component(0)?), None, None, None),
+            2 => (Some(component(0)?), Some(component(1)?), None, None),
             3 => (
-                Some(pieces[0].parse()?),
-                Some(pieces[1].parse()?),
-                Some(pieces[2].parse()?),
+                Some(component(0)?),
+                Some(component(1)?),
+                Some(component(2)?),
                 None,
             ),
             4 => (
-                Some(pieces[0].parse()?),
-                Some(pieces[1].parse()?),
-                Some(pieces[2].parse()?),
-                Some(pieces[3].parse()?),
+                Some(component(0)?),
+                Some(component(1)?),
+                Some(component(2)?),
+                Some(component(3)?),
             ),
-            _ => return Err(anyhow::anyhow!("Unrecognized version format: {raw}")),
+            _ => {
+                return Err(anyhow::anyhow!(t!(
+                    "error-unrecognized-version-format",
+                    input = raw
+                )));
+            }
         };
 
         Ok(VersionQuery {

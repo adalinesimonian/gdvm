@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::t;
 use anyhow::{Result, anyhow};
 use std::fs;
 use std::io::Write;
@@ -25,7 +26,7 @@ use std::path::Path;
 pub fn atomic_write(path: &Path, data: &str) -> Result<()> {
     let parent = path
         .parent()
-        .ok_or_else(|| anyhow!("Invalid path: {}", path.display()))?;
+        .ok_or_else(|| anyhow!(t!("error-invalid-path", path = path.display().to_string())))?;
 
     fs::create_dir_all(parent)?;
 

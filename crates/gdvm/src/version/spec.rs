@@ -16,6 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use super::query::VersionQuery;
+use crate::t;
 
 /// A fully parsed version specifier from the specifier format
 /// `[registry/][variant:]version_or_keyword`.
@@ -48,7 +49,10 @@ impl VersionSpec {
             Some(pos) => {
                 let reg = &input[..pos];
                 if reg.is_empty() {
-                    return Err(anyhow::anyhow!("Empty registry name in '{input}'"));
+                    return Err(anyhow::anyhow!(t!(
+                        "error-spec-empty-registry",
+                        input = input
+                    )));
                 }
                 (Some(reg.to_string()), &input[pos + 1..])
             }
@@ -59,7 +63,10 @@ impl VersionSpec {
             Some(pos) => {
                 let var = &remainder[..pos];
                 if var.is_empty() {
-                    return Err(anyhow::anyhow!("Empty variant name in '{input}'"));
+                    return Err(anyhow::anyhow!(t!(
+                        "error-spec-empty-variant",
+                        input = input
+                    )));
                 }
                 (Some(var.to_string()), &remainder[pos + 1..])
             }
@@ -67,7 +74,10 @@ impl VersionSpec {
         };
 
         if version_str.is_empty() {
-            return Err(anyhow::anyhow!("Empty version in '{input}'"));
+            return Err(anyhow::anyhow!(t!(
+                "error-spec-empty-version",
+                input = input
+            )));
         }
 
         let target = if is_keyword(version_str) {

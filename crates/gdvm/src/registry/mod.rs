@@ -26,6 +26,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::host::{HostArch, HostOs, HostPlatform};
+use crate::t;
 
 /// Returns true if the registry refers to the official gdvm registry.
 pub fn is_official_registry(registry: Option<&str>) -> bool {
@@ -211,7 +212,10 @@ impl RegistryUrl {
         } else if s.starts_with("http://") || s.starts_with("https://") {
             Ok(RegistryUrl::Http(s.trim_end_matches('/').to_string()))
         } else {
-            Err(anyhow!("Unsupported registry URL scheme: {s}"))
+            Err(anyhow!(t!(
+                "error-registry-unsupported-url-scheme",
+                url = s
+            )))
         }
     }
 
@@ -351,7 +355,11 @@ impl Registry {
                     return Ok(None);
                 }
                 if !resp.status().is_success() {
-                    return Err(anyhow!("Failed to fetch {url}: HTTP {}", resp.status()));
+                    return Err(anyhow!(t!(
+                        "error-registry-fetch-failed",
+                        url = url,
+                        status = resp.status().to_string()
+                    )));
                 }
                 Ok(Some(
                     crate::download_utils::response_text_limited(
@@ -374,12 +382,19 @@ impl Registry {
 
     /// Fetch and normalize the registry index.
     pub async fn fetch_index(&self) -> Result<Vec<IndexEntry>> {
-        let manifest_text = self
-            .fetch_text("registry.json")
-            .await?
-            .ok_or_else(|| anyhow!("Registry '{}' is missing registry.json", self.name))?;
-        let manifest: v2::Manifest = serde_json::from_str(&manifest_text)
-            .map_err(|e| anyhow!("Failed to parse manifest for '{}': {e}", self.name))?;
+        let manifest_text = self.fetch_text("registry.json").await?.ok_or_else(|| {
+            anyhow!(t!(
+                "error-registry-missing-manifest",
+                name = self.name.as_str()
+            ))
+        })?;
+        let manifest: v2::Manifest = serde_json::from_str(&manifest_text).map_err(|e| {
+            anyhow!(t!(
+                "error-registry-parse-manifest",
+                name = self.name.as_str(),
+                error = e.to_string()
+            ))
+        })?;
         if manifest.schema != 2 {
             return Err(anyhow!(
                 "Registry '{}' declares unsupported schema version {}",
@@ -388,12 +403,19 @@ impl Registry {
             ));
         }
 
-        let index_text = self
-            .fetch_text("index.json")
-            .await?
-            .ok_or_else(|| anyhow!("Registry '{}' is missing index.json", self.name))?;
-        let index: v2::Index = serde_json::from_str(&index_text)
-            .map_err(|e| anyhow!("Failed to parse index for '{}': {e}", self.name))?;
+        let index_text = self.fetch_text("index.json").await?.ok_or_else(|| {
+            anyhow!(t!(
+                "error-registry-missing-index",
+                name = self.name.as_str()
+            ))
+        })?;
+        let index: v2::Index = serde_json::from_str(&index_text).map_err(|e| {
+            anyhow!(t!(
+                "error-registry-parse-index",
+                name = self.name.as_str(),
+                error = e.to_string()
+            ))
+        })?;
         Ok(v2::normalize_index(index))
     }
 
@@ -404,7 +426,7 @@ impl Registry {
                 let text = self
                     .fetch_text(path)
                     .await?
-                    .ok_or_else(|| anyhow!("Failed to fetch release metadata"))?;
+                    .ok_or_else(|| anyhow!(t!("error-registry-fetch-release-failed")))?;
                 let meta: v2::ReleaseMetadata = serde_json::from_str(&text)?;
                 Ok(v2::normalize_release(meta, &self.base_url))
             }

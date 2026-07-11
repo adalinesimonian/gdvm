@@ -27,6 +27,7 @@ use std::{fs, io};
 
 use super::v2;
 use crate::date_utils::now_iso8601;
+use crate::t;
 use crate::version::Variant;
 
 /// Current registry schema version produced by the authoring commands.
@@ -111,7 +112,7 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
         let file = args
             .file
             .as_deref()
-            .ok_or_else(|| anyhow!("--store requires a local --file"))?;
+            .ok_or_else(|| anyhow!(t!("error-publish-store-requires-file")))?;
         if !file.is_file() {
             bail!("archive not found: {}", file.display());
         }
@@ -128,13 +129,14 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
         let url = args
             .url
             .clone()
-            .ok_or_else(|| anyhow!("either --store or --url must be provided"))?;
+            .ok_or_else(|| anyhow!(t!("error-publish-store-or-url-required")))?;
         let (sha512, size) = match (&args.sha512, args.size) {
             (Some(sha512), Some(size)) => (sha512.clone(), size),
             _ => {
-                let file = args.file.as_deref().ok_or_else(|| {
-                    anyhow!("--url requires either a local --file or explicit --sha512 and --size")
-                })?;
+                let file = args
+                    .file
+                    .as_deref()
+                    .ok_or_else(|| anyhow!(t!("error-publish-url-requires-integrity")))?;
                 if !file.is_file() {
                     bail!("archive not found: {}", file.display());
                 }
@@ -178,8 +180,12 @@ pub fn remove_build(dir: &Path, args: &RemoveBuild) -> Result<()> {
 
     let rel_path = release_rel_path(&args.version);
     let release_path = dir.join(&rel_path);
-    let mut release: v2::ReleaseMetadata =
-        read_json(&release_path)?.ok_or_else(|| anyhow!("no such version: {}", args.version))?;
+    let mut release: v2::ReleaseMetadata = read_json(&release_path)?.ok_or_else(|| {
+        anyhow!(t!(
+            "error-publish-no-such-version",
+            version = args.version.as_str()
+        ))
+    })?;
 
     match (&args.variant, &args.platform) {
         (Some(variant), Some(platform)) => {
@@ -392,7 +398,7 @@ fn write_index(dir: &Path, index: &mut v2::Index) -> Result<()> {
 fn touch_manifest(dir: &Path) -> Result<()> {
     let path = dir.join("registry.json");
     let mut manifest: v2::Manifest =
-        read_json(&path)?.ok_or_else(|| anyhow!("missing registry.json"))?;
+        read_json(&path)?.ok_or_else(|| anyhow!(t!("error-publish-missing-manifest")))?;
     manifest.schema = SCHEMA_VERSION;
     manifest.updated_at = Some(now_iso8601());
     write_json(&path, &manifest)

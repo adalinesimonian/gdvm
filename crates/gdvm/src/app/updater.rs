@@ -48,7 +48,7 @@ impl<'a> Updater<'a> {
         // Check for updates
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| anyhow!("System time before UNIX EPOCH"))? // Should never fail.
+            .map_err(|_| anyhow!(t!("error-system-time")))? // Should never fail.
             .as_secs();
         let cache_duration = Duration::from_secs(48 * 3600); // 48 hours
         let cache_age = crate::date_utils::age_secs(now, gdvm_cache.last_update_check);
@@ -317,7 +317,7 @@ impl<'a> Updater<'a> {
         // Update gdvm cache
         let last_update_check = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
+            .map_err(|_| anyhow!(t!("error-system-time")))?
             .as_secs();
 
         self.cache_store.clear_gdvm_cache(last_update_check)?;
