@@ -125,7 +125,7 @@ fn host_token(normalized_url: &str) -> String {
 pub fn store_dir_name(url: &str) -> String {
     let normalized = normalize_url(url);
     let digest = Sha256::digest(normalized.as_bytes());
-    let hash: String = digest.iter().take(8).map(|b| format!("{b:02x}")).collect();
+    let hash = crate::hash_utils::to_hex(&digest[..8]);
     format!("{}-{hash}", host_token(&normalized))
 }
 

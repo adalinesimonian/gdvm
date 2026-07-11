@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs,
-    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -109,7 +108,7 @@ impl CacheStore {
 
     fn save_full_cache(&self, full: &FullCache) -> Result<()> {
         let data = serde_json::to_string(full)?;
-        atomic_write(&self.index_path, data)
+        crate::fs_utils::atomic_write(&self.index_path, &data)
     }
 
     fn update_full_cache<F>(&self, update: F) -> Result<()>
@@ -159,21 +158,6 @@ impl CacheStore {
     }
 }
 
-/// Write data to a file atomically by writing to a temp file in the same directory
-/// and renaming it into place. Ensures the parent directory exists before writing.
-fn atomic_write(path: &Path, data: String) -> Result<()> {
-    let parent = path.parent().ok_or_else(|| anyhow!("Invalid cache path"))?;
-
-    fs::create_dir_all(parent)?;
-
-    let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
-    tmp.write_all(data.as_bytes())?;
-    tmp.as_file().sync_all()?;
-    tmp.persist(path)?;
-
-    Ok(())
-}
-
 pub fn filter_cached_releases(
     cache: &RegistryReleasesCache,
     filter: Option<&GodotVersion>,
@@ -189,23 +173,4 @@ pub fn filter_cached_releases(
     releases.sort_by_version();
 
     releases
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn atomic_write_creates_parent_and_overwrites() -> Result<()> {
-        let dir = tempfile::tempdir()?;
-        let path = dir.path().join("nested").join("cache.json");
-
-        atomic_write(&path, "first".to_string())?;
-        assert_eq!(fs::read_to_string(&path)?, "first");
-
-        atomic_write(&path, "second".to_string())?;
-        assert_eq!(fs::read_to_string(&path)?, "second");
-
-        Ok(())
-    }
 }

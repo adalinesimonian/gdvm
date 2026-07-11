@@ -482,7 +482,7 @@ fn sha512_file(path: &Path) -> Result<String> {
     let mut hasher = IoWrapper(Sha512::new());
     io::copy(&mut file, &mut hasher)?;
     let digest = hasher.0.finalize();
-    Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
+    Ok(crate::hash_utils::to_hex(&digest))
 }
 
 /// Hash a local archive, returning its SHA-512 in hex and size in bytes.

@@ -82,16 +82,8 @@ pub fn read(store_dir: &Path) -> Result<Option<RegistryStoreMeta>> {
 
 /// Write the sidecar into a store directory.
 pub fn write(store_dir: &Path, meta: &RegistryStoreMeta) -> Result<()> {
-    std::fs::create_dir_all(store_dir)?;
     let body = toml::to_string(meta)?;
-
-    let mut tmp = tempfile::NamedTempFile::new_in(store_dir)?;
-    {
-        use std::io::Write;
-        tmp.write_all(format!("{HEADER}{body}").as_bytes())?;
-        tmp.as_file().sync_all()?;
-    }
-    tmp.persist(meta_path(store_dir))?;
+    crate::fs_utils::atomic_write(&meta_path(store_dir), &format!("{HEADER}{body}"))?;
     Ok(())
 }
 

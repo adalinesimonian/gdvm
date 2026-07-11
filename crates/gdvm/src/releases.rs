@@ -16,7 +16,6 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use anyhow::{Result, anyhow};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -143,10 +142,7 @@ impl ReleaseCatalog {
     }
 
     async fn update_cache(&self, cache: &mut RegistryReleasesCache) -> Result<()> {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-        pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message(t!("fetching-releases"));
+        let pb = crate::progress_utils::spinner(t!("fetching-releases"))?;
 
         let index = self.registry.fetch_index().await?;
 
