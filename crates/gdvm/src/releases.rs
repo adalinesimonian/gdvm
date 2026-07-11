@@ -21,7 +21,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::i18n::I18n;
 use crate::metadata_cache::{
     CacheStore, RegistryReleasesCache, ReleaseCache, filter_cached_releases,
 };
@@ -61,7 +60,6 @@ impl ReleaseCatalog {
         &self,
         filter: Option<&GodotVersion>,
         use_cache_only: bool,
-        i18n: &I18n,
     ) -> Result<Vec<GodotVersionDeterminate>> {
         let registry = self.registry.cache_key();
         let mut cache = self.cache_store.load_registry_cache(&registry)?;
@@ -71,7 +69,7 @@ impl ReleaseCatalog {
 
         if should_refresh
             && !use_cache_only
-            && let Err(error) = self.update_cache(&mut cache, i18n).await
+            && let Err(error) = self.update_cache(&mut cache).await
         {
             if cache.releases.is_empty() {
                 return Err(error);
@@ -79,7 +77,6 @@ impl ReleaseCatalog {
 
             // Defer to cached data if available.
             crate::eprintln_i18n!(
-                i18n,
                 "warning-fetching-releases-using-cache",
                 error = error.to_string()
             );
@@ -89,11 +86,7 @@ impl ReleaseCatalog {
     }
 
     /// Get the platforms available for a release's variants.
-    pub async fn platforms_by_variant(
-        &self,
-        tag: &str,
-        i18n: &I18n,
-    ) -> Result<HashMap<String, Vec<String>>> {
+    pub async fn platforms_by_variant(&self, tag: &str) -> Result<HashMap<String, Vec<String>>> {
         let key = self.registry.cache_key();
         let mut cache = self.cache_store.load_registry_cache(&key)?;
 
@@ -102,13 +95,13 @@ impl ReleaseCatalog {
             .iter()
             .find(|r| r.tag_name == tag)
             .cloned()
-            .ok_or_else(|| anyhow!(t!(i18n, "error-version-not-found")))?;
+            .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
 
         if let Some(variants) = release.variants {
             return Ok(variants);
         }
 
-        let metadata = self.registry.fetch_release(&release.source, i18n).await?;
+        let metadata = self.registry.fetch_release(&release.source).await?;
         let variants = derive_variants(&metadata);
 
         if let Some(entry) = cache.releases.iter_mut().find(|r| r.tag_name == tag) {
@@ -120,48 +113,44 @@ impl ReleaseCatalog {
     }
 
     /// Retrieve release metadata for an exact version, refreshing the cache if needed.
-    pub async fn metadata_for(
-        &self,
-        gv: &GodotVersionDeterminate,
-        i18n: &I18n,
-    ) -> Result<ReleaseMetadata> {
+    pub async fn metadata_for(&self, gv: &GodotVersionDeterminate) -> Result<ReleaseMetadata> {
         let tag = gv.to_remote_str();
         let mut cache = self
             .cache_store
             .load_registry_cache(&self.registry.cache_key())?;
 
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(&entry.source, i18n).await;
+            return self.registry.fetch_release(&entry.source).await;
         }
 
-        self.update_cache(&mut cache, i18n).await?;
+        self.update_cache(&mut cache).await?;
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
-            return self.registry.fetch_release(&entry.source, i18n).await;
+            return self.registry.fetch_release(&entry.source).await;
         }
 
-        Err(anyhow!(t!(i18n, "error-version-not-found")))
+        Err(anyhow!(t!("error-version-not-found")))
     }
 
-    pub async fn refresh_cache(&self, i18n: &I18n) -> Result<()> {
+    pub async fn refresh_cache(&self) -> Result<()> {
         let mut cache = self
             .cache_store
             .load_registry_cache(&self.registry.cache_key())?;
-        self.update_cache(&mut cache, i18n).await
+        self.update_cache(&mut cache).await
     }
 
     pub fn cache_store(&self) -> &CacheStore {
         &self.cache_store
     }
 
-    async fn update_cache(&self, cache: &mut RegistryReleasesCache, i18n: &I18n) -> Result<()> {
+    async fn update_cache(&self, cache: &mut RegistryReleasesCache) -> Result<()> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
         pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message(t!(i18n, "fetching-releases"));
+        pb.set_message(t!("fetching-releases"));
 
-        let index = self.registry.fetch_index(i18n).await?;
+        let index = self.registry.fetch_index().await?;
 
-        pb.finish_with_message(t!(i18n, "releases-fetched"));
+        pb.finish_with_message(t!("releases-fetched"));
 
         cache.releases = index
             .into_iter()
@@ -195,13 +184,13 @@ pub struct RegistryInfo {
 
 impl CatalogSet {
     /// Build a catalog set from configured registries.
-    pub fn new(cache_index: &Path, registries: &[(String, String)], i18n: &I18n) -> Result<Self> {
+    pub fn new(cache_index: &Path, registries: &[(String, String)]) -> Result<Self> {
         let mut catalogs = HashMap::new();
 
         catalogs.insert(
             OFFICIAL_REGISTRY.to_string(),
             ReleaseCatalog::new(
-                Registry::official(i18n)?,
+                Registry::official()?,
                 CacheStore::new(cache_index.to_path_buf()),
             ),
         );
@@ -212,7 +201,7 @@ impl CatalogSet {
                 continue;
             }
 
-            let registry = Registry::new(name, url, i18n)?;
+            let registry = Registry::new(name, url)?;
 
             catalogs.insert(
                 name.clone(),
@@ -298,10 +287,6 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    fn i18n() -> I18n {
-        I18n::new().expect("i18n init")
-    }
-
     fn make_catalog_with_cache(tags: &[&str], last_fetched: u64) -> (ReleaseCatalog, TempDir) {
         let tmp = TempDir::new().expect("tempdir");
         let cache_store = CacheStore::new(tmp.path().join("cache.json"));
@@ -321,8 +306,7 @@ mod tests {
             last_fetched,
             releases,
         };
-        let i18n = I18n::new().expect("i18n init");
-        let registry = Registry::official(&i18n).expect("registry client");
+        let registry = Registry::official().expect("registry client");
         // Persist cache so ReleaseCatalog reads it.
         cache_store
             .save_registry_cache(&registry.cache_key(), &cache)
@@ -335,10 +319,9 @@ mod tests {
     async fn uses_cached_releases_when_fresh() {
         let now = now_seconds().unwrap();
         let (catalog, _tmp) = make_catalog_with_cache(&["4.3-stable", "4.2-rc1"], now);
-        let intl = i18n();
 
         let releases = catalog
-            .list_releases(None, false, &intl)
+            .list_releases(None, false)
             .await
             .expect("list releases");
 
@@ -352,7 +335,6 @@ mod tests {
     async fn filters_cached_releases_with_query() {
         let now = now_seconds().unwrap();
         let (catalog, _tmp) = make_catalog_with_cache(&["4.3-stable", "4.2-rc1"], now);
-        let intl = i18n();
         let filter = GodotVersion {
             major: Some(4),
             minor: Some(2),
@@ -362,7 +344,7 @@ mod tests {
         };
 
         let releases = catalog
-            .list_releases(Some(&filter), true, &intl)
+            .list_releases(Some(&filter), true)
             .await
             .expect("filtered releases");
 
@@ -379,8 +361,7 @@ mod tests {
     #[test]
     fn catalog_set_defaults_to_official() {
         let (_tmp, cache) = cache_path();
-        let set =
-            CatalogSet::new(&cache, &[], &I18n::new().expect("i18n init")).expect("catalog set");
+        let set = CatalogSet::new(&cache, &[]).expect("catalog set");
 
         assert!(set.is_official(None));
         assert_eq!(set.catalog(None).unwrap().registry_name(), "official");
@@ -397,8 +378,7 @@ mod tests {
             ),
             ("local".to_string(), "file:///tmp/reg".to_string()),
         ];
-        let set = CatalogSet::new(&cache, &registries, &I18n::new().expect("i18n init"))
-            .expect("catalog set");
+        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
 
         assert!(set.is_official(None));
         assert!(set.is_official(Some("official")));
@@ -420,8 +400,7 @@ mod tests {
             "official".to_string(),
             "https://evil.example.com".to_string(),
         )];
-        let set = CatalogSet::new(&cache, &registries, &I18n::new().expect("i18n init"))
-            .expect("catalog set");
+        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
 
         assert_eq!(set.names(), vec!["official"]);
         assert_ne!(
@@ -437,8 +416,7 @@ mod tests {
             ("a".to_string(), "https://machine.example.com".to_string()),
             ("a".to_string(), "https://project.example.com".to_string()),
         ];
-        let set = CatalogSet::new(&cache, &registries, &I18n::new().expect("i18n init"))
-            .expect("catalog set");
+        let set = CatalogSet::new(&cache, &registries).expect("catalog set");
 
         assert_eq!(
             set.catalog(Some("a")).unwrap().registry_base_url(),

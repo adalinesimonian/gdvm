@@ -15,10 +15,9 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{eprintln_i18n, i18n, t};
+use crate::{eprintln_i18n, t};
 use anyhow::{Result, anyhow};
 use directories::BaseDirs;
-use i18n::I18n;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -183,7 +182,7 @@ impl Config {
     }
 }
 
-pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
+pub fn get_home_dir() -> Result<PathBuf> {
     #[cfg(feature = "integration-tests")]
     {
         // Override home directory for testing purposes.
@@ -192,22 +191,22 @@ pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
         }
     }
 
-    let base_dirs = BaseDirs::new().ok_or(anyhow!(t!(i18n, "error-find-user-dirs")))?;
+    let base_dirs = BaseDirs::new().ok_or(anyhow!(t!("error-find-user-dirs")))?;
     Ok(base_dirs.home_dir().to_path_buf())
 }
 
 impl Config {
     /// Load configuration from ~/.gdvm/config.toml.
-    pub fn load(i18n: &I18n) -> Result<Self> {
-        let home = get_home_dir(i18n)?;
+    pub fn load() -> Result<Self> {
+        let home = get_home_dir()?;
         let config_path = home.join(".gdvm").join("config.toml");
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
             match toml::from_str(&contents) {
                 Ok(config) => Ok(config),
                 Err(e) => {
-                    eprintln_i18n!(i18n, "error-parse-config", error = e.to_string());
-                    eprintln_i18n!(i18n, "error-parse-config-using-default");
+                    eprintln_i18n!("error-parse-config", error = e.to_string());
+                    eprintln_i18n!("error-parse-config-using-default");
                     Ok(Self::default())
                 }
             }
@@ -217,8 +216,8 @@ impl Config {
     }
 
     /// Save configuration to ~/.gdvm/config.toml.
-    pub fn save(&self, i18n: &I18n) -> Result<()> {
-        let home = get_home_dir(i18n)?;
+    pub fn save(&self) -> Result<()> {
+        let home = get_home_dir()?;
         let config_dir = home.join(".gdvm");
         fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("config.toml");

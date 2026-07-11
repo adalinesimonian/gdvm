@@ -16,7 +16,6 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::config::get_home_dir;
-use crate::i18n::I18n;
 use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -34,8 +33,8 @@ pub struct GdvmPaths {
 impl GdvmPaths {
     /// Construct paths rooted at the GDVM base directory, ~/.gdvm, and ensure the base, installs,
     /// cache, and bin directories exist.
-    pub fn new(i18n: &I18n) -> Result<Self> {
-        let base = get_home_dir(i18n)?.join(".gdvm");
+    pub fn new() -> Result<Self> {
+        let base = get_home_dir()?.join(".gdvm");
         let installs = base.join("installs");
         let cache_dir = base.join("cache");
         let cache_index = base.join("cache.json");

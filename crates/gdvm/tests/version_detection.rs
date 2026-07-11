@@ -15,10 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::{
-    i18n::I18n,
-    project_version_detector::{detect_godot_version_in_path, find_project_file},
-};
+use gdvm::project_version_detector::{detect_godot_version_in_path, find_project_file};
 use tempfile::tempdir;
 
 #[test]
@@ -47,8 +44,7 @@ foo=bar
 "#,
     )
     .unwrap();
-    let i18n = I18n::new().unwrap();
-    let (gv, _variant) = detect_godot_version_in_path(&i18n, &proj).unwrap();
+    let (gv, _variant) = detect_godot_version_in_path(&proj).unwrap();
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(2));
 }

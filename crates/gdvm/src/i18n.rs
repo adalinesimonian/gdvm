@@ -16,8 +16,9 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use anyhow::Result;
-use fluent_bundle::{FluentBundle, FluentResource, FluentValue};
+use fluent_bundle::{FluentResource, FluentValue, concurrent::FluentBundle};
 use std::env;
+use std::sync::OnceLock;
 use unic_langid::langid;
 
 // Include the Fluent translation files as static strings
@@ -29,6 +30,8 @@ static NN_NO_FTL: &str = include_str!("../i18n/nn-NO.ftl");
 static RU_RU_FTL: &str = include_str!("../i18n/ru-RU.ftl");
 
 use std::collections::HashMap;
+
+static I18N: OnceLock<I18n> = OnceLock::new();
 
 pub struct I18n {
     bundles: HashMap<String, FluentBundle<FluentResource>>,
@@ -48,7 +51,7 @@ impl I18n {
         let mut bundles = HashMap::new();
 
         for (locale, ftl_code) in resources.iter() {
-            let mut bundle = FluentBundle::new(vec![locale.clone()]);
+            let mut bundle = FluentBundle::new_concurrent(vec![locale.clone()]);
             let res = FluentResource::try_new(ftl_code.to_string())
                 .map_err(|e| anyhow::anyhow!("Failed to parse resource for {locale}: {e:?}"))?;
             bundle
@@ -58,6 +61,20 @@ impl I18n {
         }
 
         Ok(Self { bundles })
+    }
+
+    /// Initialize the global i18n instance.
+    pub fn init() -> Result<&'static Self> {
+        if let Some(i18n) = I18N.get() {
+            return Ok(i18n);
+        }
+        let i18n = Self::new()?;
+        Ok(I18N.get_or_init(|| i18n))
+    }
+
+    /// Get the global i18n instance.
+    pub fn get() -> &'static Self {
+        I18N.get_or_init(|| Self::new().expect("Failed to load translation resources"))
     }
 
     /// Translate a key without arguments
@@ -149,24 +166,23 @@ impl I18n {
 
 #[macro_export]
 macro_rules! i18n_generic {
-    ($i18n:expr, $noargs_func:ident, $args_func:ident, $key:expr, $( $arg_key:ident = $arg_val:expr ),* $(,)?) => {
-        $i18n.$args_func(
+    ($noargs_func:ident, $args_func:ident, $key:expr, $( $arg_key:ident = $arg_val:expr ),* $(,)?) => {
+        $crate::i18n::I18n::get().$args_func(
             $key,
             &[
                 $( ( stringify!($arg_key), fluent_bundle::FluentValue::from($arg_val) ) ),*
             ]
         )
     };
-    ($i18n:expr, $noargs_func:ident, $args_func:ident, $key:expr) => {
-        $i18n.$noargs_func($key)
+    ($noargs_func:ident, $args_func:ident, $key:expr) => {
+        $crate::i18n::I18n::get().$noargs_func($key)
     };
 }
 
 #[macro_export]
 macro_rules! t {
-    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+    ($key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
         $crate::i18n_generic!(
-            $i18n,
             t,
             t_args,
             $key
@@ -177,11 +193,10 @@ macro_rules! t {
 
 #[macro_export]
 macro_rules! i18n_print {
-    ($print_fn:ident, $i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+    ($print_fn:ident, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
         $print_fn!(
             "{}",
             $crate::t!(
-                $i18n,
                 $key
                 $(, $( $arg_key = $arg_val ),* )?
             )
@@ -191,10 +206,9 @@ macro_rules! i18n_print {
 
 #[macro_export]
 macro_rules! println_i18n {
-    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+    ($key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
         $crate::i18n_print!(
             println,
-            $i18n,
             $key
             $(, $( $arg_key = $arg_val ),* )?
         )
@@ -203,10 +217,9 @@ macro_rules! println_i18n {
 
 #[macro_export]
 macro_rules! eprintln_i18n {
-    ($i18n:expr, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+    ($key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
         $crate::i18n_print!(
             eprintln,
-            $i18n,
             $key
             $(, $( $arg_key = $arg_val ),* )?
         )
@@ -216,11 +229,11 @@ macro_rules! eprintln_i18n {
 /// Prints to stdout if the result of an operation is true, otherwise prints to stderr
 #[macro_export]
 macro_rules! xprintln_i18n {
-    ($result:expr, $i18n:expr, $success_key:expr, $failure_key:expr) => {
+    ($result:expr, $success_key:expr, $failure_key:expr) => {
         if $result {
-            $crate::println_i18n!($i18n, $success_key);
+            $crate::println_i18n!($success_key);
         } else {
-            $crate::eprintln_i18n!($i18n, $failure_key);
+            $crate::eprintln_i18n!($failure_key);
         }
     };
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 # SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -27,7 +28,7 @@ $rsFiles = Get-ChildItem -Path "$ScriptDir\..\crates\gdvm\src" -Recurse -Filter 
 $keys = @()
 
 # Define the regex pattern with single-line and multi-line options
-$pattern = '(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"'
+$pattern = '(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*)"([^"\\]*(?:\\.[^"\\]*)*)"'
 
 foreach ($file in $rsFiles) {
     # Read the entire file content as a single string
