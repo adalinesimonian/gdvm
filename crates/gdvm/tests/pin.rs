@@ -16,7 +16,6 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use gdvm::godot_manager::GodotManager;
-use gdvm::i18n::I18n;
 use gdvm::version_utils::{GodotVersion, GodotVersionDeterminate, Variant};
 use serial_test::serial;
 use std::fs;
@@ -99,16 +98,15 @@ fn determinate(install_str: &str) -> GodotVersionDeterminate {
         .to_determinate()
 }
 
-async fn manager(i18n: &I18n) -> GodotManager<'_> {
-    GodotManager::new(i18n).await.unwrap()
+async fn manager() -> GodotManager {
+    GodotManager::new().await.unwrap()
 }
 
 #[tokio::test]
 #[serial]
 async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = manager().await;
 
     mgr.pin_version(&determinate("4.3-stable"), &Variant::default(), None, false)
         .unwrap();
@@ -127,8 +125,7 @@ async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
 #[serial]
 async fn pin_csharp_writes_variant_formats() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = manager().await;
 
     mgr.pin_version(
         &determinate("4.3-stable"),
@@ -152,8 +149,7 @@ async fn pin_csharp_writes_variant_formats() {
 #[serial]
 async fn pin_no_legacy_skips_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = manager().await;
 
     mgr.pin_version(&determinate("4.3-stable"), &Variant::default(), None, true)
         .unwrap();
@@ -172,8 +168,7 @@ async fn pin_no_legacy_skips_gdvmrc() {
 #[serial]
 async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = manager().await;
 
     fs::write(
         env.project_dir().join("gdvm.toml"),
@@ -194,8 +189,7 @@ async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
 #[serial]
 async fn get_pinned_falls_back_to_legacy_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = manager().await;
 
     fs::write(env.project_dir().join(".gdvmrc"), "4.3.0-stable-csharp").unwrap();
 
@@ -211,8 +205,7 @@ async fn get_pinned_falls_back_to_legacy_gdvmrc() {
 #[serial]
 async fn get_pinned_walks_up_parent_directories() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = manager().await;
 
     fs::write(
         env.project_dir().join("gdvm.toml"),
@@ -234,8 +227,7 @@ async fn get_pinned_walks_up_parent_directories() {
 async fn pin_then_get_roundtrips_variant() {
     let env = PinTestEnv::new();
     let _ = env.project_dir();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = manager().await;
 
     mgr.pin_version(
         &determinate("4.3-stable"),

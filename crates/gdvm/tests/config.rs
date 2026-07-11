@@ -17,7 +17,7 @@
 
 #![cfg(feature = "integration-tests")]
 
-use gdvm::{config::Config, i18n::I18n};
+use gdvm::config::Config;
 use serial_test::serial;
 use tempfile::tempdir;
 
@@ -50,17 +50,16 @@ where
 #[serial]
 fn test_load_save_roundtrip() {
     let dir = tempdir().unwrap();
-    let i18n = I18n::new().unwrap();
 
     with_test_home(dir.path(), || {
         let cfg = Config {
             prune_max_age_days: Some(7),
             ..Default::default()
         };
-        cfg.save(&i18n).unwrap();
+        cfg.save().unwrap();
     });
 
-    let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    let loaded = with_test_home(dir.path(), || Config::load().unwrap());
     assert_eq!(loaded.prune_max_age_days, Some(7));
 
     with_test_home(dir.path(), || {
@@ -68,10 +67,10 @@ fn test_load_save_roundtrip() {
             prune_max_age_days: Some(14),
             ..Default::default()
         };
-        cfg.save(&i18n).unwrap();
+        cfg.save().unwrap();
     });
 
-    let loaded2 = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    let loaded2 = with_test_home(dir.path(), || Config::load().unwrap());
     assert_eq!(loaded2.prune_max_age_days, Some(14));
 }
 
@@ -79,7 +78,6 @@ fn test_load_save_roundtrip() {
 #[serial]
 fn test_legacy_config_option_is_ignored_on_load() {
     let dir = tempdir().unwrap();
-    let i18n = I18n::new().unwrap();
 
     let config_dir = dir.path().join(".gdvm");
     std::fs::create_dir_all(&config_dir).unwrap();
@@ -89,6 +87,6 @@ fn test_legacy_config_option_is_ignored_on_load() {
     )
     .unwrap();
 
-    let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    let loaded = with_test_home(dir.path(), || Config::load().unwrap());
     assert_eq!(loaded.prune_max_age_days, Some(9));
 }

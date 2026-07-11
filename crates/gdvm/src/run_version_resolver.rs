@@ -23,7 +23,7 @@ use async_trait::async_trait;
 use crate::version_utils::{
     DeterminateSelection, GodotVersion, GodotVersionDeterminate, Variant, VersionSelection,
 };
-use crate::{eprintln_i18n, i18n::I18n, t};
+use crate::{eprintln_i18n, t};
 
 #[async_trait(?Send)]
 pub trait RunVersionSource {
@@ -54,7 +54,6 @@ pub trait RunVersionSource {
 
 pub struct RunVersionResolver<'a, S: RunVersionSource> {
     source: &'a S,
-    i18n: &'a I18n,
 }
 
 #[derive(Debug)]
@@ -102,8 +101,8 @@ pub struct RunSelection {
 }
 
 impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
-    pub fn new(source: &'a S, i18n: &'a I18n) -> Self {
-        Self { source, i18n }
+    pub fn new(source: &'a S) -> Self {
+        Self { source }
     }
 
     /// Determine which source to use for the Godot version.
@@ -156,7 +155,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
     /// Resolve the Godot version to use. Installs it if requested.
     pub async fn resolve(&self, request: RunResolutionRequest<'_>) -> Result<RunResolutionResult> {
         let Some(selection) = self.select(&request).await? else {
-            return Err(anyhow!(t!(self.i18n, "no-default-set")));
+            return Err(anyhow!(t!("no-default-set")));
         };
 
         match selection.source {
@@ -164,7 +163,6 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 let path_bufs = request.path_bufs();
                 if warn_project_version_mismatch::<S, PathBuf>(
                     self.source,
-                    self.i18n,
                     &selection.version,
                     false,
                     Some(&path_bufs),
@@ -172,17 +170,12 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 .await
                     && !request.force_on_mismatch
                 {
-                    return Err(anyhow!(t!(
-                        self.i18n,
-                        "error-project-version-mismatch",
-                        pinned = 0
-                    )));
+                    return Err(anyhow!(t!("error-project-version-mismatch", pinned = 0)));
                 }
             }
             RunSource::Pin => {
                 if warn_project_version_mismatch::<S, PathBuf>(
                     self.source,
-                    self.i18n,
                     &selection.version,
                     true,
                     None,
@@ -190,16 +183,11 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 .await
                     && !request.force_on_mismatch
                 {
-                    return Err(anyhow!(t!(
-                        self.i18n,
-                        "error-project-version-mismatch",
-                        pinned = 1
-                    )));
+                    return Err(anyhow!(t!("error-project-version-mismatch", pinned = 1)));
                 }
             }
             RunSource::Project => {
                 eprintln_i18n!(
-                    self.i18n,
                     "warning-using-project-version",
                     version = selection.version.to_display_str()
                 );
@@ -249,7 +237,6 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
 
 pub async fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path> + Send + Sync>(
     source: &S,
-    i18n: &I18n,
     requested: &GodotVersion,
     is_pin: bool,
     paths: Option<&[P]>,
@@ -275,7 +262,6 @@ pub async fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path> +
         && project_version.conflicts_with(requested)
     {
         eprintln_i18n!(
-            i18n,
             "warning-project-version-mismatch",
             project_version = project_version.to_display_str(),
             requested_version = requested.to_display_str(),
@@ -429,18 +415,13 @@ mod tests {
         }
     }
 
-    fn intl() -> I18n {
-        I18n::new().expect("i18n init")
-    }
-
     #[tokio::test]
     async fn prefers_explicit_over_others() {
         let source = FakeSource::new()
             .with_pinned(gv(3, 5, "stable"))
             .with_default(gvd(4, 0, "stable"))
             .with_auto(gvd(5, 0, "stable"));
-        let intl = intl();
-        let resolver = RunVersionResolver::new(&source, &intl);
+        let resolver = RunVersionResolver::new(&source);
         let explicit = gv(5, 0, "stable");
         let request = RunResolutionRequest {
             explicit: Some(explicit),
@@ -461,8 +442,7 @@ mod tests {
         let source = FakeSource::new()
             .with_pinned(gv(3, 5, "stable"))
             .with_default(gvd(4, 0, "stable"));
-        let intl = intl();
-        let resolver = RunVersionResolver::new(&source, &intl);
+        let resolver = RunVersionResolver::new(&source);
 
         let resolved = resolver
             .resolve(RunResolutionRequest {
@@ -485,8 +465,7 @@ mod tests {
         let source = FakeSource::new()
             .with_project("/proj", gv(4, 2, "stable"))
             .with_default(gvd(4, 0, "stable"));
-        let intl = intl();
-        let resolver = RunVersionResolver::new(&source, &intl);
+        let resolver = RunVersionResolver::new(&source);
 
         let resolved = resolver
             .resolve(RunResolutionRequest {
@@ -507,8 +486,7 @@ mod tests {
     #[tokio::test]
     async fn falls_back_to_default() {
         let source = FakeSource::new().with_default(gvd(4, 0, "stable"));
-        let intl = intl();
-        let resolver = RunVersionResolver::new(&source, &intl);
+        let resolver = RunVersionResolver::new(&source);
 
         let resolved = resolver
             .resolve(RunResolutionRequest {
@@ -529,8 +507,7 @@ mod tests {
     #[tokio::test]
     async fn mismatches_error_when_not_forced() {
         let source = FakeSource::new().with_project("<cwd>", gv(4, 1, "stable"));
-        let intl = intl();
-        let resolver = RunVersionResolver::new(&source, &intl);
+        let resolver = RunVersionResolver::new(&source);
         let requested = gv(3, 5, "stable");
 
         resolver
@@ -568,8 +545,7 @@ mod tests {
         let source = FakeSource::new()
             .with_pinned(gv(4, 3, "stable"))
             .with_pin_registry("mybuilds");
-        let intl = intl();
-        let resolver = RunVersionResolver::new(&source, &intl);
+        let resolver = RunVersionResolver::new(&source);
         let request = RunResolutionRequest {
             explicit: Some(gv(4, 4, "stable")),
             variant: None,
@@ -590,8 +566,7 @@ mod tests {
         let source = FakeSource::new()
             .with_pinned(gv(4, 3, "stable"))
             .with_pin_registry("mybuilds");
-        let intl = intl();
-        let resolver = RunVersionResolver::new(&source, &intl);
+        let resolver = RunVersionResolver::new(&source);
         let request = RunResolutionRequest {
             explicit: None,
             variant: None,

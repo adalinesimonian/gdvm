@@ -25,7 +25,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck disable=SC2016
 expectedKeys=$(find "$SCRIPT_DIR/../crates/gdvm/src" -type f -name '*.rs' -print0 |
     xargs -0 perl -0777 -ne '
-        while (/(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*[^,\s]+,\s*)"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
+        while (/(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*)"([^"\\]*(?:\\.[^"\\]*)*)"/g) {
             print "$1\n";
         }
     ' | LC_ALL=C sort -u)

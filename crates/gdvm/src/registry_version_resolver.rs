@@ -18,7 +18,6 @@
 use anyhow::{Result, anyhow};
 
 use crate::host::HostPlatform;
-use crate::i18n::I18n;
 use crate::registry::{registry_arch_key, registry_os_key};
 use crate::releases::ReleaseCatalog;
 use crate::t;
@@ -29,7 +28,6 @@ use crate::version_utils::{
 /// Provides an API for resolving Godot versions against installed and available releases.
 pub struct RegistryVersionResolver<'a> {
     catalog: &'a ReleaseCatalog,
-    i18n: &'a I18n,
     host: HostPlatform,
 }
 
@@ -108,12 +106,8 @@ impl<'a> ResolveRequest<'a> {
 }
 
 impl<'a> RegistryVersionResolver<'a> {
-    pub fn new(catalog: &'a ReleaseCatalog, i18n: &'a I18n, host: HostPlatform) -> Self {
-        Self {
-            catalog,
-            i18n,
-            host,
-        }
+    pub fn new(catalog: &'a ReleaseCatalog, host: HostPlatform) -> Self {
+        Self { catalog, host }
     }
 
     pub async fn resolve(&self, request: ResolveRequest<'_>) -> Result<ResolveOutcome> {
@@ -205,7 +199,7 @@ impl<'a> RegistryVersionResolver<'a> {
         request.include_pre = include_pre;
         match self.resolve(request).await? {
             ResolveOutcome::Determinate(gv) => Ok(gv),
-            ResolveOutcome::NotFound => Err(anyhow!(t!(self.i18n, "error-version-not-found"))),
+            ResolveOutcome::NotFound => Err(anyhow!(t!("error-version-not-found"))),
             ResolveOutcome::Candidates(_) => unreachable!("auto-install never yields candidates"),
         }
     }
@@ -222,16 +216,13 @@ impl<'a> RegistryVersionResolver<'a> {
         &self,
         query: &GodotVersion,
     ) -> Result<GodotVersionDeterminate> {
-        let releases = self
-            .catalog
-            .list_releases(Some(query), false, self.i18n)
-            .await?;
+        let releases = self.catalog.list_releases(Some(query), false).await?;
 
         releases
             .iter()
             .find(|r| r.release_type == "stable")
             .cloned()
-            .ok_or_else(|| anyhow!(t!(self.i18n, "error-no-stable-releases-found")))
+            .ok_or_else(|| anyhow!(t!("error-no-stable-releases-found")))
     }
 
     async fn resolve_available_impl(
@@ -243,7 +234,7 @@ impl<'a> RegistryVersionResolver<'a> {
     ) -> Result<Option<GodotVersionDeterminate>> {
         let releases = self
             .catalog
-            .list_releases(Some(query), use_cache_only, self.i18n)
+            .list_releases(Some(query), use_cache_only)
             .await?;
 
         let mut newest_compatible_pre_release: Option<GodotVersionDeterminate> = None;
@@ -302,7 +293,7 @@ impl<'a> RegistryVersionResolver<'a> {
     ) -> Result<bool> {
         let platforms_per_variant = self
             .catalog
-            .platforms_by_variant(&gv.to_remote_str(), self.i18n)
+            .platforms_by_variant(&gv.to_remote_str())
             .await?;
 
         let variant = Variant::from_option(variant);
@@ -326,10 +317,6 @@ mod tests {
     use crate::metadata_cache::{CacheStore, RegistryReleasesCache, ReleaseCache};
     use std::collections::HashMap;
     use tempfile::TempDir;
-
-    fn i18n() -> I18n {
-        I18n::new().expect("i18n init")
-    }
 
     fn catalog_with_tags(tags: &[&str]) -> (ReleaseCatalog, TempDir) {
         let tmp = TempDir::new().expect("tempdir");
@@ -363,9 +350,7 @@ mod tests {
             last_fetched,
             releases,
         };
-        let registry =
-            crate::registry::Registry::official(&crate::i18n::I18n::new().expect("i18n init"))
-                .expect("registry client");
+        let registry = crate::registry::Registry::official().expect("registry client");
         cache_store
             .save_registry_cache(&registry.cache_key(), &registry_cache)
             .expect("write cache");
@@ -376,8 +361,7 @@ mod tests {
     #[tokio::test]
     async fn resolve_available_prefers_stable() {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-rc1", "4.2-stable"]);
-        let intl = i18n();
-        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, host());
         let query = GodotVersion {
             major: Some(4),
             minor: Some(2),
@@ -397,8 +381,7 @@ mod tests {
     #[tokio::test]
     async fn resolve_available_standard_variant() {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-rc1", "4.2-stable"]);
-        let intl = i18n();
-        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, host());
         let query = GodotVersion {
             major: Some(4),
             minor: Some(2),
@@ -420,8 +403,7 @@ mod tests {
     #[tokio::test]
     async fn resolve_for_auto_install_uses_latest_stable() {
         let (catalog, _tmp) = catalog_with_tags(&["4.1-stable", "4.0-stable"]);
-        let intl = i18n();
-        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, host());
         let query = GodotVersion {
             major: None,
             minor: None,
@@ -440,8 +422,7 @@ mod tests {
     #[tokio::test]
     async fn resolve_request_available_reports_not_found() {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-stable"]);
-        let intl = i18n();
-        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, host());
         let request = ResolveRequest::available(
             GodotVersion {
                 major: Some(3),
@@ -461,8 +442,7 @@ mod tests {
     #[tokio::test]
     async fn resolve_installed_sorts_and_filters() {
         let (catalog, _tmp) = catalog_with_tags(&[]);
-        let intl = i18n();
-        let resolver = RegistryVersionResolver::new(&catalog, &intl, host());
+        let resolver = RegistryVersionResolver::new(&catalog, host());
         let query = GodotVersion {
             major: Some(3),
             minor: None,

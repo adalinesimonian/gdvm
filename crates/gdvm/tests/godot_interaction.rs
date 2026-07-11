@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::{godot_manager::find_godot_executable, i18n::I18n, zip_utils::extract_zip};
+use gdvm::{godot_manager::find_godot_executable, zip_utils::extract_zip};
 use std::io::Write;
 use tempfile::tempdir;
 use zip::write::SimpleFileOptions;
@@ -34,8 +34,7 @@ fn test_extract_zip_basic() {
     }
 
     let out_dir = dir.path().join("out");
-    let i18n = I18n::new().unwrap();
-    extract_zip(&zip_path, &out_dir, &i18n).unwrap();
+    extract_zip(&zip_path, &out_dir).unwrap();
     let extracted = std::fs::read_to_string(out_dir.join("folder/file.txt")).unwrap();
     assert_eq!(extracted, "hello");
 }
@@ -57,8 +56,7 @@ fn test_extract_zip_strips_special_permission_bits() {
     }
 
     let out_dir = dir.path().join("out");
-    let i18n = I18n::new().unwrap();
-    extract_zip(&zip_path, &out_dir, &i18n).unwrap();
+    extract_zip(&zip_path, &out_dir).unwrap();
 
     let mode = std::fs::metadata(out_dir.join("folder/evil"))
         .unwrap()

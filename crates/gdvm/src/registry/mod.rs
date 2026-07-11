@@ -295,14 +295,14 @@ pub struct Registry {
 
 impl Registry {
     /// Construct the built-in official registry.
-    pub fn official(i18n: &crate::i18n::I18n) -> Result<Self> {
-        Self::new(OFFICIAL_REGISTRY, OFFICIAL_BASE_URL, i18n)
+    pub fn official() -> Result<Self> {
+        Self::new(OFFICIAL_REGISTRY, OFFICIAL_BASE_URL)
     }
 
     /// Construct a registry with the given name and base URL.
-    pub fn new(name: &str, base_url: &str, i18n: &crate::i18n::I18n) -> Result<Self> {
+    pub fn new(name: &str, base_url: &str) -> Result<Self> {
         Ok(Self {
-            client: crate::download_utils::http_client(i18n)?,
+            client: crate::download_utils::http_client()?,
             name: name.to_string(),
             base_url: RegistryUrl::parse(base_url)?,
         })
@@ -324,10 +324,10 @@ impl Registry {
 
     /// Fetch text for a registry-relative path. `Ok(None)` means the file is
     /// missing. Any other failure is an error.
-    async fn fetch_text(&self, rel: &str, i18n: &crate::i18n::I18n) -> Result<Option<String>> {
+    async fn fetch_text(&self, rel: &str) -> Result<Option<String>> {
         match &self.base_url {
             RegistryUrl::Http(base) => {
-                crate::download_utils::ensure_url_scheme_allowed(base, i18n)?;
+                crate::download_utils::ensure_url_scheme_allowed(base)?;
                 let url = format!("{base}/{}", rel.trim_start_matches('/'));
                 let resp = self.client.get(&url).send().await?;
                 if resp.status() == reqwest::StatusCode::NOT_FOUND {
@@ -340,7 +340,6 @@ impl Registry {
                     crate::download_utils::response_text_limited(
                         resp,
                         crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
-                        i18n,
                     )
                     .await?,
                 ))
@@ -357,9 +356,9 @@ impl Registry {
     }
 
     /// Fetch and normalize the registry index.
-    pub async fn fetch_index(&self, i18n: &crate::i18n::I18n) -> Result<Vec<IndexEntry>> {
+    pub async fn fetch_index(&self) -> Result<Vec<IndexEntry>> {
         let manifest_text = self
-            .fetch_text("registry.json", i18n)
+            .fetch_text("registry.json")
             .await?
             .ok_or_else(|| anyhow!("Registry '{}' is missing registry.json", self.name))?;
         let manifest: v2::Manifest = serde_json::from_str(&manifest_text)
@@ -373,7 +372,7 @@ impl Registry {
         }
 
         let index_text = self
-            .fetch_text("index.json", i18n)
+            .fetch_text("index.json")
             .await?
             .ok_or_else(|| anyhow!("Registry '{}' is missing index.json", self.name))?;
         let index: v2::Index = serde_json::from_str(&index_text)
@@ -382,15 +381,11 @@ impl Registry {
     }
 
     /// Fetch and normalize the download metadata for a single release.
-    pub async fn fetch_release(
-        &self,
-        source: &ReleaseRef,
-        i18n: &crate::i18n::I18n,
-    ) -> Result<ReleaseMetadata> {
+    pub async fn fetch_release(&self, source: &ReleaseRef) -> Result<ReleaseMetadata> {
         match source {
             ReleaseRef::V2 { path } => {
                 let text = self
-                    .fetch_text(path, i18n)
+                    .fetch_text(path)
                     .await?
                     .ok_or_else(|| anyhow!("Failed to fetch release metadata"))?;
                 let meta: v2::ReleaseMetadata = serde_json::from_str(&text)?;

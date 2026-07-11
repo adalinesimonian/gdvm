@@ -22,7 +22,7 @@ use sha2::{Digest, Sha256, Sha512};
 use std::{path::Path, time::Duration};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::{eprintln_i18n, i18n::I18n, t};
+use crate::{eprintln_i18n, t};
 
 /// Allows opting into unencrypted HTTP for fetches.
 pub const ALLOW_INSECURE_URLS_ENV_VAR: &str = "GDVM_ALLOW_INSECURE_URLS";
@@ -41,15 +41,11 @@ fn url_scheme_allowed_with(url: &str, allow_insecure: bool) -> bool {
 }
 
 /// Error if the URL scheme is not allowed. Returns `Ok(())` otherwise.
-pub fn ensure_url_scheme_allowed(url: &str, i18n: &I18n) -> Result<()> {
+pub fn ensure_url_scheme_allowed(url: &str) -> Result<()> {
     if url_scheme_allowed(url) {
         Ok(())
     } else {
-        Err(anyhow!(t!(
-            i18n,
-            "error-insecure-url",
-            url = url.to_string()
-        )))
+        Err(anyhow!(t!("error-insecure-url", url = url.to_string())))
     }
 }
 
@@ -57,10 +53,10 @@ pub fn ensure_url_scheme_allowed(url: &str, i18n: &I18n) -> Result<()> {
 const MAX_REDIRECTS: usize = 10;
 
 /// Get a reusable HTTP client.
-pub fn http_client(i18n: &I18n) -> Result<reqwest::Client> {
+pub fn http_client() -> Result<reqwest::Client> {
     let allow_insecure = std::env::var_os(ALLOW_INSECURE_URLS_ENV_VAR).is_some();
-    let too_many_redirects = t!(i18n, "error-too-many-redirects");
-    let insecure_redirect = t!(i18n, "error-insecure-redirect");
+    let too_many_redirects = t!("error-too-many-redirects");
+    let insecure_redirect = t!("error-insecure-redirect");
 
     let policy = reqwest::redirect::Policy::custom(move |attempt| {
         if attempt.previous().len() >= MAX_REDIRECTS {
@@ -128,15 +124,11 @@ impl StreamHasher {
 }
 
 /// Download `url` to the `dest` file handle.
-pub async fn download_to_file(
-    url: &str,
-    dest: &mut tokio::fs::File,
-    i18n: &I18n,
-) -> Result<DownloadDigests> {
-    ensure_url_scheme_allowed(url, i18n)?;
+pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<DownloadDigests> {
+    ensure_url_scheme_allowed(url)?;
 
     // Print downloading URL message
-    eprintln_i18n!(i18n, "operation-downloading-url", url = url);
+    eprintln_i18n!("operation-downloading-url", url = url);
 
     let mut hasher = StreamHasher::new();
 
@@ -144,7 +136,7 @@ pub async fn download_to_file(
     if let Some(path) = url.strip_prefix("file://") {
         let src_path = Path::new(path);
         if !src_path.is_file() {
-            return Err(anyhow!(t!(i18n, "error-file-not-found")));
+            return Err(anyhow!(t!("error-file-not-found")));
         }
         let mut src = tokio::fs::File::open(src_path).await?;
         let mut buffer = vec![0u8; 64 * 1024];
@@ -157,11 +149,11 @@ pub async fn download_to_file(
             hasher.update(&buffer[..read]);
         }
         dest.flush().await?;
-        eprintln_i18n!(i18n, "operation-download-complete");
+        eprintln_i18n!("operation-download-complete");
         return Ok(hasher.finish());
     }
 
-    let client = http_client(i18n)?;
+    let client = http_client()?;
     let response = client.get(url).send().await?;
 
     match response.status() {
@@ -180,7 +172,7 @@ pub async fn download_to_file(
             } else {
                 let pb = ProgressBar::new_spinner();
                 pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-                pb.set_message(t!(i18n, "operation-downloading-url", url = url));
+                pb.set_message(t!("operation-downloading-url", url = url));
                 pb
             };
 
@@ -199,14 +191,13 @@ pub async fn download_to_file(
 
             dest.flush().await?;
 
-            pb.finish_with_message(t!(i18n, "operation-download-complete"));
+            pb.finish_with_message(t!("operation-download-complete"));
         }
         reqwest::StatusCode::NOT_FOUND => {
-            return Err(anyhow!(t!(i18n, "error-file-not-found")));
+            return Err(anyhow!(t!("error-file-not-found")));
         }
         status => {
             return Err(anyhow!(t!(
-                i18n,
                 "error-download-failed",
                 status = status.to_string(),
             )));
@@ -220,16 +211,11 @@ pub async fn download_to_file(
 pub const MAX_METADATA_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
 
 /// Read a response body as text. Refuses bodies larger than `max_bytes`.
-pub async fn response_text_limited(
-    response: reqwest::Response,
-    max_bytes: u64,
-    i18n: &I18n,
-) -> Result<String> {
+pub async fn response_text_limited(response: reqwest::Response, max_bytes: u64) -> Result<String> {
     let url = response.url().to_string();
 
     let too_large = || {
         anyhow!(t!(
-            i18n,
             "error-response-too-large",
             url = url.clone(),
             limit = max_bytes
@@ -254,7 +240,6 @@ pub async fn response_text_limited(
 
     String::from_utf8(buf).map_err(|e| {
         anyhow!(t!(
-            i18n,
             "error-response-not-utf8",
             url = url.clone(),
             error = e.to_string()
@@ -263,14 +248,14 @@ pub async fn response_text_limited(
 }
 
 /// Download `url` to path at `dest`.
-pub async fn download_file(url: &str, dest: &Path, i18n: &I18n) -> Result<DownloadDigests> {
+pub async fn download_file(url: &str, dest: &Path) -> Result<DownloadDigests> {
     let mut file = tokio::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(dest)
         .await?;
 
-    match download_to_file(url, &mut file, i18n).await {
+    match download_to_file(url, &mut file).await {
         Ok(digests) => Ok(digests),
         Err(err) => {
             drop(file);

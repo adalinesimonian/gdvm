@@ -21,7 +21,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use crate::i18n::I18n;
 use crate::t;
 
 /// URL to gdvm's own release manifest.
@@ -217,63 +216,42 @@ pub fn newer_prerelease_available(
 }
 
 /// Fetch and parse the gdvm release manifest from `url`.
-pub async fn fetch_manifest(url: &str, timeout: Duration, i18n: &I18n) -> Result<ReleasesManifest> {
-    let text = if let Some(path) = url.strip_prefix("file://") {
-        std::fs::read_to_string(path).map_err(|e| {
-            anyhow!(t!(
-                i18n,
-                "error-fetching-gdvm-releases",
-                error = e.to_string()
-            ))
-        })?
-    } else {
-        crate::download_utils::ensure_url_scheme_allowed(url, i18n)?;
-        let client = crate::download_utils::http_client(i18n)?;
-        let resp = client.get(url).timeout(timeout).send().await.map_err(|e| {
-            anyhow!(t!(
-                i18n,
-                "error-fetching-gdvm-releases",
-                error = e.to_string()
-            ))
-        })?;
-        if !resp.status().is_success() {
-            return Err(anyhow!(t!(
-                i18n,
-                "error-fetching-gdvm-releases",
-                error = resp.status().to_string()
-            )));
-        }
-        crate::download_utils::response_text_limited(
-            resp,
-            crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
-            i18n,
-        )
-        .await
-        .map_err(|e| {
-            anyhow!(t!(
-                i18n,
-                "error-fetching-gdvm-releases",
-                error = e.to_string()
-            ))
-        })?
-    };
+pub async fn fetch_manifest(url: &str, timeout: Duration) -> Result<ReleasesManifest> {
+    let text =
+        if let Some(path) = url.strip_prefix("file://") {
+            std::fs::read_to_string(path)
+                .map_err(|e| anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string())))?
+        } else {
+            crate::download_utils::ensure_url_scheme_allowed(url)?;
+            let client = crate::download_utils::http_client()?;
+            let resp =
+                client.get(url).timeout(timeout).send().await.map_err(|e| {
+                    anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string()))
+                })?;
+            if !resp.status().is_success() {
+                return Err(anyhow!(t!(
+                    "error-fetching-gdvm-releases",
+                    error = resp.status().to_string()
+                )));
+            }
+            crate::download_utils::response_text_limited(
+                resp,
+                crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
+            )
+            .await
+            .map_err(|e| anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string())))?
+        };
 
-    parse_manifest(&text, i18n)
+    parse_manifest(&text)
 }
 
 /// Parse and validate a manifest from its JSON.
-pub fn parse_manifest(text: &str, i18n: &I18n) -> Result<ReleasesManifest> {
-    let manifest: ReleasesManifest = serde_json::from_str(text).map_err(|e| {
-        anyhow!(t!(
-            i18n,
-            "error-parsing-gdvm-releases",
-            error = e.to_string()
-        ))
-    })?;
+pub fn parse_manifest(text: &str) -> Result<ReleasesManifest> {
+    let manifest: ReleasesManifest = serde_json::from_str(text)
+        .map_err(|e| anyhow!(t!("error-parsing-gdvm-releases", error = e.to_string())))?;
 
     if manifest.schema != SUPPORTED_SCHEMA_VERSION {
         return Err(anyhow!(t!(
-            i18n,
             "error-unsupported-gdvm-schema",
             schema = manifest.schema
         )));
@@ -314,10 +292,6 @@ mod tests {
 
     fn selected(target: Option<&GdvmRelease>) -> Option<String> {
         target.map(|r| r.version.clone())
-    }
-
-    fn i18n() -> I18n {
-        I18n::new().expect("i18n init")
     }
 
     #[test]
@@ -553,7 +527,7 @@ mod tests {
             ]
         }"#;
 
-        let manifest = parse_manifest(json, &i18n()).expect("parse");
+        let manifest = parse_manifest(json).expect("parse");
         assert_eq!(manifest.schema, 1);
         assert_eq!(manifest.releases.len(), 1);
         let release = &manifest.releases[0];
@@ -572,6 +546,6 @@ mod tests {
     #[test]
     fn parse_manifest_rejects_unsupported_schema() {
         let json = r#"{ "schema": 99, "releases": [] }"#;
-        assert!(parse_manifest(json, &i18n()).is_err());
+        assert!(parse_manifest(json).is_err());
     }
 }
