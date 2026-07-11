@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+// SPDX-FileCopyrightText: Copyright (C) 2026 Adaline Simonian
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // This file is part of gdvm.
@@ -15,28 +15,24 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod app;
-pub mod artifact_cache;
-pub mod config;
-pub mod date_utils;
-pub mod download_utils;
-pub mod fs_utils;
-pub mod gdvm_toml;
-pub mod hash_utils;
-pub mod host;
-pub mod i18n;
-pub mod metadata_cache;
-pub mod migrations;
-pub mod paths;
-pub mod process_utils;
-pub mod progress_utils;
-pub mod project_version_detector;
-pub mod registry;
-pub mod registry_store;
-pub mod registry_version_resolver;
-pub mod releases;
-pub mod run_version_resolver;
-pub mod self_update;
-pub mod usage_tracker;
-pub mod version;
-pub mod zip_utils;
+use std::io;
+use std::process::{Command, Stdio};
+
+/// Spawn `command` detached from the current process.
+pub fn spawn_detached(command: &mut Command) -> io::Result<()> {
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    #[cfg(target_family = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        use winapi::um::winbase::DETACHED_PROCESS;
+        command.creation_flags(DETACHED_PROCESS);
+    }
+
+    command.spawn()?;
+
+    Ok(())
+}

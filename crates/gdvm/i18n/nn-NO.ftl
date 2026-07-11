@@ -229,7 +229,6 @@ upgrade-checksum-required = Utgjevingsmanifestet inneheld ingen sjekksum for den
 error-fetching-gdvm-releases = Feil ved henting av gdvm-utgjevingar: { $error }
 error-parsing-gdvm-releases = Feil ved tolking av gdvm-utgjevingar: { $error }
 error-unsupported-gdvm-schema = Skjemaversjon for gdvm-utgjevingsmanifestet er ikkje støtta: { $schema }. Prøv å oppgradere gdvm manuelt.
-checking-updates = Sjekkar etter oppdateringar til gdvm...
 upgrade-available = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade» for å oppdatere.
 upgrade-available-major = 💡 Ei hovudversjonsoppdatering av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade -m» for å oppdatere.
 upgrade-available-both = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$minor_version}. Ei hovudversjonsoppdatering er òg tilgjengeleg: {$major_version}. Køyr «gdvm upgrade» for å oppdatere innan gjeldande hovudversjon, eller «gdvm upgrade -m» for å oppgradere til aller siste versjon.

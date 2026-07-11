@@ -25,7 +25,10 @@ mod cli;
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     I18n::init()?;
-    let gdvm = Gdvm::new().await?;
+
+    if std::env::var_os(gdvm::app::Updater::BACKGROUND_CHECK_ENV_VAR).is_some() {
+        return Gdvm::new().await?.updater().run_background_check().await;
+    }
 
     // Detect if running through "godot" or "godot_console" shim.
     let exe_name = std::env::var("GDVM_ALIAS").ok().unwrap_or_else(|| {
@@ -74,6 +77,7 @@ async fn main() -> Result<()> {
     }
 
     let matches = cli::build_cli().get_matches();
+    let gdvm = Gdvm::new().await?;
 
     // Match the subcommand and call the appropriate function
     match matches.subcommand() {

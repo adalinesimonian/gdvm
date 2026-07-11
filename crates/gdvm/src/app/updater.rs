@@ -30,7 +30,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::download_utils::download_to_file;
 use crate::migrations;
-use crate::progress_utils;
 use crate::t;
 use crate::{eprintln_i18n, println_i18n};
 
@@ -41,146 +40,93 @@ pub struct Updater<'a> {
 }
 
 impl<'a> Updater<'a> {
-    pub async fn check_for_upgrades(&self) -> Result<()> {
-        // Load or initialize gdvm cache
+    /// How long to wait before running another update check.
+    const CHECK_INTERVAL: Duration = Duration::from_secs(48 * 3600);
+
+    /// Environment variable identifying the instance of gdvm that's running the
+    /// update check in the background.
+    pub const BACKGROUND_CHECK_ENV_VAR: &'static str = "GDVM_INTERNAL_UPDATE_CHECK";
+
+    /// Print an upgrade notice from the cached result of the last update check.
+    pub fn print_upgrade_notice(&self) -> Result<()> {
+        let gdvm_cache = self.cache_store.load_gdvm_cache()?;
+        let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+
+        match upgrade_notice(&gdvm_cache, &current_version) {
+            NoticeState::Notice(notice) => print_notice(&notice),
+            NoticeState::Stale => {
+                self.cache_store
+                    .clear_gdvm_cache(gdvm_cache.last_update_check)?;
+            }
+            NoticeState::None => {}
+        }
+
+        Ok(())
+    }
+
+    /// Run an update check in the background if the last check was more than
+    /// `CHECK_INTERVAL` ago.
+    pub fn spawn_background_check_if_due(&self) -> Result<()> {
         let gdvm_cache = self.cache_store.load_gdvm_cache()?;
 
-        // Check for updates
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| anyhow!(t!("error-system-time")))? // Should never fail.
             .as_secs();
-        let cache_duration = Duration::from_secs(48 * 3600); // 48 hours
         let cache_age = crate::date_utils::age_secs(now, gdvm_cache.last_update_check);
 
-        if cache_age > cache_duration.as_secs() {
-            let progress = progress_utils::spinner(t!("checking-updates"))?;
+        if cache_age <= Self::CHECK_INTERVAL.as_secs() {
+            return Ok(());
+        }
 
-            let manifest = match self_update::fetch_manifest(
-                &self_update::releases_url(),
-                Duration::from_secs(3),
-            )
-            .await
+        self.cache_store.save_gdvm_cache(&GdvmCache {
+            last_update_check: now,
+            ..gdvm_cache
+        })?;
+
+        crate::process_utils::spawn_detached(
+            std::process::Command::new(std::env::current_exe()?)
+                .env(Self::BACKGROUND_CHECK_ENV_VAR, "1"),
+        )?;
+
+        Ok(())
+    }
+
+    /// Run an update check.
+    pub async fn run_background_check(&self) -> Result<()> {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|_| anyhow!(t!("error-system-time")))? // Should never fail.
+            .as_secs();
+
+        let manifest =
+            match self_update::fetch_manifest(&self_update::releases_url(), Duration::from_secs(3))
+                .await
             {
                 Ok(manifest) => manifest,
                 Err(_) => {
-                    progress.finish_and_clear();
                     self.cache_store.clear_gdvm_cache(now)?;
                     return Ok(());
                 }
             };
 
-            progress.finish_and_clear();
+        // Get current version and determine major version for upgrade compatibility.
+        let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
 
-            // Get current version and determine major version for upgrade compatibility.
-            let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
+        let new_version =
+            self_update::select_upgrade(&manifest.releases, &current_version, false, false)
+                .map(|r| r.normalized_version().to_string());
 
-            let new_version =
-                self_update::select_upgrade(&manifest.releases, &current_version, false, false)
-                    .map(|r| r.normalized_version().to_string());
+        let new_major_version =
+            self_update::select_upgrade(&manifest.releases, &current_version, true, false)
+                .map(|r| r.normalized_version().to_string())
+                .filter(|major| Some(major) != new_version.as_ref());
 
-            let new_major_version =
-                self_update::select_upgrade(&manifest.releases, &current_version, true, false)
-                    .map(|r| r.normalized_version().to_string())
-                    .filter(|major| Some(major) != new_version.as_ref());
-
-            // Display appropriate message based on available updates.
-            if let (Some(minor_ver), Some(major_ver)) = (&new_version, &new_major_version) {
-                eprint!("\x1b[1;32m"); // Bold and green
-                eprintln_i18n!(
-                    "upgrade-available-both",
-                    minor_version = minor_ver,
-                    major_version = major_ver
-                );
-                eprint!("\x1b[0m"); // Reset
-                eprintln!();
-            } else if let Some(new_ver) = &new_version {
-                eprint!("\x1b[1;32m"); // Bold and green
-                eprintln_i18n!("upgrade-available", version = new_ver);
-                eprint!("\x1b[0m"); // Reset
-                eprintln!();
-            } else if let Some(major_ver) = &new_major_version {
-                eprint!("\x1b[1;32m"); // Bold and green
-                eprintln_i18n!("upgrade-available-major", version = major_ver);
-                eprint!("\x1b[0m"); // Reset
-                eprintln!();
-            }
-
-            self.cache_store.save_gdvm_cache(&GdvmCache {
-                last_update_check: now,
-                new_version,
-                new_major_version,
-            })?;
-        } else if let Some(new_version) = &gdvm_cache.new_version {
-            if let Ok(new_version) = Version::parse(new_version.trim_start_matches('v')) {
-                let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-                if new_version > current_version {
-                    eprint!("\x1b[1;32m"); // Bold and green
-                    eprintln_i18n!("upgrade-available", version = new_version.to_string(),);
-                    eprint!("\x1b[0m"); // Reset
-                    eprintln!();
-                } else {
-                    // Check cached versions.
-                    let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-                    let mut should_clear_cache = false;
-
-                    // Parse cached versions.
-                    let cached_minor = gdvm_cache
-                        .new_version
-                        .as_ref()
-                        .and_then(|v| Version::parse(v.trim_start_matches('v')).ok());
-                    let cached_major = gdvm_cache
-                        .new_major_version
-                        .as_ref()
-                        .and_then(|v| Version::parse(v.trim_start_matches('v')).ok());
-
-                    // Check if cached versions are still newer than current.
-                    let valid_minor = cached_minor
-                        .as_ref()
-                        .map(|v| v > &current_version)
-                        .unwrap_or(false);
-                    let valid_major = cached_major
-                        .as_ref()
-                        .map(|v| v > &current_version)
-                        .unwrap_or(false);
-
-                    if valid_minor && valid_major && cached_minor != cached_major {
-                        eprint!("\x1b[1;32m"); // Bold and green
-                        eprintln_i18n!(
-                            "upgrade-available-both",
-                            minor_version = gdvm_cache.new_version.as_ref().unwrap(),
-                            major_version = gdvm_cache.new_major_version.as_ref().unwrap()
-                        );
-                        eprint!("\x1b[0m"); // Reset
-                        eprintln!();
-                    } else if valid_minor {
-                        eprint!("\x1b[1;32m"); // Bold and green
-                        eprintln_i18n!(
-                            "upgrade-available",
-                            version = gdvm_cache.new_version.as_ref().unwrap()
-                        );
-                        eprint!("\x1b[0m"); // Reset
-                        eprintln!();
-                    } else if valid_major {
-                        eprint!("\x1b[1;32m"); // Bold and green
-                        eprintln_i18n!(
-                            "upgrade-available-major",
-                            version = gdvm_cache.new_major_version.as_ref().unwrap()
-                        );
-                        eprint!("\x1b[0m"); // Reset
-                        eprintln!();
-                    } else {
-                        should_clear_cache = true;
-                    }
-
-                    if should_clear_cache {
-                        self.cache_store.clear_gdvm_cache(now)?;
-                    }
-                }
-            } else {
-                self.cache_store.clear_gdvm_cache(now)?;
-            }
-        }
+        self.cache_store.save_gdvm_cache(&GdvmCache {
+            last_update_check: now,
+            new_version,
+            new_major_version,
+        })?;
 
         Ok(())
     }
@@ -327,5 +273,156 @@ impl<'a> Updater<'a> {
         println_i18n!("upgrade-complete");
 
         Ok(())
+    }
+}
+
+/// An upgrade notice.
+#[derive(Debug, PartialEq, Eq)]
+enum UpgradeNotice {
+    /// Both a compatible and a major upgrade are available.
+    Both { minor: String, major: String },
+    /// A compatible upgrade is available.
+    Minor(String),
+    /// Only a major upgrade is available.
+    Major(String),
+}
+
+/// The state of whether an upgrade notice should be shown.
+#[derive(Debug, PartialEq, Eq)]
+enum NoticeState {
+    /// A notice should be shown.
+    Notice(UpgradeNotice),
+    /// The cached upgrade notice is no longer relevant to the current version.
+    Stale,
+    /// Nothing is cached.
+    None,
+}
+
+/// Determine whether an upgrade notice should be shown based on the cached
+/// upgrade information and the current version.
+fn upgrade_notice(cache: &GdvmCache, current_version: &Version) -> NoticeState {
+    if cache.new_version.is_none() && cache.new_major_version.is_none() {
+        return NoticeState::None;
+    }
+
+    let parse = |v: &Option<String>| {
+        v.as_ref()
+            .and_then(|v| Version::parse(v.trim_start_matches('v')).ok())
+    };
+    let cached_minor = parse(&cache.new_version);
+    let cached_major = parse(&cache.new_major_version);
+
+    let valid_minor = cached_minor
+        .as_ref()
+        .map(|v| v > current_version)
+        .unwrap_or(false);
+    let valid_major = cached_major
+        .as_ref()
+        .map(|v| v > current_version)
+        .unwrap_or(false);
+
+    if valid_minor && valid_major && cached_minor != cached_major {
+        NoticeState::Notice(UpgradeNotice::Both {
+            minor: cache.new_version.clone().unwrap(),
+            major: cache.new_major_version.clone().unwrap(),
+        })
+    } else if valid_minor {
+        NoticeState::Notice(UpgradeNotice::Minor(cache.new_version.clone().unwrap()))
+    } else if valid_major {
+        NoticeState::Notice(UpgradeNotice::Major(
+            cache.new_major_version.clone().unwrap(),
+        ))
+    } else {
+        NoticeState::Stale
+    }
+}
+
+/// Print an upgrade notice.
+fn print_notice(notice: &UpgradeNotice) {
+    eprint!("\x1b[1;32m"); // Bold and green
+    match notice {
+        UpgradeNotice::Both { minor, major } => {
+            eprintln_i18n!(
+                "upgrade-available-both",
+                minor_version = minor.as_str(),
+                major_version = major.as_str()
+            );
+        }
+        UpgradeNotice::Minor(version) => {
+            eprintln_i18n!("upgrade-available", version = version.as_str());
+        }
+        UpgradeNotice::Major(version) => {
+            eprintln_i18n!("upgrade-available-major", version = version.as_str());
+        }
+    }
+    eprint!("\x1b[0m"); // Reset
+    eprintln!();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cache(minor: Option<&str>, major: Option<&str>) -> GdvmCache {
+        GdvmCache {
+            last_update_check: 0,
+            new_version: minor.map(str::to_string),
+            new_major_version: major.map(str::to_string),
+        }
+    }
+
+    fn v(s: &str) -> Version {
+        Version::parse(s).unwrap()
+    }
+
+    #[test]
+    fn notice_for_newer_minor() {
+        assert_eq!(
+            upgrade_notice(&cache(Some("1.2.0"), None), &v("1.1.0")),
+            NoticeState::Notice(UpgradeNotice::Minor("1.2.0".into()))
+        );
+    }
+
+    #[test]
+    fn notice_for_newer_major_only() {
+        assert_eq!(
+            upgrade_notice(&cache(None, Some("2.0.0")), &v("1.1.0")),
+            NoticeState::Notice(UpgradeNotice::Major("2.0.0".into()))
+        );
+    }
+
+    #[test]
+    fn notice_for_both() {
+        assert_eq!(
+            upgrade_notice(&cache(Some("1.2.0"), Some("2.0.0")), &v("1.1.0")),
+            NoticeState::Notice(UpgradeNotice::Both {
+                minor: "1.2.0".into(),
+                major: "2.0.0".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn stale_when_no_longer_newer() {
+        assert_eq!(
+            upgrade_notice(&cache(Some("1.2.0"), None), &v("1.2.0")),
+            NoticeState::Stale
+        );
+    }
+
+    #[test]
+    fn stale_when_unparsable() {
+        assert_eq!(
+            upgrade_notice(&cache(Some("not-a-version"), None), &v("1.0.0")),
+            NoticeState::Stale
+        );
+    }
+
+    #[test]
+    fn none_when_cache_empty() {
+        assert_eq!(
+            upgrade_notice(&cache(None, None), &v("1.0.0")),
+            NoticeState::None
+        );
     }
 }

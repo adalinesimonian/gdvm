@@ -231,7 +231,6 @@ upgrade-checksum-required = The release manifest does not include a checksum for
 error-fetching-gdvm-releases = Error fetching gdvm releases: { $error }
 error-parsing-gdvm-releases = Error parsing gdvm releases: { $error }
 error-unsupported-gdvm-schema = Unsupported gdvm release manifest schema version: { $schema }. Try upgrading gdvm manually.
-checking-updates = Checking for updates to gdvm...
 upgrade-available = 💡 A new version of gdvm is available: {$version}. Run "gdvm upgrade" to update.
 upgrade-available-major = 💡 A major version update of gdvm is available: {$version}. Run "gdvm upgrade -m" to update.
 upgrade-available-both = 💡 A new version of gdvm is available: {$minor_version}. A major version update is also available: {$major_version}. Run "gdvm upgrade" to update within the current major version, or "gdvm upgrade -m" to upgrade to the latest version.

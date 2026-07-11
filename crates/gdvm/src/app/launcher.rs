@@ -242,13 +242,11 @@ impl<'a> Launcher<'a> {
 
             #[cfg(target_family = "windows")]
             {
-                use std::os::windows::process::CommandExt;
-                use winapi::um::winbase::DETACHED_PROCESS;
-                std::process::Command::new(&path)
-                    .args(godot_args)
-                    .envs(dotenv_vars)
-                    .creation_flags(DETACHED_PROCESS)
-                    .spawn()?;
+                crate::process_utils::spawn_detached(
+                    std::process::Command::new(&path)
+                        .args(godot_args)
+                        .envs(dotenv_vars),
+                )?;
             }
         }
 

@@ -52,6 +52,13 @@ pub fn ensure_url_scheme_allowed(url: &str) -> Result<()> {
 /// The maximum number of redirects to follow.
 const MAX_REDIRECTS: usize = 10;
 
+/// How long to wait when establishing a connection before giving up.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// How long a connection may sit without any data arriving before it is
+/// considered stalled.
+const READ_TIMEOUT: Duration = Duration::from_secs(30);
+
 /// Get a reusable HTTP client.
 pub fn http_client() -> Result<reqwest::Client> {
     let allow_insecure = std::env::var_os(ALLOW_INSECURE_URLS_ENV_VAR).is_some();
@@ -74,6 +81,8 @@ pub fn http_client() -> Result<reqwest::Client> {
     Ok(reqwest::ClientBuilder::new()
         .user_agent("gdvm")
         .redirect(policy)
+        .connect_timeout(CONNECT_TIMEOUT)
+        .read_timeout(READ_TIMEOUT)
         .build()?)
 }
 
