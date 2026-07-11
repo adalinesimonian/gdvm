@@ -229,7 +229,6 @@ upgrade-checksum-required = Le manifeste de publication ne contient pas de somme
 error-fetching-gdvm-releases = Erreur lors de la récupération des versions de gdvm : { $error }
 error-parsing-gdvm-releases = Erreur lors de l'analyse des versions de gdvm : { $error }
 error-unsupported-gdvm-schema = Version de schéma du manifeste des versions de gdvm non prise en charge : { $schema }. Essayez de mettre à jour gdvm manuellement.
-checking-updates = Vérification des mises à jour de gdvm...
 upgrade-available = 💡 Une nouvelle version de gdvm est disponible : {$version}. Exécutez « gdvm upgrade » pour mettre à jour.
 upgrade-available-major = 💡 Une mise à jour de version majeure de gdvm est disponible : {$version}. Exécutez « gdvm upgrade -m » pour mettre à jour.
 upgrade-available-both = 💡 Une nouvelle version de gdvm est disponible : {$minor_version}. Une mise à jour de version majeure est également disponible : {$major_version}. Exécutez « gdvm upgrade » pour mettre à jour dans la version majeure actuelle, ou « gdvm upgrade -m » pour mettre à jour vers la dernière version.

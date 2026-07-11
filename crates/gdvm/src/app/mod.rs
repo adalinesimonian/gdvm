@@ -192,8 +192,11 @@ impl Gdvm {
 
         migrations::run_migrations(gdvm.paths.base())?;
 
-        // Don't fail if update check fails, since it isn't critical
-        gdvm.updater().check_for_upgrades().await.ok();
+        // Report any available upgrade from the last update check.
+        if std::env::var_os(Updater::BACKGROUND_CHECK_ENV_VAR).is_none() {
+            gdvm.updater().print_upgrade_notice().ok();
+            gdvm.updater().spawn_background_check_if_due().ok();
+        }
 
         Ok(gdvm)
     }

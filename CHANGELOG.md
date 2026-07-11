@@ -21,6 +21,12 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### Changed
+
+- gdvm no longer blocks commands with update checks, which are now run in the background.
+- Commands don't start processing gdvm's cache or internal data until after the command line is parsed, which should reduce response time for commands given bad arguments or when `--help` is passed.
+- Network connections now time out after 10 seconds of waiting to establish a connection and 30 seconds of inactivity during a transfer. This will not affect downloads that are actively transferring data, it will only prevent gdvm from hanging indefinitely on a stalled connection.
+
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.14.0...main
 
 ## v0.14.0
