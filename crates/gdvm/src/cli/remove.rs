@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::version_utils::{self, VersionSpec, VersionTarget};
 use gdvm::{eprintln_i18n, println_i18n, t};
 
@@ -26,7 +26,7 @@ use std::io::{self, Write};
 use super::check_deprecated_csharp_flag;
 
 /// Handle the 'remove' subcommand
-pub(crate) async fn sub_remove(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version").unwrap();
     let spec = VersionSpec::parse(version_input)?;
     let variant = check_deprecated_csharp_flag(matches, spec.variant);
@@ -40,7 +40,8 @@ pub(crate) async fn sub_remove(manager: &GodotManager, matches: &ArgMatches) -> 
         VersionTarget::Pattern(gv) => gv.clone(),
     };
 
-    let resolved_versions = manager
+    let resolved_versions = gdvm
+        .library()
         .resolve_installed_version(&requested_version, variant, registry)
         .await?;
 
@@ -68,7 +69,7 @@ pub(crate) async fn sub_remove(manager: &GodotManager, matches: &ArgMatches) -> 
                     return Ok(());
                 }
             }
-            manager.remove(
+            gdvm.library().remove(
                 &installed.version,
                 &installed.variant,
                 installed.registry.as_deref(),

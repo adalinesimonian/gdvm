@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::println_i18n;
 use gdvm::version_utils::{self, Variant, VersionSpec, VersionTarget};
 
@@ -28,7 +28,7 @@ use super::{
 };
 
 /// Handle the 'use' subcommand
-pub(crate) async fn sub_use(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_use(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let refresh = matches.get_flag("refresh");
 
     let version_input = match matches.get_one::<String>("version") {
@@ -40,19 +40,19 @@ pub(crate) async fn sub_use(manager: &GodotManager, matches: &ArgMatches) -> Res
     };
 
     if version_input == "unset" {
-        manager.unset_default()?;
+        gdvm.defaults().unset_default()?;
         println_i18n!("default-unset-success");
         return Ok(());
     }
 
-    refresh_cache_if_requested(manager, refresh).await?;
+    refresh_cache_if_requested(gdvm, refresh).await?;
 
     let spec = VersionSpec::parse(version_input)?;
     let variant = check_deprecated_csharp_flag(matches, spec.variant);
     let variant = variant.as_deref();
     let registry = spec.registry.as_deref();
 
-    ensure_registry_trusted(manager, registry, matches.get_flag("yes")).await?;
+    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
 
     let requested_version = match &spec.target {
         VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
@@ -61,12 +61,14 @@ pub(crate) async fn sub_use(manager: &GodotManager, matches: &ArgMatches) -> Res
 
     let include_pre = matches.get_flag("include-pre");
 
-    let resolved_version = manager
+    let resolved_version = gdvm
+        .installer()
         .auto_install_version(&requested_version, variant, registry, include_pre)
         .await?;
 
     let resolved_variant = Variant::from_option(variant);
-    manager.set_default(&resolved_version, &resolved_variant, registry)?;
+    gdvm.defaults()
+        .set_default(&resolved_version, &resolved_variant, registry)?;
     let display = version_utils::display_version(
         &resolved_version.to_display_str(),
         &resolved_variant,

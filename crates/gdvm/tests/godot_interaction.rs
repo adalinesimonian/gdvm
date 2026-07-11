@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::{godot_manager::find_godot_executable, zip_utils::extract_zip};
+use gdvm::{app::find_godot_executable, zip_utils::extract_zip};
 use std::io::Write;
 use tempfile::tempdir;
 use zip::write::SimpleFileOptions;

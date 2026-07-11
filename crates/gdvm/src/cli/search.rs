@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::println_i18n;
 use gdvm::version_utils::GodotVersion;
 
@@ -25,13 +25,13 @@ use clap::ArgMatches;
 use super::{ensure_registry_trusted, refresh_cache_if_requested};
 
 /// Handle the 'search' subcommand
-pub(crate) async fn sub_search(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let filter = matches.get_one::<String>("filter").map(|s| s.as_str());
     let include_pre = matches.get_flag("include-pre");
     let cache_only = matches.get_flag("cache-only");
     let refresh = matches.get_flag("refresh");
 
-    refresh_cache_if_requested(manager, refresh).await?;
+    refresh_cache_if_requested(gdvm, refresh).await?;
 
     let (registry, version_filter) = match filter {
         Some(f) => match f.split_once('/') {
@@ -41,14 +41,15 @@ pub(crate) async fn sub_search(manager: &GodotManager, matches: &ArgMatches) -> 
         None => (None, None),
     };
 
-    ensure_registry_trusted(manager, registry, matches.get_flag("yes")).await?;
+    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
 
     let requested_version = match version_filter {
         Some(filter) => Some(GodotVersion::from_match_str(filter)?),
         None => None,
     };
 
-    let mut releases = manager
+    let mut releases = gdvm
+        .catalogs()
         .fetch_available_releases(registry, &requested_version, cache_only)
         .await?;
 

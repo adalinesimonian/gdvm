@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use gdvm::app::Gdvm;
 use gdvm::config::Config;
-use gdvm::godot_manager::GodotManager;
 use gdvm::version_utils::GodotVersion;
 use gdvm::{eprintln_i18n, t};
 
@@ -80,9 +80,9 @@ fn check_deprecated_csharp_flag(
     }
 }
 
-async fn refresh_cache_if_requested(manager: &GodotManager, refresh: bool) -> Result<()> {
+async fn refresh_cache_if_requested(gdvm: &Gdvm, refresh: bool) -> Result<()> {
     if refresh {
-        manager.refresh_cache().await?;
+        gdvm.catalogs().refresh_cache().await?;
     }
 
     Ok(())
@@ -106,16 +106,16 @@ fn keyword_to_version_filter(keyword: &str) -> GodotVersion {
 /// `assume_yes` is true, in which case it automatically trusts the registry
 /// after a brief pause.
 async fn ensure_registry_trusted(
-    manager: &GodotManager,
+    gdvm: &Gdvm,
     registry: Option<&str>,
     assume_yes: bool,
 ) -> Result<()> {
-    if manager.is_official_registry(registry) {
+    if gdvm.catalogs().is_official_registry(registry) {
         return Ok(());
     }
 
     let name = registry.expect("a non-official registry always has a name");
-    let url = manager.registry_base_url(name)?;
+    let url = gdvm.catalogs().registry_base_url(name)?;
 
     // Always warn when using a third-party registry, even after it has been confirmed.
     eprintln_i18n!(

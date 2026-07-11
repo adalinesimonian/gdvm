@@ -17,7 +17,7 @@
 
 #![cfg(feature = "integration-tests")]
 
-use gdvm::godot_manager::{GodotManager, PruneOptions};
+use gdvm::app::{Gdvm, PruneOptions};
 use gdvm::usage_tracker::{ArchiveUsage, InstallUsage, LinkRecord, UsageState, UsageTracker};
 use gdvm::version_utils::{GodotVersion, Variant};
 use serial_test::serial;
@@ -122,8 +122,8 @@ fn determinate(install_str: &str) -> gdvm::version_utils::GodotVersionDeterminat
         .to_determinate()
 }
 
-async fn manager() -> GodotManager {
-    GodotManager::new().await.unwrap()
+async fn gdvm() -> Gdvm {
+    Gdvm::new().await.unwrap()
 }
 
 /// Create a symlink at `link` pointing at `target`.
@@ -186,8 +186,11 @@ async fn prune_removes_stale_keeps_recent() {
         &[],
     ));
 
-    let mgr = manager().await;
-    let report = mgr.prune(30 * DAY, PruneOptions::default()).unwrap();
+    let mgr = gdvm().await;
+    let report = mgr
+        .pruner()
+        .prune(30 * DAY, PruneOptions::default())
+        .unwrap();
 
     assert!(!stale.exists(), "stale install should be removed");
     assert!(fresh.exists(), "fresh install should be kept");
@@ -220,8 +223,11 @@ async fn prune_keeps_freshly_created_untracked_install() {
     let dir = env.make_install(key);
     env.write_usage(&UsageState::default());
 
-    let mgr = manager().await;
-    let report = mgr.prune(30 * DAY, PruneOptions::default()).unwrap();
+    let mgr = gdvm().await;
+    let report = mgr
+        .pruner()
+        .prune(30 * DAY, PruneOptions::default())
+        .unwrap();
 
     assert!(dir.exists(), "recently created install should be kept");
     assert!(report.is_empty());
@@ -248,8 +254,9 @@ async fn prune_all_preserves_link_referenced_install() {
         &[(&link_str, linked_key, now - DAY)],
     ));
 
-    let mgr = manager().await;
+    let mgr = gdvm().await;
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -283,13 +290,17 @@ async fn prune_force_removes_link_referenced_install() {
         &[(&link_str, key, now - 40 * DAY)],
     ));
 
-    let mgr = manager().await;
+    let mgr = gdvm().await;
 
-    let report = mgr.prune(30 * DAY, PruneOptions::default()).unwrap();
+    let report = mgr
+        .pruner()
+        .prune(30 * DAY, PruneOptions::default())
+        .unwrap();
     assert!(dir.exists(), "link should protect the install by default");
     assert_eq!(report.preserved_by_link, 1);
 
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -329,8 +340,9 @@ async fn prune_dry_run_changes_nothing() {
         &[],
     ));
 
-    let mgr = manager().await;
+    let mgr = gdvm().await;
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -373,8 +385,9 @@ async fn prune_all_force_removes_everything() {
         &[(&link_str, key, now)],
     ));
 
-    let mgr = manager().await;
+    let mgr = gdvm().await;
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -400,21 +413,24 @@ async fn prune_all_force_removes_everything() {
 async fn prune_never_removes_the_default_install() {
     let env = TestHome::new();
 
-    let mgr = manager().await;
+    let mgr = gdvm().await;
 
     let default_gv = determinate("4.3-stable");
     let other_gv = determinate("4.4-stable");
     let default_key = mgr
+        .library()
         .install_key(&default_gv, &Variant::default(), None)
         .unwrap();
     let other_key = mgr
+        .library()
         .install_key(&other_gv, &Variant::default(), None)
         .unwrap();
 
     let default_dir = env.make_install(&default_key);
     let other_dir = env.make_install(&other_key);
 
-    mgr.set_default(&default_gv, &Variant::default(), None)
+    mgr.defaults()
+        .set_default(&default_gv, &Variant::default(), None)
         .unwrap();
 
     env.make_cache_file("stalearchive.zip", b"old");
@@ -430,6 +446,7 @@ async fn prune_never_removes_the_default_install() {
     ));
 
     let report = mgr
+        .pruner()
         .prune(
             0,
             PruneOptions {

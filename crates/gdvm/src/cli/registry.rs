@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use gdvm::app::Gdvm;
 use gdvm::config::{self};
-use gdvm::godot_manager::GodotManager;
 use gdvm::registry;
 use gdvm::{eprintln_i18n, println_i18n, t};
 
@@ -121,7 +121,7 @@ async fn resolve_build_integrity(
 }
 
 /// Handle the 'registry' subcommand
-pub(crate) async fn sub_registry(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
         Some(("add", sub_m)) => {
             let name = sub_m.get_one::<String>("name").unwrap();
@@ -151,7 +151,7 @@ pub(crate) async fn sub_registry(manager: &GodotManager, matches: &ArgMatches) -
             }
         }
         Some(("list", _)) => {
-            let registries = manager.registry_list();
+            let registries = gdvm.catalogs().registry_list();
             println_i18n!("registry-list-header");
             for info in registries {
                 let mut tags = Vec::new();
@@ -168,8 +168,8 @@ pub(crate) async fn sub_registry(manager: &GodotManager, matches: &ArgMatches) -
         }
         Some(("refresh", sub_m)) => {
             match sub_m.get_one::<String>("name") {
-                Some(name) => manager.refresh_registry_cache(Some(name)).await?,
-                None => manager.refresh_all_registry_caches().await?,
+                Some(name) => gdvm.catalogs().refresh_registry_cache(Some(name)).await?,
+                None => gdvm.catalogs().refresh_all_registry_caches().await?,
             }
             println_i18n!("cache-refreshed");
         }

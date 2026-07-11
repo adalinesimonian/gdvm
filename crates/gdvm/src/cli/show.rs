@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version_utils::{VersionSpec, VersionTarget};
 
@@ -26,7 +26,7 @@ use super::link::collect_possible_paths;
 use super::{check_deprecated_csharp_flag, keyword_to_version_filter, refresh_cache_if_requested};
 
 /// Handle the 'show' subcommand
-pub(crate) async fn sub_show(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_show(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let raw_args: Vec<String> = Vec::new();
 
     let version_input = matches.get_one::<String>("version");
@@ -34,7 +34,7 @@ pub(crate) async fn sub_show(manager: &GodotManager, matches: &ArgMatches) -> Re
     let force_on_mismatch = matches.get_flag("force");
     let refresh = matches.get_flag("refresh");
 
-    refresh_cache_if_requested(manager, refresh).await?;
+    refresh_cache_if_requested(gdvm, refresh).await?;
 
     let possible_paths = collect_possible_paths(&raw_args);
 
@@ -51,7 +51,7 @@ pub(crate) async fn sub_show(manager: &GodotManager, matches: &ArgMatches) -> Re
 
     let include_pre = matches.get_flag("include-pre");
 
-    let resolver = RunVersionResolver::new(manager);
+    let resolver = RunVersionResolver::new(gdvm);
     let resolved = resolver
         .resolve(RunResolutionRequest {
             explicit: explicit_version,
@@ -64,7 +64,7 @@ pub(crate) async fn sub_show(manager: &GodotManager, matches: &ArgMatches) -> Re
         })
         .await?;
 
-    let exe_path = manager.get_executable_path(
+    let exe_path = gdvm.library().get_executable_path(
         &resolved.version,
         &resolved.variant,
         resolved.registry.as_deref(),
