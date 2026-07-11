@@ -19,7 +19,7 @@
 
 use gdvm::app::{Gdvm, PruneOptions};
 use gdvm::usage_tracker::{ArchiveUsage, InstallUsage, LinkRecord, UsageState, UsageTracker};
-use gdvm::version_utils::{GodotVersion, Variant};
+use gdvm::version::{Variant, VersionQuery};
 use serial_test::serial;
 use std::collections::HashMap;
 use std::fs;
@@ -116,10 +116,10 @@ fn now_secs() -> u64 {
         .as_secs()
 }
 
-fn determinate(install_str: &str) -> gdvm::version_utils::GodotVersionDeterminate {
-    GodotVersion::from_install_str(install_str)
+fn determinate(install_str: &str) -> gdvm::version::ResolvedVersion {
+    VersionQuery::from_install_str(install_str)
         .unwrap()
-        .to_determinate()
+        .to_resolved()
 }
 
 async fn gdvm() -> Gdvm {

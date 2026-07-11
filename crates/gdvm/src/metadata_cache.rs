@@ -24,7 +24,7 @@ use std::{
 };
 
 use crate::registry::ReleaseRef;
-use crate::version_utils::{GodotVersion, GodotVersionDeterminate, GodotVersionDeterminateVecExt};
+use crate::version::{ResolvedVersion, VersionQuery};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 /// Metadata for a single Godot release stored in the registry cache.
@@ -160,17 +160,17 @@ impl CacheStore {
 
 pub fn filter_cached_releases(
     cache: &RegistryReleasesCache,
-    filter: Option<&GodotVersion>,
-) -> Vec<GodotVersionDeterminate> {
-    let mut releases: Vec<GodotVersionDeterminate> = cache
+    filter: Option<&VersionQuery>,
+) -> Vec<ResolvedVersion> {
+    let mut releases: Vec<ResolvedVersion> = cache
         .releases
         .iter()
-        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name).ok())
-        .map(|gv| gv.to_determinate())
+        .filter_map(|r| VersionQuery::from_remote_str(&r.tag_name).ok())
+        .map(|gv| gv.to_resolved())
         .filter(|r| filter.is_none_or(|f| f.matches(r)))
         .collect();
 
-    releases.sort_by_version();
+    releases.sort_by(|a, b| b.cmp(a));
 
     releases
 }

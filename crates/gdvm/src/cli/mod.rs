@@ -17,7 +17,7 @@
 
 use gdvm::app::Gdvm;
 use gdvm::config::Config;
-use gdvm::version_utils::GodotVersion;
+use gdvm::version::VersionQuery;
 use gdvm::{eprintln_i18n, t};
 
 use anyhow::{Result, anyhow};
@@ -88,15 +88,15 @@ async fn refresh_cache_if_requested(gdvm: &Gdvm, refresh: bool) -> Result<()> {
     Ok(())
 }
 
-/// Convert a keyword to a `GodotVersion` filter for resolution.
-fn keyword_to_version_filter(keyword: &str) -> GodotVersion {
+/// Convert a keyword to a `VersionQuery` filter for resolution.
+fn keyword_to_version_filter(keyword: &str) -> VersionQuery {
     if keyword == "stable" {
-        GodotVersion {
+        VersionQuery {
             release_type: Some("stable".to_string()),
             ..Default::default()
         }
     } else {
-        GodotVersion::default()
+        VersionQuery::default()
     }
 }
 

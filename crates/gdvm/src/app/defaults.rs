@@ -21,11 +21,11 @@ use std::fs;
 use std::path::Path;
 
 use crate::usage_tracker::UsageTracker;
-use crate::version_utils::GodotVersion;
-use crate::version_utils::{DeterminateSelection, Variant, VersionSelection};
+use crate::version::VersionQuery;
+use crate::version::{QuerySelection, ResolvedSelection, Variant};
 use crate::{project_version_detector, t};
 
-use crate::version_utils::GodotVersionDeterminate;
+use crate::version::ResolvedVersion;
 
 use super::*;
 
@@ -47,12 +47,12 @@ impl<'a> Defaults<'a> {
 
     pub fn set_default(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
     ) -> Result<()> {
         // Check if the version exists
-        let install_name = crate::version_utils::install_dir_subpath(
+        let install_name = crate::version::install_dir_subpath(
             &self.library().install_store_key(registry)?,
             &gv.to_remote_str(),
             variant,
@@ -66,7 +66,7 @@ impl<'a> Defaults<'a> {
 
         // Write pinned-format string to .gdvm/default
         let default_path = self.paths.default_file();
-        let default_str = crate::version_utils::pinned_str(registry, &gv.to_remote_str(), variant);
+        let default_str = crate::version::pinned_str(registry, &gv.to_remote_str(), variant);
         fs::write(&default_path, &default_str)?;
 
         // Create directory symlink .gdvm/bin/current_godot -> .gdvm/<install_name>/
@@ -107,14 +107,14 @@ impl<'a> Defaults<'a> {
         Ok(())
     }
 
-    pub fn get_default(&self) -> Result<Option<DeterminateSelection>> {
+    pub fn get_default(&self) -> Result<Option<ResolvedSelection>> {
         let default_file = self.paths.default_file();
         if default_file.exists() {
             let contents = fs::read_to_string(&default_file)?;
             let (registry, variant, version_str) =
-                crate::version_utils::parse_pinned_str(contents.trim());
-            let version = GodotVersion::from_install_str(&version_str)?.to_determinate();
-            Ok(Some(DeterminateSelection {
+                crate::version::parse_pinned_str(contents.trim());
+            let version = VersionQuery::from_install_str(&version_str)?.to_resolved();
+            Ok(Some(ResolvedSelection {
                 version,
                 variant: Variant::from_option(variant.as_deref()),
                 registry,
@@ -125,19 +125,19 @@ impl<'a> Defaults<'a> {
     }
 
     /// Recursively search upward for gdvm.toml, return the pinned version if found.
-    pub fn get_pinned_version(&self) -> Option<VersionSelection> {
+    pub fn get_pinned_version(&self) -> Option<QuerySelection> {
         let mut current = std::env::current_dir().ok()?;
         loop {
             let toml_candidate = current.join("gdvm.toml");
             if toml_candidate.is_file()
                 && let Ok(contents) = fs::read_to_string(&toml_candidate)
-                && let Ok(gdvm_toml) = crate::version_utils::deserialize_gdvm_toml(&contents)
+                && let Ok(gdvm_toml) = crate::gdvm_toml::deserialize_gdvm_toml(&contents)
                 && let Some(godot) = gdvm_toml.godot
             {
                 let (registry, variant, version_str) =
-                    crate::version_utils::parse_pinned_str(godot.version.trim());
-                if let Ok(version) = GodotVersion::from_install_str(&version_str) {
-                    return Some(VersionSelection {
+                    crate::version::parse_pinned_str(godot.version.trim());
+                if let Ok(version) = VersionQuery::from_install_str(&version_str) {
+                    return Some(QuerySelection {
                         version,
                         variant,
                         registry,
@@ -151,9 +151,9 @@ impl<'a> Defaults<'a> {
                 && let Ok(contents) = fs::read_to_string(&rc_candidate)
             {
                 let (registry, variant, version_str) =
-                    crate::version_utils::parse_pinned_str(contents.trim());
-                if let Ok(version) = GodotVersion::from_install_str(&version_str) {
-                    return Some(VersionSelection {
+                    crate::version::parse_pinned_str(contents.trim());
+                if let Ok(version) = VersionQuery::from_install_str(&version_str) {
+                    return Some(QuerySelection {
                         version,
                         variant,
                         registry,
@@ -172,7 +172,7 @@ impl<'a> Defaults<'a> {
     pub fn determine_version<P: AsRef<Path>>(
         &self,
         path: Option<P>,
-    ) -> Option<(GodotVersion, Option<String>)> {
+    ) -> Option<(VersionQuery, Option<String>)> {
         let current_dir = match path {
             Some(p) => p.as_ref().to_path_buf(),
             None => std::env::current_dir().ok()?,
@@ -184,22 +184,22 @@ impl<'a> Defaults<'a> {
     /// Pin a version to gdvm.toml in the current directory.
     pub fn pin_version(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
         gdvm_toml_only: bool,
     ) -> Result<()> {
         let path = std::env::current_dir()?;
 
-        let specifier = crate::version_utils::pinned_str(registry, &gv.to_remote_str(), variant);
-        let toml_content = crate::version_utils::serialize_gdvm_toml(&specifier);
+        let specifier = crate::version::pinned_str(registry, &gv.to_remote_str(), variant);
+        let toml_content = crate::gdvm_toml::serialize_gdvm_toml(&specifier);
         fs::write(path.join("gdvm.toml"), toml_content)?;
 
         // Write deprecated .gdvmrc for backward compatibility with older versions of gdvm.
         // The legacy format predates registries, so we skip writing it for builds from custom
         // registries.
-        if !gdvm_toml_only && crate::version_utils::is_official_registry(registry) {
-            let legacy = crate::version_utils::legacy_pinned_str(gv, variant);
+        if !gdvm_toml_only && crate::registry::is_official_registry(registry) {
+            let legacy = crate::version::legacy_pinned_str(gv, variant);
             fs::write(path.join(".gdvmrc"), legacy)?;
         }
 

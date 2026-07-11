@@ -22,16 +22,16 @@ use std::path::Path;
 
 use crate::t;
 use crate::usage_tracker::UsageTracker;
-use crate::version_utils::GodotVersion;
-use crate::version_utils::Variant;
+use crate::version::Variant;
+use crate::version::VersionQuery;
 
-use crate::version_utils::GodotVersionDeterminate;
+use crate::version::ResolvedVersion;
 
 use super::*;
 
 #[derive(Debug, Clone)]
 pub struct InstalledVersion {
-    pub version: GodotVersionDeterminate,
+    pub version: ResolvedVersion,
     pub variant: Variant,
     pub registry: Option<String>,
 }
@@ -59,11 +59,11 @@ impl<'a> Library<'a> {
     /// A unique key for an install path.
     pub fn install_key(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
     ) -> Result<String> {
-        Ok(crate::version_utils::install_dir_subpath(
+        Ok(crate::version::install_dir_subpath(
             &self.install_store_key(registry)?,
             &gv.to_remote_str(),
             variant,
@@ -136,9 +136,8 @@ impl<'a> Library<'a> {
             }
         }
         versions.sort_by(|a, b| {
-            use crate::version_utils::GodotVersionDeterminateVecExt;
-            let mut v = vec![a.version.clone(), b.version.clone()];
-            v.sort_by_version();
+            let mut v = [a.version.clone(), b.version.clone()];
+            v.sort_by(|a, b| b.cmp(a));
             if v[0] == a.version {
                 std::cmp::Ordering::Greater // Newest first.
             } else {
@@ -170,10 +169,10 @@ impl<'a> Library<'a> {
             for leaf in leaves.flatten() {
                 if leaf.file_type().is_ok_and(|ft| ft.is_dir())
                     && let Ok(gv) =
-                        GodotVersion::from_install_str(&leaf.file_name().to_string_lossy())
+                        VersionQuery::from_install_str(&leaf.file_name().to_string_lossy())
                 {
                     out.push(InstalledVersion {
-                        version: gv.to_determinate(),
+                        version: gv.to_resolved(),
                         variant: Variant::from_option(Some(variant_name.as_str())),
                         registry: registry.clone(),
                     });
@@ -195,9 +194,9 @@ impl<'a> Library<'a> {
             }
             let sub_name = sub_entry.file_name().to_string_lossy().to_string();
 
-            if let Ok(gv) = GodotVersion::from_install_str(&sub_name) {
+            if let Ok(gv) = VersionQuery::from_install_str(&sub_name) {
                 out.push(InstalledVersion {
-                    version: gv.to_determinate(),
+                    version: gv.to_resolved(),
                     variant: Variant::from_option(Some(top_name.as_str())),
                     registry: None,
                 });
@@ -209,10 +208,10 @@ impl<'a> Library<'a> {
                 for leaf in leaves.flatten() {
                     if leaf.file_type().is_ok_and(|ft| ft.is_dir())
                         && let Ok(gv) =
-                            GodotVersion::from_install_str(&leaf.file_name().to_string_lossy())
+                            VersionQuery::from_install_str(&leaf.file_name().to_string_lossy())
                     {
                         out.push(InstalledVersion {
-                            version: gv.to_determinate(),
+                            version: gv.to_resolved(),
                             variant: Variant::from_option(Some(sub_name.as_str())),
                             registry: Some(top_name.clone()),
                         });
@@ -225,11 +224,11 @@ impl<'a> Library<'a> {
     /// Remove a specified Godot version
     pub fn remove(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
     ) -> Result<()> {
-        let install_name = crate::version_utils::install_dir_subpath(
+        let install_name = crate::version::install_dir_subpath(
             &self.install_store_key(registry)?,
             &gv.to_remote_str(),
             variant,
@@ -241,8 +240,8 @@ impl<'a> Library<'a> {
             if let Some(def) = self.defaults().get_default()?
                 && def.version.to_remote_str() == gv.to_remote_str()
                 && def.variant == *variant
-                && crate::version_utils::normalize_registry(def.registry.as_deref())
-                    == crate::version_utils::normalize_registry(registry)
+                && crate::registry::normalize_registry(def.registry.as_deref())
+                    == crate::registry::normalize_registry(registry)
             {
                 self.defaults().unset_default()?;
             }
@@ -257,12 +256,12 @@ impl<'a> Library<'a> {
     /// Resolve the path to the Godot executable for the given version and console preference.
     pub fn get_executable_path(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
         console: bool,
     ) -> Result<std::path::PathBuf> {
-        let install_name = crate::version_utils::install_dir_subpath(
+        let install_name = crate::version::install_dir_subpath(
             &self.install_store_key(registry)?,
             &gv.to_remote_str(),
             variant,
@@ -296,16 +295,16 @@ impl<'a> Library<'a> {
         registry: Option<&str>,
     ) -> Result<bool>
     where
-        T: Into<GodotVersion> + Clone,
+        T: Into<VersionQuery> + Clone,
     {
-        let gv: GodotVersion = gv.clone().into();
+        let gv: VersionQuery = gv.clone().into();
 
         let installed_versions = self.list_installed()?;
         let target_variant = Variant::from_option(variant);
         Ok(installed_versions.iter().any(|v| {
             v.variant == target_variant
-                && crate::version_utils::normalize_registry(v.registry.as_deref())
-                    == crate::version_utils::normalize_registry(registry)
+                && crate::registry::normalize_registry(v.registry.as_deref())
+                    == crate::registry::normalize_registry(registry)
                 && gv.matches(&v.version)
         }))
     }
@@ -323,9 +322,9 @@ impl<'a> Library<'a> {
         registry: Option<&str>,
     ) -> Result<Vec<InstalledVersion>>
     where
-        T: Into<GodotVersion> + Clone,
+        T: Into<VersionQuery> + Clone,
     {
-        let gv: GodotVersion = gv.clone().into();
+        let gv: VersionQuery = gv.clone().into();
         let installed = self.list_installed()?;
         // Filter by registry and variant, then filter by version match.
         let target_variant = Variant::from_option(variant);
@@ -333,8 +332,8 @@ impl<'a> Library<'a> {
             .into_iter()
             .filter(|v| {
                 v.variant == target_variant
-                    && crate::version_utils::normalize_registry(v.registry.as_deref())
-                        == crate::version_utils::normalize_registry(registry)
+                    && crate::registry::normalize_registry(v.registry.as_deref())
+                        == crate::registry::normalize_registry(registry)
                     && gv.matches(&v.version)
             })
             .collect();

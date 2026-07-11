@@ -21,9 +21,7 @@ use crate::host::HostPlatform;
 use crate::registry::{registry_arch_key, registry_os_key};
 use crate::releases::ReleaseCatalog;
 use crate::t;
-use crate::version_utils::{
-    GodotVersion, GodotVersionDeterminate, GodotVersionDeterminateVecExt, Variant,
-};
+use crate::version::{ResolvedVersion, Variant, VersionQuery};
 
 /// Provides an API for resolving Godot versions against installed and available releases.
 pub struct RegistryVersionResolver<'a> {
@@ -33,18 +31,14 @@ pub struct RegistryVersionResolver<'a> {
 
 #[derive(Debug, Clone)]
 pub enum ResolveMode<'a> {
-    Installed {
-        installed: &'a [GodotVersionDeterminate],
-    },
-    Available {
-        use_cache_only: bool,
-    },
+    Installed { installed: &'a [ResolvedVersion] },
+    Available { use_cache_only: bool },
     AutoInstall,
 }
 
 #[derive(Debug, Clone)]
 pub struct ResolveRequest<'a> {
-    pub query: GodotVersion,
+    pub query: VersionQuery,
     pub variant: Option<String>,
     /// The registry this request targets. `None` for gdvm's own registry.
     pub registry: Option<String>,
@@ -54,13 +48,13 @@ pub struct ResolveRequest<'a> {
 
 #[derive(Debug)]
 pub enum ResolveOutcome {
-    Candidates(Vec<GodotVersionDeterminate>),
-    Determinate(GodotVersionDeterminate),
+    Candidates(Vec<ResolvedVersion>),
+    Determinate(ResolvedVersion),
     NotFound,
 }
 
 impl<'a> ResolveRequest<'a> {
-    pub fn installed(query: GodotVersion, installed: &'a [GodotVersionDeterminate]) -> Self {
+    pub fn installed(query: VersionQuery, installed: &'a [ResolvedVersion]) -> Self {
         Self {
             query,
             variant: None,
@@ -71,9 +65,9 @@ impl<'a> ResolveRequest<'a> {
     }
 
     pub fn installed_with_variant(
-        query: GodotVersion,
+        query: VersionQuery,
         variant: Option<String>,
-        installed: &'a [GodotVersionDeterminate],
+        installed: &'a [ResolvedVersion],
     ) -> Self {
         Self {
             query,
@@ -84,7 +78,7 @@ impl<'a> ResolveRequest<'a> {
         }
     }
 
-    pub fn available(query: GodotVersion, variant: Option<String>, use_cache_only: bool) -> Self {
+    pub fn available(query: VersionQuery, variant: Option<String>, use_cache_only: bool) -> Self {
         Self {
             query,
             variant,
@@ -94,7 +88,7 @@ impl<'a> ResolveRequest<'a> {
         }
     }
 
-    pub fn auto_install(query: GodotVersion, variant: Option<String>) -> Self {
+    pub fn auto_install(query: VersionQuery, variant: Option<String>) -> Self {
         Self {
             query,
             variant,
@@ -118,7 +112,7 @@ impl<'a> RegistryVersionResolver<'a> {
                     .filter(|&v| request.query.matches(v))
                     .cloned()
                     .collect();
-                matches.sort_by_version();
+                matches.sort_by(|a, b| b.cmp(a));
                 Ok(ResolveOutcome::Candidates(matches))
             }
             ResolveMode::Available { use_cache_only } => {
@@ -152,9 +146,9 @@ impl<'a> RegistryVersionResolver<'a> {
     /// Return installed versions matching a query, sorted newest-first.
     pub async fn resolve_installed(
         &self,
-        query: &GodotVersion,
-        installed: &[GodotVersionDeterminate],
-    ) -> Vec<GodotVersionDeterminate> {
+        query: &VersionQuery,
+        installed: &[ResolvedVersion],
+    ) -> Vec<ResolvedVersion> {
         match self
             .resolve(ResolveRequest::installed(query.clone(), installed))
             .await
@@ -168,11 +162,11 @@ impl<'a> RegistryVersionResolver<'a> {
     /// Resolve an available version, preferring latest stable when present.
     pub async fn resolve_available(
         &self,
-        query: &GodotVersion,
+        query: &VersionQuery,
         variant: Option<&str>,
         include_pre: bool,
         use_cache_only: bool,
-    ) -> Result<Option<GodotVersionDeterminate>> {
+    ) -> Result<Option<ResolvedVersion>> {
         let mut request = ResolveRequest::available(
             query.clone(),
             variant.map(|s| s.to_string()),
@@ -190,10 +184,10 @@ impl<'a> RegistryVersionResolver<'a> {
     /// Resolves auto-install requests, preferring latest stable when present.
     pub async fn resolve_for_auto_install(
         &self,
-        query: &GodotVersion,
+        query: &VersionQuery,
         variant: Option<&str>,
         include_pre: bool,
-    ) -> Result<GodotVersionDeterminate> {
+    ) -> Result<ResolvedVersion> {
         let mut request =
             ResolveRequest::auto_install(query.clone(), variant.map(|s| s.to_string()));
         request.include_pre = include_pre;
@@ -204,18 +198,15 @@ impl<'a> RegistryVersionResolver<'a> {
         }
     }
 
-    pub async fn latest_stable(&self) -> Result<GodotVersionDeterminate> {
-        let stable = GodotVersion {
+    pub async fn latest_stable(&self) -> Result<ResolvedVersion> {
+        let stable = VersionQuery {
             release_type: Some("stable".to_string()),
             ..Default::default()
         };
         self.latest_stable_from_query(&stable).await
     }
 
-    async fn latest_stable_from_query(
-        &self,
-        query: &GodotVersion,
-    ) -> Result<GodotVersionDeterminate> {
+    async fn latest_stable_from_query(&self, query: &VersionQuery) -> Result<ResolvedVersion> {
         let releases = self.catalog.list_releases(Some(query), false).await?;
 
         releases
@@ -227,17 +218,17 @@ impl<'a> RegistryVersionResolver<'a> {
 
     async fn resolve_available_impl(
         &self,
-        query: &GodotVersion,
+        query: &VersionQuery,
         variant: Option<&str>,
         include_pre: bool,
         use_cache_only: bool,
-    ) -> Result<Option<GodotVersionDeterminate>> {
+    ) -> Result<Option<ResolvedVersion>> {
         let releases = self
             .catalog
             .list_releases(Some(query), use_cache_only)
             .await?;
 
-        let mut newest_compatible_pre_release: Option<GodotVersionDeterminate> = None;
+        let mut newest_compatible_pre_release: Option<ResolvedVersion> = None;
 
         for gv in releases {
             if !self.is_compatible(&gv, variant).await? {
@@ -262,10 +253,10 @@ impl<'a> RegistryVersionResolver<'a> {
 
     async fn resolve_for_auto_install_impl(
         &self,
-        query: &GodotVersion,
+        query: &VersionQuery,
         variant: Option<&str>,
         include_pre: bool,
-    ) -> Result<Option<GodotVersionDeterminate>> {
+    ) -> Result<Option<ResolvedVersion>> {
         if query.is_stable() && query.major.is_none() {
             return self
                 .resolve_available_impl(query, variant, include_pre, false)
@@ -278,7 +269,7 @@ impl<'a> RegistryVersionResolver<'a> {
                 .await;
         }
 
-        let determinate: GodotVersionDeterminate = query.clone().into();
+        let determinate: ResolvedVersion = query.clone().into();
         if self.is_compatible(&determinate, variant).await? {
             Ok(Some(determinate))
         } else {
@@ -286,11 +277,7 @@ impl<'a> RegistryVersionResolver<'a> {
         }
     }
 
-    async fn is_compatible(
-        &self,
-        gv: &GodotVersionDeterminate,
-        variant: Option<&str>,
-    ) -> Result<bool> {
+    async fn is_compatible(&self, gv: &ResolvedVersion, variant: Option<&str>) -> Result<bool> {
         let platforms_per_variant = self
             .catalog
             .platforms_by_variant(&gv.to_remote_str())
@@ -362,7 +349,7 @@ mod tests {
     async fn resolve_available_prefers_stable() {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-rc1", "4.2-stable"]);
         let resolver = RegistryVersionResolver::new(&catalog, host());
-        let query = GodotVersion {
+        let query = VersionQuery {
             major: Some(4),
             minor: Some(2),
             patch: None,
@@ -382,7 +369,7 @@ mod tests {
     async fn resolve_available_standard_variant() {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-rc1", "4.2-stable"]);
         let resolver = RegistryVersionResolver::new(&catalog, host());
-        let query = GodotVersion {
+        let query = VersionQuery {
             major: Some(4),
             minor: Some(2),
             patch: None,
@@ -404,7 +391,7 @@ mod tests {
     async fn resolve_for_auto_install_uses_latest_stable() {
         let (catalog, _tmp) = catalog_with_tags(&["4.1-stable", "4.0-stable"]);
         let resolver = RegistryVersionResolver::new(&catalog, host());
-        let query = GodotVersion {
+        let query = VersionQuery {
             major: None,
             minor: None,
             patch: None,
@@ -424,7 +411,7 @@ mod tests {
         let (catalog, _tmp) = catalog_with_tags(&["4.2-stable"]);
         let resolver = RegistryVersionResolver::new(&catalog, host());
         let request = ResolveRequest::available(
-            GodotVersion {
+            VersionQuery {
                 major: Some(3),
                 minor: Some(6),
                 patch: None,
@@ -443,7 +430,7 @@ mod tests {
     async fn resolve_installed_sorts_and_filters() {
         let (catalog, _tmp) = catalog_with_tags(&[]);
         let resolver = RegistryVersionResolver::new(&catalog, host());
-        let query = GodotVersion {
+        let query = VersionQuery {
             major: Some(3),
             minor: None,
             patch: None,
@@ -452,21 +439,21 @@ mod tests {
         };
 
         let installed = vec![
-            GodotVersionDeterminate {
+            ResolvedVersion {
                 major: 3,
                 minor: 5,
                 patch: 0,
                 subpatch: 0,
                 release_type: "stable".into(),
             },
-            GodotVersionDeterminate {
+            ResolvedVersion {
                 major: 4,
                 minor: 0,
                 patch: 0,
                 subpatch: 0,
                 release_type: "stable".into(),
             },
-            GodotVersionDeterminate {
+            ResolvedVersion {
                 major: 3,
                 minor: 6,
                 patch: 1,

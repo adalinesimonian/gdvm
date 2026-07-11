@@ -24,8 +24,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::usage_tracker::{UsageState, UsageTracker};
-use crate::version_utils::GodotVersion;
-use crate::version_utils::Variant;
+use crate::version::Variant;
+use crate::version::VersionQuery;
 
 use super::*;
 
@@ -270,7 +270,7 @@ impl<'a> Pruner<'a> {
                     continue;
                 }
                 let mid_name = mid.file_name().to_string_lossy().to_string();
-                if GodotVersion::from_install_str(&mid_name).is_ok() {
+                if VersionQuery::from_install_str(&mid_name).is_ok() {
                     // Legacy variant/version layout.
                     out.push((format!("{top_name}/{mid_name}"), mid.path()));
                     continue;
@@ -283,7 +283,7 @@ impl<'a> Pruner<'a> {
                         continue;
                     }
                     let leaf_name = leaf.file_name().to_string_lossy().to_string();
-                    if GodotVersion::from_install_str(&leaf_name).is_ok() {
+                    if VersionQuery::from_install_str(&leaf_name).is_ok() {
                         out.push((format!("{top_name}/{mid_name}/{leaf_name}"), leaf.path()));
                     }
                 }
@@ -348,9 +348,9 @@ impl<'a> Pruner<'a> {
             _ => return key.to_string(),
         };
 
-        match GodotVersion::from_install_str(&version) {
-            Ok(gv) => crate::version_utils::display_version(
-                &gv.to_determinate().to_display_str(),
+        match VersionQuery::from_install_str(&version) {
+            Ok(gv) => crate::version::display_version(
+                &gv.to_resolved().to_display_str(),
                 &Variant::from_option(Some(&variant)),
                 registry.as_deref(),
             ),

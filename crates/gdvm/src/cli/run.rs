@@ -18,7 +18,7 @@
 use gdvm::app::Gdvm;
 use gdvm::eprintln_i18n;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version_utils::{self, VersionSpec, VersionTarget};
+use gdvm::version::{self, VersionSpec, VersionTarget};
 
 use anyhow::Result;
 use clap::ArgMatches;
@@ -124,7 +124,7 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
 
     let resolved = resolver.resolve(request).await?;
 
-    let display = version_utils::display_version(
+    let display = version::display_version(
         &resolved.version.to_display_str(),
         &resolved.variant,
         resolved.registry.as_deref(),

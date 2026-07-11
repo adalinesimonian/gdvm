@@ -29,11 +29,11 @@ use crate::progress_utils;
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::t;
 use crate::usage_tracker::UsageTracker;
-use crate::version_utils::GodotVersion;
-use crate::version_utils::Variant;
+use crate::version::Variant;
+use crate::version::VersionQuery;
 use crate::zip_utils;
 
-use crate::version_utils::GodotVersionDeterminate;
+use crate::version::ResolvedVersion;
 
 use super::*;
 
@@ -125,7 +125,7 @@ impl<'a> Installer<'a> {
     /// - `redownload`: If true, ignore cached zip files and download fresh ones.
     pub async fn install(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
         force: bool,
@@ -133,7 +133,7 @@ impl<'a> Installer<'a> {
     ) -> Result<InstallOutcome> {
         let store_key = self.library().install_store_key(registry)?;
         let install_str =
-            crate::version_utils::install_dir_subpath(&store_key, &gv.to_remote_str(), variant);
+            crate::version::install_dir_subpath(&store_key, &gv.to_remote_str(), variant);
         let version_path = self.paths.installs().join(&install_str);
 
         if version_path.exists() {
@@ -228,7 +228,7 @@ impl<'a> Installer<'a> {
     /// Resolve the path to the cached download archive for a release.
     pub async fn cached_archive_path(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
     ) -> Result<PathBuf> {
@@ -251,11 +251,11 @@ impl<'a> Installer<'a> {
         variant: Option<&str>,
         registry: Option<&str>,
         include_pre: bool,
-    ) -> Result<GodotVersionDeterminate>
+    ) -> Result<ResolvedVersion>
     where
-        T: Into<GodotVersion> + Clone,
+        T: Into<VersionQuery> + Clone,
     {
-        let gv: GodotVersion = gv.clone().into();
+        let gv: VersionQuery = gv.clone().into();
         let resolver =
             RegistryVersionResolver::new(self.catalogs().catalog(registry)?, *self.catalogs.host);
 

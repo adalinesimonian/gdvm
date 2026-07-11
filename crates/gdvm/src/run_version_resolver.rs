@@ -20,36 +20,34 @@ use std::path::{Path, PathBuf};
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 
-use crate::version_utils::{
-    DeterminateSelection, GodotVersion, GodotVersionDeterminate, Variant, VersionSelection,
-};
+use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, Variant, VersionQuery};
 use crate::{eprintln_i18n, t};
 
 #[async_trait(?Send)]
 pub trait RunVersionSource {
-    async fn get_pinned_version(&self) -> Option<VersionSelection>;
-    async fn get_default(&self) -> Result<Option<DeterminateSelection>>;
+    async fn get_pinned_version(&self) -> Option<QuerySelection>;
+    async fn get_default(&self) -> Result<Option<ResolvedSelection>>;
     async fn determine_version<P: AsRef<Path> + Send + Sync>(
         &self,
         path: Option<P>,
-    ) -> Option<(GodotVersion, Option<String>)>;
+    ) -> Option<(VersionQuery, Option<String>)>;
     async fn auto_install_version<T>(
         &self,
         gv: &T,
         variant: Option<&str>,
         registry: Option<&str>,
         include_pre: bool,
-    ) -> Result<GodotVersionDeterminate>
+    ) -> Result<ResolvedVersion>
     where
-        T: Into<GodotVersion> + Clone + Send + Sync;
+        T: Into<VersionQuery> + Clone + Send + Sync;
     async fn ensure_installed_version<T>(
         &self,
         gv: &T,
         variant: Option<&str>,
         registry: Option<&str>,
-    ) -> Result<GodotVersionDeterminate>
+    ) -> Result<ResolvedVersion>
     where
-        T: Into<GodotVersion> + Clone + Send + Sync;
+        T: Into<VersionQuery> + Clone + Send + Sync;
 }
 
 pub struct RunVersionResolver<'a, S: RunVersionSource> {
@@ -58,13 +56,13 @@ pub struct RunVersionResolver<'a, S: RunVersionSource> {
 
 #[derive(Debug)]
 pub struct RunResolutionResult {
-    pub version: GodotVersionDeterminate,
+    pub version: ResolvedVersion,
     pub variant: Variant,
     pub registry: Option<String>,
 }
 
 pub struct RunResolutionRequest<'a> {
-    pub explicit: Option<GodotVersion>,
+    pub explicit: Option<VersionQuery>,
     pub variant: Option<String>,
     pub registry: Option<String>,
     pub include_pre: bool,
@@ -95,7 +93,7 @@ pub enum RunSource {
 #[derive(Debug, Clone)]
 pub struct RunSelection {
     pub source: RunSource,
-    pub version: GodotVersion,
+    pub version: VersionQuery,
     pub variant: Option<String>,
     pub registry: Option<String>,
 }
@@ -224,7 +222,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
     async fn detect_project_version(
         &self,
         paths: &[PathBuf],
-    ) -> Option<(GodotVersion, Option<String>)> {
+    ) -> Option<(VersionQuery, Option<String>)> {
         for path in paths {
             if let Some(result) = self.source.determine_version(Some(path)).await {
                 return Some(result);
@@ -237,7 +235,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
 
 pub async fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path> + Send + Sync>(
     source: &S,
-    requested: &GodotVersion,
+    requested: &VersionQuery,
     is_pin: bool,
     paths: Option<&[P]>,
 ) -> bool {
@@ -281,11 +279,11 @@ mod tests {
     use std::collections::HashMap;
 
     struct FakeSource {
-        pinned: Option<GodotVersion>,
+        pinned: Option<VersionQuery>,
         pin_registry: Option<String>,
-        project_versions: HashMap<String, GodotVersion>,
-        default: Option<GodotVersionDeterminate>,
-        auto_result: Option<GodotVersionDeterminate>,
+        project_versions: HashMap<String, VersionQuery>,
+        default: Option<ResolvedVersion>,
+        auto_result: Option<ResolvedVersion>,
     }
 
     impl FakeSource {
@@ -299,12 +297,12 @@ mod tests {
             }
         }
 
-        fn with_project(mut self, path: &str, gv: GodotVersion) -> Self {
+        fn with_project(mut self, path: &str, gv: VersionQuery) -> Self {
             self.project_versions.insert(path.to_string(), gv);
             self
         }
 
-        fn with_pinned(mut self, gv: GodotVersion) -> Self {
+        fn with_pinned(mut self, gv: VersionQuery) -> Self {
             self.pinned = Some(gv);
             self
         }
@@ -314,12 +312,12 @@ mod tests {
             self
         }
 
-        fn with_default(mut self, gv: GodotVersionDeterminate) -> Self {
+        fn with_default(mut self, gv: ResolvedVersion) -> Self {
             self.default = Some(gv);
             self
         }
 
-        fn with_auto(mut self, gv: GodotVersionDeterminate) -> Self {
+        fn with_auto(mut self, gv: ResolvedVersion) -> Self {
             self.auto_result = Some(gv);
             self
         }
@@ -327,16 +325,16 @@ mod tests {
 
     #[async_trait::async_trait(?Send)]
     impl RunVersionSource for FakeSource {
-        async fn get_pinned_version(&self) -> Option<VersionSelection> {
-            self.pinned.clone().map(|version| VersionSelection {
+        async fn get_pinned_version(&self) -> Option<QuerySelection> {
+            self.pinned.clone().map(|version| QuerySelection {
                 version,
                 variant: None,
                 registry: self.pin_registry.clone(),
             })
         }
 
-        async fn get_default(&self) -> Result<Option<DeterminateSelection>> {
-            Ok(self.default.clone().map(|version| DeterminateSelection {
+        async fn get_default(&self) -> Result<Option<ResolvedSelection>> {
+            Ok(self.default.clone().map(|version| ResolvedSelection {
                 version,
                 variant: Variant::default(),
                 registry: None,
@@ -346,7 +344,7 @@ mod tests {
         async fn determine_version<P: AsRef<Path> + Send + Sync>(
             &self,
             path: Option<P>,
-        ) -> Option<(GodotVersion, Option<String>)> {
+        ) -> Option<(VersionQuery, Option<String>)> {
             match path {
                 Some(p) => self
                     .project_versions
@@ -367,15 +365,15 @@ mod tests {
             _variant: Option<&str>,
             _registry: Option<&str>,
             _include_pre: bool,
-        ) -> Result<GodotVersionDeterminate>
+        ) -> Result<ResolvedVersion>
         where
-            T: Into<GodotVersion> + Clone + Send + Sync,
+            T: Into<VersionQuery> + Clone + Send + Sync,
         {
             if let Some(result) = self.auto_result.clone() {
                 return Ok(result);
             }
-            let gv: GodotVersion = gv.clone().into();
-            Ok(GodotVersionDeterminate::from(gv))
+            let gv: VersionQuery = gv.clone().into();
+            Ok(ResolvedVersion::from(gv))
         }
 
         async fn ensure_installed_version<T>(
@@ -383,20 +381,20 @@ mod tests {
             gv: &T,
             _variant: Option<&str>,
             _registry: Option<&str>,
-        ) -> Result<GodotVersionDeterminate>
+        ) -> Result<ResolvedVersion>
         where
-            T: Into<GodotVersion> + Clone + Send + Sync,
+            T: Into<VersionQuery> + Clone + Send + Sync,
         {
             if let Some(result) = self.auto_result.clone() {
                 return Ok(result);
             }
-            let gv: GodotVersion = gv.clone().into();
-            Ok(GodotVersionDeterminate::from(gv))
+            let gv: VersionQuery = gv.clone().into();
+            Ok(ResolvedVersion::from(gv))
         }
     }
 
-    fn gv(major: u32, minor: u32, release: &str) -> GodotVersion {
-        GodotVersion {
+    fn gv(major: u32, minor: u32, release: &str) -> VersionQuery {
+        VersionQuery {
             major: Some(major),
             minor: Some(minor),
             patch: Some(0),
@@ -405,8 +403,8 @@ mod tests {
         }
     }
 
-    fn gvd(major: u32, minor: u32, release: &str) -> GodotVersionDeterminate {
-        GodotVersionDeterminate {
+    fn gvd(major: u32, minor: u32, release: &str) -> ResolvedVersion {
+        ResolvedVersion {
             major,
             minor,
             patch: 0,

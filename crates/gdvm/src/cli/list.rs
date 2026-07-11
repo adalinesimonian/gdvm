@@ -17,7 +17,7 @@
 
 use gdvm::app::Gdvm;
 use gdvm::println_i18n;
-use gdvm::version_utils::{self};
+use gdvm::version::{self};
 
 use anyhow::Result;
 
@@ -31,7 +31,7 @@ pub(crate) fn sub_list(gdvm: &Gdvm) -> Result<()> {
         for v in &versions {
             println!(
                 "- {}",
-                version_utils::display_version(
+                version::display_version(
                     &v.version.to_display_str(),
                     &v.variant,
                     v.registry.as_deref(),

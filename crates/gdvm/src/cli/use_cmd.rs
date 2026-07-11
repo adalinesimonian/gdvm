@@ -17,7 +17,7 @@
 
 use gdvm::app::Gdvm;
 use gdvm::println_i18n;
-use gdvm::version_utils::{self, Variant, VersionSpec, VersionTarget};
+use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
 
 use anyhow::Result;
 use clap::ArgMatches;
@@ -69,7 +69,7 @@ pub(crate) async fn sub_use(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let resolved_variant = Variant::from_option(variant);
     gdvm.defaults()
         .set_default(&resolved_version, &resolved_variant, registry)?;
-    let display = version_utils::display_version(
+    let display = version::display_version(
         &resolved_version.to_display_str(),
         &resolved_variant,
         registry,
