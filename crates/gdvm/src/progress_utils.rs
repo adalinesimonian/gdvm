@@ -15,26 +15,15 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod artifact_cache;
-pub mod config;
-pub mod date_utils;
-pub mod download_utils;
-pub mod fs_utils;
-pub mod godot_manager;
-pub mod hash_utils;
-pub mod host;
-pub mod i18n;
-pub mod metadata_cache;
-pub mod migrations;
-pub mod paths;
-pub mod progress_utils;
-pub mod project_version_detector;
-pub mod registry;
-pub mod registry_store;
-pub mod registry_version_resolver;
-pub mod releases;
-pub mod run_version_resolver;
-pub mod self_update;
-pub mod usage_tracker;
-pub mod version_utils;
-pub mod zip_utils;
+use anyhow::Result;
+use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
+
+/// Create a spinner displaying the given message.
+pub fn spinner(message: String) -> Result<ProgressBar> {
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
+    pb.enable_steady_tick(Duration::from_millis(100));
+    pb.set_message(message);
+    Ok(pb)
+}

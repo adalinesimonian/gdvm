@@ -111,13 +111,9 @@ impl StreamHasher {
     }
 
     fn finish(self) -> DownloadDigests {
-        fn hex(bytes: &[u8]) -> String {
-            bytes.iter().map(|b| format!("{b:02x}")).collect()
-        }
-
         DownloadDigests {
-            sha256: hex(&self.sha256.finalize()),
-            sha512: hex(&self.sha512.finalize()),
+            sha256: crate::hash_utils::to_hex(&self.sha256.finalize()),
+            sha512: crate::hash_utils::to_hex(&self.sha512.finalize()),
             size: self.size,
         }
     }
@@ -170,10 +166,7 @@ pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<D
                 );
                 pb
             } else {
-                let pb = ProgressBar::new_spinner();
-                pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-                pb.set_message(t!("operation-downloading-url", url = url));
-                pb
+                crate::progress_utils::spinner(t!("operation-downloading-url", url = url))?
             };
 
             pb.enable_steady_tick(Duration::from_millis(100));

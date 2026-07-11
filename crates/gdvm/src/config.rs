@@ -222,14 +222,7 @@ impl Config {
         fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("config.toml");
         let toml_str = toml::to_string(self).expect("Failed to serialize config");
-
-        let mut tmp = tempfile::NamedTempFile::new_in(&config_dir)?;
-        {
-            use std::io::Write;
-            tmp.write_all(toml_str.as_bytes())?;
-            tmp.as_file().sync_all()?;
-        }
-        tmp.persist(config_path)?;
+        crate::fs_utils::atomic_write(&config_path, &toml_str)?;
         Ok(())
     }
 }

@@ -15,11 +15,10 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::date_utils::now_unix_secs;
@@ -108,7 +107,7 @@ impl UsageTracker {
     /// Persist the state to disk.
     pub fn save(&self, state: &UsageState) -> Result<()> {
         let data = serde_json::to_string(state)?;
-        atomic_write(&self.path, data)
+        crate::fs_utils::atomic_write(&self.path, &data)
     }
 
     /// Update the state and persist to disk.
@@ -187,23 +186,6 @@ fn link_key(link_path: &Path) -> String {
             .unwrap_or_else(|_| link_path.to_path_buf())
     };
     absolute.to_string_lossy().to_string()
-}
-
-/// Write data to a file atomically by writing to a temp file in the same folder
-/// and renaming it into place.
-fn atomic_write(path: &Path, data: String) -> Result<()> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| anyhow!("Invalid usage state path"))?;
-
-    fs::create_dir_all(parent)?;
-
-    let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
-    tmp.write_all(data.as_bytes())?;
-    tmp.as_file().sync_all()?;
-    tmp.persist(path)?;
-
-    Ok(())
 }
 
 #[cfg(test)]

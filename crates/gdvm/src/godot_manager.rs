@@ -30,10 +30,7 @@ use crate::self_update;
 use anyhow::{Result, anyhow, bail};
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
-use digest_io::IoWrapper;
-use indicatif::{ProgressBar, ProgressStyle};
 use semver::Version;
-use sha2::{Digest, Sha256, Sha512};
 use std::collections::HashSet;
 use std::fs;
 use std::io::Seek;
@@ -43,7 +40,9 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::download_utils::download_to_file;
+use crate::hash_utils::{self, ShaType};
 use crate::migrations;
+use crate::progress_utils;
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::usage_tracker::{UsageState, UsageTracker};
 use crate::version_utils::GodotVersion;
@@ -110,24 +109,6 @@ impl PruneReport {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum ShaType {
-    Sha256,
-    Sha512,
-}
-
-impl ShaType {
-    /// Attempts to detect the SHA type based on the expected hash length.
-    /// SHA256 produces 64 hex characters, SHA512 produces 128 hex characters.
-    fn from_hash_length(hash: &str) -> Option<Self> {
-        match hash.len() {
-            64 => Some(ShaType::Sha256),
-            128 => Some(ShaType::Sha512),
-            _ => None,
-        }
-    }
-}
-
 /// GodotManager is a struct that manages the installation and running of Godot versions.
 pub struct GodotManager {
     /// Paths helper for GDVM directories
@@ -156,54 +137,34 @@ fn dotenv_vars() -> Vec<(String, String)> {
         .collect()
 }
 
+/// Build the checksum mismatch error for the given file.
+fn checksum_mismatch_error(display_path: &Path) -> anyhow::Error {
+    anyhow!(t!(
+        "error-checksum-mismatch",
+        file = display_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
+    ))
+}
+
 /// Verifies the SHA of a file against an expected hash.
 fn verify_sha_file(file: &mut fs::File, expected: &str, display_path: &Path) -> Result<()> {
-    let sha_type = ShaType::from_hash_length(expected)
-        .ok_or_else(|| anyhow!(t!("error-invalid-sha-length", length = expected.len())))?;
+    let sha_type = ShaType::from_expected(expected)?;
 
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-    pb.enable_steady_tick(Duration::from_millis(100));
-    pb.set_message(t!("verifying-checksum"));
+    let pb = progress_utils::spinner(t!("verifying-checksum"))?;
 
     file.rewind()?;
 
-    let local_hash = match sha_type {
-        ShaType::Sha256 => {
-            let mut hasher = IoWrapper(Sha256::new());
-            std::io::copy(file, &mut hasher)?;
-            hasher
-                .0
-                .finalize()
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect::<String>()
-        }
-        ShaType::Sha512 => {
-            let mut hasher = IoWrapper(Sha512::new());
-            std::io::copy(file, &mut hasher)?;
-            hasher
-                .0
-                .finalize()
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect::<String>()
-        }
-    };
+    let local_hash = hash_utils::hash_reader(sha_type, file)?;
 
     if local_hash == expected.to_lowercase() {
         pb.finish_with_message(t!("checksum-verified"));
         Ok(())
     } else {
         pb.finish_and_clear();
-        Err(anyhow!(t!(
-            "error-checksum-mismatch",
-            file = display_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string()
-        )))
+        Err(checksum_mismatch_error(display_path))
     }
 }
 
@@ -214,8 +175,7 @@ fn verify_download_digests(
     expected: &str,
     display_path: &Path,
 ) -> Result<()> {
-    let sha_type = ShaType::from_hash_length(expected)
-        .ok_or_else(|| anyhow!(t!("error-invalid-sha-length", length = expected.len())))?;
+    let sha_type = ShaType::from_expected(expected)?;
 
     let actual = match sha_type {
         ShaType::Sha256 => &digests.sha256,
@@ -226,14 +186,7 @@ fn verify_download_digests(
         eprintln_i18n!("checksum-verified");
         Ok(())
     } else {
-        Err(anyhow!(t!(
-            "error-checksum-mismatch",
-            file = display_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string()
-        )))
+        Err(checksum_mismatch_error(display_path))
     }
 }
 
@@ -1555,11 +1508,7 @@ impl GodotManager {
         let cache_age = crate::date_utils::age_secs(now, gdvm_cache.last_update_check);
 
         if cache_age > cache_duration.as_secs() {
-            let progress = ProgressBar::new_spinner();
-            progress
-                .set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-            progress.enable_steady_tick(Duration::from_millis(100));
-            progress.set_message(t!("checking-updates"));
+            let progress = progress_utils::spinner(t!("checking-updates"))?;
 
             let manifest = match self_update::fetch_manifest(
                 &self_update::releases_url(),
