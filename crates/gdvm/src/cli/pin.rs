@@ -17,7 +17,7 @@
 
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::warn_project_version_mismatch;
-use gdvm::version_utils::{self, Variant, VersionSpec, VersionTarget};
+use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
 use gdvm::{eprintln_i18n, println_i18n};
 
 use anyhow::Result;
@@ -57,7 +57,7 @@ pub(crate) async fn sub_pin(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         .await?;
 
     let resolved_variant = Variant::from_option(variant);
-    let display = version_utils::display_version(
+    let display = version::display_version(
         &resolved_version.to_display_str(),
         &resolved_variant,
         registry,

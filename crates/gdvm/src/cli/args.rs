@@ -17,7 +17,7 @@
 
 use gdvm::config::{self};
 use gdvm::t;
-use gdvm::version_utils::{self};
+use gdvm::version::{self};
 
 use clap::{Arg, Command, value_parser};
 
@@ -99,7 +99,7 @@ pub(crate) fn build_cli() -> Command {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(version_utils::validate_version_spec)
+                        .value_parser(version::validate_version_spec)
                         .help(t!("help-version"))
                         .long_help(t!("help-version-long")),
                 )
@@ -128,7 +128,7 @@ pub(crate) fn build_cli() -> Command {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(version_utils::validate_version_spec)
+                        .value_parser(version::validate_version_spec)
                         .help(t!("help-version-installed")),
                 )
                 .arg(
@@ -173,7 +173,7 @@ pub(crate) fn build_cli() -> Command {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(version_utils::validate_version_spec)
+                        .value_parser(version::validate_version_spec)
                         .help(t!("help-version-installed")),
                 )
                 .arg(
@@ -211,7 +211,7 @@ pub(crate) fn build_cli() -> Command {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(version_utils::validate_version_spec)
+                        .value_parser(version::validate_version_spec)
                         .help(t!("help-version")),
                 )
                 .arg(deprecated_csharp_flag_with_value())
@@ -227,7 +227,7 @@ pub(crate) fn build_cli() -> Command {
                 .arg(
                     Arg::new("version")
                         .required(false)
-                        .value_parser(version_utils::validate_version_spec)
+                        .value_parser(version::validate_version_spec)
                         .help(t!("help-link-version")),
                 )
                 .arg({
@@ -273,7 +273,7 @@ pub(crate) fn build_cli() -> Command {
                 .arg(
                     Arg::new("version")
                         .required(true)
-                        .value_parser(version_utils::validate_version_spec)
+                        .value_parser(version::validate_version_spec)
                         .help(t!("help-version-installed")),
                 )
                 .arg(

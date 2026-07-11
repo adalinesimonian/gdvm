@@ -16,7 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use gdvm::app::Gdvm;
-use gdvm::version_utils::{GodotVersion, GodotVersionDeterminate, Variant};
+use gdvm::version::{ResolvedVersion, Variant, VersionQuery};
 use serial_test::serial;
 use std::fs;
 use std::path::Path;
@@ -92,10 +92,10 @@ impl Drop for PinTestEnv {
     }
 }
 
-fn determinate(install_str: &str) -> GodotVersionDeterminate {
-    GodotVersion::from_install_str(install_str)
+fn determinate(install_str: &str) -> ResolvedVersion {
+    VersionQuery::from_install_str(install_str)
         .unwrap()
-        .to_determinate()
+        .to_resolved()
 }
 
 async fn gdvm() -> Gdvm {

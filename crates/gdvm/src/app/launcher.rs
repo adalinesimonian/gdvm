@@ -27,9 +27,9 @@ use std::path::{Path, PathBuf};
 #[cfg(target_family = "unix")]
 use crate::t;
 use crate::usage_tracker::UsageTracker;
-use crate::version_utils::Variant;
+use crate::version::Variant;
 
-use crate::version_utils::GodotVersionDeterminate;
+use crate::version::ResolvedVersion;
 
 use super::*;
 
@@ -203,7 +203,7 @@ impl<'a> Launcher<'a> {
     /// Run a specified Godot version
     pub fn run(
         &self,
-        gv: &GodotVersionDeterminate,
+        gv: &ResolvedVersion,
         variant: &Variant,
         registry: Option<&str>,
         console: bool,

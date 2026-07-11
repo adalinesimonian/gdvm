@@ -22,10 +22,10 @@ use anyhow::{Result, anyhow};
 
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::t;
-use crate::version_utils::GodotVersion;
-use crate::version_utils::Variant;
+use crate::version::Variant;
+use crate::version::VersionQuery;
 
-use crate::version_utils::GodotVersionDeterminate;
+use crate::version::ResolvedVersion;
 
 #[derive(Clone, Copy)]
 pub struct Catalogs<'a> {
@@ -44,9 +44,9 @@ impl<'a> Catalogs<'a> {
     pub async fn fetch_available_releases(
         &self,
         registry: Option<&str>,
-        filter: &Option<GodotVersion>,
+        filter: &Option<VersionQuery>,
         use_cache_only: bool,
-    ) -> Result<Vec<GodotVersionDeterminate>> {
+    ) -> Result<Vec<ResolvedVersion>> {
         self.catalog(registry)?
             .list_releases(filter.as_ref(), use_cache_only)
             .await
@@ -97,11 +97,11 @@ impl<'a> Catalogs<'a> {
         registry: Option<&str>,
         include_pre: bool,
         use_cache_only: bool,
-    ) -> Result<Option<GodotVersionDeterminate>>
+    ) -> Result<Option<ResolvedVersion>>
     where
-        T: Into<GodotVersion> + Clone,
+        T: Into<VersionQuery> + Clone,
     {
-        let gv: GodotVersion = gv.clone().into();
+        let gv: VersionQuery = gv.clone().into();
         let resolver = RegistryVersionResolver::new(self.catalog(registry)?, *self.host);
         resolver
             .resolve_available(&gv, variant, include_pre, use_cache_only)

@@ -20,7 +20,7 @@
 use gdvm::app::{Gdvm, InstallOutcome};
 use gdvm::config::Config;
 use gdvm::registry::{self, publish};
-use gdvm::version_utils::{GodotVersion, Variant};
+use gdvm::version::{Variant, VersionQuery};
 use serial_test::serial;
 use std::fs;
 use std::io::Write;
@@ -161,9 +161,9 @@ async fn install_from_file_registry_extracts_build() {
     let (reg, _stored, _platform) = publish_local_registry(&env);
 
     let gdvm = Gdvm::new().await.unwrap();
-    let gv = GodotVersion::from_install_str("4.4-stable")
+    let gv = VersionQuery::from_install_str("4.4-stable")
         .unwrap()
-        .to_determinate();
+        .to_resolved();
 
     let outcome = gdvm
         .installer()
@@ -190,9 +190,9 @@ async fn install_fails_closed_on_sha512_mismatch() {
     let (_reg, stored, _platform) = publish_local_registry(&env);
 
     let gdvm = Gdvm::new().await.unwrap();
-    let gv = GodotVersion::from_install_str("4.4-stable")
+    let gv = VersionQuery::from_install_str("4.4-stable")
         .unwrap()
-        .to_determinate();
+        .to_resolved();
 
     gdvm.installer()
         .install(&gv, &Variant::default(), Some("localreg"), false, false)
@@ -242,9 +242,9 @@ async fn project_gdvm_toml_registry_is_honored_over_machine() {
             project_url
         );
 
-        let gv = GodotVersion::from_install_str("4.4-stable")
+        let gv = VersionQuery::from_install_str("4.4-stable")
             .unwrap()
-            .to_determinate();
+            .to_resolved();
         let outcome = gdvm
             .installer()
             .install(&gv, &Variant::default(), Some("proj"), false, false)

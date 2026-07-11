@@ -17,7 +17,7 @@
 
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version_utils::{self, VersionSpec, VersionTarget};
+use gdvm::version::{self, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, t};
 
 use anyhow::{Result, anyhow};
@@ -86,7 +86,7 @@ pub(crate) async fn sub_link(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         }
     };
 
-    let display = version_utils::display_version(
+    let display = version::display_version(
         &resolved.version.to_display_str(),
         &resolved.variant,
         resolved.registry.as_deref(),

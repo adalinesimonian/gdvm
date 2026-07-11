@@ -16,7 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use gdvm::app::Gdvm;
-use gdvm::version_utils::{Variant, VersionSpec, VersionTarget};
+use gdvm::version::{Variant, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, t};
 
 use anyhow::{Result, anyhow};

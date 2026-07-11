@@ -17,7 +17,7 @@
 
 use gdvm::app::Gdvm;
 use gdvm::println_i18n;
-use gdvm::version_utils::GodotVersion;
+use gdvm::version::VersionQuery;
 
 use anyhow::Result;
 use clap::ArgMatches;
@@ -44,7 +44,7 @@ pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
     ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
 
     let requested_version = match version_filter {
-        Some(filter) => Some(GodotVersion::from_match_str(filter)?),
+        Some(filter) => Some(VersionQuery::from_match_str(filter)?),
         None => None,
     };
 

@@ -25,7 +25,7 @@ use crate::metadata_cache::{
 };
 use crate::registry::{OFFICIAL_REGISTRY, Registry, ReleaseMetadata};
 use crate::t;
-use crate::version_utils::{GodotVersion, GodotVersionDeterminate};
+use crate::version::{ResolvedVersion, VersionQuery};
 
 const CACHE_TTL: Duration = Duration::from_secs(48 * 3600); // 48 hours
 
@@ -53,13 +53,13 @@ impl ReleaseCatalog {
         self.registry.base_url_display()
     }
 
-    /// List available releases, optionally filtering with a partial GodotVersion. Respects cache-
+    /// List available releases, optionally filtering with a partial VersionQuery. Respects cache-
     /// only mode and refreshes the registry index when stale.
     pub async fn list_releases(
         &self,
-        filter: Option<&GodotVersion>,
+        filter: Option<&VersionQuery>,
         use_cache_only: bool,
-    ) -> Result<Vec<GodotVersionDeterminate>> {
+    ) -> Result<Vec<ResolvedVersion>> {
         let registry = self.registry.cache_key();
         let mut cache = self.cache_store.load_registry_cache(&registry)?;
         let now = now_seconds()?;
@@ -112,7 +112,7 @@ impl ReleaseCatalog {
     }
 
     /// Retrieve release metadata for an exact version, refreshing the cache if needed.
-    pub async fn metadata_for(&self, gv: &GodotVersionDeterminate) -> Result<ReleaseMetadata> {
+    pub async fn metadata_for(&self, gv: &ResolvedVersion) -> Result<ReleaseMetadata> {
         let tag = gv.to_remote_str();
         let mut cache = self
             .cache_store
@@ -331,7 +331,7 @@ mod tests {
     async fn filters_cached_releases_with_query() {
         let now = now_seconds().unwrap();
         let (catalog, _tmp) = make_catalog_with_cache(&["4.3-stable", "4.2-rc1"], now);
-        let filter = GodotVersion {
+        let filter = VersionQuery {
             major: Some(4),
             minor: Some(2),
             patch: None,

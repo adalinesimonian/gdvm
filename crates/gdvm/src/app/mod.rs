@@ -31,11 +31,11 @@ use std::path::Path;
 use crate::migrations;
 use crate::t;
 use crate::usage_tracker::UsageTracker;
-use crate::version_utils::GodotVersion;
-use crate::version_utils::{DeterminateSelection, VersionSelection};
+use crate::version::VersionQuery;
+use crate::version::{QuerySelection, ResolvedSelection};
 use crate::{eprintln_i18n, println_i18n};
 
-use crate::version_utils::GodotVersionDeterminate;
+use crate::version::ResolvedVersion;
 
 mod catalog;
 mod defaults;
@@ -93,8 +93,7 @@ fn project_registry_pairs() -> Vec<(String, String)> {
             let parsed = fs::read_to_string(&candidate)
                 .map_err(|e| e.to_string())
                 .and_then(|contents| {
-                    crate::version_utils::deserialize_gdvm_toml(&contents)
-                        .map_err(|e| e.to_string())
+                    crate::gdvm_toml::deserialize_gdvm_toml(&contents).map_err(|e| e.to_string())
                 });
             match parsed {
                 Ok(toml) => {
@@ -291,18 +290,18 @@ impl Gdvm {
 
 #[async_trait::async_trait(?Send)]
 impl RunVersionSource for Gdvm {
-    async fn get_pinned_version(&self) -> Option<VersionSelection> {
+    async fn get_pinned_version(&self) -> Option<QuerySelection> {
         self.defaults().get_pinned_version()
     }
 
-    async fn get_default(&self) -> Result<Option<DeterminateSelection>> {
+    async fn get_default(&self) -> Result<Option<ResolvedSelection>> {
         self.defaults().get_default()
     }
 
     async fn determine_version<P: AsRef<Path> + Send + Sync>(
         &self,
         path: Option<P>,
-    ) -> Option<(GodotVersion, Option<String>)> {
+    ) -> Option<(VersionQuery, Option<String>)> {
         self.defaults().determine_version(path)
     }
 
@@ -312,9 +311,9 @@ impl RunVersionSource for Gdvm {
         variant: Option<&str>,
         registry: Option<&str>,
         include_pre: bool,
-    ) -> Result<GodotVersionDeterminate>
+    ) -> Result<ResolvedVersion>
     where
-        T: Into<GodotVersion> + Clone + Send + Sync,
+        T: Into<VersionQuery> + Clone + Send + Sync,
     {
         self.installer()
             .auto_install_version(gv, variant, registry, include_pre)
@@ -326,11 +325,11 @@ impl RunVersionSource for Gdvm {
         gv: &T,
         variant: Option<&str>,
         registry: Option<&str>,
-    ) -> Result<GodotVersionDeterminate>
+    ) -> Result<ResolvedVersion>
     where
-        T: Into<GodotVersion> + Clone + Send + Sync,
+        T: Into<VersionQuery> + Clone + Send + Sync,
     {
-        let gv: GodotVersion = gv.clone().into();
+        let gv: VersionQuery = gv.clone().into();
         let matches = self
             .library()
             .resolve_installed_version(&gv, variant, registry)
@@ -344,7 +343,7 @@ impl RunVersionSource for Gdvm {
                 for v in &matches {
                     println!(
                         "- {}",
-                        crate::version_utils::display_version(
+                        crate::version::display_version(
                             &v.version.to_display_str(),
                             &v.variant,
                             v.registry.as_deref(),
@@ -424,7 +423,7 @@ mod tests {
     fn filter_cached_releases_applies_filter() {
         let cache = cache_with_tags(&["4.1.1-rc1", "3.5-stable", "4.1.1-stable"]);
 
-        let filter = GodotVersion::from_match_str("4.1.1-stable").unwrap();
+        let filter = VersionQuery::from_match_str("4.1.1-stable").unwrap();
         let releases = filter_cached_releases(&cache, Some(&filter));
         let tags: Vec<String> = releases.into_iter().map(|r| r.to_remote_str()).collect();
 

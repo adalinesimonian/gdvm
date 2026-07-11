@@ -27,6 +27,23 @@ use std::path::PathBuf;
 
 use crate::host::{HostArch, HostOs, HostPlatform};
 
+/// Returns true if the registry refers to the official gdvm registry.
+pub fn is_official_registry(registry: Option<&str>) -> bool {
+    match registry {
+        None => true,
+        Some(r) => r == crate::registry::OFFICIAL_REGISTRY,
+    }
+}
+
+/// Normalize a registry name to `None` for the official registry, or
+/// `Some(name)` for a custom registry.
+pub fn normalize_registry(registry: Option<&str>) -> Option<&str> {
+    match registry {
+        Some(r) if r != crate::registry::OFFICIAL_REGISTRY => Some(r),
+        _ => None,
+    }
+}
+
 /// Alias for the official registry. Cannot be overridden by a project pin or
 /// machine config.
 pub const OFFICIAL_REGISTRY: &str = "official";
@@ -267,7 +284,7 @@ pub fn platform_candidates(host: HostPlatform) -> Vec<String> {
 pub fn select_binary<'a>(
     meta: &'a ReleaseMetadata,
     host: HostPlatform,
-    variant: &crate::version_utils::Variant,
+    variant: &crate::version::Variant,
 ) -> Result<&'a BinaryInfo, BinarySelectionError> {
     let platform_map = meta
         .variants
@@ -446,8 +463,7 @@ mod tests {
             os: HostOs::Macos,
             arch: HostArch::X86_64,
         };
-        let selected =
-            select_binary(&meta, host, &crate::version_utils::Variant::default()).unwrap();
+        let selected = select_binary(&meta, host, &crate::version::Variant::default()).unwrap();
         assert_eq!(selected.urls[0], "http://example.com/u.zip");
     }
 
@@ -461,7 +477,7 @@ mod tests {
         let err = select_binary(
             &meta,
             host,
-            &crate::version_utils::Variant::from_option(Some("csharp")),
+            &crate::version::Variant::from_option(Some("csharp")),
         )
         .unwrap_err();
         assert_eq!(err, BinarySelectionError::UnsupportedPlatform);
@@ -474,8 +490,7 @@ mod tests {
             os: HostOs::Windows,
             arch: HostArch::X86_64,
         };
-        let err =
-            select_binary(&meta, host, &crate::version_utils::Variant::default()).unwrap_err();
+        let err = select_binary(&meta, host, &crate::version::Variant::default()).unwrap_err();
         assert_eq!(err, BinarySelectionError::UnsupportedArch);
     }
 

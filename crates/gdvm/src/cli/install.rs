@@ -16,7 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use gdvm::app::{Gdvm, InstallOutcome};
-use gdvm::version_utils::{self, Variant, VersionSpec, VersionTarget};
+use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, t};
 
 use anyhow::{Result, anyhow};
@@ -56,7 +56,7 @@ pub(crate) async fn sub_install(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()>
         .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
 
     let resolved_variant = Variant::from_option(variant);
-    let display = version_utils::display_version(&gv.to_display_str(), &resolved_variant, registry);
+    let display = version::display_version(&gv.to_display_str(), &resolved_variant, registry);
 
     // Print a message indicating the start of the installation process
     println_i18n!("installing-version", version = &display);

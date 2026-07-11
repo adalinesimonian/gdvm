@@ -17,7 +17,7 @@
 
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version_utils::{VersionSpec, VersionTarget};
+use gdvm::version::{VersionSpec, VersionTarget};
 
 use anyhow::Result;
 use clap::ArgMatches;

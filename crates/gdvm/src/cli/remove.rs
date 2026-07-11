@@ -16,7 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use gdvm::app::Gdvm;
-use gdvm::version_utils::{self, VersionSpec, VersionTarget};
+use gdvm::version::{self, VersionSpec, VersionTarget};
 use gdvm::{eprintln_i18n, println_i18n, t};
 
 use anyhow::{Result, anyhow};
@@ -51,7 +51,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
         }
         1 => {
             let installed = &resolved_versions[0];
-            let display = version_utils::display_version(
+            let display = version::display_version(
                 &installed.version.to_display_str(),
                 &installed.variant,
                 installed.registry.as_deref(),
@@ -81,7 +81,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
             for installed in &resolved_versions {
                 println!(
                     "- {}",
-                    version_utils::display_version(
+                    version::display_version(
                         &installed.version.to_display_str(),
                         &installed.variant,
                         installed.registry.as_deref(),

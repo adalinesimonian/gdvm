@@ -27,7 +27,7 @@ use std::{fs, io};
 
 use super::v2;
 use crate::date_utils::now_iso8601;
-use crate::version_utils::Variant;
+use crate::version::Variant;
 
 /// Current registry schema version produced by the authoring commands.
 const SCHEMA_VERSION: u32 = 2;
@@ -271,7 +271,7 @@ pub fn validate(dir: &Path) -> Result<ValidationReport> {
 
     let actual_order: Vec<&str> = index.releases.iter().map(|r| r.version.as_str()).collect();
     let mut expected_order = actual_order.clone();
-    expected_order.sort_by(|a, b| crate::version_utils::cmp_versions_newest_first(a, b));
+    expected_order.sort_by(|a, b| crate::version::cmp_versions_newest_first(a, b));
     if actual_order != expected_order {
         errors.push("index.json releases are not ordered newest to oldest".to_string());
     }
@@ -378,7 +378,7 @@ fn load_index(dir: &Path) -> Result<v2::Index> {
 fn sort_index(index: &mut v2::Index) {
     index
         .releases
-        .sort_by(|a, b| crate::version_utils::cmp_versions_newest_first(&a.version, &b.version));
+        .sort_by(|a, b| crate::version::cmp_versions_newest_first(&a.version, &b.version));
 }
 
 /// Sort the index newest first and write it to `index.json`.

@@ -108,9 +108,9 @@ define_migrations! {
 
             let new_path = if let Some(base) = dir_name.strip_suffix("-csharp") {
                 installs.join("csharp").join(base)
-            } else if crate::version_utils::GodotVersion::from_install_str(&dir_name).is_ok() {
+            } else if crate::version::VersionQuery::from_install_str(&dir_name).is_ok() {
                 installs
-                    .join(crate::version_utils::Variant::DEFAULT)
+                    .join(crate::version::Variant::DEFAULT)
                     .join(&dir_name)
             } else {
                 // Not a recognized install, ignore.
@@ -328,10 +328,8 @@ fn dir_holds_versions(dir: &Path) -> bool {
     };
     entries.flatten().any(|e| {
         e.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
-            && crate::version_utils::GodotVersion::from_install_str(
-                &e.file_name().to_string_lossy(),
-            )
-            .is_ok()
+            && crate::version::VersionQuery::from_install_str(&e.file_name().to_string_lossy())
+                .is_ok()
     })
 }
 
