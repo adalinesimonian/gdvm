@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 
 use anyhow::Result;
 use clap::ArgMatches;
 
 /// Handle the 'upgrade' subcommand
-pub(crate) async fn sub_upgrade(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_upgrade(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let allow_major = matches.get_flag("major");
     let allow_pre = matches.get_flag("pre");
-    manager.upgrade(allow_major, allow_pre).await
+    gdvm.updater().upgrade(allow_major, allow_pre).await
 }

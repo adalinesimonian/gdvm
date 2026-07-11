@@ -17,8 +17,8 @@
 
 #![cfg(feature = "integration-tests")]
 
+use gdvm::app::{Gdvm, InstallOutcome};
 use gdvm::config::Config;
-use gdvm::godot_manager::{GodotManager, InstallOutcome};
 use gdvm::registry::{self, publish};
 use gdvm::version_utils::{GodotVersion, Variant};
 use serial_test::serial;
@@ -160,12 +160,13 @@ async fn install_from_file_registry_extracts_build() {
     let env = TestHome::new();
     let (reg, _stored, _platform) = publish_local_registry(&env);
 
-    let manager = GodotManager::new().await.unwrap();
+    let gdvm = Gdvm::new().await.unwrap();
     let gv = GodotVersion::from_install_str("4.4-stable")
         .unwrap()
         .to_determinate();
 
-    let outcome = manager
+    let outcome = gdvm
+        .installer()
         .install(&gv, &Variant::default(), Some("localreg"), false, false)
         .await
         .expect("install should succeed from a file: registry");
@@ -188,19 +189,20 @@ async fn install_fails_closed_on_sha512_mismatch() {
     let env = TestHome::new();
     let (_reg, stored, _platform) = publish_local_registry(&env);
 
-    let manager = GodotManager::new().await.unwrap();
+    let gdvm = Gdvm::new().await.unwrap();
     let gv = GodotVersion::from_install_str("4.4-stable")
         .unwrap()
         .to_determinate();
 
-    manager
+    gdvm.installer()
         .install(&gv, &Variant::default(), Some("localreg"), false, false)
         .await
         .expect("initial install should succeed");
 
     fs::write(&stored, b"tampered contents that do not match the hash").unwrap();
 
-    let result = manager
+    let result = gdvm
+        .installer()
         .install(&gv, &Variant::default(), Some("localreg"), true, true)
         .await;
     assert!(
@@ -233,14 +235,18 @@ async fn project_gdvm_toml_registry_is_honored_over_machine() {
 
     let installed = {
         let _cwd = CwdGuard::enter(project.path());
-        let manager = GodotManager::new().await.unwrap();
+        let gdvm = Gdvm::new().await.unwrap();
 
-        assert_eq!(manager.registry_base_url("proj").unwrap(), project_url);
+        assert_eq!(
+            gdvm.catalogs().registry_base_url("proj").unwrap(),
+            project_url
+        );
 
         let gv = GodotVersion::from_install_str("4.4-stable")
             .unwrap()
             .to_determinate();
-        let outcome = manager
+        let outcome = gdvm
+            .installer()
             .install(&gv, &Variant::default(), Some("proj"), false, false)
             .await
             .expect("install from project-defined registry should succeed");

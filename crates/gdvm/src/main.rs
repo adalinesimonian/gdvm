@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::i18n::I18n;
 
 use anyhow::Result;
@@ -25,7 +25,7 @@ mod cli;
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     I18n::init()?;
-    let manager = GodotManager::new().await?;
+    let gdvm = Gdvm::new().await?;
 
     // Detect if running through "godot" or "godot_console" shim.
     let exe_name = std::env::var("GDVM_ALIAS").ok().unwrap_or_else(|| {
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
         let args: Vec<String> = std::env::args().skip(1).collect();
 
         if let Err(err) = cli::sub_run_inner(cli::RunConfig {
-            manager: &GodotManager::new().await?,
+            gdvm: &Gdvm::new().await?,
             version_input: None,
             variant: None,
             console: console_mode,
@@ -77,22 +77,22 @@ async fn main() -> Result<()> {
 
     // Match the subcommand and call the appropriate function
     match matches.subcommand() {
-        Some(("install", sub_m)) => cli::sub_install(&manager, sub_m).await?,
-        Some(("list", _)) => cli::sub_list(&manager)?,
-        Some(("run", sub_m)) => cli::sub_run(&manager, sub_m).await?,
-        Some(("show", sub_m)) => cli::sub_show(&manager, sub_m).await?,
-        Some(("cache-path", sub_m)) => cli::sub_cache_path(&manager, sub_m).await?,
-        Some(("link", sub_m)) => cli::sub_link(&manager, sub_m).await?,
-        Some(("remove", sub_m)) => cli::sub_remove(&manager, sub_m).await?,
-        Some(("search", sub_m)) => cli::sub_search(&manager, sub_m).await?,
-        Some(("clear-cache", _)) => cli::sub_clear_cache(&manager)?,
-        Some(("refresh", _)) => cli::sub_refresh(&manager).await?,
-        Some(("prune", sub_m)) => cli::sub_prune(&manager, sub_m)?,
-        Some(("use", sub_m)) => cli::sub_use(&manager, sub_m).await?,
-        Some(("upgrade", sub_m)) => cli::sub_upgrade(&manager, sub_m).await?,
-        Some(("pin", sub_m)) => cli::sub_pin(&manager, sub_m).await?,
+        Some(("install", sub_m)) => cli::sub_install(&gdvm, sub_m).await?,
+        Some(("list", _)) => cli::sub_list(&gdvm)?,
+        Some(("run", sub_m)) => cli::sub_run(&gdvm, sub_m).await?,
+        Some(("show", sub_m)) => cli::sub_show(&gdvm, sub_m).await?,
+        Some(("cache-path", sub_m)) => cli::sub_cache_path(&gdvm, sub_m).await?,
+        Some(("link", sub_m)) => cli::sub_link(&gdvm, sub_m).await?,
+        Some(("remove", sub_m)) => cli::sub_remove(&gdvm, sub_m).await?,
+        Some(("search", sub_m)) => cli::sub_search(&gdvm, sub_m).await?,
+        Some(("clear-cache", _)) => cli::sub_clear_cache(&gdvm)?,
+        Some(("refresh", _)) => cli::sub_refresh(&gdvm).await?,
+        Some(("prune", sub_m)) => cli::sub_prune(&gdvm, sub_m)?,
+        Some(("use", sub_m)) => cli::sub_use(&gdvm, sub_m).await?,
+        Some(("upgrade", sub_m)) => cli::sub_upgrade(&gdvm, sub_m).await?,
+        Some(("pin", sub_m)) => cli::sub_pin(&gdvm, sub_m).await?,
         Some(("config", sub_m)) => cli::sub_config(sub_m)?,
-        Some(("registry", sub_m)) => cli::sub_registry(&manager, sub_m).await?,
+        Some(("registry", sub_m)) => cli::sub_registry(&gdvm, sub_m).await?,
         _ => {}
     }
 

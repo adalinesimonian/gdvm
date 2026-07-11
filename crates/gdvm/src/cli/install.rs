@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::{GodotManager, InstallOutcome};
+use gdvm::app::{Gdvm, InstallOutcome};
 use gdvm::version_utils::{self, Variant, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, t};
 
@@ -28,28 +28,29 @@ use super::{
 };
 
 /// Handle the 'install' subcommand
-pub(crate) async fn sub_install(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_install(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version").unwrap();
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
     let refresh = matches.get_flag("refresh");
     let include_pre = matches.get_flag("include-pre");
 
-    refresh_cache_if_requested(manager, refresh).await?;
+    refresh_cache_if_requested(gdvm, refresh).await?;
 
     let spec = VersionSpec::parse(version_input)?;
     let variant = check_deprecated_csharp_flag(matches, spec.variant);
     let variant = variant.as_deref();
     let registry = spec.registry.as_deref();
 
-    ensure_registry_trusted(manager, registry, matches.get_flag("yes")).await?;
+    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
 
     let requested_version = match &spec.target {
         VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
         VersionTarget::Pattern(gv) => gv.clone(),
     };
 
-    let gv = manager
+    let gv = gdvm
+        .catalogs()
         .resolve_available_version(&requested_version, variant, registry, include_pre, false)
         .await?
         .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
@@ -60,7 +61,8 @@ pub(crate) async fn sub_install(manager: &GodotManager, matches: &ArgMatches) ->
     // Print a message indicating the start of the installation process
     println_i18n!("installing-version", version = &display);
 
-    match manager
+    match gdvm
+        .installer()
         .install(
             &gv,
             &resolved_variant,

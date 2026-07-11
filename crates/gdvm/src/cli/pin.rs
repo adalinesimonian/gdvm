@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::warn_project_version_mismatch;
 use gdvm::version_utils::{self, Variant, VersionSpec, VersionTarget};
 use gdvm::{eprintln_i18n, println_i18n};
@@ -30,7 +30,7 @@ use super::{
 };
 
 /// Handle the 'pin' subcommand
-pub(crate) async fn sub_pin(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_pin(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let version_str = matches.get_one::<String>("version").unwrap();
     let refresh = matches.get_flag("refresh");
     let spec = VersionSpec::parse(version_str)?;
@@ -38,20 +38,21 @@ pub(crate) async fn sub_pin(manager: &GodotManager, matches: &ArgMatches) -> Res
     let variant = variant.as_deref();
     let registry = spec.registry.as_deref();
 
-    refresh_cache_if_requested(manager, refresh).await?;
+    refresh_cache_if_requested(gdvm, refresh).await?;
 
-    ensure_registry_trusted(manager, registry, matches.get_flag("yes")).await?;
+    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
 
     let version = match &spec.target {
         VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
         VersionTarget::Pattern(gv) => gv.clone(),
     };
 
-    warn_project_version_mismatch::<_, &Path>(manager, &version, true, None).await;
+    warn_project_version_mismatch::<_, &Path>(gdvm, &version, true, None).await;
 
     let include_pre = matches.get_flag("include-pre");
 
-    let resolved_version = manager
+    let resolved_version = gdvm
+        .installer()
         .auto_install_version(&version, variant, registry, include_pre)
         .await?;
 
@@ -64,7 +65,10 @@ pub(crate) async fn sub_pin(manager: &GodotManager, matches: &ArgMatches) -> Res
 
     let skip_gdvmrc = matches.get_flag("no-legacy");
 
-    match manager.pin_version(&resolved_version, &resolved_variant, registry, skip_gdvmrc) {
+    match gdvm
+        .defaults()
+        .pin_version(&resolved_version, &resolved_variant, registry, skip_gdvmrc)
+    {
         Ok(()) => println_i18n!("pinned-success", version = &display),
         Err(_) => eprintln_i18n!("error-pin-version-not-found", version = &display),
     }

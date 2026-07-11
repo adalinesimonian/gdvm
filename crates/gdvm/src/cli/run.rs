@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use gdvm::app::Gdvm;
 use gdvm::eprintln_i18n;
-use gdvm::godot_manager::GodotManager;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version_utils::{self, VersionSpec, VersionTarget};
 
@@ -30,7 +30,7 @@ use super::{
 };
 
 /// Handle the 'run' subcommand
-pub(crate) async fn sub_run(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_run(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     // Capture args after "--" to pass directly to child
     let raw_args = match std::env::args().position(|x| x == "--") {
         Some(pos) => std::env::args().skip(pos + 1).collect(),
@@ -42,7 +42,7 @@ pub(crate) async fn sub_run(manager: &GodotManager, matches: &ArgMatches) -> Res
     let force_on_mismatch = matches.get_flag("force");
     let refresh = matches.get_flag("refresh");
 
-    refresh_cache_if_requested(manager, refresh).await?;
+    refresh_cache_if_requested(gdvm, refresh).await?;
 
     let spec_variant = version_input
         .map(|v| VersionSpec::parse(v))
@@ -53,7 +53,7 @@ pub(crate) async fn sub_run(manager: &GodotManager, matches: &ArgMatches) -> Res
     let include_pre = matches.get_flag("include-pre");
 
     sub_run_inner(RunConfig {
-        manager,
+        gdvm,
         version_input,
         variant,
         console,
@@ -67,7 +67,7 @@ pub(crate) async fn sub_run(manager: &GodotManager, matches: &ArgMatches) -> Res
 
 /// Configuration for the `sub_run_inner` function
 pub(crate) struct RunConfig<'a> {
-    pub(crate) manager: &'a GodotManager,
+    pub(crate) gdvm: &'a Gdvm,
     pub(crate) version_input: Option<&'a String>,
     pub(crate) variant: Option<String>,
     pub(crate) console: bool,
@@ -80,7 +80,7 @@ pub(crate) struct RunConfig<'a> {
 /// Run the Godot executable
 pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
     let RunConfig {
-        manager,
+        gdvm,
         version_input,
         variant,
         console,
@@ -108,7 +108,7 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
         (None, variant, None)
     };
 
-    let resolver = RunVersionResolver::new(manager);
+    let resolver = RunVersionResolver::new(gdvm);
     let request = RunResolutionRequest {
         explicit: explicit_version,
         variant: resolved_variant,
@@ -120,7 +120,7 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
     };
 
     let trust_registry = resolver.select(&request).await?.and_then(|s| s.registry);
-    ensure_registry_trusted(manager, trust_registry.as_deref(), assume_yes).await?;
+    ensure_registry_trusted(gdvm, trust_registry.as_deref(), assume_yes).await?;
 
     let resolved = resolver.resolve(request).await?;
 
@@ -132,7 +132,7 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
 
     eprintln_i18n!("running-version", version = &display);
 
-    manager.run(
+    gdvm.launcher().run(
         &resolved.version,
         &resolved.variant,
         resolved.registry.as_deref(),

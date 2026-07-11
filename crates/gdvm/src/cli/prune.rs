@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use gdvm::app::{Gdvm, PruneOptions};
 use gdvm::config::{self};
-use gdvm::godot_manager::{GodotManager, PruneOptions};
 use gdvm::println_i18n;
 
 use anyhow::Result;
@@ -41,7 +41,7 @@ fn format_bytes(bytes: u64) -> String {
 }
 
 /// Handle the 'prune' subcommand
-pub(crate) fn sub_prune(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let opts = PruneOptions {
         all: matches.get_flag("all"),
         force: matches.get_flag("force"),
@@ -51,7 +51,7 @@ pub(crate) fn sub_prune(manager: &GodotManager, matches: &ArgMatches) -> Result<
     let config = config::Config::load().unwrap_or_default();
     let max_age_secs = config.prune_max_age_days().saturating_mul(24 * 60 * 60);
 
-    let report = manager.prune(max_age_secs, opts)?;
+    let report = gdvm.pruner().prune(max_age_secs, opts)?;
 
     if report.is_empty() {
         if report.dry_run {

@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+pub mod app;
 pub mod artifact_cache;
 pub mod config;
 pub mod date_utils;
 pub mod download_utils;
 pub mod fs_utils;
-pub mod godot_manager;
 pub mod hash_utils;
 pub mod host;
 pub mod i18n;

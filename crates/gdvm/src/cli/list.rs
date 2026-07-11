@@ -15,15 +15,15 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::println_i18n;
 use gdvm::version_utils::{self};
 
 use anyhow::Result;
 
 /// Handle the 'list' subcommand
-pub(crate) fn sub_list(manager: &GodotManager) -> Result<()> {
-    let versions = manager.list_installed()?;
+pub(crate) fn sub_list(gdvm: &Gdvm) -> Result<()> {
+    let versions = gdvm.library().list_installed()?;
     if versions.is_empty() {
         println_i18n!("no-versions-installed");
     } else {

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
+use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version_utils::{self, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, t};
@@ -30,7 +30,7 @@ use std::{
 use super::{check_deprecated_csharp_flag, keyword_to_version_filter};
 
 /// Handle the 'link' subcommand
-pub(crate) async fn sub_link(manager: &GodotManager, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_link(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version");
     let link_path_raw = matches
         .get_one::<String>("linkpath")
@@ -51,7 +51,7 @@ pub(crate) async fn sub_link(manager: &GodotManager, matches: &ArgMatches) -> Re
     let force = matches.get_flag("force");
     let copy = matches.get_flag("copy");
 
-    let resolver = RunVersionResolver::new(manager);
+    let resolver = RunVersionResolver::new(gdvm);
     let resolved = resolver
         .resolve(RunResolutionRequest {
             explicit: explicit_version,
@@ -64,7 +64,7 @@ pub(crate) async fn sub_link(manager: &GodotManager, matches: &ArgMatches) -> Re
         })
         .await?;
 
-    let primary_exe = manager.get_executable_path(
+    let primary_exe = gdvm.library().get_executable_path(
         &resolved.version,
         &resolved.variant,
         resolved.registry.as_deref(),
@@ -73,7 +73,7 @@ pub(crate) async fn sub_link(manager: &GodotManager, matches: &ArgMatches) -> Re
 
     #[cfg(target_os = "windows")]
     let console_exe = {
-        let console_exe = manager.get_executable_path(
+        let console_exe = gdvm.library().get_executable_path(
             &resolved.version,
             &resolved.variant,
             resolved.registry.as_deref(),
@@ -94,7 +94,7 @@ pub(crate) async fn sub_link(manager: &GodotManager, matches: &ArgMatches) -> Re
 
     // Key used to track this link against its install, so prune can preserve
     // installs that still have a live link.
-    let install_key = manager.install_key(
+    let install_key = gdvm.library().install_key(
         &resolved.version,
         &resolved.variant,
         resolved.registry.as_deref(),
@@ -117,7 +117,7 @@ pub(crate) async fn sub_link(manager: &GodotManager, matches: &ArgMatches) -> Re
                 path = link_path.display().to_string()
             );
         } else {
-            manager.record_link(&link_path, &install_key)?;
+            gdvm.library().record_link(&link_path, &install_key)?;
             println_i18n!(
                 "link-created",
                 version = display,
@@ -156,7 +156,7 @@ pub(crate) async fn sub_link(manager: &GodotManager, matches: &ArgMatches) -> Re
             path = link_path.display().to_string()
         );
     } else {
-        manager.record_link(&link_path, &install_key)?;
+        gdvm.library().record_link(&link_path, &install_key)?;
         println_i18n!(
             "link-created",
             version = display,
