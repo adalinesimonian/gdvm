@@ -94,6 +94,17 @@ While for most purposes it is more than enough to run `godot`, the shim provided
 
 See the dedicated guide for details and examples (including a Visual Studio Code debugger configuration): [Using gdvm with debuggers](docs/debuggers.md).
 
+### Shell Completions
+
+The installer sets up tab completions for your shell automatically if you are using bash, zsh, fish, or PowerShell. To set them up manually, add the matching line to your shell's profile:
+
+```sh
+eval "$(gdvm completions bash)"           # bash (~/.bashrc)
+eval "$(gdvm completions zsh)"            # zsh (~/.zshrc)
+gdvm completions fish | source            # fish (~/.config/fish/config.fish)
+gdvm completions powershell | Out-String | Invoke-Expression  # PowerShell ($PROFILE)
+```
+
 ## Registries
 
 gdvm installs official Godot builds by default. Custom registries let you install from anywhere else, such as builds from your own CI pipeline or wherever else.

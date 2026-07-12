@@ -112,6 +112,24 @@ Update-UserPath $installDir
 $godotDir = Join-Path $installDir 'current_godot'
 Update-UserPath $godotDir
 
+# Enable shell completions for gdvm.
+$completionLine = 'if (Get-Command gdvm -ErrorAction SilentlyContinue) { gdvm completions powershell | Out-String | Invoke-Expression }'
+try {
+    if (-not (Test-Path $PROFILE)) {
+        New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+    }
+    if (-not (Select-String -Path $PROFILE -Pattern 'gdvm completions powershell' -SimpleMatch -Quiet)) {
+        Add-Content -Path $PROFILE -Value $completionLine
+        Write-Host "✅ Enabled PowerShell completions for gdvm in $PROFILE" -ForegroundColor Green
+    }
+    else {
+        Write-Host "ℹ️ $PROFILE already enables gdvm completions." -ForegroundColor Cyan
+    }
+}
+catch {
+    Write-Host "ℹ️ Could not update $PROFILE to enable completions. Run 'gdvm completions powershell' to set them up manually." -ForegroundColor Yellow
+}
+
 if ($failedPaths.Count -gt 0) {
     Write-Error "❌ Failed to update the following paths to the user environment PATH:"
     foreach ($path in $failedPaths) {

@@ -23,6 +23,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ### New Features
 
+- Shell completions for bash, zsh, fish, and PowerShell are now provided via the new `gdvm completions <shell>` command. The install scripts now enable completions automatically for your detected shell.
 - Downloads, as well as other web requests, now retry and resume interrupted requests when possible.
 
 ### Fixed

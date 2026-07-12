@@ -144,12 +144,37 @@ if [ -n "$SHELL" ]; then
         ;;
     esac
 
+    case "$shellName" in
+    bash)
+        completionLine='command -v gdvm >/dev/null 2>&1 && eval "$(gdvm completions bash)"'
+        ;;
+    zsh)
+        completionLine='command -v gdvm >/dev/null 2>&1 && command -v compdef >/dev/null 2>&1 && eval "$(gdvm completions zsh)"'
+        ;;
+    fish)
+        completionLine='command -q gdvm; and gdvm completions fish | source'
+        ;;
+    *)
+        completionLine=""
+        ;;
+    esac
+
     if [ -n "$profileFile" ]; then
         if ! grep -Fxq "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" "$profileFile"; then
             echo "export PATH=\"$installDir/current_godot:$installDir:\$PATH\"" >>"$profileFile"
             echo -e "\e[32m✅ Added $installDir to PATH in $profileFile\e[0m"
         else
             echo -e "\e[36mℹ️ $profileFile already adds $installDir and $installDir/current_godot to PATH.\e[0m"
+        fi
+
+        # Enable shell completions for gdvm.
+        if [ -n "$completionLine" ]; then
+            if ! grep -Fxq "$completionLine" "$profileFile"; then
+                echo "$completionLine" >>"$profileFile"
+                echo -e "\e[32m✅ Enabled $shellName completions for gdvm in $profileFile\e[0m"
+            else
+                echo -e "\e[36mℹ️ $profileFile already enables gdvm completions.\e[0m"
+            fi
         fi
     else
         echo -e "\e[31m❌ $errorMessage\e[0m" >&2
