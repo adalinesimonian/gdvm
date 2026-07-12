@@ -47,6 +47,7 @@ reqwest = { version = "=0.13.4", features = [
     "rustls",
     "stream",
 ] }
+fastrand = "=2.4.1"
 indicatif = { version = "=0.18.6", features = ["improved_unicode"] }
 sha2 = "=0.11.0"
 digest-io = "=0.1.0"

@@ -158,6 +158,7 @@ error-spec-empty-variant = Tomt variantnamn i «{ $input }»
 error-spec-empty-version = Tom versjon i «{ $input }»
 error-system-time = Systemtida er før UNIX-epoken
 error-unrecognized-version-format = Ukjent versjonsformat: { $input }
+download-retrying = Nedlastinga vart avbroten, prøver på nytt (forsøk { $attempt } av { $max })...
 lock-waiting = Ventar på at ein annan gdvm-prosess skal verta ferdig (lås: { $resource })...
 prune-skipped-error = Hoppar over { $item }: { $error }
 prune-skipped-in-use = Hoppar over { $item }: han er i bruk av ein annan gdvm-prosess.

@@ -217,30 +217,28 @@ pub fn newer_prerelease_available(
 
 /// Fetch and parse the gdvm release manifest from `url`.
 pub async fn fetch_manifest(url: &str, timeout: Duration) -> Result<ReleasesManifest> {
-    let text =
-        if let Some(path) = url.strip_prefix("file://") {
-            std::fs::read_to_string(path)
-                .map_err(|e| anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string())))?
-        } else {
-            crate::download_utils::ensure_url_scheme_allowed(url)?;
-            let client = crate::download_utils::http_client()?;
-            let resp =
-                client.get(url).timeout(timeout).send().await.map_err(|e| {
-                    anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string()))
-                })?;
-            if !resp.status().is_success() {
-                return Err(anyhow!(t!(
-                    "error-fetching-gdvm-releases",
-                    error = resp.status().to_string()
-                )));
-            }
-            crate::download_utils::response_text_limited(
-                resp,
-                crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
-            )
-            .await
+    let text = if let Some(path) = url.strip_prefix("file://") {
+        std::fs::read_to_string(path)
             .map_err(|e| anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string())))?
-        };
+    } else {
+        crate::download_utils::ensure_url_scheme_allowed(url)?;
+        let client = crate::download_utils::http_client()?;
+        let resp = crate::download_utils::get_retrying(&client, url, Some(timeout))
+            .await
+            .map_err(|e| anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string())))?;
+        if !resp.status().is_success() {
+            return Err(anyhow!(t!(
+                "error-fetching-gdvm-releases",
+                error = resp.status().to_string()
+            )));
+        }
+        crate::download_utils::response_text_limited(
+            resp,
+            crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
+        )
+        .await
+        .map_err(|e| anyhow!(t!("error-fetching-gdvm-releases", error = e.to_string())))?
+    };
 
     parse_manifest(&text)
 }

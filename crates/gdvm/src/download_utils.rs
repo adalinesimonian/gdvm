@@ -59,6 +59,104 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// considered stalled.
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// How many times to try a download before giving up.
+const MAX_ATTEMPTS: u32 = 4;
+
+/// Base delay for exponential backoff between retry attempts.
+const RETRY_BASE_DELAY: Duration = Duration::from_millis(500);
+
+/// The longest gdvm should wait between retry attempts.
+const RETRY_MAX_DELAY: Duration = Duration::from_secs(15);
+
+/// Get whether a response status should be retried.
+fn is_retryable_status(status: reqwest::StatusCode) -> bool {
+    status.is_server_error()
+        || status == reqwest::StatusCode::REQUEST_TIMEOUT
+        || status == reqwest::StatusCode::TOO_MANY_REQUESTS
+}
+
+/// Get the seconds from a `Retry-After` header, if one is present.
+fn parse_retry_after(headers: &reqwest::header::HeaderMap) -> Option<Duration> {
+    headers
+        .get(reqwest::header::RETRY_AFTER)?
+        .to_str()
+        .ok()?
+        .trim()
+        .parse::<u64>()
+        .ok()
+        .map(Duration::from_secs)
+}
+
+/// Get the delay, in milliseconds, for the next retry attempt.
+fn retry_delay(attempt: u32, retry_after: Option<Duration>) -> Duration {
+    if let Some(delay) = retry_after {
+        return delay.min(RETRY_MAX_DELAY);
+    }
+
+    let exp = RETRY_BASE_DELAY.saturating_mul(1u32 << (attempt - 1).min(16));
+
+    // Use jitter from 0.5 to 1.5 seconds to avoid hitting the server at the
+    // same time as other clients.
+    let jitter = 500 + fastrand::u32(0..=1000);
+    (exp.saturating_mul(jitter) / 1000).min(RETRY_MAX_DELAY)
+}
+
+/// How a transfer attempt failed.
+enum TransferError {
+    /// The error is transient, i.e. it can be retried (like rate limits).
+    Transient {
+        error: anyhow::Error,
+        retry_after: Option<Duration>,
+    },
+    /// The error is permanent, e.g. a 404 or something like it.
+    Permanent(anyhow::Error),
+}
+
+/// Send a GET request with retries.
+pub(crate) async fn get_retrying(
+    client: &reqwest::Client,
+    url: &str,
+    request_timeout: Option<Duration>,
+) -> Result<reqwest::Response> {
+    let mut attempt = 1;
+    loop {
+        let mut request = client.get(url);
+        if let Some(timeout) = request_timeout {
+            request = request.timeout(timeout);
+        }
+        let outcome = match request.send().await {
+            Ok(response) => {
+                let status = response.status();
+                if is_retryable_status(status) {
+                    let retry_after = parse_retry_after(response.headers());
+                    Err(TransferError::Transient {
+                        error: anyhow!(t!("error-download-failed", status = status.to_string())),
+                        retry_after,
+                    })
+                } else {
+                    Ok(response)
+                }
+            }
+            Err(e) => Err(TransferError::Transient {
+                error: e.into(),
+                retry_after: None,
+            }),
+        };
+
+        match outcome {
+            Ok(response) => return Ok(response),
+            Err(TransferError::Permanent(error)) => return Err(error),
+            Err(TransferError::Transient { error, retry_after }) => {
+                if attempt >= MAX_ATTEMPTS {
+                    return Err(error);
+                }
+                tokio::time::sleep(retry_delay(attempt, retry_after)).await;
+                attempt += 1;
+            }
+        }
+    }
+}
+
 /// Get a reusable HTTP client.
 pub fn http_client() -> Result<reqwest::Client> {
     let allow_insecure = std::env::var_os(ALLOW_INSECURE_URLS_ENV_VAR).is_some();
@@ -135,10 +233,9 @@ pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<D
     // Print downloading URL message
     eprintln_i18n!("operation-downloading-url", url = url);
 
-    let mut hasher = StreamHasher::new();
-
     // Copy from local file if the registry is on disk.
     if let Some(path) = url.strip_prefix("file://") {
+        let mut hasher = StreamHasher::new();
         let src_path = Path::new(path);
         if !src_path.is_file() {
             return Err(anyhow!(t!("error-file-not-found")));
@@ -159,54 +256,293 @@ pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<D
     }
 
     let client = http_client()?;
-    let response = client.get(url).send().await?;
+    let mut state = TransferState::default();
+    let mut attempt = 1;
 
-    match response.status() {
-        reqwest::StatusCode::OK => {
-            let total_size = response.content_length();
-            let pb = if let Some(size) = total_size {
-                let pb = ProgressBar::new(size);
-                pb.set_style(
-                    ProgressStyle::default_bar()
-                        .template(
-                            "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
-                        )?
-                        .progress_chars("#>-"),
-                );
-                pb
-            } else {
-                crate::progress_utils::spinner(t!("operation-downloading-url", url = url))?
-            };
-
-            pb.enable_steady_tick(Duration::from_millis(100));
-
-            let mut stream = response.bytes_stream();
-
-            while let Some(chunk) = stream.next().await {
-                let chunk = chunk?;
-                dest.write_all(&chunk).await?;
-                hasher.update(&chunk);
-                if total_size.is_some() {
-                    pb.set_position(hasher.size);
+    let result = loop {
+        match transfer_attempt(&client, url, dest, &mut state).await {
+            Ok(digests) => break Ok(digests),
+            Err(TransferError::Permanent(error)) => break Err(error),
+            Err(TransferError::Transient { error, retry_after }) => {
+                if attempt >= MAX_ATTEMPTS {
+                    break Err(error);
                 }
+                state.println(t!(
+                    "download-retrying",
+                    attempt = attempt,
+                    max = MAX_ATTEMPTS - 1
+                ));
+                tokio::time::sleep(retry_delay(attempt, retry_after)).await;
+                attempt += 1;
             }
-
-            dest.flush().await?;
-
-            pb.finish_with_message(t!("operation-download-complete"));
         }
-        reqwest::StatusCode::NOT_FOUND => {
-            return Err(anyhow!(t!("error-file-not-found")));
-        }
-        status => {
-            return Err(anyhow!(t!(
-                "error-download-failed",
-                status = status.to_string(),
-            )));
+    };
+
+    if let Some(pb) = &state.progress {
+        match &result {
+            Ok(_) => pb.finish_with_message(t!("operation-download-complete")),
+            Err(_) => pb.finish_and_clear(),
         }
     }
 
+    result
+}
+
+/// Transfer state for a download, across all retries.
+#[derive(Default)]
+struct TransferState {
+    /// Verified bytes written to disk.
+    downloaded: u64,
+    /// `ETag` or `Last-Modified` header from the server, if any, used to
+    /// validate that a resumed range request is still valid.
+    validator: Option<String>,
+    /// Whether or not the server supports range requests.
+    range_supported: bool,
+    /// The total size of the file, if known.
+    total: Option<u64>,
+    /// The progress bar.
+    progress: Option<ProgressBar>,
+}
+
+impl TransferState {
+    /// Check if the transfer can be resumed.
+    fn can_resume(&self) -> bool {
+        self.downloaded > 0 && self.range_supported && self.validator.is_some()
+    }
+
+    /// Print a line, either to the progress bar or to stderr if no progress bar
+    /// exists.
+    fn println(&self, message: String) {
+        match &self.progress {
+            Some(pb) => pb.println(message),
+            None => eprintln!("{message}"),
+        }
+    }
+}
+
+/// Make one attempt to make the transfer.
+async fn transfer_attempt(
+    client: &reqwest::Client,
+    url: &str,
+    dest: &mut tokio::fs::File,
+    state: &mut TransferState,
+) -> Result<DownloadDigests, TransferError> {
+    use tokio::io::AsyncSeekExt;
+
+    let resuming = state.can_resume();
+    if !resuming {
+        // Restart from scratch.
+        reset_dest(dest, state)
+            .await
+            .map_err(TransferError::Permanent)?;
+    }
+
+    let mut request = client.get(url);
+    if resuming {
+        request = request
+            .header(
+                reqwest::header::RANGE,
+                format!("bytes={}-", state.downloaded),
+            )
+            .header(
+                reqwest::header::IF_RANGE,
+                state.validator.clone().unwrap_or_default(),
+            );
+    }
+
+    let response = request.send().await.map_err(|e| TransferError::Transient {
+        error: e.into(),
+        retry_after: None,
+    })?;
+
+    match response.status() {
+        reqwest::StatusCode::OK => {
+            reset_dest(dest, state)
+                .await
+                .map_err(TransferError::Permanent)?;
+            state.total = response.content_length();
+            state.range_supported = response
+                .headers()
+                .get(reqwest::header::ACCEPT_RANGES)
+                .and_then(|v| v.to_str().ok())
+                .is_some_and(|v| v.eq_ignore_ascii_case("bytes"));
+            state.validator = response
+                .headers()
+                .get(reqwest::header::ETAG)
+                .or_else(|| response.headers().get(reqwest::header::LAST_MODIFIED))
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_string);
+        }
+        reqwest::StatusCode::PARTIAL_CONTENT => {
+            let starts_at_prefix = response
+                .headers()
+                .get(reqwest::header::CONTENT_RANGE)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.strip_prefix("bytes "))
+                .and_then(|v| v.split('-').next())
+                .and_then(|v| v.parse::<u64>().ok())
+                == Some(state.downloaded);
+
+            if !starts_at_prefix {
+                state.range_supported = false;
+                return Err(TransferError::Transient {
+                    error: anyhow!(t!(
+                        "error-download-failed",
+                        status = response.status().to_string()
+                    )),
+                    retry_after: None,
+                });
+            }
+        }
+        reqwest::StatusCode::NOT_FOUND => {
+            return Err(TransferError::Permanent(anyhow!(t!(
+                "error-file-not-found"
+            ))));
+        }
+        status if is_retryable_status(status) => {
+            let retry_after = parse_retry_after(response.headers());
+
+            return Err(TransferError::Transient {
+                error: anyhow!(t!("error-download-failed", status = status.to_string())),
+                retry_after,
+            });
+        }
+        status => {
+            return Err(TransferError::Permanent(anyhow!(t!(
+                "error-download-failed",
+                status = status.to_string()
+            ))));
+        }
+    }
+
+    let mut hasher = rehash_prefix(dest, state.downloaded)
+        .await
+        .map_err(TransferError::Permanent)?;
+
+    update_progress(state, url)?;
+
+    let mut stream = response.bytes_stream();
+    loop {
+        match stream.next().await {
+            Some(Ok(chunk)) => {
+                dest.write_all(&chunk)
+                    .await
+                    .map_err(|e| TransferError::Permanent(e.into()))?;
+                hasher.update(&chunk);
+                if let Some(pb) = &state.progress
+                    && state.total.is_some()
+                {
+                    pb.set_position(hasher.size);
+                }
+            }
+            Some(Err(e)) => {
+                dest.flush()
+                    .await
+                    .map_err(|e| TransferError::Permanent(e.into()))?;
+                state.downloaded = hasher.size;
+                return Err(TransferError::Transient {
+                    error: e.into(),
+                    retry_after: None,
+                });
+            }
+            None => break,
+        }
+    }
+
+    dest.flush()
+        .await
+        .map_err(|e| TransferError::Permanent(e.into()))?;
+
+    if let Some(total) = state.total
+        && hasher.size < total
+    {
+        state.downloaded = hasher.size;
+        return Err(TransferError::Transient {
+            error: anyhow!(t!(
+                "error-size-mismatch",
+                expected = total,
+                actual = hasher.size
+            )),
+            retry_after: None,
+        });
+    }
+
+    let _ = dest.seek(std::io::SeekFrom::End(0)).await;
     Ok(hasher.finish())
+}
+
+/// Reset the downloaded file to empty and reset the transfer state.
+async fn reset_dest(dest: &mut tokio::fs::File, state: &mut TransferState) -> Result<()> {
+    use tokio::io::AsyncSeekExt;
+    dest.set_len(0).await?;
+    dest.seek(std::io::SeekFrom::Start(0)).await?;
+    state.downloaded = 0;
+    Ok(())
+}
+
+/// Hash the first `len` bytes of the downloaded file, so that it can be used to
+/// resume a download and continue hashing from that point.
+async fn rehash_prefix(dest: &mut tokio::fs::File, len: u64) -> Result<StreamHasher> {
+    use tokio::io::AsyncSeekExt;
+
+    let mut hasher = StreamHasher::new();
+    dest.set_len(len).await?;
+    dest.seek(std::io::SeekFrom::Start(0)).await?;
+
+    let mut remaining = len;
+    let mut buffer = vec![0u8; 64 * 1024];
+    while remaining > 0 {
+        let want = remaining.min(buffer.len() as u64) as usize;
+        let read = dest.read(&mut buffer[..want]).await?;
+        if read == 0 {
+            return Err(anyhow!(t!(
+                "error-size-mismatch",
+                expected = len,
+                actual = len - remaining
+            )));
+        }
+        hasher.update(&buffer[..read]);
+        remaining -= read as u64;
+    }
+
+    dest.seek(std::io::SeekFrom::Start(len)).await?;
+    Ok(hasher)
+}
+
+/// Update the progress bar. Creates one if it hasn't been made yet.
+fn update_progress(state: &mut TransferState, url: &str) -> Result<(), TransferError> {
+    let make = || -> Result<ProgressBar> {
+        let pb = if let Some(size) = state.total {
+            let pb = ProgressBar::new(size);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template(
+                        "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+                    )?
+                    .progress_chars("#>-"),
+            );
+            pb
+        } else {
+            crate::progress_utils::spinner(t!("operation-downloading-url", url = url))?
+        };
+        pb.enable_steady_tick(Duration::from_millis(100));
+        Ok(pb)
+    };
+
+    match &state.progress {
+        Some(pb) => {
+            if let Some(total) = state.total {
+                pb.set_length(total);
+            }
+            pb.set_position(state.downloaded);
+        }
+        None => {
+            let pb = make().map_err(TransferError::Permanent)?;
+            pb.set_position(state.downloaded);
+            state.progress = Some(pb);
+        }
+    }
+    Ok(())
 }
 
 /// The maximum size accepted for responses from the registry, in bytes.
@@ -297,5 +633,87 @@ mod tests {
             ));
             assert!(!url_scheme_allowed_with("example.com/x", allow_insecure));
         }
+    }
+
+    #[test]
+    fn retryable_statuses() {
+        assert!(is_retryable_status(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR
+        ));
+        assert!(is_retryable_status(
+            reqwest::StatusCode::SERVICE_UNAVAILABLE
+        ));
+        assert!(is_retryable_status(reqwest::StatusCode::TOO_MANY_REQUESTS));
+        assert!(is_retryable_status(reqwest::StatusCode::REQUEST_TIMEOUT));
+        assert!(!is_retryable_status(reqwest::StatusCode::NOT_FOUND));
+        assert!(!is_retryable_status(reqwest::StatusCode::FORBIDDEN));
+        assert!(!is_retryable_status(reqwest::StatusCode::OK));
+    }
+
+    #[test]
+    fn retry_delay_backs_off_and_caps() {
+        for attempt in 1..=10 {
+            let delay = retry_delay(attempt, None);
+            assert!(delay >= RETRY_BASE_DELAY / 2);
+            assert!(delay <= RETRY_MAX_DELAY);
+        }
+        assert_eq!(
+            retry_delay(1, Some(Duration::from_secs(2))),
+            Duration::from_secs(2)
+        );
+        assert_eq!(
+            retry_delay(1, Some(Duration::from_secs(600))),
+            RETRY_MAX_DELAY
+        );
+    }
+
+    #[test]
+    fn retry_after_parses_delay_seconds_only() {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(reqwest::header::RETRY_AFTER, "3".parse().unwrap());
+        assert_eq!(parse_retry_after(&headers), Some(Duration::from_secs(3)));
+
+        headers.insert(
+            reqwest::header::RETRY_AFTER,
+            "Fri, 21 Jul 2000 06:00:00 GMT".parse().unwrap(),
+        );
+        assert_eq!(parse_retry_after(&headers), None);
+
+        assert_eq!(parse_retry_after(&reqwest::header::HeaderMap::new()), None);
+    }
+
+    #[tokio::test]
+    async fn rehash_prefix_matches_single_pass_hash() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("data");
+        let content: Vec<u8> = (0..200000u32).flat_map(|i| i.to_le_bytes()).collect();
+        let (prefix, rest) = content.split_at(300001);
+
+        let mut file = tokio::fs::File::options()
+            .create(true)
+            .truncate(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .await?;
+        file.write_all(prefix).await?;
+        // Nothing past the prefix should be used.
+        file.write_all(b"garbage").await?;
+        file.flush().await?;
+
+        let mut hasher = rehash_prefix(&mut file, prefix.len() as u64).await?;
+        file.write_all(rest).await?;
+        hasher.update(rest);
+        let resumed = hasher.finish();
+
+        let mut single = StreamHasher::new();
+        single.update(&content);
+        let expected = single.finish();
+
+        assert_eq!(resumed.sha256, expected.sha256);
+        assert_eq!(resumed.sha512, expected.sha512);
+        assert_eq!(resumed.size, expected.size);
+        assert_eq!(tokio::fs::read(&path).await?, content);
+        Ok(())
     }
 }
