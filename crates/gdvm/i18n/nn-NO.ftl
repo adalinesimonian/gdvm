@@ -260,6 +260,10 @@ error-ensure-godot-binaries-failed = Kunne ikkje sikre Godot-køyrberre filer.
     Feil: { $error }.
     Prøv å slette { $path } og køyre gdvm på nytt.
 
+error-post-upgrade-action-failed = Trinnet { $id } mislukkast etter oppgraderinga.
+    Feil: { $error }.
+    gdvm-installasjonen din kan vera ufullstendig. Prøv å køyre gdvm på nytt.
+
 error-failed-reading-project-godot = Kunne ikkje lesa project.godot, kan ikkje automatisk bestemme prosjektversjonen.
 warning-using-project-version = Brukar versjon { $version } definert i project.godot.
 

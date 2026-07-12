@@ -29,7 +29,6 @@ use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::download_utils::download_to_file;
-use crate::migrations;
 use crate::t;
 use crate::{eprintln_i18n, println_i18n};
 
@@ -270,8 +269,6 @@ impl<'a> Updater<'a> {
             .as_secs();
 
         self.cache_store.clear_gdvm_cache(last_update_check)?;
-
-        migrations::run_migrations(self.paths.base())?;
 
         println_i18n!("upgrade-complete");
 

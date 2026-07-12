@@ -262,6 +262,10 @@ error-ensure-godot-binaries-failed = Failed to ensure Godot binaries.
     Error: { $error }.
     Try removing { $path } and then run gdvm again.
 
+error-post-upgrade-action-failed = Step { $id } failed after upgrade.
+    Error: { $error }.
+    Your gdvm installation may be incomplete. Try running gdvm again.
+
 error-failed-reading-project-godot = Failed reading project.godot, cannot automatically determine project version.
 warning-using-project-version = Using version { $version } defined in project.godot.
 

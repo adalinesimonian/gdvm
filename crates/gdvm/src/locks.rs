@@ -37,6 +37,8 @@ pub enum Resource<'a> {
     Config,
     /// Migrations of gdvm's local data.
     Migrations,
+    /// Actions run after gdvm is upgraded.
+    PostUpgrade,
     /// Upgrade of gdvm.
     SelfUpgrade,
 }
@@ -51,6 +53,7 @@ impl Resource<'_> {
             Resource::Usage => "usage".to_string(),
             Resource::Config => "config".to_string(),
             Resource::Migrations => "migrations".to_string(),
+            Resource::PostUpgrade => "post-upgrade".to_string(),
             Resource::SelfUpgrade => "self-upgrade".to_string(),
         }
     }
