@@ -350,7 +350,7 @@ impl Registry {
             RegistryUrl::Http(base) => {
                 crate::download_utils::ensure_url_scheme_allowed(base)?;
                 let url = format!("{base}/{}", rel.trim_start_matches('/'));
-                let resp = self.client.get(&url).send().await?;
+                let resp = crate::download_utils::get_retrying(&self.client, &url, None).await?;
                 if resp.status() == reqwest::StatusCode::NOT_FOUND {
                     return Ok(None);
                 }

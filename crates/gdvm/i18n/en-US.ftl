@@ -160,6 +160,7 @@ error-spec-empty-variant = Empty variant name in '{ $input }'
 error-spec-empty-version = Empty version in '{ $input }'
 error-system-time = System time before UNIX EPOCH
 error-unrecognized-version-format = Unrecognized version format: { $input }
+download-retrying = Download interrupted, retrying (attempt { $attempt } of { $max })...
 lock-waiting = Waiting for another gdvm process to finish (lock: { $resource })...
 prune-skipped-error = Skipping { $item }: { $error }
 prune-skipped-in-use = Skipping { $item }: it is in use by another gdvm process.
