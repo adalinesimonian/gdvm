@@ -15,9 +15,10 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use super::query::VersionQuery;
 use std::cmp::Ordering;
 use std::fmt;
+
+use super::query::VersionQuery;
 
 #[derive(Debug, PartialEq)]
 pub struct ResolvedVersion {

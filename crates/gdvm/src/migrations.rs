@@ -15,10 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{eprintln_i18n, i18n::I18n};
-use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use anyhow::Result;
+
+use crate::eprintln_i18n;
+use crate::i18n::I18n;
 
 type MigrationFn = fn(&Path) -> Result<()>;
 
@@ -291,10 +294,12 @@ fn finish_legacy_top(old: &Path, new_target: &Path) {
 
 #[cfg(test)]
 mod tests {
-    use super::run_migrations;
     use std::fs;
     use std::path::Path;
+
     use tempfile::TempDir;
+
+    use super::run_migrations;
 
     fn make_version(base: &Path, rel: &str) {
         let dir = base.join("installs").join(rel);

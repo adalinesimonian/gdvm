@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::io::Write;
+
 use gdvm::config::{self, ConfigOps};
 use gdvm::{eprintln_i18n, println_i18n, t};
-
-use std::io::Write;
 
 /// Handle the 'config' subcommand
 pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {

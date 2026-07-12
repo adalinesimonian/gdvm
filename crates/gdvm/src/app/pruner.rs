@@ -15,21 +15,20 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::artifact_cache::ArtifactCache;
-use crate::date_utils::{modified_unix_secs, now_unix_secs};
-use crate::paths::GdvmPaths;
-use anyhow::Result;
-use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::fs_utils::dir_size;
-use crate::usage_tracker::{UsageState, UsageTracker};
-use crate::version::Variant;
-use crate::version::VersionQuery;
+use anyhow::Result;
+use serde::Serialize;
 
 use super::*;
+use crate::artifact_cache::ArtifactCache;
+use crate::date_utils::{modified_unix_secs, now_unix_secs};
+use crate::fs_utils::dir_size;
+use crate::paths::GdvmPaths;
+use crate::usage_tracker::{UsageState, UsageTracker};
+use crate::version::{Variant, VersionQuery};
 
 /// Options controlling how `Gdvm::prune` behaves.
 #[derive(Debug, Clone, Copy, Default)]

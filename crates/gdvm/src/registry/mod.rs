@@ -19,11 +19,12 @@ mod v2;
 
 pub mod publish;
 
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
-use std::path::PathBuf;
 
 use crate::host::{HostArch, HostOs, HostPlatform};
 use crate::t;

@@ -15,19 +15,16 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::paths::GdvmPaths;
-use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::Path;
 
-use crate::usage_tracker::UsageTracker;
-use crate::version::VersionQuery;
-use crate::version::{QuerySelection, ResolvedSelection, Variant};
-use crate::{project_version_detector, t};
-
-use crate::version::ResolvedVersion;
+use anyhow::{Result, anyhow};
 
 use super::*;
+use crate::paths::GdvmPaths;
+use crate::usage_tracker::UsageTracker;
+use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, Variant, VersionQuery};
+use crate::{project_version_detector, t};
 
 #[derive(Clone, Copy)]
 pub struct Defaults<'a> {

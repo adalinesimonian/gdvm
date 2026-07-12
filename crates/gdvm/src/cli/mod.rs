@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::io::{self, Write};
+
+use anyhow::{Result, anyhow};
+use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::config::Config;
 use gdvm::version::VersionQuery;
 use gdvm::{eprintln_i18n, t};
-
-use anyhow::{Result, anyhow};
-use clap::ArgMatches;
-use std::io::{self, Write};
 
 mod args;
 mod cache;

@@ -15,10 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
+
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 
 use crate::date_utils::now_iso8601;
 
@@ -115,8 +116,9 @@ pub fn upsert(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn upsert_then_read_roundtrips_and_preserves_created_at() {

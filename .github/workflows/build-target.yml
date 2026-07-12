@@ -54,7 +54,7 @@ jobs:
         id: devdrive
         uses: samypr100/setup-dev-drive@30f0f98ae5636b2b6501e181dfb3631b9974818d # v4
         with:
-          drive-size: 5GB
+          drive-size: 6GB
           drive-format: ReFS
           drive-type: Fixed
           workspace-copy: true
@@ -84,6 +84,9 @@ jobs:
           cache-shared-key: ${{ inputs.target }}
           cache-workspaces: ${{ env.WORKSPACE_DIR }}
           components: rustc, rust-std, cargo, rustfmt, clippy
+
+      - name: Install nightly rustfmt
+        run: rustup toolchain install nightly --component rustfmt --profile minimal --no-self-update
 
       - name: Setup UV
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
@@ -120,7 +123,7 @@ jobs:
       - name: Check formatting
         if: success() || failure()
         working-directory: ${{ env.WORKSPACE_DIR }}
-        run: cargo fmt -- --check
+        run: cargo +nightly fmt -- --check
 
       - name: Check clippy
         if: success() || failure()

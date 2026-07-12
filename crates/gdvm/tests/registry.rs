@@ -17,14 +17,15 @@
 
 #![cfg(feature = "integration-tests")]
 
+use std::fs;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+
 use gdvm::app::{Gdvm, InstallOutcome};
 use gdvm::config::Config;
 use gdvm::registry::{self, publish};
 use gdvm::version::{Variant, VersionQuery};
 use serial_test::serial;
-use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 struct TestHome {

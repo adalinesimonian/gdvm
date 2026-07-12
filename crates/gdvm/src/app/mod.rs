@@ -15,6 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::fs;
+use std::path::Path;
+
+use anyhow::{Result, anyhow};
+
 use crate::artifact_cache::ArtifactCache;
 use crate::config::Config;
 use crate::host::{HostPlatform, detect_host};
@@ -24,18 +29,9 @@ use crate::metadata_cache::{RegistryReleasesCache, ReleaseCache, filter_cached_r
 use crate::paths::GdvmPaths;
 use crate::releases::CatalogSet;
 use crate::run_version_resolver::RunVersionSource;
-use anyhow::{Result, anyhow};
-use std::fs;
-use std::path::Path;
-
-use crate::post_upgrade;
-use crate::t;
 use crate::usage_tracker::UsageTracker;
-use crate::version::VersionQuery;
-use crate::version::{QuerySelection, ResolvedSelection};
-use crate::{eprintln_i18n, println_i18n};
-
-use crate::version::ResolvedVersion;
+use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, VersionQuery};
+use crate::{eprintln_i18n, post_upgrade, println_i18n, t};
 
 mod catalog;
 mod defaults;

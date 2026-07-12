@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use anyhow::{Result, anyhow};
+use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::version::{Variant, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, t};
-
-use anyhow::{Result, anyhow};
-use clap::ArgMatches;
 
 use super::{
     check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,

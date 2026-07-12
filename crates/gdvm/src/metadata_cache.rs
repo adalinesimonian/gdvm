@@ -15,13 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fs,
-    path::{Path, PathBuf},
-};
 
 use crate::registry::ReleaseRef;
 use crate::version::{ResolvedVersion, VersionQuery};

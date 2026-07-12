@@ -15,11 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 
 use crate::date_utils::now_unix_secs;
 
@@ -192,8 +193,9 @@ fn link_key(link_path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     fn tracker() -> (TempDir, UsageTracker) {
         let tmp = TempDir::new().unwrap();

@@ -15,12 +15,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::eprintln_i18n;
-use anyhow::Result;
 use std::fs;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+
+use anyhow::Result;
+
+use crate::eprintln_i18n;
 
 #[cfg(target_os = "windows")]
 const GDVM_SHIM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/shim.exe"));

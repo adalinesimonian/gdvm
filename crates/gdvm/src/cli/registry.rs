@@ -15,17 +15,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::app::Gdvm;
-use gdvm::config::{self};
-use gdvm::registry;
-use gdvm::{eprintln_i18n, println_i18n, t};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
 use clap::ArgMatches;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use gdvm::app::Gdvm;
+use gdvm::config::{self};
+use gdvm::{eprintln_i18n, println_i18n, registry, t};
 
 /// Download `url` to a unique temporary file and return its path.
 async fn download_to_temp(url: &str) -> Result<PathBuf> {
