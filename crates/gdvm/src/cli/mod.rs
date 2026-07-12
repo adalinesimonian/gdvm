@@ -26,6 +26,7 @@ use std::io::{self, Write};
 
 mod args;
 mod cache;
+mod completions;
 mod config;
 mod install;
 mod link;
@@ -42,6 +43,7 @@ mod use_cmd;
 
 pub(crate) use args::build_cli;
 pub(crate) use cache::{sub_cache_path, sub_clear_cache, sub_refresh};
+pub(crate) use completions::sub_completions;
 pub(crate) use config::sub_config;
 pub(crate) use install::sub_install;
 pub(crate) use link::sub_link;

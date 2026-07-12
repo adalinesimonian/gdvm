@@ -576,4 +576,14 @@ pub(crate) fn build_cli() -> Command {
                         .arg(Arg::new("dir").required(true).help(t!("help-registry-dir"))),
                 ),
         )
+        .subcommand(
+            Command::new("completions")
+                .about(t!("help-completions"))
+                .arg(
+                    Arg::new("shell")
+                        .required(true)
+                        .value_parser(clap::value_parser!(clap_complete::Shell))
+                        .help(t!("help-completions-shell")),
+                ),
+        )
 }

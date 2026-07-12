@@ -297,6 +297,8 @@ help-run-force-long =
     Hvis du gjør dette, kan den forespurte eller festa versjonen av Godot overskrive prosjektfila. Hvis du fester versjoner, anbefales det i stedet å oppdatere den festa versjonen i .gdvmrc for å samsvare med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.
 
 help-config = Administrer gdvm-konfigurasjon
+help-completions = Generer skript for skallfullføring
+help-completions-shell = Skallet det skal genereres fullføringer for
 help-config-get = Hent en konfigurasjonsverdi
 help-config-set = Sett en konfigurasjonsverdi
 help-config-unset = Fjern en konfigurasjonsverdi

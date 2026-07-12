@@ -297,6 +297,8 @@ help-run-force-long =
     Si vous faites cela, la version demandée ou épinglée de Godot peut écraser le fichier de projet. Si vous épinglez des versions, il est plutôt recommandé de mettre à jour la version épinglée dans .gdvmrc pour correspondre à la version du projet, ou de supprimer le fichier .gdvmrc pour utiliser la version du projet.
 
 help-config = Gérer la configuration gdvm
+help-completions = Générer les scripts de complétion pour le shell
+help-completions-shell = Le shell pour lequel générer les complétions
 help-config-get = Obtenir une valeur de configuration
 help-config-set = Définir une valeur de configuration
 help-config-unset = Supprimer une valeur de configuration

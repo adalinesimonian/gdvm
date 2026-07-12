@@ -528,6 +528,121 @@ assert_contains "$cache_contents" '"tag_name"' \
     "cache was not repopulated with releases"
 TEST_SCRIPT
 
+test "Bash completions complete subcommands, flags, and shell names" <<'TEST_SCRIPT'
+completion_script="$(mktemp)"
+trap 'rm -f "$completion_script"' EXIT
+gdvm completions bash >"$completion_script"
+source "$completion_script"
+
+run_completion() {
+    local cur="$1"
+    shift
+    COMP_WORDS=("$@")
+    COMP_CWORD=$((${#COMP_WORDS[@]} - 1))
+    COMPREPLY=()
+    _gdvm gdvm "$cur" "${COMP_WORDS[COMP_CWORD - 1]}"
+    echo "${COMPREPLY[@]:-}"
+}
+
+assert_eq "$(run_completion i gdvm i)" "install" "gdvm i<TAB> completes to install"
+assert_contains "$(run_completion --re gdvm install --re)" "--redownload" \
+    "gdvm install --re<TAB> offers --redownload"
+assert_contains "$(run_completion "" gdvm completions "")" "powershell" \
+    "gdvm completions <TAB> offers the shell names"
+TEST_SCRIPT
+
+test "Zsh completions complete subcommands, descriptions, and shell names" <<'TEST_SCRIPT'
+if ! command -v zsh >/dev/null 2>&1; then
+    echo "zsh is not available on this platform; skipping"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+        echo "::warning title=Completion test skipped::zsh is not installed on this runner"
+    fi
+    exit 0
+fi
+
+harness="$(mktemp)"
+trap 'rm -f "$harness"' EXIT
+cat >"$harness" <<'ZSH_HARNESS'
+zmodload zsh/zpty || exit 1
+zpty z zsh -f -i
+zpty -w z 'autoload -Uz compinit && compinit -u; eval "$(gdvm completions zsh)"; echo READY'
+buf=""
+for i in {1..200}; do
+    if zpty -r -t z chunk 2>/dev/null; then buf+=$chunk; fi
+    [[ $buf == *READY* ]] && break
+    sleep 0.05
+done
+[[ $buf == *READY* ]] || { print "zsh session never became ready"; exit 1 }
+
+zpty -w -n z $'gdvm i\t'
+buf=""
+for i in {1..200}; do
+    if zpty -r -t z chunk 2>/dev/null; then buf+=$chunk; fi
+    [[ $buf == *install* ]] && break
+    sleep 0.05
+done
+[[ $buf == *install* ]] || { print "TAB on 'gdvm i' did not complete to install"; exit 1 }
+
+zpty -w -n z $'\003'
+sleep 0.2
+zpty -w -n z $'gdvm completions \t'
+buf=""
+for i in {1..200}; do
+    if zpty -r -t z chunk 2>/dev/null; then buf+=$chunk; fi
+    [[ $buf == *powershell* ]] && break
+    sleep 0.05
+done
+[[ $buf == *powershell* && $buf == *zsh* ]] || {
+    print "TAB on 'gdvm completions ' did not list the shells"
+    exit 1
+}
+ZSH_HARNESS
+
+assert_succeeds zsh "$harness"
+TEST_SCRIPT
+
+test "Fish completions complete subcommands, descriptions, and shell names" <<'TEST_SCRIPT'
+if ! command -v fish >/dev/null 2>&1; then
+    echo "fish is not available on this platform; skipping"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+        echo "::warning title=Completion test skipped::fish is not installed on this runner"
+    fi
+    exit 0
+fi
+
+subcommands="$(fish -c 'gdvm completions fish | source; complete -C"gdvm i"')"
+assert_contains "$subcommands" "install" "gdvm i<TAB> offers install"
+
+shells="$(fish -c 'gdvm completions fish | source; complete -C"gdvm completions "')"
+assert_contains "$shells" "powershell" "gdvm completions <TAB> offers the shell names"
+assert_contains "$shells" "zsh" "gdvm completions <TAB> offers zsh"
+TEST_SCRIPT
+
+test "PowerShell completions complete subcommands and shell names" <<'TEST_SCRIPT'
+if ! command -v pwsh >/dev/null 2>&1; then
+    echo "pwsh is not available on this platform; skipping"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+        echo "::warning title=Completion test skipped::pwsh is not installed on this runner"
+    fi
+    exit 0
+fi
+
+subcommands="$(pwsh -NoProfile -Command 'gdvm completions powershell | Out-String | Invoke-Expression; (TabExpansion2 "gdvm i" 6).CompletionMatches | Select-Object -ExpandProperty CompletionText')"
+assert_contains "$subcommands" "install" "gdvm i<TAB> offers install"
+
+shells="$(pwsh -NoProfile -Command 'gdvm completions powershell | Out-String | Invoke-Expression; (TabExpansion2 "gdvm completions " 17).CompletionMatches | Select-Object -ExpandProperty CompletionText')"
+assert_contains "$shells" "powershell" "gdvm completions <TAB> offers the shell names"
+assert_contains "$shells" "zsh" "gdvm completions <TAB> offers zsh"
+TEST_SCRIPT
+
+test "Completion scripts generate for every supported shell" <<'TEST_SCRIPT'
+for shell in bash zsh fish powershell; do
+    script="$(gdvm completions "$shell")"
+    [[ -n "$script" ]] || fail "empty $shell completion script"
+    assert_contains "$script" "gdvm" "$shell script names the binary"
+done
+TEST_SCRIPT
+
 test "Install Godot 4.3" gdvm install 4.3
 
 # ARM lacks Godot 3.x builds, so the ARM matrix uses 4.4 instead of 3.x.

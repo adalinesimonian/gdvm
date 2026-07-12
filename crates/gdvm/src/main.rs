@@ -77,6 +77,11 @@ async fn main() -> Result<()> {
     }
 
     let matches = cli::build_cli().get_matches();
+
+    if let Some(("completions", sub_m)) = matches.subcommand() {
+        return cli::sub_completions(sub_m);
+    }
+
     let gdvm = Gdvm::new().await?;
 
     // Match the subcommand and call the appropriate function

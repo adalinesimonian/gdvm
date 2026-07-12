@@ -62,6 +62,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     ca-certificates \
     bash \
+    zsh \
+    fish \
     grep \
     coreutils \
     libfontconfig1 \

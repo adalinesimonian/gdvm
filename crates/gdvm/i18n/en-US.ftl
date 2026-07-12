@@ -299,6 +299,8 @@ help-run-force-long =
     If you do this, the requested or pinned version of Godot may overwrite the project file. If pinning versions, it is instead recommended to update the pinned version in .gdvmrc to match the project version, or remove the .gdvmrc file to use the project version.
 
 help-config = Manage gdvm configuration
+help-completions = Generate shell completion scripts
+help-completions-shell = The shell to generate completions for
 help-config-get = Get a configuration value
 help-config-set = Set a configuration value
 help-config-unset = Unset a configuration value
