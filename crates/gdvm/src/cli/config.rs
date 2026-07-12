@@ -26,7 +26,20 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     match matches.subcommand() {
         Some(("get", sub_m)) => {
             let key = sub_m.get_one::<String>("key").unwrap();
-            if let Some(value) = config.get_value(key) {
+            let value = config.get_value(key);
+
+            if super::format::OutputFormat::from_matches(sub_m) == super::format::OutputFormat::Json
+            {
+                #[derive(serde::Serialize)]
+                struct ConfigValue<'a> {
+                    key: &'a str,
+                    value: Option<String>,
+                }
+
+                return super::format::print_json(&ConfigValue { key, value });
+            }
+
+            if let Some(value) = value {
                 println!("{value}");
             } else {
                 println!("{}", t!("config-key-not-set"));

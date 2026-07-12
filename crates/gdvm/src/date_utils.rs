@@ -15,10 +15,39 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use icu::datetime::{DateTimeFormatter, fieldsets};
+use icu::locale::Locale;
+use icu::time::DateTime as IcuDateTime;
+use jiff::{Timestamp, tz::TimeZone};
+use jiff_icu::ConvertFrom as _;
+
+use crate::i18n::current_locale;
+
 pub fn now_iso8601() -> String {
     jiff::Timestamp::now()
         .strftime("%Y-%m-%dT%H:%M:%S.%3fZ")
         .to_string()
+}
+
+/// Format a Unix timestamp for the current locale. Falls back to ISO format.
+pub fn format_unix_timestamp_local(secs: u64) -> String {
+    let secs = i64::try_from(secs).unwrap_or(i64::MAX);
+
+    let zoned = match Timestamp::from_second(secs) {
+        Ok(timestamp) => timestamp.to_zoned(TimeZone::system()),
+        Err(_) => return secs.to_string(),
+    };
+
+    let icu_datetime = IcuDateTime::convert_from(zoned.datetime());
+
+    let locale = current_locale()
+        .parse::<Locale>()
+        .unwrap_or(Locale::UNKNOWN);
+
+    match DateTimeFormatter::try_new(locale.into(), fieldsets::YMDT::medium()) {
+        Ok(formatter) => formatter.format(&icu_datetime).to_string(),
+        Err(_) => zoned.strftime("%Y-%m-%d %H:%M:%S").to_string(),
+    }
 }
 
 /// The current time as whole seconds since the Unix epoch.

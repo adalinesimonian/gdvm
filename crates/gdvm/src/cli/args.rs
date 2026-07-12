@@ -28,6 +28,14 @@ fn refresh_flag() -> Arg {
         .help(t!("help-refresh-flag"))
 }
 
+fn format_flag() -> Arg {
+    Arg::new("format")
+        .long("format")
+        .value_parser(["text", "json"])
+        .default_value("text")
+        .help(t!("help-format"))
+}
+
 fn yes_flag() -> Arg {
     Arg::new("yes")
         .short('y')
@@ -121,7 +129,11 @@ pub(crate) fn build_cli() -> Command {
                 .arg(refresh_flag())
                 .arg(yes_flag()),
         )
-        .subcommand(Command::new("list").about(t!("help-list")))
+        .subcommand(
+            Command::new("list")
+                .about(t!("help-list"))
+                .arg(format_flag()),
+        )
         .subcommand(
             Command::new("run")
                 .about(t!("help-run"))
@@ -170,6 +182,7 @@ pub(crate) fn build_cli() -> Command {
         .subcommand(
             Command::new("show")
                 .about(t!("help-show"))
+                .arg(format_flag())
                 .arg(
                     Arg::new("version")
                         .required(false)
@@ -206,8 +219,21 @@ pub(crate) fn build_cli() -> Command {
                 .arg(yes_flag()),
         )
         .subcommand(
+            Command::new("info")
+                .about(t!("help-info"))
+                .arg(format_flag())
+                .arg(
+                    Arg::new("version")
+                        .required(false)
+                        .value_parser(version::validate_version_spec)
+                        .help(t!("help-version-installed")),
+                )
+                .arg(include_pre_flag()),
+        )
+        .subcommand(
             Command::new("cache-path")
                 .about(t!("help-cache-path"))
+                .arg(format_flag())
                 .arg(
                     Arg::new("version")
                         .required(true)
@@ -288,6 +314,7 @@ pub(crate) fn build_cli() -> Command {
         .subcommand(
             Command::new("search")
                 .about(t!("help-search"))
+                .arg(format_flag())
                 .arg(
                     Arg::new("filter")
                         .long("filter")
@@ -324,6 +351,7 @@ pub(crate) fn build_cli() -> Command {
         .subcommand(
             Command::new("prune")
                 .about(t!("help-prune"))
+                .arg(format_flag())
                 .long_about(t!(
                     "help-prune-long",
                     default_days = config::DEFAULT_PRUNE_MAX_AGE_DAYS
@@ -406,6 +434,7 @@ pub(crate) fn build_cli() -> Command {
                 .subcommand(
                     Command::new("get")
                         .about(t!("help-config-get"))
+                        .arg(format_flag())
                         .arg(Arg::new("key").required(true).help(t!("help-config-key"))),
                 )
                 .subcommand(
@@ -467,7 +496,11 @@ pub(crate) fn build_cli() -> Command {
                                 .help(t!("help-registry-name")),
                         ),
                 )
-                .subcommand(Command::new("list").about(t!("help-registry-list")))
+                .subcommand(
+                    Command::new("list")
+                        .about(t!("help-registry-list"))
+                        .arg(format_flag()),
+                )
                 .subcommand(
                     Command::new("refresh")
                         .about(t!("help-registry-refresh"))

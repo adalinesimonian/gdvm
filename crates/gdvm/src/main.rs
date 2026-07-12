@@ -50,10 +50,13 @@ async fn main() -> Result<()> {
 
         // Pass all arguments to Godot
         let args: Vec<String> = std::env::args().skip(1).collect();
+        let env_version = std::env::var("GDVM_GODOT_VERSION")
+            .ok()
+            .filter(|v| !v.trim().is_empty());
 
         if let Err(err) = cli::sub_run_inner(cli::RunConfig {
             gdvm: &Gdvm::new().await?,
-            version_input: None,
+            version_input: env_version.as_ref(),
             variant: None,
             console: console_mode,
             raw_args: &args,
@@ -87,9 +90,10 @@ async fn main() -> Result<()> {
     // Match the subcommand and call the appropriate function
     match matches.subcommand() {
         Some(("install", sub_m)) => cli::sub_install(&gdvm, sub_m).await?,
-        Some(("list", _)) => cli::sub_list(&gdvm)?,
+        Some(("list", sub_m)) => cli::sub_list(&gdvm, sub_m)?,
         Some(("run", sub_m)) => cli::sub_run(&gdvm, sub_m).await?,
         Some(("show", sub_m)) => cli::sub_show(&gdvm, sub_m).await?,
+        Some(("info", sub_m)) => cli::sub_info(&gdvm, sub_m).await?,
         Some(("cache-path", sub_m)) => cli::sub_cache_path(&gdvm, sub_m).await?,
         Some(("link", sub_m)) => cli::sub_link(&gdvm, sub_m).await?,
         Some(("remove", sub_m)) => cli::sub_remove(&gdvm, sub_m).await?,

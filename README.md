@@ -71,12 +71,19 @@ gdvm pin csharp:latest  # Pin the current folder to latest stable with C#,
 gdvm run             # Run the default Godot for the folder.
 godot                # Alias for `gdvm run`.
 godot_console        # Windows variant keeping the console open.
+
 gdvm run csharp:3.5  # Run Godot 3.5 with C#.
 gdvm remove 3.5      # Removes Godot 3.5 without C#.
+
 gdvm list            # List installed versions.
 gdvm search 4        # Search available 4.x versions.
+
 gdvm prune           # Remove idle installs and cached archives.
 gdvm upgrade         # Upgrade gdvm.
+
+gdvm list --format json       # List installed versions in JSON for scripting.
+GDVM_GODOT_VERSION=4.4 godot  # Use a specific version with scripts that expect
+                              # "godot" in PATH.
 ```
 
 > [!NOTE]

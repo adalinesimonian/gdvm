@@ -22,23 +22,7 @@ use gdvm::println_i18n;
 use anyhow::Result;
 use clap::ArgMatches;
 
-/// Format a byte count into a short user-friendly string.
-fn format_bytes(bytes: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
-    let mut value = bytes as f64;
-    let mut unit = 0;
-
-    while value >= 1024.0 && unit < UNITS.len() - 1 {
-        value /= 1024.0;
-        unit += 1;
-    }
-
-    if unit == 0 {
-        format!("{bytes} {}", UNITS[unit])
-    } else {
-        format!("{value:.1} {}", UNITS[unit])
-    }
-}
+use super::format::{OutputFormat, format_bytes, print_json};
 
 /// Handle the 'prune' subcommand
 pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
@@ -52,6 +36,10 @@ pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let max_age_secs = config.prune_max_age_days().saturating_mul(24 * 60 * 60);
 
     let report = gdvm.pruner().prune(max_age_secs, opts)?;
+
+    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+        return print_json(&report);
+    }
 
     if report.is_empty() {
         if report.dry_run {
