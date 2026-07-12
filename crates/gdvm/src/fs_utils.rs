@@ -63,6 +63,30 @@ pub fn write_marker_line(path: &Path, value: &str) -> Result<()> {
     Ok(())
 }
 
+/// Compute the approximate size of a file or directory in bytes.
+pub fn dir_size(path: &Path) -> u64 {
+    let Ok(meta) = std::fs::symlink_metadata(path) else {
+        return 0;
+    };
+
+    if meta.file_type().is_symlink() {
+        return 0;
+    }
+
+    if meta.is_file() {
+        return meta.len();
+    }
+
+    let mut total = 0;
+
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            total += dir_size(&entry.path());
+        }
+    }
+    total
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

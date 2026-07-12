@@ -58,6 +58,18 @@ pub(crate) async fn sub_cache_path(gdvm: &Gdvm, matches: &ArgMatches) -> Result<
         .installer()
         .cached_archive_path(&gv, &resolved_variant, registry)
         .await?;
+
+    if super::format::OutputFormat::from_matches(matches) == super::format::OutputFormat::Json {
+        #[derive(serde::Serialize)]
+        struct CachePath {
+            path: String,
+        }
+
+        return super::format::print_json(&CachePath {
+            path: path.display().to_string(),
+        });
+    }
+
     println!("{}", path.display());
 
     Ok(())

@@ -19,10 +19,12 @@ use crate::artifact_cache::ArtifactCache;
 use crate::date_utils::{modified_unix_secs, now_unix_secs};
 use crate::paths::GdvmPaths;
 use anyhow::Result;
+use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::fs_utils::dir_size;
 use crate::usage_tracker::{UsageState, UsageTracker};
 use crate::version::Variant;
 use crate::version::VersionQuery;
@@ -42,7 +44,7 @@ pub struct PruneOptions {
 }
 
 /// A single asset removed by prune.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PrunedItem {
     /// A user-friendly label for the asset.
     pub label: String,
@@ -51,7 +53,7 @@ pub struct PrunedItem {
 }
 
 /// The outcome of a prune operation.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct PruneReport {
     /// Installs that were removed.
     pub installs: Vec<PrunedItem>,
@@ -70,27 +72,6 @@ impl PruneReport {
     pub fn is_empty(&self) -> bool {
         self.installs.is_empty() && self.archives.is_empty()
     }
-}
-
-/// Compute the approximate size of a file or directory in bytes.
-fn dir_size(path: &Path) -> u64 {
-    let Ok(meta) = fs::symlink_metadata(path) else {
-        return 0;
-    };
-    if meta.file_type().is_symlink() {
-        return 0;
-    }
-    if meta.is_file() {
-        return meta.len();
-    }
-
-    let mut total = 0;
-    if let Ok(entries) = fs::read_dir(path) {
-        for entry in entries.flatten() {
-            total += dir_size(&entry.path());
-        }
-    }
-    total
 }
 
 #[derive(Clone, Copy)]

@@ -544,7 +544,7 @@ run_completion() {
     echo "${COMPREPLY[@]:-}"
 }
 
-assert_eq "$(run_completion i gdvm i)" "install" "gdvm i<TAB> completes to install"
+assert_eq "$(run_completion ins gdvm ins)" "install" "gdvm ins<TAB> completes to install"
 assert_contains "$(run_completion --re gdvm install --re)" "--redownload" \
     "gdvm install --re<TAB> offers --redownload"
 assert_contains "$(run_completion "" gdvm completions "")" "powershell" \
@@ -574,14 +574,14 @@ for i in {1..200}; do
 done
 [[ $buf == *READY* ]] || { print "zsh session never became ready"; exit 1 }
 
-zpty -w -n z $'gdvm i\t'
+zpty -w -n z $'gdvm ins\t'
 buf=""
 for i in {1..200}; do
     if zpty -r -t z chunk 2>/dev/null; then buf+=$chunk; fi
     [[ $buf == *install* ]] && break
     sleep 0.05
 done
-[[ $buf == *install* ]] || { print "TAB on 'gdvm i' did not complete to install"; exit 1 }
+[[ $buf == *install* ]] || { print "TAB on 'gdvm ins' did not complete to install"; exit 1 }
 
 zpty -w -n z $'\003'
 sleep 0.2
@@ -610,8 +610,8 @@ if ! command -v fish >/dev/null 2>&1; then
     exit 0
 fi
 
-subcommands="$(fish -c 'gdvm completions fish | source; complete -C"gdvm i"')"
-assert_contains "$subcommands" "install" "gdvm i<TAB> offers install"
+subcommands="$(fish -c 'gdvm completions fish | source; complete -C"gdvm ins"')"
+assert_contains "$subcommands" "install" "gdvm ins<TAB> offers install"
 
 shells="$(fish -c 'gdvm completions fish | source; complete -C"gdvm completions "')"
 assert_contains "$shells" "powershell" "gdvm completions <TAB> offers the shell names"
@@ -627,8 +627,8 @@ if ! command -v pwsh >/dev/null 2>&1; then
     exit 0
 fi
 
-subcommands="$(pwsh -NoProfile -Command 'gdvm completions powershell | Out-String | Invoke-Expression; (TabExpansion2 "gdvm i" 6).CompletionMatches | Select-Object -ExpandProperty CompletionText')"
-assert_contains "$subcommands" "install" "gdvm i<TAB> offers install"
+subcommands="$(pwsh -NoProfile -Command 'gdvm completions powershell | Out-String | Invoke-Expression; (TabExpansion2 "gdvm ins" 6).CompletionMatches | Select-Object -ExpandProperty CompletionText')"
+assert_contains "$subcommands" "install" "gdvm ins<TAB> offers install"
 
 shells="$(pwsh -NoProfile -Command 'gdvm completions powershell | Out-String | Invoke-Expression; (TabExpansion2 "gdvm completions " 17).CompletionMatches | Select-Object -ExpandProperty CompletionText')"
 assert_contains "$shells" "powershell" "gdvm completions <TAB> offers the shell names"
@@ -644,6 +644,28 @@ done
 TEST_SCRIPT
 
 test "Install Godot 4.3" gdvm install 4.3
+
+test "list --format json is machine-readable" <<'TEST_SCRIPT'
+output="$(gdvm list --format json)"
+assert_contains "$output" '"version": "4.3-stable"' "lists the installed version"
+
+if command -v jq >/dev/null 2>&1; then
+    echo "$output" | jq . >/dev/null \
+        || { echo "list --format json did not emit valid JSON"; exit 1; }
+fi
+TEST_SCRIPT
+
+test "info --format json reports details of an installed version" <<'TEST_SCRIPT'
+output="$(gdvm info 4.3 --format json)"
+assert_contains "$output" '"version": "4.3-stable"' "reports the version"
+assert_contains "$output" '"size_bytes"' "reports the size on disk"
+assert_contains "$output" '"executable"' "reports the executable path"
+
+if command -v jq >/dev/null 2>&1; then
+    echo "$output" | jq '.size_bytes > 0' | grep -q true \
+        || { echo "info --format json did not emit valid JSON with a size"; exit 1; }
+fi
+TEST_SCRIPT
 
 # ARM lacks Godot 3.x builds, so the ARM matrix uses 4.4 instead of 3.x.
 if [[ "$arch" == "arm" ]]; then
@@ -679,6 +701,16 @@ TEST_SCRIPT
 test "Godot shim points to the pinned version" <<'TEST_SCRIPT'
 assert_run_contains 4.3.stable.official -- godot_shim --version
 TEST_SCRIPT
+
+if [[ "$arch" == "arm" ]]; then
+    test "GDVM_GODOT_VERSION overrides the pin for the shim (ARM)" <<'TEST_SCRIPT'
+GDVM_GODOT_VERSION=4.4.0 assert_run_contains 4.4.stable.official -- godot_shim --version
+TEST_SCRIPT
+else
+    test "GDVM_GODOT_VERSION overrides the pin for the shim (x86)" <<'TEST_SCRIPT'
+GDVM_GODOT_VERSION=3.6.2 assert_run_contains 3.6.2.stable.official -- godot_shim --version
+TEST_SCRIPT
+fi
 
 test "Show without version resolves to pinned 4.3.0" <<'TEST_SCRIPT'
 path="$(gdvm show)"

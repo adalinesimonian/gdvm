@@ -303,6 +303,29 @@ help-run-force-long =
     If you do this, the requested or pinned version of Godot may overwrite the project file. If pinning versions, it is instead recommended to update the pinned version in .gdvmrc to match the project version, or remove the .gdvmrc file to use the project version.
 
 help-config = Manage gdvm configuration
+help-format = Output format: text (default) or json
+help-info = Show detailed information about an installed version
+info-default =
+    { $value ->
+        [1] { confirm-yes }
+       *[0] { info-no }
+    }
+    .label = Default:
+info-executable = { $path }
+    .label = Executable:
+info-install-path = { $path }
+    .label = Install path:
+info-last-used = { $timestamp }
+    .label = Last used:
+info-no = no
+info-registry = { $registry }
+    .label = Registry:
+info-size = { $size }
+    .label = Size on disk:
+info-variant = { $variant }
+    .label = Variant:
+info-version = { $version }
+    .label = Version:
 help-completions = Generate shell completion scripts
 help-completions-shell = The shell to generate completions for
 help-config-get = Get a configuration value

@@ -20,10 +20,26 @@ use gdvm::println_i18n;
 use gdvm::version::{self};
 
 use anyhow::Result;
+use clap::ArgMatches;
+
+use super::format::{OutputFormat, VersionEntry, print_json};
 
 /// Handle the 'list' subcommand
-pub(crate) fn sub_list(gdvm: &Gdvm) -> Result<()> {
+pub(crate) fn sub_list(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let versions = gdvm.library().list_installed()?;
+
+    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+        let entries: Vec<VersionEntry> = versions
+            .iter()
+            .map(|v| VersionEntry {
+                version: v.version.to_display_str(),
+                variant: Some(v.variant.as_str().to_string()),
+                registry: v.registry.clone(),
+            })
+            .collect();
+        return print_json(&entries);
+    }
+
     if versions.is_empty() {
         println_i18n!("no-versions-installed");
     } else {

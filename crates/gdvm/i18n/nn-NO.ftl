@@ -302,6 +302,29 @@ help-run-force-long =
     Viss du gjer dette, kan den ynskte eller festa versjonen av Godot overskrive prosjektfila. Viss du festar versjonar, er det tilrådd i staden å oppdatere den festa versjonen i .gdvmrc for å samsvara med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.
 
 help-config = Administrer gdvm-konfigurasjon
+help-format = Utdataformat: text (standard) eller json
+help-info = Vis detaljert informasjon om ein installert versjon
+info-default =
+    { $value ->
+        [1] { confirm-yes }
+       *[0] { info-no }
+    }
+    .label = Standard:
+info-executable = { $path }
+    .label = Køyrberr fil:
+info-install-path = { $path }
+    .label = Installasjonsstig:
+info-last-used = { $timestamp }
+    .label = Sist bruka:
+info-no = nei
+info-registry = { $registry }
+    .label = Register:
+info-size = { $size }
+    .label = Storleik på disk:
+info-variant = { $variant }
+    .label = Variant:
+info-version = { $version }
+    .label = Versjon:
 help-completions = Generer skript for skalfullføring
 help-completions-shell = Skalet det skal genererast fullføringar for
 help-config-get = Hent ein konfigurasjonsverdi

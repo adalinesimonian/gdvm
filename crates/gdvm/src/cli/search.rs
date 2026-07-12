@@ -22,6 +22,7 @@ use gdvm::version::VersionQuery;
 use anyhow::Result;
 use clap::ArgMatches;
 
+use super::format::{OutputFormat, VersionEntry, print_json};
 use super::{ensure_registry_trusted, refresh_cache_if_requested};
 
 /// Handle the 'search' subcommand
@@ -61,6 +62,18 @@ pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
     let limit = matches.get_one::<usize>("limit").unwrap();
     if *limit != 0 {
         releases = releases.into_iter().take(*limit).collect();
+    }
+
+    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+        let entries: Vec<VersionEntry> = releases
+            .iter()
+            .map(|r| VersionEntry {
+                version: r.to_string(),
+                variant: None,
+                registry: registry.map(str::to_string),
+            })
+            .collect();
+        return print_json(&entries);
     }
 
     if releases.is_empty() {

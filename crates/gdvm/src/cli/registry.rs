@@ -146,8 +146,28 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
                 Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
             }
         }
-        Some(("list", _)) => {
+        Some(("list", sub_m)) => {
             let registries = gdvm.catalogs().registry_list();
+
+            if super::format::OutputFormat::from_matches(sub_m) == super::format::OutputFormat::Json
+            {
+                #[derive(serde::Serialize)]
+                struct RegistryEntry {
+                    name: String,
+                    url: String,
+                    official: bool,
+                }
+                let entries: Vec<RegistryEntry> = registries
+                    .into_iter()
+                    .map(|info| RegistryEntry {
+                        name: info.name,
+                        url: info.url,
+                        official: info.is_official,
+                    })
+                    .collect();
+                return super::format::print_json(&entries);
+            }
+
             println_i18n!("registry-list-header");
             for info in registries {
                 let mut tags = Vec::new();

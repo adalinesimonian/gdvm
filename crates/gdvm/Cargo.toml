@@ -38,6 +38,8 @@ fluent-bundle = "=0.16.0"
 unic-langid = { version = "=0.9.6", features = ["unic-langid-macros"] }
 anyhow = "=1.0.103"
 terminal_size = "=0.4.4"
+unicode-width = "=0.2.2"
+icu = "=2.2.0"
 
 # For downloading files:
 reqwest = { version = "=0.13.4", features = [
@@ -74,6 +76,7 @@ tempfile = "=3.27.0"
 
 # For timestamps:
 jiff = "=0.2.32"
+jiff-icu = "=0.2.2"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]

@@ -33,6 +33,16 @@ use std::collections::HashMap;
 
 static I18N: OnceLock<I18n> = OnceLock::new();
 
+/// Get the current locale. Falls back to `en-US` if `LANG` is not set.
+pub fn current_locale() -> String {
+    env::var("LANG")
+        .unwrap_or_else(|_| "en-US".to_string())
+        .split('.')
+        .next()
+        .unwrap_or("en-US")
+        .replace("_", "-")
+}
+
 pub struct I18n {
     bundles: HashMap<String, FluentBundle<FluentResource>>,
 }
@@ -77,57 +87,14 @@ impl I18n {
         I18N.get_or_init(|| Self::new().expect("Failed to load translation resources"))
     }
 
-    /// Translate a key without arguments
-    pub fn t(&self, key: &str) -> String {
-        let locale = env::var("LANG")
-            .unwrap_or_else(|_| "en-US".to_string())
-            .split('.')
-            .next()
-            .unwrap_or("en-US")
-            .replace("_", "-");
-
-        let fallback_bundle = if let Some(fallback_bundle) = self.bundles.get("en-US") {
-            fallback_bundle
-        } else {
-            panic!("Fallback locale en-US not found");
-        };
-
-        let bundle = if let Some(bundle) = self.bundles.get(&locale) {
-            bundle
-        } else {
-            fallback_bundle
-        };
-
-        let msg = if let Some(msg) = bundle
-            .get_message(key)
-            .or_else(|| fallback_bundle.get_message(key))
-        {
-            msg
-        } else {
-            return key.to_string();
-        };
-
-        let pattern = match msg.value() {
-            Some(pattern) => pattern,
-            None => {
-                return key.to_string();
-            }
-        };
-
-        let mut errors = vec![];
-        let value = bundle.format_pattern(pattern, None, &mut errors);
-
-        value.to_string()
-    }
-
-    /// Translate a key with arguments
-    pub fn t_args(&self, key: &str, args: &[(&str, FluentValue)]) -> String {
-        let locale = env::var("LANG")
-            .unwrap_or_else(|_| "en-US".to_string())
-            .split('.')
-            .next()
-            .unwrap_or("en-US")
-            .replace("_", "-");
+    /// Translate a key or one of its attributes.
+    pub fn translate_message(
+        &self,
+        key: &str,
+        attr: Option<&str>,
+        args: &[(&str, FluentValue)],
+    ) -> String {
+        let locale = current_locale();
 
         let fallback_bundle = if let Some(fallback_bundle) = self.bundles.get("en-US") {
             fallback_bundle
@@ -137,56 +104,56 @@ impl I18n {
 
         let bundle = self.bundles.get(&locale).unwrap_or(fallback_bundle);
 
-        let msg = if let Some(msg) = bundle
-            .get_message(key)
-            .or_else(|| fallback_bundle.get_message(key))
-        {
-            msg
-        } else {
-            return key.to_string();
-        };
-
-        let pattern = match msg.value() {
-            Some(pattern) => pattern,
-            None => {
-                return key.to_string();
-            }
-        };
-
-        let mut errors = vec![];
         let mut fluent_args = fluent_bundle::FluentArgs::new();
         for (k, v) in args {
             fluent_args.set(*k, v.clone());
         }
-        let value = bundle.format_pattern(pattern, Some(&fluent_args), &mut errors);
 
-        value.to_string()
+        let format_from = |bundle: &FluentBundle<FluentResource>| -> Option<String> {
+            let msg = bundle.get_message(key)?;
+            let pattern = match attr {
+                Some(attr) => msg.get_attribute(attr)?.value(),
+                None => msg.value()?,
+            };
+            let mut errors = vec![];
+            Some(
+                bundle
+                    .format_pattern(pattern, Some(&fluent_args), &mut errors)
+                    .to_string(),
+            )
+        };
+
+        format_from(bundle)
+            .or_else(|| format_from(fallback_bundle))
+            .unwrap_or_else(|| match attr {
+                Some(attr) => format!("{key}.{attr}"),
+                None => key.to_string(),
+            })
     }
-}
-
-#[macro_export]
-macro_rules! i18n_generic {
-    ($noargs_func:ident, $args_func:ident, $key:expr, $( $arg_key:ident = $arg_val:expr ),* $(,)?) => {
-        $crate::i18n::I18n::get().$args_func(
-            $key,
-            &[
-                $( ( stringify!($arg_key), fluent_bundle::FluentValue::from($arg_val) ) ),*
-            ]
-        )
-    };
-    ($noargs_func:ident, $args_func:ident, $key:expr) => {
-        $crate::i18n::I18n::get().$noargs_func($key)
-    };
 }
 
 #[macro_export]
 macro_rules! t {
     ($key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
-        $crate::i18n_generic!(
-            t,
-            t_args,
-            $key
-            $(, $( $arg_key = $arg_val ),* )?
+        $crate::i18n::I18n::get().translate_message(
+            $key,
+            None,
+            &[
+                $( $( ( stringify!($arg_key), fluent_bundle::FluentValue::from($arg_val) ) ),* )?
+            ]
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! t_attr {
+    ($key:expr, $attr:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
+        $crate::i18n::I18n::get().translate_message(
+            $key,
+            Some($attr),
+            &[
+                $( $( ( stringify!($arg_key), fluent_bundle::FluentValue::from($arg_val) ) ),* )?
+            ]
         )
     };
 }

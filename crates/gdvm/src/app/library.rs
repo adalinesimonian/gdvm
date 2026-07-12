@@ -76,6 +76,32 @@ impl<'a> Library<'a> {
         Ok(crate::registry::store_dir_name(&base_url))
     }
 
+    /// Get the path to the install directory for a given version.
+    pub fn install_dir(
+        &self,
+        gv: &ResolvedVersion,
+        variant: &Variant,
+        registry: Option<&str>,
+    ) -> Result<(String, std::path::PathBuf)> {
+        let subpath = crate::version::install_dir_subpath(
+            &self.install_store_key(registry)?,
+            &gv.to_remote_str(),
+            variant,
+        );
+        let path = self.paths.installs().join(&subpath);
+        Ok((subpath, path))
+    }
+
+    /// Get when a version was last used.
+    pub fn last_used(&self, install_key: &str) -> Result<Option<u64>> {
+        Ok(self
+            .usage_tracker
+            .load()?
+            .installs
+            .get(install_key)
+            .map(|usage| usage.last_used))
+    }
+
     /// Record that a link was created at `link_path` pointing into the install
     /// identified by `install_key`.
     pub fn record_link(&self, link_path: &Path, install_key: &str) -> Result<()> {

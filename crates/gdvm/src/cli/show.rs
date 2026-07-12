@@ -22,6 +22,7 @@ use gdvm::version::{VersionSpec, VersionTarget};
 use anyhow::Result;
 use clap::ArgMatches;
 
+use super::format::{OutputFormat, print_json};
 use super::link::collect_possible_paths;
 use super::{check_deprecated_csharp_flag, keyword_to_version_filter, refresh_cache_if_requested};
 
@@ -70,6 +71,24 @@ pub(crate) async fn sub_show(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         resolved.registry.as_deref(),
         console,
     )?;
+
+    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+        #[derive(serde::Serialize)]
+        struct Shown {
+            version: String,
+            variant: String,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            registry: Option<String>,
+            path: String,
+        }
+        return print_json(&Shown {
+            version: resolved.version.to_display_str(),
+            variant: resolved.variant.as_str().to_string(),
+            registry: resolved.registry.clone(),
+            path: exe_path.display().to_string(),
+        });
+    }
+
     println!("{}", exe_path.display());
 
     Ok(())

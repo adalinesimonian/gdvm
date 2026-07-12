@@ -303,6 +303,29 @@ help-run-force-long =
     Если вы сделаете это, запрошенная или закреплённая версия Godot может перезаписать файл проекта. Если вы закрепляете версии, рекомендуется вместо этого обновить закреплённую версию в .gdvmrc, чтобы она соответствовала версии проекта, или удалить файл .gdvmrc, чтобы использовать версию проекта.
 
 help-config = Управление конфигурацией gdvm
+help-format = Формат вывода: text (по умолчанию) или json
+help-info = Показать подробную информацию об установленной версии
+info-default =
+    { $value ->
+        [1] { confirm-yes }
+       *[0] { info-no }
+    }
+    .label = По умолчанию:
+info-executable = { $path }
+    .label = Исполняемый файл:
+info-install-path = { $path }
+    .label = Путь установки:
+info-last-used = { $timestamp }
+    .label = Последнее использование:
+info-no = нет
+info-registry = { $registry }
+    .label = Реестр:
+info-size = { $size }
+    .label = Размер на диске:
+info-variant = { $variant }
+    .label = Вариант:
+info-version = { $version }
+    .label = Версия:
 help-completions = Сгенерировать скрипты автодополнения для оболочки
 help-completions-shell = Оболочка, для которой генерируются автодополнения
 help-config-get = Получить значение параметра конфигурации

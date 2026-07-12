@@ -23,6 +23,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ### New Features
 
+- `list`, `search`, `show`, `cache-path`, `prune`, `config get`, and `registry list` now accept `--format json`.
+- Added `gdvm info [version]`, which reports details about an installed version.
+- Setting `GDVM_GODOT_VERSION` makes `godot` run that version, taking precedence over any project settings. This is meant for compatibility with scripts that expect to use `godot` in `PATH` and may not be gdvm-aware.
 - Shell completions for bash, zsh, fish, and PowerShell are now provided via the new `gdvm completions <shell>` command. The install scripts now enable completions automatically for your detected shell.
 - Downloads, as well as other web requests, now retry and resume interrupted requests when possible.
 

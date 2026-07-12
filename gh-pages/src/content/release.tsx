@@ -62,6 +62,11 @@ export function Usage() {
         <li>
           <code>gdvm upgrade</code> — Upgrade gdvm.
         </li>
+        <li>
+          <code>GDVM_GODOT_VERSION=4.4 godot</code> — Use a specific version
+          with scripts that expect <code>godot</code> to be in the{" "}
+          <code>PATH</code>.
+        </li>
       </ul>
 
       <p>

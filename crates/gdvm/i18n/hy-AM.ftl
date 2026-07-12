@@ -301,6 +301,29 @@ help-run-force-long =
     Եթե դուք այս գործողությունը կատարեք, Godot-ի պահանջված կամ սահմանված տարբերակը կարող է վերագրանցել նախագծի ֆայլը։ Եթե տարբերակը սահմանված է .gdvmrc-ում, խորհուրդ է տրվում թարմացնել այն, որպեսզի այն համապատասխանի նախագծի տարբերակին, կամ հեռացնել .gdvmrc ֆայլը, որպեսզի օգտագործվի նախագծի տարբերակը:
 
 help-config = Կառավարել gdvm-ի կարգավորումները
+help-format = Արտածման ձևաչափ. text (լռելյայն) կամ json
+help-info = Ցուցադրել տեղադրված տարբերակի մանրամասն տեղեկությունները
+info-default =
+    { $value ->
+        [1] { confirm-yes }
+       *[0] { info-no }
+    }
+    .label = Լռելյայն.
+info-executable = { $path }
+    .label = Գործարկվող ֆայլ.
+info-install-path = { $path }
+    .label = Տեղադրման ուղի.
+info-last-used = { $timestamp }
+    .label = Վերջին օգտագործումը.
+info-no = ոչ
+info-registry = { $registry }
+    .label = Ռեգիստր.
+info-size = { $size }
+    .label = Չափը սկավառակի վրա.
+info-variant = { $variant }
+    .label = Տարբերակ.
+info-version = { $version }
+    .label = Տարբերակ.
 help-completions = Գեներացնել shell-ի ավտոլրացման սկրիպտներ
 help-completions-shell = Shell-ը, որի համար գեներացվում են ավտոլրացումները
 help-config-get = Ստանալ կարգավորման արժեքը
