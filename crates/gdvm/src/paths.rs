@@ -15,10 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::config::get_home_dir;
-use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use anyhow::Result;
+
+use crate::config::get_home_dir;
 
 /// Centralizes filesystem layout for GDVM under the user home directory.
 pub struct GdvmPaths {
@@ -116,8 +118,9 @@ impl GdvmPaths {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn creates_directories_and_exposes_paths() -> Result<()> {

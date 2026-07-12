@@ -15,17 +15,15 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use anyhow::{Result, anyhow};
+use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version::{self, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, t};
-
-use anyhow::{Result, anyhow};
-use clap::ArgMatches;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
 
 use super::{check_deprecated_csharp_flag, keyword_to_version_filter};
 
@@ -353,10 +351,10 @@ fn build_console_link_path(base_link: &Path) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
 
-    use super::collect_possible_paths;
-    use super::link_sideloaded_components;
     use std::fs;
     use std::path::PathBuf;
+
+    use super::{collect_possible_paths, link_sideloaded_components};
 
     fn to_vec(args: &[&str]) -> Vec<String> {
         args.iter().map(|s| s.to_string()).collect()

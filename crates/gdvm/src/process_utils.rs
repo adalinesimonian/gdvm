@@ -28,7 +28,9 @@ pub fn spawn_detached(command: &mut Command) -> io::Result<()> {
     #[cfg(target_family = "windows")]
     {
         use std::os::windows::process::CommandExt;
+
         use winapi::um::winbase::DETACHED_PROCESS;
+
         command.creation_flags(DETACHED_PROCESS);
     }
 

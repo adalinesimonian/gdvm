@@ -15,14 +15,16 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{eprintln_i18n, t};
-use anyhow::{Result, anyhow};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;
 use std::fs;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
+
+use anyhow::{Result, anyhow};
+use indicatif::{ProgressBar, ProgressStyle};
 use zip::ZipArchive;
+
+use crate::{eprintln_i18n, t};
 
 pub fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<()> {
     let mut file = fs::File::open(zip_path).map_err(|e| {

@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use anyhow::Result;
+use clap::ArgMatches;
 use gdvm::app::{Gdvm, PruneOptions};
 use gdvm::config::{self};
 use gdvm::println_i18n;
-
-use anyhow::Result;
-use clap::ArgMatches;
 
 use super::format::{OutputFormat, format_bytes, print_json};
 

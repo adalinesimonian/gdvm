@@ -18,7 +18,8 @@
 use icu::datetime::{DateTimeFormatter, fieldsets};
 use icu::locale::Locale;
 use icu::time::DateTime as IcuDateTime;
-use jiff::{Timestamp, tz::TimeZone};
+use jiff::Timestamp;
+use jiff::tz::TimeZone;
 use jiff_icu::ConvertFrom as _;
 
 use crate::i18n::current_locale;

@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
-use semver::Version;
 use std::path::Path;
 
+use anyhow::{Result, anyhow};
+use semver::Version;
+
 use crate::locks::{Lock, Resource};
-use crate::migrations;
-use crate::t;
+use crate::{migrations, t};
 
 /// Name of the file that stores the gdvm version that last ran.
 const VERSION_FILE: &str = "gdvm_version";
@@ -111,9 +111,11 @@ fn write_version(base_path: &Path, version: &Version) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
+
     use tempfile::TempDir;
+
+    use super::*;
 
     fn shim_path(base: &Path) -> std::path::PathBuf {
         let name = if cfg!(target_os = "windows") {

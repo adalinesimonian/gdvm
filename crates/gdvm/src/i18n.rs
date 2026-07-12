@@ -15,10 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::Result;
-use fluent_bundle::{FluentResource, FluentValue, concurrent::FluentBundle};
 use std::env;
 use std::sync::OnceLock;
+
+use anyhow::Result;
+use fluent_bundle::concurrent::FluentBundle;
+use fluent_bundle::{FluentResource, FluentValue};
 use unic_langid::langid;
 
 // Include the Fluent translation files as static strings

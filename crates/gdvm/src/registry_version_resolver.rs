@@ -299,11 +299,13 @@ impl<'a> RegistryVersionResolver<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
+    use tempfile::TempDir;
+
     use super::*;
     use crate::host::{HostArch, HostOs, HostPlatform};
     use crate::metadata_cache::{CacheStore, RegistryReleasesCache, ReleaseCache};
-    use std::collections::HashMap;
-    use tempfile::TempDir;
 
     fn catalog_with_tags(tags: &[&str]) -> (ReleaseCatalog, TempDir) {
         let tmp = TempDir::new().expect("tempdir");

@@ -17,13 +17,14 @@
 
 #![cfg(feature = "integration-tests")]
 
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use gdvm::app::{Gdvm, PruneOptions};
 use gdvm::usage_tracker::{ArchiveUsage, InstallUsage, LinkRecord, UsageState, UsageTracker};
 use gdvm::version::{Variant, VersionQuery};
 use serial_test::serial;
-use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 const DAY: u64 = 24 * 60 * 60;

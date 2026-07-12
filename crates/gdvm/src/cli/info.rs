@@ -15,13 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use anyhow::Result;
+use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version::{VersionSpec, VersionTarget};
 use gdvm::{fs_utils, t, t_attr};
-
-use anyhow::Result;
-use clap::ArgMatches;
 
 use super::format::{OutputFormat, format_bytes, format_label_value_table, print_json};
 use super::keyword_to_version_filter;

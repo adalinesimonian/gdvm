@@ -15,11 +15,10 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use clap::{Arg, Command, value_parser};
 use gdvm::config::{self};
 use gdvm::t;
 use gdvm::version::{self};
-
-use clap::{Arg, Command, value_parser};
 
 fn refresh_flag() -> Arg {
     Arg::new("refresh")

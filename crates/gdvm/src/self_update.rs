@@ -15,11 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::BTreeMap;
+use std::time::Duration;
+
 use anyhow::{Result, anyhow};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::time::Duration;
 
 use crate::t;
 

@@ -275,8 +275,9 @@ pub async fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path> +
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
+
+    use super::*;
 
     struct FakeSource {
         pinned: Option<VersionQuery>,

@@ -15,19 +15,16 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::paths::GdvmPaths;
-use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::Path;
 
-use crate::t;
-use crate::usage_tracker::UsageTracker;
-use crate::version::Variant;
-use crate::version::VersionQuery;
-
-use crate::version::ResolvedVersion;
+use anyhow::{Result, anyhow};
 
 use super::*;
+use crate::paths::GdvmPaths;
+use crate::t;
+use crate::usage_tracker::UsageTracker;
+use crate::version::{ResolvedVersion, Variant, VersionQuery};
 
 #[derive(Debug, Clone)]
 pub struct InstalledVersion {

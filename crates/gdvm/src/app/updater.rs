@@ -15,12 +15,6 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::host::detect_host;
-use crate::metadata_cache::{CacheStore, GdvmCache};
-use crate::paths::GdvmPaths;
-use crate::self_update;
-use anyhow::{Result, anyhow};
-use semver::Version;
 #[cfg(target_family = "unix")]
 use std::fs;
 #[cfg(target_family = "unix")]
@@ -28,9 +22,14 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use anyhow::{Result, anyhow};
+use semver::Version;
+
 use crate::download_utils::download_to_file;
-use crate::t;
-use crate::{eprintln_i18n, println_i18n};
+use crate::host::detect_host;
+use crate::metadata_cache::{CacheStore, GdvmCache};
+use crate::paths::GdvmPaths;
+use crate::{eprintln_i18n, println_i18n, self_update, t};
 
 #[derive(Clone, Copy)]
 pub struct Updater<'a> {

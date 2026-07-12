@@ -15,10 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use anyhow::{Result, anyhow};
 
 use crate::metadata_cache::{
     CacheStore, RegistryReleasesCache, ReleaseCache, filter_cached_releases,
@@ -280,8 +281,9 @@ fn now_seconds() -> Result<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     fn make_catalog_with_cache(tags: &[&str], last_fetched: u64) -> (ReleaseCatalog, TempDir) {
         let tmp = TempDir::new().expect("tempdir");

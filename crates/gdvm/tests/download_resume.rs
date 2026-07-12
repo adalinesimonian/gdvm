@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::download_utils::download_to_file;
-use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 use std::thread;
+
+use gdvm::download_utils::download_to_file;
+use sha2::{Digest, Sha256};
 
 /// A scripted response for an incoming connection.
 enum Script {

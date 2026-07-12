@@ -15,9 +15,10 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::time::Duration;
+
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::time::Duration;
 
 /// Create a spinner displaying the given message.
 pub fn spinner(message: String) -> Result<ProgressBar> {

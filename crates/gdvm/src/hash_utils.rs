@@ -15,10 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::io::Read;
+
 use anyhow::{Result, anyhow};
 use digest_io::IoWrapper;
 use sha2::{Digest, Sha256, Sha512};
-use std::io::Read;
 
 use crate::t;
 

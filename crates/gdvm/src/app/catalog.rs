@@ -15,17 +15,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::host::HostPlatform;
-use crate::registry::{self, BinarySelectionError};
-use crate::releases::{CatalogSet, ReleaseCatalog};
 use anyhow::{Result, anyhow};
 
+use crate::host::HostPlatform;
+use crate::registry::{self, BinarySelectionError};
 use crate::registry_version_resolver::RegistryVersionResolver;
+use crate::releases::{CatalogSet, ReleaseCatalog};
 use crate::t;
-use crate::version::Variant;
-use crate::version::VersionQuery;
-
-use crate::version::ResolvedVersion;
+use crate::version::{ResolvedVersion, Variant, VersionQuery};
 
 #[derive(Clone, Copy)]
 pub struct Catalogs<'a> {

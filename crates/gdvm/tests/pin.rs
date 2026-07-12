@@ -15,11 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::fs;
+use std::path::Path;
+
 use gdvm::app::Gdvm;
 use gdvm::version::{ResolvedVersion, Variant, VersionQuery};
 use serial_test::serial;
-use std::fs;
-use std::path::Path;
 use tempfile::TempDir;
 
 struct PinTestEnv {

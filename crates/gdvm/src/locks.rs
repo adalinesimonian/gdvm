@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::path::{Path, PathBuf};
+use std::{fs, io};
+
 use anyhow::Result;
 use sha2::{Digest, Sha256};
-use std::fs;
-use std::io;
-use std::path::{Path, PathBuf};
 
 use crate::{eprintln_i18n, hash_utils};
 

@@ -15,10 +15,9 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::app::Gdvm;
-
 use anyhow::Result;
 use clap::ArgMatches;
+use gdvm::app::Gdvm;
 
 /// Handle the 'upgrade' subcommand
 pub(crate) async fn sub_upgrade(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {

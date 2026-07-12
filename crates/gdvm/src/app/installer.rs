@@ -15,27 +15,21 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::artifact_cache::ArtifactCache;
-use crate::paths::GdvmPaths;
-use anyhow::{Result, anyhow, bail};
 use std::fs;
 use std::io::Seek;
 use std::path::{Path, PathBuf};
 
-use crate::download_utils::download_to_file;
-use crate::eprintln_i18n;
-use crate::hash_utils::{self, ShaType};
-use crate::progress_utils;
-use crate::registry_version_resolver::RegistryVersionResolver;
-use crate::t;
-use crate::usage_tracker::UsageTracker;
-use crate::version::Variant;
-use crate::version::VersionQuery;
-use crate::zip_utils;
-
-use crate::version::ResolvedVersion;
+use anyhow::{Result, anyhow, bail};
 
 use super::*;
+use crate::artifact_cache::ArtifactCache;
+use crate::download_utils::download_to_file;
+use crate::hash_utils::{self, ShaType};
+use crate::paths::GdvmPaths;
+use crate::registry_version_resolver::RegistryVersionResolver;
+use crate::usage_tracker::UsageTracker;
+use crate::version::{ResolvedVersion, Variant, VersionQuery};
+use crate::{eprintln_i18n, progress_utils, t, zip_utils};
 
 #[derive(Debug)]
 pub enum InstallOutcome {

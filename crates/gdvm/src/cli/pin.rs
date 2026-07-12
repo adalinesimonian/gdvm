@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::path::Path;
+
+use anyhow::Result;
+use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::warn_project_version_mismatch;
 use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
 use gdvm::{eprintln_i18n, println_i18n};
-
-use anyhow::Result;
-use clap::ArgMatches;
-use std::path::Path;
 
 use super::{
     check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,

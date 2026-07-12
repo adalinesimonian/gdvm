@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use anyhow::Result;
+use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::println_i18n;
 use gdvm::version::VersionQuery;
-
-use anyhow::Result;
-use clap::ArgMatches;
 
 use super::format::{OutputFormat, VersionEntry, print_json};
 use super::{ensure_registry_trusted, refresh_cache_if_requested};

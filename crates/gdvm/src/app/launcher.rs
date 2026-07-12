@@ -15,23 +15,21 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::paths::GdvmPaths;
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use anyhow::Result;
 #[cfg(target_family = "unix")]
 use anyhow::anyhow;
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
-use std::fs;
-use std::path::{Path, PathBuf};
 
+use super::*;
+use crate::paths::GdvmPaths;
 #[cfg(target_family = "unix")]
 use crate::t;
 use crate::usage_tracker::UsageTracker;
-use crate::version::Variant;
-
-use crate::version::ResolvedVersion;
-
-use super::*;
+use crate::version::{ResolvedVersion, Variant};
 
 /// Searches for the Godot executable within the given directory.
 ///

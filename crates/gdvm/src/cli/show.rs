@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use anyhow::Result;
+use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version::{VersionSpec, VersionTarget};
-
-use anyhow::Result;
-use clap::ArgMatches;
 
 use super::format::{OutputFormat, print_json};
 use super::link::collect_possible_paths;

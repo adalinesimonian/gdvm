@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::app::Gdvm;
-use gdvm::version::{self, VersionSpec, VersionTarget};
-use gdvm::{eprintln_i18n, println_i18n, t};
+use std::io::{self, Write};
 
 use anyhow::{Result, anyhow};
 use clap::ArgMatches;
-use std::io::{self, Write};
+use gdvm::app::Gdvm;
+use gdvm::version::{self, VersionSpec, VersionTarget};
+use gdvm::{eprintln_i18n, println_i18n, t};
 
 use super::check_deprecated_csharp_flag;
 

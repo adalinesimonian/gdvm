@@ -15,13 +15,15 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{eprintln_i18n, t};
-use anyhow::{Result, anyhow};
-use directories::BaseDirs;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+
+use anyhow::{Result, anyhow};
+use directories::BaseDirs;
+use serde::{Deserialize, Serialize};
+
+use crate::{eprintln_i18n, t};
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days"];

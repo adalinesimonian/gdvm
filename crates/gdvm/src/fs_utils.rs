@@ -15,11 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::t;
-use anyhow::{Result, anyhow};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+
+use anyhow::{Result, anyhow};
+
+use crate::t;
 
 /// Write data to a file atomically by writing to a temp file in the same
 /// directory and then renaming it to the target path.

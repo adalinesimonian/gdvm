@@ -15,15 +15,17 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+use std::{fs, io};
+
 use anyhow::{Result, anyhow, bail};
 use digest_io::IoWrapper;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use serde_json::{Serializer, ser::PrettyFormatter};
+use serde_json::Serializer;
+use serde_json::ser::PrettyFormatter;
 use sha2::{Digest, Sha512};
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
-use std::{fs, io};
 
 use super::v2;
 use crate::date_utils::now_iso8601;
@@ -532,8 +534,9 @@ fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     fn write_archive(dir: &Path, name: &str, contents: &[u8]) -> PathBuf {
         let path = dir.join(name);
