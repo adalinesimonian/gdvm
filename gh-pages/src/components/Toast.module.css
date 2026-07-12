@@ -1,0 +1,53 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This file is part of gdvm.
+ *
+ * gdvm is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * gdvm. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  padding: 0.6rem 1.25rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 9999px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  z-index: 9999;
+  opacity: 1;
+  transform: translateX(-50%) translateY(-8px);
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+  animation: toast-in 0.3s ease;
+}
+
+.toast[data-leaving="true"] {
+  opacity: 0;
+  transform: translateX(-50%);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-8px);
+  }
+}

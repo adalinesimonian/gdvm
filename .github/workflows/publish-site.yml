@@ -23,6 +23,10 @@ on:
       - main
     paths:
       - "gh-pages/**"
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
   workflow_dispatch:
 
 # Needed to deploy to GitHub Pages
@@ -37,25 +41,97 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
+  build:
+    name: Build site
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-
+    outputs:
+      deploy: ${{ steps.overlay.outputs.deploy }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      - name: Resolve latest release tag
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Latest release: $tag"
+
+      - name: Check out content for current release
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          path: release-src
+          sparse-checkout: |
+            gh-pages
+            scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Overlay content from latest release
+        id: overlay
+        run: |
+          set -euo pipefail
+          missing=0
+
+          while IFS= read -r path; do
+            src="release-src/gh-pages/$path"
+            dest="gh-pages/$path"
+
+            if [ ! -e "$src" ]; then
+              echo "::notice::release ${{ steps.release.outputs.tag }} does not contain $path, skipping overlay."
+              missing=1
+              continue
+            fi
+
+            mkdir -p "$(dirname "$dest")"
+            cp -R "$src" "$dest"
+          done < <(jq -r '.paths[]' gh-pages/release-content.json)
+
+          if [ "$missing" -ne 0 ]; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping deployment as some release content is missing."
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node
+        if: steps.overlay.outputs.deploy == 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: latest
+          cache: yarn
+
       - name: Setup Pages
+        if: steps.overlay.outputs.deploy == 'true'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 
+      - name: Build site
+        if: steps.overlay.outputs.deploy == 'true'
+        working-directory: gh-pages
+        run: |
+          corepack enable
+          yarn --immutable
+          yarn build
+
       - name: Upload artifact
+        if: steps.overlay.outputs.deploy == 'true'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
-          path: "gh-pages"
+          path: "gh-pages/dist/client"
 
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: needs.build.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5

@@ -90,6 +90,23 @@ The compiled binary will be available in the `target/release` directory.
 
 GDVM uses a separate Git branch named [`registry`](https://github.com/adalinesimonian/gdvm/tree/registry) to store a machine-readable list of Godot versions. This branch is updated automatically and usually should not be modified directly by contributors. For more details on its structure and how it works, please see the [registry's `README.md`](https://github.com/adalinesimonian/gdvm/tree/registry?tab=readme-ov-file#gdvm-package-registry).
 
+## Website
+
+The website is built from`gh-pages/`. It's a static site that uses [Vike](https://vike.dev/) and [SolidJS](https://www.solidjs.com/). To run it locally, you need to have [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) installed (this repo configures [Proto](https://moonrepo.dev/proto) to use the correct Node version automatically, so you can just install Proto to avoid managing the versions yourself).
+
+```sh
+cd gh-pages
+
+yarn install
+yarn dev        # Start the dev server.
+yarn build      # Build the site to gh-pages/dist/client.
+yarn typecheck  # Check types.
+```
+
+Any content that is specific to the current release, such as for example install scripts or documentation, needs to be separated from the rest of the site into different files and listed in [`gh-pages/release-content.json`](gh-pages/release-content.json).
+
+The build process will write over these files with the content from the latest release's tag, so that the site always shows the correct install commands and documentation for the currently published release, rather than whatever is in `main`.
+
 ## Internationalization (i18n)
 
 GDVM supports multiple languages using the [Fluent](https://projectfluent.org/) localization system. If you want to add or update translations, follow these steps:

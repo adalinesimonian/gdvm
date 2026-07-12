@@ -1,0 +1,48 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This file is part of gdvm.
+ *
+ * gdvm is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * gdvm. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tabButton {
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  background: var(--surface-muted);
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.tabButton[aria-selected="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+.panel {
+  display: none;
+}
+
+.panel[data-active="true"] {
+  display: block;
+}
