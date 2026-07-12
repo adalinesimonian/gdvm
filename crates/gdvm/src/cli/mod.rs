@@ -124,8 +124,7 @@ async fn ensure_registry_trusted(
         url = url.as_str()
     );
 
-    let mut config = Config::load()?;
-    if config.is_registry_trusted(&url) {
+    if Config::load()?.is_registry_trusted(&url) {
         return Ok(());
     }
 
@@ -133,9 +132,10 @@ async fn ensure_registry_trusted(
         // Warn and allow the user some time to cancel.
         eprintln_i18n!("registry-trust-bypass", registry = name, url = url.as_str());
         std::thread::sleep(std::time::Duration::from_secs(5));
-        config.trust_registry(&url);
-        config.save()?;
-        return Ok(());
+        return Config::modify(|config| {
+            config.trust_registry(&url);
+            Ok(())
+        });
     }
 
     eprint!("{} ", t!("registry-trust-prompt"));
@@ -146,7 +146,8 @@ async fn ensure_registry_trusted(
         return Err(anyhow!(t!("registry-trust-aborted")));
     }
 
-    config.trust_registry(&url);
-    config.save()?;
-    Ok(())
+    Config::modify(|config| {
+        config.trust_registry(&url);
+        Ok(())
+    })
 }

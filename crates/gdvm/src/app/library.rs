@@ -233,7 +233,25 @@ impl<'a> Library<'a> {
             &gv.to_remote_str(),
             variant,
         );
-        let path = self.paths.installs().join(&install_name);
+
+        let _lock = crate::locks::Lock::acquire(
+            &self.paths.locks(),
+            crate::locks::Resource::Install(&install_name),
+        )?;
+
+        self.remove_locked(gv, variant, registry, &install_name)
+    }
+
+    /// Inner removal function that does not lock. Only use when a lock was
+    /// already acquired.
+    pub(super) fn remove_locked(
+        &self,
+        gv: &ResolvedVersion,
+        variant: &Variant,
+        registry: Option<&str>,
+        install_name: &str,
+    ) -> Result<()> {
+        let path = self.paths.installs().join(install_name);
 
         if path.exists() {
             // If this version is the default, unset it
@@ -246,7 +264,7 @@ impl<'a> Library<'a> {
                 self.defaults().unset_default()?;
             }
             fs::remove_dir_all(path)?;
-            self.usage_tracker.forget_install(&install_name)?;
+            self.usage_tracker.forget_install(install_name)?;
             Ok(())
         } else {
             Err(anyhow!(t!("error-version-not-found")))

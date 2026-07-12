@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### Fixed
+
+- It is no longer problematic to run multiple gdvm commands concurrently, e.g. if running multiple installs at once. Each operation that needs to write to gdvm's data now locks whatever specific resource it needs to write to, allowing multiple gdvm commands to safely be run in parallel.
+
 ### Changed
 
 - gdvm no longer blocks commands with update checks, which are now run in the background.

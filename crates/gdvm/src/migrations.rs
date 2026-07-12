@@ -217,6 +217,18 @@ pub fn run_migrations(base_path: &Path) -> Result<()> {
     fs::create_dir_all(base_path)?;
 
     let version_file = base_path.join("data_version");
+
+    let latest = MIGRATIONS.iter().map(|m| m.version).max().unwrap_or(0);
+    if read_data_version(&version_file)? >= latest {
+        return Ok(());
+    }
+
+    // If there was a lock for migrations held by another process, wait for it
+    // to finish and then re-read the version file to see if we still need to
+    // run migrations.
+    let _lock =
+        crate::locks::Lock::acquire(&base_path.join("locks"), crate::locks::Resource::Migrations)?;
+
     let original_version = read_data_version(&version_file)?;
     let mut current = original_version;
 

@@ -25,6 +25,7 @@ pub mod gdvm_toml;
 pub mod hash_utils;
 pub mod host;
 pub mod i18n;
+pub mod locks;
 pub mod metadata_cache;
 pub mod migrations;
 pub mod paths;

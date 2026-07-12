@@ -121,7 +121,7 @@ impl<'a> Pruner<'a> {
     /// Remove installs and cached archives that are no longer needed.
     pub fn prune(&self, max_age_secs: u64, opts: PruneOptions) -> Result<PruneReport> {
         let now = now_unix_secs();
-        let mut state = self.usage_tracker.load()?;
+        let state = self.usage_tracker.load()?;
 
         let default_install_key: Option<String> = self
             .defaults()
@@ -166,15 +166,38 @@ impl<'a> Pruner<'a> {
                 continue;
             }
 
-            let freed = dir_size(&path);
             if !opts.dry_run {
-                fs::remove_dir_all(&path)?;
+                let Some(_lock) = crate::locks::Lock::try_acquire(
+                    &self.paths.locks(),
+                    crate::locks::Resource::Install(&key),
+                )?
+                else {
+                    eprintln_i18n!("prune-skipped-in-use", item = self.install_label(&key));
+                    continue;
+                };
+
+                let freed = dir_size(&path);
+                if let Err(error) = fs::remove_dir_all(&path) {
+                    eprintln_i18n!(
+                        "prune-skipped-error",
+                        item = self.install_label(&key),
+                        error = error.to_string()
+                    );
+                    continue;
+                }
+                report.freed_bytes += freed;
+                report.installs.push(PrunedItem {
+                    label: self.install_label(&key),
+                    freed_bytes: freed,
+                });
+            } else {
+                let freed = dir_size(&path);
+                report.freed_bytes += freed;
+                report.installs.push(PrunedItem {
+                    label: self.install_label(&key),
+                    freed_bytes: freed,
+                });
             }
-            report.freed_bytes += freed;
-            report.installs.push(PrunedItem {
-                label: self.install_label(&key),
-                freed_bytes: freed,
-            });
         }
 
         for path in self.collect_cached_archives() {
@@ -189,16 +212,33 @@ impl<'a> Pruner<'a> {
                 continue;
             }
 
+            let label = path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
             let freed = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
             if !opts.dry_run {
-                fs::remove_file(&path)?;
+                let Some(_lock) = crate::locks::Lock::try_acquire(
+                    &self.paths.locks(),
+                    crate::locks::Resource::Archive(&label),
+                )?
+                else {
+                    eprintln_i18n!("prune-skipped-in-use", item = label.as_str());
+                    continue;
+                };
+
+                if let Err(error) = fs::remove_file(&path) {
+                    eprintln_i18n!(
+                        "prune-skipped-error",
+                        item = label.as_str(),
+                        error = error.to_string()
+                    );
+                    continue;
+                }
             }
             report.freed_bytes += freed;
             report.archives.push(PrunedItem {
-                label: path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_default(),
+                label,
                 freed_bytes: freed,
             });
         }
@@ -209,14 +249,15 @@ impl<'a> Pruner<'a> {
 
         let installs_dir = self.paths.installs().to_path_buf();
         let cache_dir = self.artifact_cache.dir().to_path_buf();
-        state.installs.retain(|k, _| installs_dir.join(k).exists());
-        state
-            .archives
-            .retain(|name, _| cache_dir.join(name).exists());
-        state
-            .links
-            .retain(|path_str, rec| self.link_is_live(Path::new(path_str), &rec.install_key));
-        self.usage_tracker.save(&state)?;
+        self.usage_tracker.update(|state| {
+            state.installs.retain(|k, _| installs_dir.join(k).exists());
+            state
+                .archives
+                .retain(|name, _| cache_dir.join(name).exists());
+            state
+                .links
+                .retain(|path_str, rec| self.link_is_live(Path::new(path_str), &rec.install_key));
+        })?;
 
         Ok(report)
     }

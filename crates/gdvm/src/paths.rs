@@ -79,6 +79,10 @@ impl GdvmPaths {
         &self.bin_dir
     }
 
+    pub fn locks(&self) -> PathBuf {
+        self.base.join("locks")
+    }
+
     pub fn default_file(&self) -> PathBuf {
         self.base.join("default")
     }

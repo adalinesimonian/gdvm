@@ -177,7 +177,7 @@ impl Gdvm {
         registries.extend(project);
         let catalogs = CatalogSet::new(paths.cache_index(), &registries)?;
         let cache_store = CacheStore::new(paths.cache_index().to_path_buf());
-        let usage_tracker = UsageTracker::new(paths.usage_index().to_path_buf());
+        let usage_tracker = UsageTracker::new(paths.usage_index().to_path_buf(), paths.locks());
         let host = detect_host()?;
 
         let gdvm = Gdvm {

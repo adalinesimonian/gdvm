@@ -182,6 +182,11 @@ impl Config {
     }
 }
 
+/// The gdvm data directory (~/.gdvm).
+pub fn gdvm_dir() -> Result<PathBuf> {
+    Ok(get_home_dir()?.join(".gdvm"))
+}
+
 pub fn get_home_dir() -> Result<PathBuf> {
     #[cfg(feature = "integration-tests")]
     {
@@ -198,8 +203,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
 impl Config {
     /// Load configuration from ~/.gdvm/config.toml.
     pub fn load() -> Result<Self> {
-        let home = get_home_dir()?;
-        let config_path = home.join(".gdvm").join("config.toml");
+        let config_path = gdvm_dir()?.join("config.toml");
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
             match toml::from_str(&contents) {
@@ -216,9 +220,19 @@ impl Config {
     }
 
     /// Save configuration to ~/.gdvm/config.toml.
+    pub fn modify<T>(f: impl FnOnce(&mut Config) -> Result<T>) -> Result<T> {
+        let _lock = crate::locks::Lock::acquire(
+            &gdvm_dir()?.join("locks"),
+            crate::locks::Resource::Config,
+        )?;
+        let mut config = Self::load()?;
+        let out = f(&mut config)?;
+        config.save()?;
+        Ok(out)
+    }
+
     pub fn save(&self) -> Result<()> {
-        let home = get_home_dir()?;
-        let config_dir = home.join(".gdvm");
+        let config_dir = gdvm_dir()?;
         fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("config.toml");
         let toml_str = toml::to_string(self).expect("Failed to serialize config");
