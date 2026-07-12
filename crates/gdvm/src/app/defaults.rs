@@ -51,6 +51,8 @@ impl<'a> Defaults<'a> {
         variant: &Variant,
         registry: Option<&str>,
     ) -> Result<()> {
+        let _lock =
+            crate::locks::Lock::acquire(&self.paths.locks(), crate::locks::Resource::Defaults)?;
         // Check if the version exists
         let install_name = crate::version::install_dir_subpath(
             &self.library().install_store_key(registry)?,
@@ -93,6 +95,8 @@ impl<'a> Defaults<'a> {
     }
 
     pub fn unset_default(&self) -> Result<()> {
+        let _lock =
+            crate::locks::Lock::acquire(&self.paths.locks(), crate::locks::Resource::Defaults)?;
         // Remove default file and symlink
         let default_file = self.paths.default_file();
         if default_file.exists() {
@@ -193,7 +197,7 @@ impl<'a> Defaults<'a> {
 
         let specifier = crate::version::pinned_str(registry, &gv.to_remote_str(), variant);
         let toml_content = crate::gdvm_toml::serialize_gdvm_toml(&specifier);
-        fs::write(path.join("gdvm.toml"), toml_content)?;
+        crate::fs_utils::atomic_write(&path.join("gdvm.toml"), &toml_content)?;
 
         // Write deprecated .gdvmrc for backward compatibility with older versions of gdvm.
         // The legacy format predates registries, so we skip writing it for builds from custom

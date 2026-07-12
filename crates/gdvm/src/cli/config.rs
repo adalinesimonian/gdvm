@@ -22,7 +22,7 @@ use std::io::Write;
 
 /// Handle the 'config' subcommand
 pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
-    let mut config = config::Config::load()?;
+    let config = config::Config::load()?;
     match matches.subcommand() {
         Some(("get", sub_m)) => {
             let key = sub_m.get_one::<String>("key").unwrap();
@@ -65,22 +65,16 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
             if !config::KNOWN_KEYS.contains(&key.as_str()) {
                 eprintln_i18n!("error-unknown-config-key");
             } else {
-                match config.set_value(key, &value) {
-                    Ok(()) => {
-                        config.save()?;
-                        println_i18n!("config-set-success");
-                    }
+                match config::Config::modify(|config| Ok(config.set_value(key, &value)))? {
+                    Ok(()) => println_i18n!("config-set-success"),
                     Err(_) => eprintln_i18n!("error-invalid-config-value", key = key),
                 }
             }
         }
         Some(("unset", sub_m)) => {
             let key = sub_m.get_one::<String>("key").unwrap();
-            match config.unset_value(key) {
-                Ok(()) => {
-                    config.save()?;
-                    println_i18n!("config-unset-success", key = key);
-                }
+            match config::Config::modify(|config| Ok(config.unset_value(key)))? {
+                Ok(()) => println_i18n!("config-unset-success", key = key),
                 Err(_) => eprintln_i18n!("error-unknown-config-key"),
             }
         }

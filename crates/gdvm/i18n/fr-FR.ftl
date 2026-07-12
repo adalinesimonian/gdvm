@@ -158,6 +158,9 @@ error-spec-empty-variant = Nom de variante vide dans « { $input } »
 error-spec-empty-version = Version vide dans « { $input } »
 error-system-time = Heure système antérieure à l'époque UNIX
 error-unrecognized-version-format = Format de version non reconnu : { $input }
+lock-waiting = En attente de la fin d'un autre processus gdvm (verrou : { $resource })...
+prune-skipped-error = { $item } ignoré : { $error }
+prune-skipped-in-use = { $item } ignoré : il est en cours d'utilisation par un autre processus gdvm.
 
 error-find-user-dirs = Échec de la recherche des répertoires utilisateur.
 

@@ -71,6 +71,10 @@ impl TestHome {
         self.path().join(".gdvm").join("usage.json")
     }
 
+    fn locks_path(&self) -> PathBuf {
+        self.path().join(".gdvm").join("locks")
+    }
+
     /// Create an install at `key` with a single regular file inside. Returns
     /// the path to the install directory.
     fn make_install(&self, key: &str) -> PathBuf {
@@ -90,11 +94,15 @@ impl TestHome {
     }
 
     fn write_usage(&self, state: &UsageState) {
-        UsageTracker::new(self.usage_path()).save(state).unwrap();
+        UsageTracker::new(self.usage_path(), self.locks_path())
+            .save(state)
+            .unwrap();
     }
 
     fn read_usage(&self) -> UsageState {
-        UsageTracker::new(self.usage_path()).load().unwrap()
+        UsageTracker::new(self.usage_path(), self.locks_path())
+            .load()
+            .unwrap()
     }
 }
 

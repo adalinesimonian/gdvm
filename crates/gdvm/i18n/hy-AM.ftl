@@ -158,6 +158,9 @@ error-spec-empty-variant = Դատարկ տարբերակի անուն « { $inpu
 error-spec-empty-version = Դատարկ տարբերակ « { $input } »-ում
 error-system-time = Համակարգի ժամանակը UNIX դարաշրջանից առաջ է
 error-unrecognized-version-format = Տարբերակի չճանաչված ձևաչափ. { $input }
+lock-waiting = Սպասում է gdvm-ի մեկ այլ գործընթացի ավարտին (կողպեք՝ { $resource })...
+prune-skipped-error = { $item }-ը բաց է թողնվում. { $error }
+prune-skipped-in-use = { $item }-ը բաց է թողնվում. այն օգտագործվում է gdvm-ի մեկ այլ գործընթացի կողմից։
 
 error-find-user-dirs = Չհաջողվեց գտնել օգտագործողի պանակները։
 

@@ -80,11 +80,12 @@ impl Default for UsageState {
 /// Loads, updates, and persists the usage state file.
 pub struct UsageTracker {
     path: PathBuf,
+    locks_dir: PathBuf,
 }
 
 impl UsageTracker {
-    pub fn new(path: PathBuf) -> Self {
-        Self { path }
+    pub fn new(path: PathBuf, locks_dir: PathBuf) -> Self {
+        Self { path, locks_dir }
     }
 
     pub fn path(&self) -> &Path {
@@ -111,10 +112,11 @@ impl UsageTracker {
     }
 
     /// Update the state and persist to disk.
-    fn update<F>(&self, mutate: F) -> Result<()>
+    pub fn update<F>(&self, mutate: F) -> Result<()>
     where
         F: FnOnce(&mut UsageState),
     {
+        let _lock = crate::locks::Lock::acquire(&self.locks_dir, crate::locks::Resource::Usage)?;
         let mut state = self.load()?;
         state.schema = USAGE_SCHEMA_VERSION;
         mutate(&mut state);
@@ -196,7 +198,8 @@ mod tests {
     fn tracker() -> (TempDir, UsageTracker) {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("usage.json");
-        (tmp, UsageTracker::new(path))
+        let locks = tmp.path().join("locks");
+        (tmp, UsageTracker::new(path, locks))
     }
 
     #[test]

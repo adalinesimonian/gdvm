@@ -132,6 +132,9 @@ impl<'a> Updater<'a> {
     }
 
     pub async fn upgrade(&self, allow_major: bool, allow_pre: bool) -> Result<()> {
+        let _lock =
+            crate::locks::Lock::acquire(&self.paths.locks(), crate::locks::Resource::SelfUpgrade)?;
+
         println_i18n!("upgrade-starting");
         println_i18n!("upgrade-downloading-latest");
 

@@ -136,9 +136,15 @@ impl<'a> Installer<'a> {
             crate::version::install_dir_subpath(&store_key, &gv.to_remote_str(), variant);
         let version_path = self.paths.installs().join(&install_str);
 
+        let _lock = crate::locks::Lock::acquire(
+            &self.paths.locks(),
+            crate::locks::Resource::Install(&install_str),
+        )?;
+
         if version_path.exists() {
             if force {
-                self.library().remove(gv, variant, registry)?;
+                self.library()
+                    .remove_locked(gv, variant, registry, &install_str)?;
                 eprintln_i18n!("force-reinstalling-version", version = gv.to_display_str(),);
             } else {
                 return Ok(InstallOutcome::AlreadyInstalled);
