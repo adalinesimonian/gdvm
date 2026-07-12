@@ -28,7 +28,7 @@ use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::Path;
 
-use crate::migrations;
+use crate::post_upgrade;
 use crate::t;
 use crate::usage_tracker::UsageTracker;
 use crate::version::VersionQuery;
@@ -190,7 +190,7 @@ impl Gdvm {
             dotenv_vars: dotenv_vars(),
         };
 
-        migrations::run_migrations(gdvm.paths.base())?;
+        post_upgrade::run(gdvm.paths.base())?;
 
         // Report any available upgrade from the last update check.
         if std::env::var_os(Updater::BACKGROUND_CHECK_ENV_VAR).is_none() {

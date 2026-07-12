@@ -260,6 +260,10 @@ error-ensure-godot-binaries-failed = Échec de l'assurance des binaires Godot.
     Erreur : { $error }.
     Essayez de supprimer { $path } puis exécutez gdvm à nouveau.
 
+error-post-upgrade-action-failed = L'étape { $id } a échoué après la mise à jour.
+    Erreur : { $error }.
+    Votre installation de gdvm est peut-être incomplète. Essayez d'exécuter gdvm à nouveau.
+
 error-failed-reading-project-godot = Échec de la lecture de project.godot, impossible de déterminer automatiquement la version du projet.
 warning-using-project-version = Utilisation de la version { $version } définie dans project.godot.
 
