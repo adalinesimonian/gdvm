@@ -15,23 +15,31 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
-hello = Hei, Verda!
+-gdvm = gdvm
+-gdvm-toml = gdvm.toml
+-gdvmrc = .gdvmrc
+-godot = Godot
+size-display =
+    { $unit ->
+        [b] { NUMBER($value, maximumFractionDigits: 0) } B
+        [kib] { NUMBER($value, maximumFractionDigits: 1) } KiB
+        [mib] { NUMBER($value, maximumFractionDigits: 1) } MiB
+        [gib] { NUMBER($value, maximumFractionDigits: 1) } GiB
+       *[tib] { NUMBER($value, maximumFractionDigits: 1) } TiB
+    }
 
-help-about = Godot-versjonsbehandlaren
+help-about = { -godot }-versjonsbehandlaren
 help-help = Vis hjelp (sjå eit samandrag med '-h')
-help-help-command = Vis denne meldinga eller hjelpa for dei gjeve underkommandoane
-help-gdvm-version = Vis versjonen av Godot-versjonsbehandlaren
+help-gdvm-version = Vis versjonen av { -godot }-versjonsbehandlaren
 
-help-install = Installer ein ny Godot-versjon
-help-run = Køyr ein spesifikk Godot-versjon
-help-show = Vis stien til den køyrberre fila for den gjevne Godot-versjonen
-help-cache-path = Vis stigen til nedlastingsarkivet i cachen for den oppgjevne Godot-versjonen
-help-link = Opprett ei lenkje frå ein Godot-versjon si køyrbare fil til ein oppgjeven stig
-help-list = List alle installerte Godot-versjonar
-help-remove = Fjern ein installert Godot-versjon
-
-help-branch = Greina (stable, beta, alpha eller tilpassa).
-help-csharp = [avvikla] Bruk Godot-versjonen med C#-støtte. Bruk variantspesifikatoren «csharp» i staden (t.d. csharp:4.4).
+help-install = Installer ein ny { -godot }-versjon
+help-run = Køyr ein spesifikk { -godot }-versjon
+help-show = Vis stien til den køyrberre fila for den gjevne { -godot }-versjonen
+help-cache-path = Vis stigen til nedlastingsarkivet i cachen for den oppgjevne { -godot }-versjonen
+help-link = Opprett ei lenkje frå ein { -godot }-versjon si køyrbare fil til ein oppgjeven stig
+help-list = List alle installerte { -godot }-versjonar
+help-remove = Fjern ein installert { -godot }-versjon
+help-csharp = [avvikla] Bruk { -godot }-versjonen med C#-støtte. Bruk variantspesifikatoren «csharp» i staden (t.d. csharp:4.4).
 help-run-csharp-long = { help-csharp }
 help-version = Versjonen som skal installerast (t.d. 4, csharp:4.4, stable, latest).
 help-version-long =
@@ -43,7 +51,7 @@ help-version-long =
 
     Variantar: prefiks med eit variantnamn og kolon, t.d. «csharp:4.4» for C#-versjonen.
 
-    Døme: 4.4 vil installere den siste stabile utgjevinga av Godot 4.4. Viss berre førehandsversjonar finst, vil den siste førehandsversjonen verta installert. 4.3-rc vil installere den siste utgjevinga av Godot 4.3, osb.
+    Døme: 4.4 vil installere den siste stabile utgjevinga av { -godot } 4.4. Viss berre førehandsversjonar finst, vil den siste førehandsversjonen verta installert. 4.3-rc vil installere den siste utgjevinga av { -godot } 4.3, osb.
 help-version-installed = Den installerte versjonen (t.d. 4.2 eller 4.2-stable).
 
 help-search = List tilgjengelege utgjevingar frå registeret
@@ -58,7 +66,7 @@ help-refresh-flag = Oppdater utgjevingscachen før denne kommandoen vert køyrd
 help-prune = Fjern installasjonar og cacha arkiv som ikkje lenger er i bruk
 help-prune-long = { help-prune }
 
-    Som standard fjernar prune installasjonar som ikkje har vore bruka på ei stund, og cacha nedlastingsarkiv som har vorte for gamle, medan installasjonar som framleis har ei lenkje inn i seg vert tekne vare på. Installasjonen som er sett som standard vert aldri fjerna, uansett kva flagg som vert gjeve. Aldersgrensa kan setjast med «gdvm config set prune.max-age-days <dagar>» (standard { $default_days } dagar).
+    Som standard fjernar prune installasjonar som ikkje har vore bruka på ei stund, og cacha nedlastingsarkiv som har vorte for gamle, medan installasjonar som framleis har ei lenkje inn i seg vert tekne vare på. Installasjonen som er sett som standard vert aldri fjerna, uansett kva flagg som vert gjeve. Aldersgrensa kan setjast med «{ -gdvm } config set prune.max-age-days <dagar>» (standard { $default_days } dagar).
 help-prune-all = Fjern alle installasjonar og cacha arkiv uavhengig av alder. Installasjonar som framleis har ei aktiv lenkje vert tekne vare på med mindre --force òg er gjeve.
 help-prune-force = Ignorer lenkjer, slik at installasjonar som berre er refererte av ei lenkje òg kan fjernast.
 help-prune-dry-run = Vis kva som ville vorte fjerna utan å sletta noko.
@@ -69,9 +77,14 @@ prune-installs-header = Installasjonar:
 prune-archives-header = Cacha arkiv:
 prune-nothing-dry-run = Ingenting ville vorte fjerna.
 prune-nothing-removed = Ingenting å fjerna; alt er i bruk eller innanfor aldersgrensa.
-prune-preserved-by-link = Tok vare på { $count } installasjon(ar) som framleis er refererte av ei lenkje.
-prune-freed = Frigjorde omtrent { $size }.
-prune-would-free = Ville frigjort omtrent { $size }.
+prune-preserved-by-link =
+    { $count ->
+        [one] Tok vare på { $count } installasjon som framleis er referert av ei lenkje.
+       *[other] Tok vare på { $count } installasjonar som framleis er refererte av ei lenkje.
+    }
+prune-freed = Frigjorde omtrent { size-display }.
+prune-would-free = Ville frigjort omtrent { size-display }.
+prune-item = - { $label } ({ size-display })
 
 help-force = Tving installasjon på nytt sjølv om versjonen alt er installert.
 help-redownload = Last ned versjonen på nytt sjølv om han alt er lasta ned i cachen.
@@ -85,21 +98,19 @@ help-link-path = Stien der lenkja eller kopien skal opprettast, t.d. «{ $platfo
 help-link-force = Overskriv eksisterande lenkje om ho finst
 help-link-copy = Kopier køyrbar i staden for å lage lenkje
 
-cached-zip-stored = Lagra Godot-utgjevingsarkivet i cachen.
+cached-zip-stored = Lagra { -godot }-utgjevingsarkivet i cachen.
 using-cached-zip = Brukar cacha utgjevingsarkiv, hoppar over nedlasting.
-warning-cache-metadata-reset = Cache-indeksen for utgjevingar er ugyldig eller korrupt. Tilbakestiller.
 cache-files-removed = Cache-filene vart fjerna.
 cache-metadata-removed = Cache-metadataet vart fjerna.
-error-cache-metadata-empty = Feil: Cache-metadataet er tomt, må hente utgjevingar først.
 no-cache-files-found = Ingen cache-filer funne.
 no-cache-metadata-found = Inkje cache-metadata funne.
-gdvm-toml-malformed = {"\u001b"}[33mÅtvaring: ignorerer gdvm.toml på { $path } fordi han ikkje kunne tolkast: { $error }{"\u001b"}[0m
+gdvm-toml-malformed = {"\u001b"}[33mÅtvaring: ignorerer { -gdvm-toml } på { $path } fordi han ikkje kunne tolkast: { $error }{"\u001b"}[0m
 
-help-console = Køyr Godot med konsoll tilkopla. Standard er false på Windows, true på andre plattformer.
+help-console = Køyr { -godot } med konsoll tilkopla. Standard er false på Windows, true på andre plattformer.
 
 help-default = Administrer standardversjonen
 help-default-version = Versjonen som skal setjast som standard (t.d. 4.2 eller 4.2-stable).
-no-default-set = Ingen standardversjon er sett. Køyr «gdvm use <version>» for å setja ein standardversjon systemomfattande, eller «gdvm pin <version>» for å setja ein standardversjon for den gjeldende mappa.
+no-default-set = Ingen standardversjon er sett. Køyr «{ -gdvm } use <version>» for å setja ein standardversjon systemomfattande, eller «{ -gdvm } pin <version>» for å setja ein standardversjon for den gjeldende mappa.
 
 installing-version = Installerer versjon {$version}
 installed-success = Installerte {$version} vellukka.
@@ -112,7 +123,7 @@ force-reinstalling-version = Tvingar installasjon av versjon {$version} på nytt
 auto-installing-version = Automatisk installasjon av versjon { $version }
 
 no-versions-installed = Ingen versjonar installerte.
-installed-versions = Installerte Godot-versjonar:
+installed-versions = Installerte { -godot }-versjonar:
 removed-version = Fjerna versjonen {$version}
 removing-version = Fjernar versjon {$version}
 
@@ -121,6 +132,12 @@ operation-downloading-url = Lastar ned {$url}...
 operation-download-complete = Nedlasting fullført.
 operation-extracting = Pakkar ut...
 operation-extract-complete = Utpakking fullført.
+progress-eta =
+    { $magnitude ->
+        [seconds] { $secs }s
+        [minutes] { $mins }m { $secs }s
+       *[hours] { $hours }t { $mins }m
+    }
 
 unsupported-platform = Plattforma er ikkje støtta
 unsupported-architecture = Arkitekturen er ikkje støtta
@@ -159,15 +176,14 @@ error-spec-empty-version = Tom versjon i «{ $input }»
 error-system-time = Systemtida er før UNIX-epoken
 error-unrecognized-version-format = Ukjent versjonsformat: { $input }
 download-retrying = Nedlastinga vart avbroten, prøver på nytt (forsøk { $attempt } av { $max })...
-lock-waiting = Ventar på at ein annan gdvm-prosess skal verta ferdig (lås: { $resource })...
+lock-waiting = Ventar på at ein annan { -gdvm }-prosess skal verta ferdig (lås: { $resource })...
 prune-skipped-error = Hoppar over { $item }: { $error }
-prune-skipped-in-use = Hoppar over { $item }: han er i bruk av ein annan gdvm-prosess.
+prune-skipped-in-use = Hoppar over { $item }: han er i bruk av ein annan { -gdvm }-prosess.
 
 error-find-user-dirs = Klarte ikkje å finne brukarmappene.
 
 fetching-releases = Hentar utgjevingar...
 releases-fetched = Utgjevingar henta.
-error-fetching-releases = Feil ved henting av utgjevingar: { $error }
 warning-fetching-releases-using-cache = Feil ved henting av utgjevingar: { $error }. Brukar hurtigbuffer i staden.
 
 error-version-not-found = Versjonen vart ikkje funnen.
@@ -183,14 +199,14 @@ cache-cleared = Cachen vart tømd.
 cache-refreshed = Cachen vart oppdatert.
 
 version-already-installed = Versjon {$version} er alt installert.
-godot-executable-not-found = Godot-køyrberr fil vart ikkje funnen for versjon {$version}.
+godot-executable-not-found = { -godot }-køyrberr fil vart ikkje funnen for versjon {$version}.
 error-link-exists = Stigen {$path} finst allereie. Bruk --force for å overskrive.
 error-link-symlink = Klarte ikkje å opprette lenkje frå {$link} til {$target}: {$error}
 error-link-copy = Klarte ikkje å kopiere køyrbar: {$error}
 
 error-no-stable-releases-found = Ingen stabile utgivelser funne.
 
-error-starting-godot = Kunne ikkje starte Godot: { $error }
+error-starting-godot = Kunne ikkje starte { -godot }: { $error }
 
 confirm-remove = Er du sikker på at du vil fjerne denne versjonen? (ja/nei):
 confirm-yes = ja
@@ -213,56 +229,53 @@ error-strip-prefix = Kunne ikkje fjerne prefiks: { $error }
 error-set-permissions = Kunne ikkje setja løyve for { $path }: { $error }
 error-create-symlink-windows = Kunne ikkje opprette symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklarmodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller køyr som administrator.
 
-help-upgrade = Oppgrader gdvm til nyaste versjon
+help-upgrade = Oppgrader { -gdvm } til nyaste versjon
 help-upgrade-major = Tillat oppgradering på tvers av hovudversjonar
 help-upgrade-pre = Oppgrader til nyaste førehandsutgjeving
-upgrade-starting = Startar oppgradering av gdvm...
-upgrade-downloading-latest = Lastar ned nyaste gdvm...
-upgrade-complete = gdvm vart oppgradert!
-upgrade-not-needed = gdvm er alt på siste versjon: { $version }.
-upgrade-current-version-newer = Den noverande gdvm-versjonen ({ $current }) er nyare enn den siste tilgjengelege versjonen ({ $latest }). Inga oppgradering nødvendig.
-upgrade-failed = Oppgradering feila: { $error }
+upgrade-starting = Startar oppgradering av { -gdvm }...
+upgrade-downloading-latest = Lastar ned nyaste { -gdvm }...
+upgrade-complete = { -gdvm } vart oppgradert!
+upgrade-not-needed = { -gdvm } er alt på siste versjon: { $version }.
+upgrade-current-version-newer = Den noverande { -gdvm }-versjonen ({ $current }) er nyare enn den siste tilgjengelege versjonen ({ $latest }). Inga oppgradering nødvendig.
 upgrade-download-failed = Nedlasting av oppgradering feila: { $error }
 upgrade-file-create-failed = Klarte ikkje å opprette oppgraderingsfila: { $error }
-upgrade-file-write-failed = Klarte ikkje å skrive til oppgraderingsfila: { $error }
 upgrade-install-dir-failed = Klarte ikkje å opprette installasjonskatalogen: { $error }
 upgrade-rename-failed = Klarte ikkje å endre namnet på den noverande køyrberre fila: { $error }
 upgrade-replace-failed = Klarte ikkje å erstatte den køyrberre fila med den nye: { $error }
-upgrade-no-binary = Inga gdvm-binærfil er tilgjengeleg for versjon { $version } og målet { $target }.
-upgrade-checksum-required = Utgjevingsmanifestet inneheld ingen sjekksum for denne gdvm-binærfila. Nektar å oppgradere.
-error-fetching-gdvm-releases = Feil ved henting av gdvm-utgjevingar: { $error }
-error-parsing-gdvm-releases = Feil ved tolking av gdvm-utgjevingar: { $error }
-error-unsupported-gdvm-schema = Skjemaversjon for gdvm-utgjevingsmanifestet er ikkje støtta: { $schema }. Prøv å oppgradere gdvm manuelt.
-upgrade-available = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade» for å oppdatere.
-upgrade-available-major = 💡 Ei hovudversjonsoppdatering av gdvm er tilgjengeleg: {$version}. Køyr «gdvm upgrade -m» for å oppdatere.
-upgrade-available-both = 💡 Ein ny versjon av gdvm er tilgjengeleg: {$minor_version}. Ei hovudversjonsoppdatering er òg tilgjengeleg: {$major_version}. Køyr «gdvm upgrade» for å oppdatere innan gjeldande hovudversjon, eller «gdvm upgrade -m» for å oppgradere til aller siste versjon.
-upgrade-prerelease-available = 💡 Ei nyare førehandsutgjeving av gdvm er tilgjengeleg. Køyr «gdvm upgrade --pre» for å installere ho.
+upgrade-no-binary = Inga { -gdvm }-binærfil er tilgjengeleg for versjon { $version } og målet { $target }.
+upgrade-checksum-required = Utgjevingsmanifestet inneheld ingen sjekksum for denne { -gdvm }-binærfila. Nektar å oppgradere.
+error-fetching-gdvm-releases = Feil ved henting av { -gdvm }-utgjevingar: { $error }
+error-parsing-gdvm-releases = Feil ved tolking av { -gdvm }-utgjevingar: { $error }
+error-unsupported-gdvm-schema = Skjemaversjon for { -gdvm }-utgjevingsmanifestet er ikkje støtta: { $schema }. Prøv å oppgradere { -gdvm } manuelt.
+upgrade-available = 💡 Ein ny versjon av { -gdvm } er tilgjengeleg: {$version}. Køyr «{ -gdvm } upgrade» for å oppdatere.
+upgrade-available-major = 💡 Ei hovudversjonsoppdatering av { -gdvm } er tilgjengeleg: {$version}. Køyr «{ -gdvm } upgrade -m» for å oppdatere.
+upgrade-available-both = 💡 Ein ny versjon av { -gdvm } er tilgjengeleg: {$minor_version}. Ei hovudversjonsoppdatering er òg tilgjengeleg: {$major_version}. Køyr «{ -gdvm } upgrade» for å oppdatere innan gjeldande hovudversjon, eller «{ -gdvm } upgrade -m» for å oppgradere til aller siste versjon.
+upgrade-prerelease-available = 💡 Ei nyare førehandsutgjeving av { -gdvm } er tilgjengeleg. Køyr «{ -gdvm } upgrade --pre» for å installere ho.
 
-help-pin = Fest ein versjon av Godot til gjeldande mappe.
+help-pin = Fest ein versjon av { -godot } til gjeldande mappe.
 help-pin-long = { help-pin }
 
-    Dette vil opprette ei gdvm.toml-fil i gjeldande mappe med den festa versjonen. Når du køyrer «gdvm run» i denne katalogen eller nokre av underkatalogane, vil den festa versjonen verta bruka i staden for standardversjonen.
+    Dette vil opprette ei { -gdvm-toml }-fil i gjeldande mappe med den festa versjonen. Når du køyrer «{ -gdvm } run» i denne katalogen eller nokre av underkatalogane, vil den festa versjonen verta bruka i staden for standardversjonen.
 
-    Dette er nyttig når du vil bruke ein spesifikk versjon av Godot for eit prosjekt utan å endre standardversjonen systemomfattande.
+    Dette er nyttig når du vil bruke ein spesifikk versjon av { -godot } for eit prosjekt utan å endre standardversjonen systemomfattande.
 
-    Dette skriv førebels òg den eldre .gdvmrc-fila for bakoverkompatibilitet med eldre versjonar av gdvm. Dette vil verta fjerna i ei framtidig utgjeving, so det er tilrådd å gå over til det nye gdvm.toml-formatet og fjerne .gdvmrc-fila om ho finst.
+    Dette skriv førebels òg den eldre { -gdvmrc }-fila for bakoverkompatibilitet med eldre versjonar av { -gdvm }. Dette vil verta fjerna i ei framtidig utgjeving, so det er tilrådd å gå over til det nye { -gdvm-toml }-formatet og fjerne { -gdvmrc }-fila om ho finst.
 
-    Du kan deaktivere skriving av ei .gdvmrc-fil med --no-legacy-flagget.
+    Du kan deaktivere skriving av ei { -gdvmrc }-fil med --no-legacy-flagget.
 help-pin-version = Versjonen som skal festast
-help-no-legacy = Ikkje skriv den eldre .gdvmrc-kompatibilitetsfila
-pinned-success = Versjon {$version} vart festa i gdvm.toml
+help-no-legacy = Ikkje skriv den eldre { -gdvmrc }-kompatibilitetsfila
+pinned-success = Versjon {$version} vart festa i { -gdvm-toml }
 error-pin-version-not-found = Kan ikkje feste versjon {$version}
-pin-subcommand-description = Set eller oppdater gdvm.toml med ynskt versjon
 
 error-file-not-found = Fil vart ikkje funnen. Ho finst kanskje ikkje på tenaren.
 error-download-failed = Nedlasting feila på grunn av ein uventa feil: { $error }
-error-ensure-godot-binaries-failed = Kunne ikkje sikre Godot-køyrberre filer.
+error-ensure-godot-binaries-failed = Kunne ikkje sikre { -godot }-køyrberre filer.
     Feil: { $error }.
-    Prøv å slette { $path } og køyre gdvm på nytt.
+    Prøv å slette { $path } og køyre { -gdvm } på nytt.
 
 error-post-upgrade-action-failed = Trinnet { $id } mislukkast etter oppgraderinga.
     Feil: { $error }.
-    gdvm-installasjonen din kan vera ufullstendig. Prøv å køyre gdvm på nytt.
+    { -gdvm }-installasjonen din kan vera ufullstendig. Prøv å køyre { -gdvm } på nytt.
 
 error-failed-reading-project-godot = Kunne ikkje lesa project.godot, kan ikkje automatisk bestemme prosjektversjonen.
 warning-using-project-version = Brukar versjon { $version } definert i project.godot.
@@ -285,23 +298,19 @@ warning-project-version-mismatch =
 
 error-project-version-mismatch =
     {"\u001b"}[31m{ $pinned ->
-        [1] Om du er sikker på at du vil køyre prosjektet med den festa versjonen, køyr {"\u001b"}[0mgdvm run --force{"\u001b"}[31m. Elles oppdater den festa versjonen i .gdvmrc for å samsvara med prosjektversjonen, eller fjern .gdvmrc-fila for å bruke prosjektversjonen.
-        *[0] Om du er sikker på at du vil køyre prosjektet med den ynskte versjonen, køyr {"\u001b"}[0mgdvm run --force <version>{"\u001b"}[31m.
+        [1] Om du er sikker på at du vil køyre prosjektet med den festa versjonen, køyr {"\u001b"}[0m{ -gdvm } run --force{"\u001b"}[31m. Elles oppdater den festa versjonen i { -gdvmrc } for å samsvara med prosjektversjonen, eller fjern { -gdvmrc }-fila for å bruke prosjektversjonen.
+        *[0] Om du er sikker på at du vil køyre prosjektet med den ynskte versjonen, køyr {"\u001b"}[0m{ -gdvm } run --force <version>{"\u001b"}[31m.
     }{"\u001b"}[0m
-warning-project-version-mismatch-force = {"\u001b"}[33mHoppar over stadfestingsprompt og held fram med den { $pinned ->
-        [1] festa
-        *[0] ynskte
-    } versjonen {"\u001b"}[0m({ $requested_version }){"\u001b"}[33m.{"\u001b"}[0m
 
-help-run-args = Tilleggsargument som skal sendast til Godot-køyrbar fil (t.d. -- path/to/project.godot).
+help-run-args = Tilleggsargument som skal sendast til { -godot }-køyrbar fil (t.d. -- path/to/project.godot).
 help-run-force =
     Tving køyring av prosjektet med den ynskte eller festa versjonen sjølv om han ikkje samsvarar med prosjektversjonen.
 help-run-force-long =
     { help-run-force }
 
-    Viss du gjer dette, kan den ynskte eller festa versjonen av Godot overskrive prosjektfila. Viss du festar versjonar, er det tilrådd i staden å oppdatere den festa versjonen i .gdvmrc for å samsvara med prosjektversjonen, eller fjerne .gdvmrc-fila for å bruke prosjektversjonen.
+    Viss du gjer dette, kan den ynskte eller festa versjonen av { -godot } overskrive prosjektfila. Viss du festar versjonar, er det tilrådd i staden å oppdatere den festa versjonen i { -gdvmrc } for å samsvara med prosjektversjonen, eller fjerne { -gdvmrc }-fila for å bruke prosjektversjonen.
 
-help-config = Administrer gdvm-konfigurasjon
+help-config = Administrer { -gdvm }-konfigurasjon
 help-format = Utdataformat: text (standard) eller json
 help-info = Vis detaljert informasjon om ein installert versjon
 info-default =
@@ -319,7 +328,7 @@ info-last-used = { $timestamp }
 info-no = nei
 info-registry = { $registry }
     .label = Register:
-info-size = { $size }
+info-size = { size-display }
     .label = Storleik på disk:
 info-variant = { $variant }
     .label = Variant:
@@ -348,7 +357,7 @@ error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk «get», «
 error-parse-config = Kunne ikkje tolke konfigurasjonsfila: { $error }
 error-parse-config-using-default = {"\u001b"}[33mBrukar standard konfigurasjonsverdiar.{"\u001b"}[0m
 
-help-registry = Administrer register å installere Godot-bygg frå
+help-registry = Administrer register å installere { -godot }-bygg frå
 help-registry-add = Legg til eit register
 help-registry-remove = Fjern eit register
 help-registry-list = List opp konfigurerte register
@@ -363,11 +372,11 @@ registry-tag-official = offisielt
 registry-error = Registerfeil: { $error }
 
 error-invalid-registry-subcommand = Ugyldig register-underkommando. Bruk «add», «remove», «list» eller «refresh».
-registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) er eit eigendefinert register, ikkje det offisielle. gdvm sjekkar at nedlastingar stemmer med det registeret oppgjev, men kan ikkje vite om dei er trygge å køyre. Installer frå det berre om du stolar på dei som driv det.{"\u001b"}[0m
+registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) er eit eigendefinert register, ikkje det offisielle. { -gdvm } sjekkar at nedlastingar stemmer med det registeret oppgjev, men kan ikkje vite om dei er trygge å køyre. Installer frå det berre om du stolar på dei som driv det.{"\u001b"}[0m
 registry-trust-prompt = Stoler du på dette registeret og vil halde fram? (ja/nei):
-registry-trust-bypass = {"\u001b"}[1;31mHoppar over tillitssjekken for { $registry } ({ $url }) fordi du brukte --yes. gdvm kan ikkje vite om filene er trygge å køyre. Tek ein kort pause; trykk Ctrl+C no for å stoppe.{"\u001b"}[0m
+registry-trust-bypass = {"\u001b"}[1;31mHoppar over tillitssjekken for { $registry } ({ $url }) fordi du brukte --yes. { -gdvm } kan ikkje vite om filene er trygge å køyre. Tek ein kort pause; trykk Ctrl+C no for å stoppe.{"\u001b"}[0m
 registry-trust-aborted = Avbrote: registeret er ikkje klarert.
-registry-project-override-conflict = {"\u001b"}[33mProsjektet sin gdvm.toml omdefinerer registeret { $registry } (konfigurasjonen din: { $machine_url }) som { $project_url }. Prosjektet sin definisjon har forrang.{"\u001b"}[0m
+registry-project-override-conflict = {"\u001b"}[33mProsjektet sin { -gdvm-toml } omdefinerer registeret { $registry } (konfigurasjonen din: { $machine_url }) som { $project_url }. Prosjektet sin definisjon har forrang.{"\u001b"}[0m
 
 help-registry-init = Initialiser ei ny registermappe
 help-registry-add-build = Legg til eit bygg i eit register
@@ -389,10 +398,14 @@ registry-init-success = Initialiserte registeret { $name } i { $path }.
 registry-build-added = La til bygget { $version } for { $platform }.
 registry-build-removed = Fjerna bygget { $version }.
 registry-build-downloading = Lastar ned { $url } for å rekne ut storleik og SHA-512 …
-registry-build-warn-local-hash = {"\u001b"}[33mHashar den lokale fila og går ut frå at ho samsvarar med { $url }. gdvm lastar ikkje ned URL-en for å stadfeste det.{"\u001b"}[0m
+registry-build-warn-local-hash = {"\u001b"}[33mHashar den lokale fila og går ut frå at ho samsvarar med { $url }. { -gdvm } lastar ikkje ned URL-en for å stadfeste det.{"\u001b"}[0m
 registry-build-warn-unverified = {"\u001b"}[33mBrukar SHA-512 og storleiken du oppgav utan å laste ned artefakten for å stadfeste dei. Sjå til at dei er rette.{"\u001b"}[0m
 registry-build-warn-explicit-store = {"\u001b"}[33mBrukar SHA-512 og/eller storleiken du oppgav i staden for å måle det lagra arkivet.{"\u001b"}[0m
 registry-build-sha-mismatch = Oppgjeve SHA-512 ({ $expected }) samsvarar ikkje med artefakten ({ $actual }).
 registry-build-size-mismatch = Oppgjeven storleik ({ $expected }) samsvarar ikkje med artefakten ({ $actual }).
-registry-validate-ok = Registeret er gyldig ({ $count } artefaktar kontrollerte).
+registry-validate-ok =
+    { $count ->
+        [one] Registeret er gyldig ({ $count } artefakt kontrollert).
+       *[other] Registeret er gyldig ({ $count } artefaktar kontrollerte).
+    }
 registry-validate-failed = Validering av registeret feila:

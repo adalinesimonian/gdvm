@@ -20,6 +20,47 @@ use std::time::Duration;
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 
+use crate::{fs_utils, t};
+
+/// Format the downloaded byte count.
+pub(crate) fn format_progress_size(bytes: u64) -> String {
+    let (value, unit) = fs_utils::byte_display_args(bytes);
+    t!("size-display", value = value, unit = unit)
+}
+
+/// Format the ETA.
+pub(crate) fn format_progress_eta(eta: Duration) -> String {
+    let total_secs = eta.as_secs();
+
+    if total_secs >= 3600 {
+        let hours = total_secs / 3600;
+        let mins = (total_secs % 3600) / 60;
+
+        t!(
+            "progress-eta",
+            magnitude = "hours",
+            hours = hours as i64,
+            mins = mins as i64
+        )
+    } else if total_secs >= 60 {
+        let mins = total_secs / 60;
+        let secs = total_secs % 60;
+
+        t!(
+            "progress-eta",
+            magnitude = "minutes",
+            mins = mins as i64,
+            secs = secs as i64
+        )
+    } else {
+        t!(
+            "progress-eta",
+            magnitude = "seconds",
+            secs = total_secs as i64
+        )
+    }
+}
+
 /// Create a spinner displaying the given message.
 pub fn spinner(message: String) -> Result<ProgressBar> {
     let pb = ProgressBar::new_spinner();

@@ -40,6 +40,8 @@ anyhow = "=1.0.103"
 terminal_size = "=0.4.4"
 unicode-width = "=0.2.2"
 icu = "=2.2.0"
+fixed_decimal = { version = "=0.7.2", features = ["ryu"] }
+intl-memoizer = "=0.5.3"
 
 # For downloading files:
 reqwest = { version = "=0.13.4", features = [

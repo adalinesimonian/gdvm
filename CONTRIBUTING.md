@@ -133,25 +133,11 @@ GDVM supports multiple languages using the [Fluent](https://projectfluent.org/) 
 
 1. **Translate messages**: Add translations for all the keys present in the existing Fluent files.
 2. **Test your translations**: Ensure that the translations are correctly loaded and displayed in the application.
-3. **Check for missing translations**: You can use the scripts in the `scripts/` directory to find missing translations.
-
-   ```sh
-   # For Linux/macOS
-   ./scripts/find-missing-i18n.sh
-   ```
+3. **Lint the translations**: The i18n linter checks that all translation string keys used from code exist in locales, term and message references aren't missing, there aren't any untranslated or extra messages, and also formats and sorts the translation bundles. It requires that the [pwsh](https://github.com/PowerShell/PowerShell) command is available in your PATH.
 
    ```powershell
-   # For Windows PowerShell
-   .\scripts\find-missing-i18n.ps1
-   ```
-
-4. **Format and sort translations**: This script will help you format and sort the translations in the Fluent files using the `en-US.ftl` file as a reference. It requires that the [pwsh](https://github.com/PowerShell/PowerShell) command is available in your PATH.
-
-   ```sh
-   # For PowerShell
-   ./scripts/sort-i18n.ps1          # Checks the Fluent bundles for sort/format issues
-   ./scripts/sort-i18n.ps1 --format # Formats/sorts the Fluent bundles
-   ./scripts/sort-i18n.sh           # Alias for *nix systems, calls the PowerShell script
+   ./scripts/lint-i18n.ps1        # Lint the Fluent bundles.
+   ./scripts/lint-i18n.ps1 --fix  # Fix any formatting issues.
    ```
 
 ## Testing

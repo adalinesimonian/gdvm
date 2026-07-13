@@ -59,23 +59,7 @@ pub(crate) struct VersionEntry {
     pub(crate) registry: Option<String>,
 }
 
-/// Format a byte count into a user-friendly string.
-pub(crate) fn format_bytes(bytes: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
-    let mut value = bytes as f64;
-    let mut unit = 0;
-
-    while value >= 1024.0 && unit < UNITS.len() - 1 {
-        value /= 1024.0;
-        unit += 1;
-    }
-
-    if unit == 0 {
-        format!("{bytes} {}", UNITS[unit])
-    } else {
-        format!("{value:.1} {}", UNITS[unit])
-    }
-}
+pub(crate) use gdvm::fs_utils::byte_display_args;
 
 /// Format `(label, value)` tuples as a table.
 pub(crate) fn format_label_value_table(rows: &[(String, String)]) -> String {
@@ -131,9 +115,9 @@ mod tests {
     }
 
     #[test]
-    fn bytes_format_scales_units() {
-        assert_eq!(format_bytes(512), "512 B");
-        assert_eq!(format_bytes(2048), "2.0 KiB");
-        assert_eq!(format_bytes(5 * 1024 * 1024), "5.0 MiB");
+    fn bytes_scale_to_display_units() {
+        assert_eq!(byte_display_args(512), (512.0, "b"));
+        assert_eq!(byte_display_args(2048), (2.0, "kib"));
+        assert_eq!(byte_display_args(5 * 1024 * 1024), (5.0, "mib"));
     }
 }

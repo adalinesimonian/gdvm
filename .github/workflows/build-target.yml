@@ -108,17 +108,11 @@ jobs:
         working-directory: ${{ env.WORKSPACE_DIR }}
         run: cargo build --release --target ${{ inputs.target }}
 
-      - name: Check i18n bundles for missing keys
-        if: success() || failure()
-        working-directory: ${{ env.WORKSPACE_DIR }}
-        shell: bash
-        run: scripts/find-missing-i18n.sh
-
-      - name: Check i18n bundles for formatting
+      - name: Lint i18n bundles
         if: success() || failure()
         working-directory: ${{ env.WORKSPACE_DIR }}
         shell: pwsh
-        run: scripts/sort-i18n.ps1
+        run: scripts/lint-i18n.ps1
 
       - name: Check formatting
         if: success() || failure()
