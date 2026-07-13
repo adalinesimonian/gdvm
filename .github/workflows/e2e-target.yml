@@ -40,7 +40,11 @@ permissions:
 jobs:
   e2e:
     name: End-to-End Tests (${{ inputs.os }}, ${{ inputs.target }})
-    runs-on: ${{ inputs.os }}
+    # Just for end-to-end tests, substitute the macos-latest runner when testing
+    # the x86_64 target, with macos-15-intel since otherwise the tests are
+    # unbelievably slow under Rosetta.
+    # TODO: Remove before Fall 2027 when macos-15-intel is slated for removal.
+    runs-on: ${{ inputs.os == 'macos-latest' && inputs.target == 'x86_64-apple-darwin' && 'macos-15-intel' || inputs.os }}
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
