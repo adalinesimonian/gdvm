@@ -67,7 +67,7 @@ pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
         let entries: Vec<VersionEntry> = releases
             .iter()
             .map(|r| VersionEntry {
-                version: r.to_string(),
+                version: r.to_display_str(),
                 variant: None,
                 registry: registry.map(str::to_string),
             })
@@ -80,7 +80,7 @@ pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
     } else {
         println_i18n!("available-releases");
         for r in releases {
-            println!("- {r}");
+            println!("- {}", r.to_display_str());
         }
     }
     Ok(())

@@ -58,13 +58,17 @@ mod tests {
             "default:4.1.1-stable"
         );
 
+        let v411 = ResolvedVersion {
+            major: 4,
+            minor: 1,
+            patch: 1,
+            subpatch: 0,
+            release_type: "stable".to_string(),
+        };
+        assert_eq!(display_version(&v411, &default, None), "4.1.1-stable");
         assert_eq!(
-            display_version("4.1.1-stable", &default, None),
-            "4.1.1-stable"
-        );
-        assert_eq!(
-            display_version("4.1.1-stable", &Variant::from_option(Some("csharp")), None),
-            "4.1.1-stable (csharp)"
+            display_version(&v411, &Variant::from_option(Some("csharp")), None),
+            "csharp:4.1.1-stable"
         );
     }
 }

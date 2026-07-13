@@ -23,7 +23,7 @@ use anyhow::{Result, anyhow};
 use directories::BaseDirs;
 use serde::{Deserialize, Serialize};
 
-use crate::{eprintln_i18n, t};
+use crate::t;
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days"];
@@ -211,8 +211,8 @@ impl Config {
             match toml::from_str(&contents) {
                 Ok(config) => Ok(config),
                 Err(e) => {
-                    eprintln_i18n!("error-parse-config", error = e.to_string());
-                    eprintln_i18n!("error-parse-config-using-default");
+                    crate::ui::error(t!("error-parse-config", error = e.to_string()));
+                    crate::ui::warn(t!("error-parse-config-using-default"));
                     Ok(Self::default())
                 }
             }

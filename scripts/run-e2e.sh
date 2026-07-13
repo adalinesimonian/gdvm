@@ -500,7 +500,7 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 test "Search for 4.x releases" <<'TEST_SCRIPT'
-assert_run_contains 4.3-stable -- gdvm search --limit 0 --filter 4
+assert_run_contains 4.3.0-stable -- gdvm search --limit 0 --filter 4
 TEST_SCRIPT
 
 test "Refresh flag repopulates registry cache" <<'TEST_SCRIPT'
@@ -519,9 +519,9 @@ fi
 printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"registries":{}}' > "$cache"
 
 cache_only_out="$(gdvm search --cache-only --limit 0 --filter 4 || true)"
-assert_not_contains "$cache_only_out" 4.3-stable \
+assert_not_contains "$cache_only_out" 4.3.0-stable \
     "cache-only search unexpectedly found releases with empty cache"
-assert_run_contains 4.3-stable -- gdvm search --refresh --limit 0 --filter 4
+assert_run_contains 4.3.0-stable -- gdvm search --refresh --limit 0 --filter 4
 
 cache_contents="$(cat "$cache")"
 assert_contains "$cache_contents" '"tag_name"' \
@@ -647,7 +647,7 @@ test "Install Godot 4.3" gdvm install 4.3
 
 test "list --format json is machine-readable" <<'TEST_SCRIPT'
 output="$(gdvm list --format json)"
-assert_contains "$output" '"version": "4.3-stable"' "lists the installed version"
+assert_contains "$output" '"version": "4.3.0-stable"' "lists the installed version"
 
 if command -v jq >/dev/null 2>&1; then
     echo "$output" | jq . >/dev/null \
@@ -657,7 +657,7 @@ TEST_SCRIPT
 
 test "info --format json reports details of an installed version" <<'TEST_SCRIPT'
 output="$(gdvm info 4.3 --format json)"
-assert_contains "$output" '"version": "4.3-stable"' "reports the version"
+assert_contains "$output" '"version": "4.3.0-stable"' "reports the version"
 assert_contains "$output" '"size_bytes"' "reports the size on disk"
 assert_contains "$output" '"executable"' "reports the executable path"
 
@@ -687,7 +687,7 @@ gdvm pin 4.3.0
 
 # gdvm.toml should exist with the new explicit-variant format.
 toml="$(cat gdvm.toml)"
-assert_contains "$toml" 'version = "default:4.3-stable"' \
+assert_contains "$toml" 'version = "default:4.3.0-stable"' \
     "gdvm.toml missing the explicit-variant version line"
 
 # .gdvmrc should exist with the old pre-refactor format.
@@ -760,8 +760,8 @@ test "Install with csharp: variant specifier" <<'TEST_SCRIPT'
 gdvm install csharp:4.3
 
 list_out="$(gdvm list)"
-assert_matches "$list_out" '4\.3.*csharp' \
-    "csharp 4.3 not shown in gdvm list after install"
+assert_matches "$list_out" 'csharp:4\.3\.0-stable' \
+    "csharp 4.3.0 not shown in gdvm list after install"
 TEST_SCRIPT
 
 test "Show with csharp: variant specifier returns existing file" <<'TEST_SCRIPT'
@@ -782,7 +782,7 @@ gdvm pin csharp:4.3.0
 
 # gdvm.toml should carry the csharp variant prefix.
 toml="$(cat gdvm.toml)"
-assert_contains "$toml" 'version = "csharp:4.3-stable"' \
+assert_contains "$toml" 'version = "csharp:4.3.0-stable"' \
     "gdvm.toml missing the csharp variant prefix"
 
 # .gdvmrc should have the old pre-refactor format.
@@ -808,7 +808,7 @@ cd "$tmpdir"
 gdvm pin 4.3.0 --no-legacy
 
 toml="$(cat gdvm.toml)"
-assert_contains "$toml" 'version = "default:4.3-stable"' \
+assert_contains "$toml" 'version = "default:4.3.0-stable"' \
     "gdvm.toml missing the default variant version line"
 
 assert_path_absent .gdvmrc ".gdvmrc should not exist with --no-legacy"
@@ -854,7 +854,7 @@ test "Remove with csharp: variant specifier" <<'TEST_SCRIPT'
 gdvm remove csharp:4.3.0 --yes
 
 list_out="$(gdvm list)"
-assert_not_matches "$list_out" '4\.3.*csharp' \
+assert_not_matches "$list_out" 'csharp:4\.3' \
     "csharp 4.3 should have been removed but still appears in list"
 TEST_SCRIPT
 

@@ -20,11 +20,12 @@ use std::time::Duration;
 
 use anyhow::{Result, anyhow};
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use sha2::{Digest, Sha256, Sha512};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::{eprintln_i18n, t};
+use crate::t;
+use crate::ui::progress::Task;
+use crate::ui::{self};
 
 /// Allows opting into unencrypted HTTP for fetches.
 pub const ALLOW_INSECURE_URLS_ENV_VAR: &str = "GDVM_ALLOW_INSECURE_URLS";
@@ -228,12 +229,14 @@ impl StreamHasher {
     }
 }
 
-/// Download `url` to the `dest` file handle.
-pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<DownloadDigests> {
+/// Download `url` to the `dest` file handle. `subject` is the text sent to the
+/// progress indicator describing what's being downloaded.
+pub async fn download_to_file(
+    url: &str,
+    dest: &mut tokio::fs::File,
+    subject: &str,
+) -> Result<DownloadDigests> {
     ensure_url_scheme_allowed(url)?;
-
-    // Print downloading URL message
-    eprintln_i18n!("operation-downloading-url", url = url);
 
     // Copy from local file if the registry is on disk.
     if let Some(path) = url.strip_prefix("file://") {
@@ -253,7 +256,6 @@ pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<D
             hasher.update(&buffer[..read]);
         }
         dest.flush().await?;
-        eprintln_i18n!("operation-download-complete");
         return Ok(hasher.finish());
     }
 
@@ -261,8 +263,8 @@ pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<D
     let mut state = TransferState::default();
     let mut attempt = 1;
 
-    let result = loop {
-        match transfer_attempt(&client, url, dest, &mut state).await {
+    loop {
+        match transfer_attempt(&client, url, dest, &mut state, subject).await {
             Ok(digests) => break Ok(digests),
             Err(TransferError::Permanent(error)) => break Err(error),
             Err(TransferError::Transient { error, retry_after }) => {
@@ -278,16 +280,7 @@ pub async fn download_to_file(url: &str, dest: &mut tokio::fs::File) -> Result<D
                 attempt += 1;
             }
         }
-    };
-
-    if let Some(pb) = &state.progress {
-        match &result {
-            Ok(_) => pb.finish_with_message(t!("operation-download-complete")),
-            Err(_) => pb.finish_and_clear(),
-        }
     }
-
-    result
 }
 
 /// Transfer state for a download, across all retries.
@@ -302,8 +295,8 @@ struct TransferState {
     range_supported: bool,
     /// The total size of the file, if known.
     total: Option<u64>,
-    /// The progress bar.
-    progress: Option<ProgressBar>,
+    /// The progress indicator.
+    task: Option<Task>,
 }
 
 impl TransferState {
@@ -312,12 +305,11 @@ impl TransferState {
         self.downloaded > 0 && self.range_supported && self.validator.is_some()
     }
 
-    /// Print a line, either to the progress bar or to stderr if no progress bar
-    /// exists.
+    /// Print a line, keeping it clear of the indicator if one exists.
     fn println(&self, message: String) {
-        match &self.progress {
-            Some(pb) => pb.println(message),
-            None => eprintln!("{message}"),
+        match &self.task {
+            Some(task) => task.print_above(message),
+            None => ui::with_suspended(|| eprintln!("{message}")),
         }
     }
 }
@@ -328,6 +320,7 @@ async fn transfer_attempt(
     url: &str,
     dest: &mut tokio::fs::File,
     state: &mut TransferState,
+    subject: &str,
 ) -> Result<DownloadDigests, TransferError> {
     use tokio::io::AsyncSeekExt;
 
@@ -421,7 +414,7 @@ async fn transfer_attempt(
         .await
         .map_err(TransferError::Permanent)?;
 
-    update_progress(state, url)?;
+    update_progress(state, subject);
 
     let mut stream = response.bytes_stream();
     loop {
@@ -431,10 +424,10 @@ async fn transfer_attempt(
                     .await
                     .map_err(|e| TransferError::Permanent(e.into()))?;
                 hasher.update(&chunk);
-                if let Some(pb) = &state.progress
+                if let Some(task) = &state.task
                     && state.total.is_some()
                 {
-                    pb.set_position(hasher.size);
+                    task.set_position(hasher.size);
                 }
             }
             Some(Err(e)) => {
@@ -512,74 +505,20 @@ async fn rehash_prefix(dest: &mut tokio::fs::File, len: u64) -> Result<StreamHas
 }
 
 /// Update the progress bar. Creates one if it hasn't been made yet.
-fn update_progress(state: &mut TransferState, url: &str) -> Result<(), TransferError> {
-    let make = || -> Result<ProgressBar> {
-        let pb = if let Some(size) = state.total {
-            let pb = ProgressBar::new(size);
-            pb.set_style(
-                ProgressStyle::default_bar()
-                    .template(
-                        "{spinner:.green} [{bar:40.cyan/blue}] {local_bytes}/{local_total_bytes} ({local_eta})",
-                    )?
-                    .progress_chars("#>-")
-                    .with_key(
-                        "local_bytes",
-                        |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                            write!(
-                                w,
-                                "{}",
-                                crate::progress_utils::format_progress_size(state.pos())
-                            )
-                            .unwrap();
-                        },
-                    )
-                    .with_key(
-                        "local_total_bytes",
-                        |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                            write!(
-                                w,
-                                "{}",
-                                crate::progress_utils::format_progress_size(
-                                    state.len().unwrap_or(0)
-                                )
-                            )
-                            .unwrap();
-                        },
-                    )
-                    .with_key(
-                        "local_eta",
-                        |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                            write!(
-                                w,
-                                "{}",
-                                crate::progress_utils::format_progress_eta(state.eta())
-                            )
-                            .unwrap();
-                        },
-                    ),
-            );
-            pb
-        } else {
-            crate::progress_utils::spinner(t!("operation-downloading-url", url = url))?
-        };
-        pb.enable_steady_tick(Duration::from_millis(100));
-        Ok(pb)
-    };
-
-    match &state.progress {
-        Some(pb) => {
+fn update_progress(state: &mut TransferState, subject: &str) {
+    match &state.task {
+        Some(task) => {
             if let Some(total) = state.total {
-                pb.set_length(total);
+                task.set_length(total);
             }
-            pb.set_position(state.downloaded);
+            task.set_position(state.downloaded);
         }
         None => {
-            let pb = make().map_err(TransferError::Permanent)?;
-            pb.set_position(state.downloaded);
-            state.progress = Some(pb);
+            let task = ui::progress::transfer(t!("status-downloading"), subject, state.total);
+            task.set_position(state.downloaded);
+            state.task = Some(task);
         }
     }
-    Ok(())
 }
 
 /// The maximum size accepted for responses from the registry, in bytes.
@@ -630,7 +569,12 @@ pub async fn download_file(url: &str, dest: &Path) -> Result<DownloadDigests> {
         .open(dest)
         .await?;
 
-    match download_to_file(url, &mut file).await {
+    let subject = dest
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+
+    match download_to_file(url, &mut file, &subject).await {
         Ok(digests) => Ok(digests),
         Err(err) => {
             drop(file);

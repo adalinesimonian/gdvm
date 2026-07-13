@@ -98,13 +98,11 @@ help-link-path = Stien der lenkja eller kopien skal opprettast, t.d. «{ $platfo
 help-link-force = Overskriv eksisterande lenkje om ho finst
 help-link-copy = Kopier køyrbar i staden for å lage lenkje
 
-cached-zip-stored = Lagra { -godot }-utgjevingsarkivet i cachen.
-using-cached-zip = Brukar cacha utgjevingsarkiv, hoppar over nedlasting.
 cache-files-removed = Cache-filene vart fjerna.
 cache-metadata-removed = Cache-metadataet vart fjerna.
 no-cache-files-found = Ingen cache-filer funne.
 no-cache-metadata-found = Inkje cache-metadata funne.
-gdvm-toml-malformed = {"\u001b"}[33mÅtvaring: ignorerer { -gdvm-toml } på { $path } fordi han ikkje kunne tolkast: { $error }{"\u001b"}[0m
+gdvm-toml-malformed = ignorerer { -gdvm-toml } på { $path } fordi han ikkje kunne tolkast: { $error }
 
 help-console = Køyr { -godot } med konsoll tilkopla. Standard er false på Windows, true på andre plattformer.
 
@@ -112,13 +110,27 @@ help-default = Administrer standardversjonen
 help-default-version = Versjonen som skal setjast som standard (t.d. 4.2 eller 4.2-stable).
 no-default-set = Ingen standardversjon er sett. Køyr «{ -gdvm } use <version>» for å setja ein standardversjon systemomfattande, eller «{ -gdvm } pin <version>» for å setja ein standardversjon for den gjeldende mappa.
 
-installing-version = Installerer versjon {$version}
-installed-success = Installerte {$version} vellukka.
+warning-prerelease = Du installerer ein førehandsversjon ({$branch}).
+warning-deprecated-csharp-flag = Flagget --csharp er avvikla. Bruk "csharp"-variantspesifikatoren i staden (t.d. csharp:4.4).
 
-warning-prerelease = {"\u001b"}[33mÅtvaring: Du installerer ein førehandsversjon ({$branch}).{"\u001b"}[0m
-warning-deprecated-csharp-flag = {"\u001b"}[33mÅtvaring: Flagget --csharp er avvikla. Bruk "csharp"-variantspesifikatoren i staden (t.d. csharp:4.4).{"\u001b"}[0m
-
-force-reinstalling-version = Tvingar installasjon av versjon {$version} på nytt.
+label-error = Feil:
+label-note = Merknad:
+label-warning = Åtvaring:
+progress-rate = { size-display }/s
+progress-eta-remaining = { $time } att
+progress-fraction = { $done }/{ $total }
+status-downloading = Lastar ned
+status-extracting = Pakkar ut
+status-fetching = Hentar
+status-installed = Installert
+status-installing = Installerer
+status-upgraded = Oppgradert
+status-upgrading = Oppgraderer
+status-verifying = Verifiserer
+subject-cached-archive = bufra arkiv
+subject-releases = utgjevingar
+subject-update-manifest = oppdateringsmanifest
+upgrade-target = { -gdvm } { $version }
 
 auto-installing-version = Automatisk installasjon av versjon { $version }
 
@@ -126,12 +138,6 @@ no-versions-installed = Ingen versjonar installerte.
 installed-versions = Installerte { -godot }-versjonar:
 removed-version = Fjerna versjonen {$version}
 removing-version = Fjernar versjon {$version}
-
-force-redownload = Tvingar nedlasting av versjon {$version} på nytt.
-operation-downloading-url = Lastar ned {$url}...
-operation-download-complete = Nedlasting fullført.
-operation-extracting = Pakkar ut...
-operation-extract-complete = Utpakking fullført.
 progress-eta =
     { $magnitude ->
         [seconds] { $secs }s
@@ -141,9 +147,6 @@ progress-eta =
 
 unsupported-platform = Plattforma er ikkje støtta
 unsupported-architecture = Arkitekturen er ikkje støtta
-
-verifying-checksum = Verifiserer sjekksum...
-checksum-verified = Sjekksum verifisert.
 error-checksum-mismatch = Sjekksumfeil for fila { $file }
 error-invalid-sha-length = Ugyldig SHA-lengde { $length }
 error-size-mismatch = Storleiksavvik for fila { $file }: forventa { $expected } byte, fekk { $actual } byte.
@@ -181,9 +184,6 @@ prune-skipped-error = Hoppar over { $item }: { $error }
 prune-skipped-in-use = Hoppar over { $item }: han er i bruk av ein annan { -gdvm }-prosess.
 
 error-find-user-dirs = Klarte ikkje å finne brukarmappene.
-
-fetching-releases = Hentar utgjevingar...
-releases-fetched = Utgjevingar henta.
 warning-fetching-releases-using-cache = Feil ved henting av utgjevingar: { $error }. Brukar hurtigbuffer i staden.
 
 error-version-not-found = Versjonen vart ikkje funnen.
@@ -232,9 +232,6 @@ error-create-symlink-windows = Kunne ikkje opprette symlink. Kontroller at {"\u0
 help-upgrade = Oppgrader { -gdvm } til nyaste versjon
 help-upgrade-major = Tillat oppgradering på tvers av hovudversjonar
 help-upgrade-pre = Oppgrader til nyaste førehandsutgjeving
-upgrade-starting = Startar oppgradering av { -gdvm }...
-upgrade-downloading-latest = Lastar ned nyaste { -gdvm }...
-upgrade-complete = { -gdvm } vart oppgradert!
 upgrade-not-needed = { -gdvm } er alt på siste versjon: { $version }.
 upgrade-current-version-newer = Den noverande { -gdvm }-versjonen ({ $current }) er nyare enn den siste tilgjengelege versjonen ({ $latest }). Inga oppgradering nødvendig.
 upgrade-download-failed = Nedlasting av oppgradering feila: { $error }
@@ -345,7 +342,7 @@ help-config-value = Verdien som skal setjast for konfigurasjonsnykelen
 help-config-unset-key = Konfigurasjonsnykelen som skal fjernast (t.d. prune.max-age-days)
 help-config-show-sensitive = Vis sensitive konfigurasjonsverdiar i klårtekst
 help-config-available = List alle tilgjengelege konfigurasjonsnyklar og verdiar, inkludert standardverdiar
-warning-setting-sensitive = {"\u001b"}[33mÅtvaring: Du set ein sensitiv verdi som vil verta lagra i klårtekst i heimemappa di.{"\u001b"}[0m
+warning-setting-sensitive = Du set ein sensitiv verdi som vil verta lagra i klårtekst i heimemappa di.
 config-set-prompt = Ver venleg og oppgjev verdien for { $key }:
 error-reading-input = Feil ved lesing av inndata
 config-set-success = Konfigurasjonen vart oppdatert.
@@ -355,7 +352,7 @@ error-unknown-config-key = Ukjend konfigurasjonsnykel.
 error-invalid-config-value = Ugyldig verdi for konfigurasjonsnykelen { $key }.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk «get», «set» eller «list».
 error-parse-config = Kunne ikkje tolke konfigurasjonsfila: { $error }
-error-parse-config-using-default = {"\u001b"}[33mBrukar standard konfigurasjonsverdiar.{"\u001b"}[0m
+error-parse-config-using-default = Brukar standard konfigurasjonsverdiar.
 
 help-registry = Administrer register å installere { -godot }-bygg frå
 help-registry-add = Legg til eit register
@@ -372,11 +369,11 @@ registry-tag-official = offisielt
 registry-error = Registerfeil: { $error }
 
 error-invalid-registry-subcommand = Ugyldig register-underkommando. Bruk «add», «remove», «list» eller «refresh».
-registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) er eit eigendefinert register, ikkje det offisielle. { -gdvm } sjekkar at nedlastingar stemmer med det registeret oppgjev, men kan ikkje vite om dei er trygge å køyre. Installer frå det berre om du stolar på dei som driv det.{"\u001b"}[0m
+registry-trust-warning = { $registry } ({ $url }) er eit eigendefinert register, ikkje det offisielle. { -gdvm } sjekkar at nedlastingar stemmer med det registeret oppgjev, men kan ikkje vite om dei er trygge å køyre. Installer frå det berre om du stolar på dei som driv det.
 registry-trust-prompt = Stoler du på dette registeret og vil halde fram? (ja/nei):
 registry-trust-bypass = {"\u001b"}[1;31mHoppar over tillitssjekken for { $registry } ({ $url }) fordi du brukte --yes. { -gdvm } kan ikkje vite om filene er trygge å køyre. Tek ein kort pause; trykk Ctrl+C no for å stoppe.{"\u001b"}[0m
 registry-trust-aborted = Avbrote: registeret er ikkje klarert.
-registry-project-override-conflict = {"\u001b"}[33mProsjektet sin { -gdvm-toml } omdefinerer registeret { $registry } (konfigurasjonen din: { $machine_url }) som { $project_url }. Prosjektet sin definisjon har forrang.{"\u001b"}[0m
+registry-project-override-conflict = Prosjektet sin { -gdvm-toml } omdefinerer registeret { $registry } (konfigurasjonen din: { $machine_url }) som { $project_url }. Prosjektet sin definisjon har forrang.
 
 help-registry-init = Initialiser ei ny registermappe
 help-registry-add-build = Legg til eit bygg i eit register
@@ -397,10 +394,9 @@ help-registry-build-size = Storleiken på arkivet i byte, i staden for å måle 
 registry-init-success = Initialiserte registeret { $name } i { $path }.
 registry-build-added = La til bygget { $version } for { $platform }.
 registry-build-removed = Fjerna bygget { $version }.
-registry-build-downloading = Lastar ned { $url } for å rekne ut storleik og SHA-512 …
-registry-build-warn-local-hash = {"\u001b"}[33mHashar den lokale fila og går ut frå at ho samsvarar med { $url }. { -gdvm } lastar ikkje ned URL-en for å stadfeste det.{"\u001b"}[0m
-registry-build-warn-unverified = {"\u001b"}[33mBrukar SHA-512 og storleiken du oppgav utan å laste ned artefakten for å stadfeste dei. Sjå til at dei er rette.{"\u001b"}[0m
-registry-build-warn-explicit-store = {"\u001b"}[33mBrukar SHA-512 og/eller storleiken du oppgav i staden for å måle det lagra arkivet.{"\u001b"}[0m
+registry-build-warn-local-hash = Hashar den lokale fila og går ut frå at ho samsvarar med { $url }. { -gdvm } lastar ikkje ned URL-en for å stadfeste det.
+registry-build-warn-unverified = Brukar SHA-512 og storleiken du oppgav utan å laste ned artefakten for å stadfeste dei. Sjå til at dei er rette.
+registry-build-warn-explicit-store = Brukar SHA-512 og/eller storleiken du oppgav i staden for å måle det lagra arkivet.
 registry-build-sha-mismatch = Oppgjeve SHA-512 ({ $expected }) samsvarar ikkje med artefakten ({ $actual }).
 registry-build-size-mismatch = Oppgjeven storleik ({ $expected }) samsvarar ikkje med artefakten ({ $actual }).
 registry-validate-ok =

@@ -55,10 +55,7 @@ pub(crate) async fn sub_install(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()>
         .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
 
     let resolved_variant = Variant::from_option(variant);
-    let display = version::display_version(&gv.to_display_str(), &resolved_variant, registry);
-
-    // Print a message indicating the start of the installation process
-    println_i18n!("installing-version", version = &display);
+    let display = version::display_version(&gv, &resolved_variant, registry);
 
     match gdvm
         .installer()
@@ -72,8 +69,7 @@ pub(crate) async fn sub_install(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()>
         .await?
     {
         InstallOutcome::Installed => {
-            // Print a message indicating the successful installation
-            println_i18n!("installed-success", version = &display);
+            // Final status already printed during installation.
         }
         InstallOutcome::AlreadyInstalled => {
             // Print a message indicating the version is already installed

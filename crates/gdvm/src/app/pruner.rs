@@ -371,7 +371,7 @@ impl<'a> Pruner<'a> {
 
         match VersionQuery::from_install_str(&version) {
             Ok(gv) => crate::version::display_version(
-                &gv.to_resolved().to_display_str(),
+                &gv.to_resolved(),
                 &Variant::from_option(Some(&variant)),
                 registry.as_deref(),
             ),

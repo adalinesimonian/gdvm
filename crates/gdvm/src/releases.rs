@@ -143,11 +143,11 @@ impl ReleaseCatalog {
     }
 
     async fn update_cache(&self, cache: &mut RegistryReleasesCache) -> Result<()> {
-        let pb = crate::progress_utils::spinner(t!("fetching-releases"))?;
+        let task = crate::ui::progress::activity(t!("status-fetching"), t!("subject-releases"));
 
         let index = self.registry.fetch_index().await?;
 
-        pb.finish_with_message(t!("releases-fetched"));
+        drop(task);
 
         cache.releases = index
             .into_iter()

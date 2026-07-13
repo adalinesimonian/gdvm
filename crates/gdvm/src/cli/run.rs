@@ -124,7 +124,7 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
     let resolved = resolver.resolve(request).await?;
 
     let display = version::display_version(
-        &resolved.version.to_display_str(),
+        &resolved.version,
         &resolved.variant,
         resolved.registry.as_deref(),
     );

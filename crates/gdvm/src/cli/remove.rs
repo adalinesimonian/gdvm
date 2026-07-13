@@ -52,7 +52,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
         1 => {
             let installed = &resolved_versions[0];
             let display = version::display_version(
-                &installed.version.to_display_str(),
+                &installed.version,
                 &installed.variant,
                 installed.registry.as_deref(),
             );
@@ -82,7 +82,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
                 println!(
                     "- {}",
                     version::display_version(
-                        &installed.version.to_display_str(),
+                        &installed.version,
                         &installed.variant,
                         installed.registry.as_deref(),
                     )

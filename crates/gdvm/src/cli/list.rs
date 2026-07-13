@@ -46,11 +46,7 @@ pub(crate) fn sub_list(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         for v in &versions {
             println!(
                 "- {}",
-                version::display_version(
-                    &v.version.to_display_str(),
-                    &v.variant,
-                    v.registry.as_deref(),
-                )
+                version::display_version(&v.version, &v.variant, v.registry.as_deref(),)
             );
         }
     }

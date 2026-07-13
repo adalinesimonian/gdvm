@@ -29,7 +29,7 @@ use crate::download_utils::download_to_file;
 use crate::host::detect_host;
 use crate::metadata_cache::{CacheStore, GdvmCache};
 use crate::paths::GdvmPaths;
-use crate::{eprintln_i18n, println_i18n, self_update, t};
+use crate::{println_i18n, self_update, t, ui};
 
 #[derive(Clone, Copy)]
 pub struct Updater<'a> {
@@ -133,14 +133,16 @@ impl<'a> Updater<'a> {
         let _lock =
             crate::locks::Lock::acquire(&self.paths.locks(), crate::locks::Resource::SelfUpgrade)?;
 
-        println_i18n!("upgrade-starting");
-        println_i18n!("upgrade-downloading-latest");
-
         let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
 
-        let manifest =
-            self_update::fetch_manifest(&self_update::releases_url(), Duration::from_secs(10))
-                .await?;
+        let manifest = {
+            let task = ui::progress::activity(t!("status-fetching"), t!("subject-update-manifest"));
+            let manifest =
+                self_update::fetch_manifest(&self_update::releases_url(), Duration::from_secs(10))
+                    .await?;
+            drop(task);
+            manifest
+        };
 
         let target = match self_update::select_upgrade(
             &manifest.releases,
@@ -184,6 +186,9 @@ impl<'a> Updater<'a> {
             return Ok(());
         }
 
+        let subject = t!("upgrade-target", version = target_version.to_string());
+        ui::milestone(t!("status-upgrading"), &subject);
+
         let triple = detect_host()?.gdvm_target_triple()?;
         let binary = target.binary_for(triple).ok_or_else(|| {
             anyhow!(t!(
@@ -216,10 +221,10 @@ impl<'a> Updater<'a> {
             .map_err(|e| anyhow!(t!("upgrade-file-create-failed", error = e.to_string())))?;
 
         let mut async_file = tokio::fs::File::from_std(tmp_file.as_file().try_clone()?);
-        let digests = match download_to_file(bin_url, &mut async_file).await {
+        let digests = match download_to_file(bin_url, &mut async_file, &subject).await {
             Ok(digests) => digests,
             Err(err) => {
-                eprintln_i18n!("upgrade-download-failed", error = err.to_string());
+                ui::error(t!("upgrade-download-failed", error = err.to_string()));
                 return Err(err);
             }
         };
@@ -269,7 +274,7 @@ impl<'a> Updater<'a> {
 
         self.cache_store.clear_gdvm_cache(last_update_check)?;
 
-        println_i18n!("upgrade-complete");
+        ui::milestone(t!("status-upgraded"), &subject);
 
         Ok(())
     }
@@ -338,24 +343,16 @@ fn upgrade_notice(cache: &GdvmCache, current_version: &Version) -> NoticeState {
 
 /// Print an upgrade notice.
 fn print_notice(notice: &UpgradeNotice) {
-    eprint!("\x1b[1;32m"); // Bold and green
-    match notice {
-        UpgradeNotice::Both { minor, major } => {
-            eprintln_i18n!(
-                "upgrade-available-both",
-                minor_version = minor.as_str(),
-                major_version = major.as_str()
-            );
-        }
-        UpgradeNotice::Minor(version) => {
-            eprintln_i18n!("upgrade-available", version = version.as_str());
-        }
-        UpgradeNotice::Major(version) => {
-            eprintln_i18n!("upgrade-available-major", version = version.as_str());
-        }
-    }
-    eprint!("\x1b[0m"); // Reset
-    eprintln!();
+    let message = match notice {
+        UpgradeNotice::Both { minor, major } => t!(
+            "upgrade-available-both",
+            minor_version = minor.as_str(),
+            major_version = major.as_str()
+        ),
+        UpgradeNotice::Minor(version) => t!("upgrade-available", version = version.as_str()),
+        UpgradeNotice::Major(version) => t!("upgrade-available-major", version = version.as_str()),
+    };
+    ui::tip(message);
 }
 
 #[cfg(test)]

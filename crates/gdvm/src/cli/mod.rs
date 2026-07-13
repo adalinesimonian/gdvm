@@ -71,7 +71,7 @@ fn check_deprecated_csharp_flag(
     if !explicitly_given {
         return spec_variant;
     }
-    eprintln_i18n!("warning-deprecated-csharp-flag");
+    gdvm::ui::warn(t!("warning-deprecated-csharp-flag"));
 
     // If the new variant field was used, it takes precedence.
     if spec_variant.is_some() {
@@ -123,11 +123,11 @@ async fn ensure_registry_trusted(
     let url = gdvm.catalogs().registry_base_url(name)?;
 
     // Always warn when using a third-party registry, even after it has been confirmed.
-    eprintln_i18n!(
+    gdvm::ui::warn(t!(
         "registry-trust-warning",
         registry = name,
         url = url.as_str()
-    );
+    ));
 
     if Config::load()?.is_registry_trusted(&url) {
         return Ok(());

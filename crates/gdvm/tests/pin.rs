@@ -115,7 +115,7 @@ async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
 
     let toml = fs::read_to_string(env.project_dir().join("gdvm.toml")).unwrap();
     assert!(
-        toml.contains("version = \"default:4.3-stable\""),
+        toml.contains("version = \"default:4.3.0-stable\""),
         "gdvm.toml should use the new specifier format, got: {toml}"
     );
 
@@ -140,7 +140,7 @@ async fn pin_csharp_writes_variant_formats() {
 
     let toml = fs::read_to_string(env.project_dir().join("gdvm.toml")).unwrap();
     assert!(
-        toml.contains("version = \"csharp:4.3-stable\""),
+        toml.contains("version = \"csharp:4.3.0-stable\""),
         "gdvm.toml should carry the csharp variant prefix, got: {toml}"
     );
 

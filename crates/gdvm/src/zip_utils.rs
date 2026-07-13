@@ -21,10 +21,9 @@ use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use zip::ZipArchive;
 
-use crate::{eprintln_i18n, t};
+use crate::{t, ui};
 
 pub fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<()> {
     let mut file = fs::File::open(zip_path).map_err(|e| {
@@ -35,18 +34,22 @@ pub fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<()> {
         ))
     })?;
 
-    extract_zip_from_file(&mut file, zip_path, extract_to)
+    let subject = zip_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+
+    extract_zip_from_file(&mut file, zip_path, extract_to, &subject)
 }
 
-/// Extract a ZIP archive from the given file handle.
+/// Extract a ZIP archive from the given file handle. `subject` is the text sent
+/// to the progress indicator describing what's being extracted.
 pub fn extract_zip_from_file(
     file: &mut fs::File,
     zip_path: &Path,
     extract_to: &Path,
+    subject: &str,
 ) -> Result<()> {
-    // Print extracting message
-    eprintln_i18n!("operation-extracting");
-
     // First pass: Calculate total uncompressed size and collect top-level entries
     file.rewind().map_err(|e| {
         anyhow!(t!(
@@ -104,48 +107,7 @@ pub fn extract_zip_from_file(
         };
 
     // Initialize progress bar with total uncompressed size
-    let pb = ProgressBar::new(total_size);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template(
-                "{spinner:.green} [{bar:40.cyan/blue}] {local_bytes}/{local_total_bytes} ({local_eta})",
-            )?
-            .progress_chars("#>-")
-            .with_key(
-                "local_bytes",
-                |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                    write!(
-                        w,
-                        "{}",
-                        crate::progress_utils::format_progress_size(state.pos())
-                    )
-                    .unwrap();
-                },
-            )
-            .with_key(
-                "local_total_bytes",
-                |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                    write!(
-                        w,
-                        "{}",
-                        crate::progress_utils::format_progress_size(state.len().unwrap_or(0))
-                    )
-                    .unwrap();
-                },
-            )
-            .with_key(
-                "local_eta",
-                |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                    write!(
-                        w,
-                        "{}",
-                        crate::progress_utils::format_progress_eta(state.eta())
-                    )
-                    .unwrap();
-                },
-            ),
-    );
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
+    let task = ui::progress::gauge(t!("status-extracting"), subject, total_size);
 
     // Second pass: Extract files and update progress
     file.rewind().map_err(|e| {
@@ -259,7 +221,7 @@ pub fn extract_zip_from_file(
                     error = e.to_string(),
                 ))
             })?;
-            pb.inc(bytes_read as u64);
+            task.inc(bytes_read as u64);
         }
 
         // Set executable permissions if applicable (Unix-like systems only)
@@ -279,6 +241,6 @@ pub fn extract_zip_from_file(
         }
     }
 
-    pb.finish_with_message(t!("operation-extract-complete"));
+    drop(task);
     Ok(())
 }
