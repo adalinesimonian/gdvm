@@ -311,7 +311,7 @@ impl<'a> Library<'a> {
         if !version_dir.exists() {
             return Err(anyhow!(t!(
                 "error-version-not-found",
-                version = &gv.to_display_str(),
+                version = &crate::version::display_version(gv, variant, registry),
             )));
         }
 
@@ -320,7 +320,7 @@ impl<'a> Library<'a> {
         let godot_executable = godot_executable.ok_or_else(|| {
             anyhow!(t!(
                 "godot-executable-not-found",
-                version = &gv.to_display_str(),
+                version = &crate::version::display_version(gv, variant, registry),
             ))
         })?;
 

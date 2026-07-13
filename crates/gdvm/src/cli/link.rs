@@ -85,7 +85,7 @@ pub(crate) async fn sub_link(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     };
 
     let display = version::display_version(
-        &resolved.version.to_display_str(),
+        &resolved.version,
         &resolved.variant,
         resolved.registry.as_deref(),
     );

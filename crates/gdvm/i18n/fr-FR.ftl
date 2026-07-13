@@ -98,13 +98,11 @@ help-link-path = Le chemin où le lien ou la copie sera créé, par exemple «{ 
 help-link-force = Écraser le lien existant s'il existe
 help-link-copy = Copier l'exécutable au lieu de créer un lien
 
-cached-zip-stored = L'archive de cette version de { -godot } a été mise en cache.
-using-cached-zip = Utilisation de l'archive de version en cache, téléchargement ignoré.
 cache-files-removed = Les fichiers du cache ont été supprimés avec succès.
 cache-metadata-removed = Les métadonnées de cache ont été supprimées avec succès.
 no-cache-files-found = Aucun fichier de cache trouvé.
 no-cache-metadata-found = Aucune métadonnée de cache trouvée.
-gdvm-toml-malformed = {"\u001b"}[33mAvertissement : { -gdvm-toml } à { $path } ignoré, car il n'a pas pu être analysé : { $error }{"\u001b"}[0m
+gdvm-toml-malformed = { -gdvm-toml } à { $path } ignoré, car il n'a pas pu être analysé : { $error }
 
 help-console = Exécuter { -godot } avec la console attachée. Par défaut false sur Windows, true sur les autres plateformes.
 
@@ -112,13 +110,27 @@ help-default = Gérer la version par défaut
 help-default-version = La version à définir par défaut (ex. 4.2 ou 4.2-stable).
 no-default-set = Aucune version par défaut définie. Exécutez « { -gdvm } use <version> » pour définir une version par défaut système, ou « { -gdvm } pin <version> » pour définir une version par défaut pour le répertoire courant.
 
-installing-version = Installation de la version {$version}
-installed-success = {$version} installée avec succès
+warning-prerelease = Vous installez une version de pré-publication ({$branch}).
+warning-deprecated-csharp-flag = Le drapeau --csharp est obsolète. Utilisez le spécificateur de variante "csharp" à la place (ex. csharp:4.4).
 
-warning-prerelease = {"\u001b"}[33mAvertissement : Vous installez une version de pré-publication ({$branch}).{"\u001b"}[0m
-warning-deprecated-csharp-flag = {"\u001b"}[33mAvertissement : Le drapeau --csharp est obsolète. Utilisez le spécificateur de variante "csharp" à la place (ex. csharp:4.4).{"\u001b"}[0m
-
-force-reinstalling-version = Réinstallation forcée de la version {$version}.
+label-error = Erreur :
+label-note = Note :
+label-warning = Avertissement :
+progress-rate = { size-display }/s
+progress-eta-remaining = ETA { $time }
+progress-fraction = { $done }/{ $total }
+status-downloading = Téléchargement
+status-extracting = Extraction
+status-fetching = Récupération
+status-installed = Installé
+status-installing = Installation
+status-upgraded = Mis à niveau
+status-upgrading = Mise à niveau
+status-verifying = Vérification
+subject-cached-archive = archive en cache
+subject-releases = versions
+subject-update-manifest = manifeste de mise à jour
+upgrade-target = { -gdvm } { $version }
 
 auto-installing-version = Installation automatique de la version { $version }
 
@@ -126,12 +138,6 @@ no-versions-installed = Aucune version installée.
 installed-versions = Versions installées de { -godot } :
 removed-version = Version {$version} supprimée
 removing-version = Suppression de la version {$version}
-
-force-redownload = Retéléchargement forcé de la version {$version}.
-operation-downloading-url = Téléchargement de {$url}...
-operation-download-complete = Téléchargement terminé.
-operation-extracting = Extraction...
-operation-extract-complete = Extraction terminée.
 progress-eta =
     { $magnitude ->
         [seconds] { $secs } s
@@ -141,9 +147,6 @@ progress-eta =
 
 unsupported-platform = Plateforme non prise en charge
 unsupported-architecture = Architecture non prise en charge
-
-verifying-checksum = Vérification de la somme de contrôle...
-checksum-verified = Somme de contrôle vérifiée.
 error-checksum-mismatch = Incompatibilité de somme de contrôle pour le fichier { $file }
 error-invalid-sha-length = Longueur SHA invalide { $length }
 error-size-mismatch = Taille incorrecte pour le fichier { $file } : { $expected } octets attendus, { $actual } octets reçus.
@@ -181,9 +184,6 @@ prune-skipped-error = { $item } ignoré : { $error }
 prune-skipped-in-use = { $item } ignoré : il est en cours d'utilisation par un autre processus { -gdvm }.
 
 error-find-user-dirs = Échec de la recherche des répertoires utilisateur.
-
-fetching-releases = Récupération des versions...
-releases-fetched = Versions récupérées.
 warning-fetching-releases-using-cache = Erreur lors de la récupération des versions : { $error }. Utilisation des versions en cache à la place.
 
 error-version-not-found = Version introuvable.
@@ -232,9 +232,6 @@ error-create-symlink-windows = Impossible de créer le lien symbolique. Veuillez
 help-upgrade = Mettre à jour { -gdvm } vers la dernière version
 help-upgrade-major = Autoriser la mise à jour entre versions majeures
 help-upgrade-pre = Mettre à jour vers la dernière pré-version
-upgrade-starting = Démarrage de la mise à jour de { -gdvm }...
-upgrade-downloading-latest = Téléchargement de la dernière version de { -gdvm }...
-upgrade-complete = { -gdvm } a été mis à jour avec succès !
 upgrade-not-needed = { -gdvm } est déjà à la dernière version : { $version }.
 upgrade-current-version-newer = La version actuelle de { -gdvm } ({ $current }) est plus récente que la dernière version disponible ({ $latest }). Aucune mise à jour nécessaire.
 upgrade-download-failed = Échec du téléchargement de la mise à jour : { $error }
@@ -344,7 +341,7 @@ help-config-value = La valeur à définir pour la clé de configuration
 help-config-unset-key = La clé de configuration à supprimer (ex., prune.max-age-days)
 help-config-show-sensitive = Rendre visible les valeurs de configuration sensibles
 help-config-available = Lister toutes les clés de configuration disponibles et leurs valeurs, y compris les valeurs par défaut
-warning-setting-sensitive = {"\u001b"}[33mAvertissement : Vous définissez une valeur sensible qui sera stockée en texte brut dans votre répertoire personnel.{"\u001b"}[0m
+warning-setting-sensitive = Vous définissez une valeur sensible qui sera stockée en texte brut dans votre répertoire personnel.
 config-set-prompt = Veuillez entrer la valeur pour { $key } :
 error-reading-input = Erreur lors de la lecture de l'entrée
 config-set-success = Configuration mise à jour avec succès.
@@ -354,7 +351,7 @@ error-unknown-config-key = Clé de configuration inconnue.
 error-invalid-config-value = Valeur invalide pour la clé de configuration { $key }.
 error-invalid-config-subcommand = Sous-commande de configuration invalide. Utilisez « get », « set », ou « list ».
 error-parse-config = Échec de l'analyse du fichier de configuration : { $error }
-error-parse-config-using-default = {"\u001b"}[33mUtilisation des valeurs de configuration par défaut.{"\u001b"}[0m
+error-parse-config-using-default = Utilisation des valeurs de configuration par défaut.
 
 help-registry = Gérer les registres depuis lesquels installer des builds de { -godot }
 help-registry-add = Ajouter un registre
@@ -371,11 +368,11 @@ registry-tag-official = officiel
 registry-error = Erreur de registre : { $error }
 
 error-invalid-registry-subcommand = Sous-commande de registre invalide. Utilisez « add », « remove », « list » ou « refresh ».
-registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) est un registre personnalisé, pas le registre officiel. { -gdvm } vérifie que les téléchargements correspondent à ce que le registre annonce, mais il ne peut pas savoir s'ils sont sûrs à exécuter. Ne l'utilisez que si vous faites confiance à la personne qui le gère.{"\u001b"}[0m
+registry-trust-warning = { $registry } ({ $url }) est un registre personnalisé, pas le registre officiel. { -gdvm } vérifie que les téléchargements correspondent à ce que le registre annonce, mais il ne peut pas savoir s'ils sont sûrs à exécuter. Ne l'utilisez que si vous faites confiance à la personne qui le gère.
 registry-trust-prompt = Faites-vous confiance à ce registre et voulez-vous continuer ? (oui/non) :
 registry-trust-bypass = {"\u001b"}[1;31mVérification de confiance ignorée pour { $registry } ({ $url }) parce que vous avez utilisé --yes. { -gdvm } ne peut pas savoir si ses fichiers sont sûrs à exécuter. Petite pause ; appuyez sur Ctrl+C maintenant pour arrêter.{"\u001b"}[0m
 registry-trust-aborted = Annulé : registre non approuvé.
-registry-project-override-conflict = {"\u001b"}[33mLe fichier { -gdvm-toml } du projet redéfinit le registre { $registry } (votre configuration : { $machine_url }) en { $project_url }. La définition du projet prévaut.{"\u001b"}[0m
+registry-project-override-conflict = Le fichier { -gdvm-toml } du projet redéfinit le registre { $registry } (votre configuration : { $machine_url }) en { $project_url }. La définition du projet prévaut.
 
 help-registry-init = Initialiser un nouveau répertoire de registre
 help-registry-add-build = Ajouter un build à un registre
@@ -396,10 +393,9 @@ help-registry-build-size = La taille de l'archive en octets, au lieu de la mesur
 registry-init-success = Registre { $name } initialisé dans { $path }.
 registry-build-added = Build { $version } ajouté pour { $platform }.
 registry-build-removed = Build { $version } supprimé.
-registry-build-downloading = Téléchargement de { $url } pour calculer sa taille et son SHA-512…
-registry-build-warn-local-hash = {"\u001b"}[33mHachage du fichier local en supposant qu'il correspond à { $url }. { -gdvm } ne télécharge pas l'URL pour le vérifier.{"\u001b"}[0m
-registry-build-warn-unverified = {"\u001b"}[33mUtilisation du SHA-512 et de la taille que vous avez fournis sans télécharger l'artefact pour les vérifier. Vérifiez qu'ils sont corrects.{"\u001b"}[0m
-registry-build-warn-explicit-store = {"\u001b"}[33mUtilisation du SHA-512 et/ou de la taille que vous avez fournis au lieu de mesurer l'archive stockée.{"\u001b"}[0m
+registry-build-warn-local-hash = Hachage du fichier local en supposant qu'il correspond à { $url }. { -gdvm } ne télécharge pas l'URL pour le vérifier.
+registry-build-warn-unverified = Utilisation du SHA-512 et de la taille que vous avez fournis sans télécharger l'artefact pour les vérifier. Vérifiez qu'ils sont corrects.
+registry-build-warn-explicit-store = Utilisation du SHA-512 et/ou de la taille que vous avez fournis au lieu de mesurer l'archive stockée.
 registry-build-sha-mismatch = Le SHA-512 fourni ({ $expected }) ne correspond pas à l'artefact ({ $actual }).
 registry-build-size-mismatch = La taille fournie ({ $expected }) ne correspond pas à l'artefact ({ $actual }).
 registry-validate-ok =

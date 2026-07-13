@@ -57,11 +57,7 @@ pub(crate) async fn sub_pin(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         .await?;
 
     let resolved_variant = Variant::from_option(variant);
-    let display = version::display_version(
-        &resolved_version.to_display_str(),
-        &resolved_variant,
-        registry,
-    );
+    let display = version::display_version(&resolved_version, &resolved_variant, registry);
 
     let skip_gdvmrc = matches.get_flag("no-legacy");
 

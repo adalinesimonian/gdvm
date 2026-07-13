@@ -97,9 +97,15 @@ impl ResolvedVersion {
         base
     }
 
-    /// Convert to a display-friendly string, e.g. "4.1.1.1-stable".
+    /// Get the resolved version string for display, with any optional components
+    /// omitted.
     pub fn to_display_str(&self) -> String {
-        self.to_remote_str()
+        let mut base = self.to_version_string(true);
+
+        base.push('-');
+        base.push_str(&self.release_type);
+
+        base
     }
 
     /// Returns if the version is a stable release.

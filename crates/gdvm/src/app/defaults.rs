@@ -65,7 +65,7 @@ impl<'a> Defaults<'a> {
 
         // Write pinned-format string to .gdvm/default
         let default_path = self.paths.default_file();
-        let default_str = crate::version::pinned_str(registry, &gv.to_remote_str(), variant);
+        let default_str = crate::version::pinned_str(registry, &gv.to_pinned_str(), variant);
         fs::write(&default_path, &default_str)?;
 
         // Create directory symlink .gdvm/bin/current_godot -> .gdvm/<install_name>/
@@ -192,7 +192,7 @@ impl<'a> Defaults<'a> {
     ) -> Result<()> {
         let path = std::env::current_dir()?;
 
-        let specifier = crate::version::pinned_str(registry, &gv.to_remote_str(), variant);
+        let specifier = crate::version::pinned_str(registry, &gv.to_pinned_str(), variant);
         let toml_content = crate::gdvm_toml::serialize_gdvm_toml(&specifier);
         crate::fs_utils::atomic_write(&path.join("gdvm.toml"), &toml_content)?;
 

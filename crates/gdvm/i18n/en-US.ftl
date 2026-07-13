@@ -100,13 +100,11 @@ help-link-path = The path where the link or copy will be created, e.g. "{ $platf
 help-link-force = Overwrite existing link if it exists
 help-link-copy = Copy the executable instead of creating a link
 
-cached-zip-stored = Saved { -godot } release archive to cache.
-using-cached-zip = Using cached release archive, skipping download.
 cache-files-removed = Cache files have been successfully removed.
 cache-metadata-removed = Cache metadata has been successfully removed.
 no-cache-files-found = No cache files were found.
 no-cache-metadata-found = No cache metadata was found.
-gdvm-toml-malformed = {"\u001b"}[33mWarning: ignoring { -gdvm-toml } at { $path } because it could not be parsed: { $error }{"\u001b"}[0m
+gdvm-toml-malformed = ignoring { -gdvm-toml } at { $path } because it could not be parsed: { $error }
 
 help-console = Run { -godot } with the console attached. Defaults to false on Windows, true on other platforms.
 
@@ -114,13 +112,27 @@ help-default = Manage the default version
 help-default-version = The version to set as default (e.g. 4.2 or 4.2-stable).
 no-default-set = No default version set. Run "{ -gdvm } use <version>" to set a default version system-wide, or "{ -gdvm } pin <version>" to set a default version for the current directory.
 
-installing-version = Installing version {$version}
-installed-success = Successfully installed {$version}
+warning-prerelease = You are installing a pre-release version ({$branch}).
+warning-deprecated-csharp-flag = The --csharp flag is deprecated. Use the "csharp" variant specifier instead (e.g. csharp:4.4).
 
-warning-prerelease = {"\u001b"}[33mWarning: You are installing a pre-release version ({$branch}).{"\u001b"}[0m
-warning-deprecated-csharp-flag = {"\u001b"}[33mWarning: The --csharp flag is deprecated. Use the "csharp" variant specifier instead (e.g. csharp:4.4).{"\u001b"}[0m
-
-force-reinstalling-version = Forcing reinstallation of version {$version}.
+label-error = Error:
+label-note = Note:
+label-warning = Warning:
+progress-rate = { size-display }/s
+progress-eta-remaining = ETA { $time }
+progress-fraction = { $done }/{ $total }
+status-downloading = Downloading
+status-extracting = Extracting
+status-fetching = Fetching
+status-installed = Installed
+status-installing = Installing
+status-upgraded = Upgraded
+status-upgrading = Upgrading
+status-verifying = Verifying
+subject-cached-archive = cached archive
+subject-releases = releases
+subject-update-manifest = update manifest
+upgrade-target = { -gdvm } { $version }
 
 auto-installing-version = Auto-installing version { $version }
 
@@ -128,12 +140,6 @@ no-versions-installed = No versions installed.
 installed-versions = Installed { -godot } versions:
 removed-version = Removed version {$version}
 removing-version = Removing version {$version}
-
-force-redownload = Forcing redownload of version {$version}.
-operation-downloading-url = Downloading {$url}...
-operation-download-complete = Download complete.
-operation-extracting = Extracting...
-operation-extract-complete = Extraction complete.
 progress-eta =
     { $magnitude ->
         [seconds] { $secs }s
@@ -143,9 +149,6 @@ progress-eta =
 
 unsupported-platform = Unsupported platform
 unsupported-architecture = Unsupported architecture
-
-verifying-checksum = Verifying checksum...
-checksum-verified = Checksum verified.
 error-checksum-mismatch = Checksum mismatch for file { $file }
 error-invalid-sha-length = Invalid SHA length { $length }
 error-size-mismatch = Size mismatch for file { $file }: expected { $expected } bytes, got { $actual } bytes.
@@ -183,9 +186,6 @@ prune-skipped-error = Skipping { $item }: { $error }
 prune-skipped-in-use = Skipping { $item }: it is in use by another { -gdvm } process.
 
 error-find-user-dirs = Failed to find user directories.
-
-fetching-releases = Fetching releases...
-releases-fetched = Releases fetched.
 warning-fetching-releases-using-cache = Error fetching releases: { $error }. Using cached releases instead.
 
 error-version-not-found = Version not found.
@@ -234,9 +234,6 @@ error-create-symlink-windows = Could not create symlink. Please ensure {"\u001b"
 help-upgrade = Upgrade { -gdvm } to the latest version
 help-upgrade-major = Allow upgrading across major versions
 help-upgrade-pre = Upgrade to the latest pre-release version
-upgrade-starting = Starting { -gdvm } upgrade...
-upgrade-downloading-latest = Downloading the latest { -gdvm } version...
-upgrade-complete = { -gdvm } was successfully upgraded!
 upgrade-not-needed = { -gdvm } is already at the latest version: { $version }.
 upgrade-current-version-newer = The current { -gdvm } version ({ $current }) is newer than the latest available version ({ $latest }). No upgrade needed.
 upgrade-download-failed = Upgrade download failed: { $error }
@@ -346,7 +343,7 @@ help-config-value = The value to set for the configuration key
 help-config-unset-key = The configuration key to unset (e.g., prune.max-age-days)
 help-config-show-sensitive = Show sensitive configuration values in plaintext
 help-config-available = List all available configuration keys and their values, including defaults
-warning-setting-sensitive = {"\u001b"}[33mWarning: You are setting a sensitive value which will be stored in plaintext in your home directory.{"\u001b"}[0m
+warning-setting-sensitive = You are setting a sensitive value which will be stored in plaintext in your home directory.
 config-set-prompt = Please enter the value for { $key }:
 error-reading-input = Error reading input
 config-set-success = Configuration updated successfully.
@@ -356,7 +353,7 @@ error-unknown-config-key = Unknown configuration key.
 error-invalid-config-value = Invalid value for configuration key { $key }.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
 error-parse-config = Failed to parse configuration file: { $error }
-error-parse-config-using-default = {"\u001b"}[33mUsing default configuration values.{"\u001b"}[0m
+error-parse-config-using-default = Using default configuration values.
 
 help-registry = Manage registries to install { -godot } builds from
 help-registry-add = Add a registry
@@ -373,11 +370,11 @@ registry-tag-official = official
 registry-error = Registry error: { $error }
 
 error-invalid-registry-subcommand = Invalid registry subcommand. Use "add", "remove", "list", or "refresh".
-registry-trust-warning = {"\u001b"}[33m{ $registry } ({ $url }) is a custom registry, not the official one. { -gdvm } makes sure downloads match what the registry says to expect, but it can't tell whether they are safe to run. Only install from it if you trust whoever runs it.{"\u001b"}[0m
+registry-trust-warning = { $registry } ({ $url }) is a custom registry, not the official one. { -gdvm } makes sure downloads match what the registry says to expect, but it can't tell whether they are safe to run. Only install from it if you trust whoever runs it.
 registry-trust-prompt = Do you trust this registry and want to continue? (yes/no):
 registry-trust-bypass = {"\u001b"}[1;31mSkipping the trust check for { $registry } ({ $url }) because you used --yes. { -gdvm } can't tell whether its files are safe to run. Pausing for a moment; press Ctrl+C now to stop.{"\u001b"}[0m
 registry-trust-aborted = Aborted: registry not trusted.
-registry-project-override-conflict = {"\u001b"}[33mThe project's { -gdvm-toml } redefines the registry { $registry } (your configuration: { $machine_url }) as { $project_url }. The project's definition takes precedence.{"\u001b"}[0m
+registry-project-override-conflict = The project's { -gdvm-toml } redefines the registry { $registry } (your configuration: { $machine_url }) as { $project_url }. The project's definition takes precedence.
 
 help-registry-init = Initialize a new registry directory
 help-registry-add-build = Add a build to a registry
@@ -398,10 +395,9 @@ help-registry-build-size = The archive's size in bytes, in lieu of measuring it.
 registry-init-success = Initialized registry { $name } at { $path }.
 registry-build-added = Added build { $version } for { $platform }.
 registry-build-removed = Removed build { $version }.
-registry-build-downloading = Downloading { $url } to compute its size and SHA-512…
-registry-build-warn-local-hash = {"\u001b"}[33mHashing the local file and assuming it matches { $url }. { -gdvm } is not downloading the URL to verify it.{"\u001b"}[0m
-registry-build-warn-unverified = {"\u001b"}[33mUsing the SHA-512 and size you provided without downloading the artifact to verify them. Make sure they are correct.{"\u001b"}[0m
-registry-build-warn-explicit-store = {"\u001b"}[33mUsing the SHA-512 and/or size you provided instead of measuring the stored archive.{"\u001b"}[0m
+registry-build-warn-local-hash = Hashing the local file and assuming it matches { $url }. { -gdvm } is not downloading the URL to verify it.
+registry-build-warn-unverified = Using the SHA-512 and size you provided without downloading the artifact to verify them. Make sure they are correct.
+registry-build-warn-explicit-store = Using the SHA-512 and/or size you provided instead of measuring the stored archive.
 registry-build-sha-mismatch = The provided SHA-512 ({ $expected }) does not match the artifact ({ $actual }).
 registry-build-size-mismatch = The provided size ({ $expected }) does not match the artifact ({ $actual }).
 registry-validate-ok =

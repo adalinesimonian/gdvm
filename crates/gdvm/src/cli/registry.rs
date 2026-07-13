@@ -31,7 +31,7 @@ async fn download_to_temp(url: &str) -> Result<PathBuf> {
         .suffix(".tmp")
         .tempfile()?;
     let mut file = tokio::fs::File::from_std(tmp.as_file().try_clone()?);
-    gdvm::download_utils::download_to_file(url, &mut file).await?;
+    gdvm::download_utils::download_to_file(url, &mut file, url).await?;
     drop(file);
     let (_file, path) = tmp.keep()?;
     Ok(path)
@@ -82,7 +82,7 @@ async fn resolve_build_integrity(
 ) -> Result<(Option<String>, Option<u64>)> {
     if store {
         if sha512.is_some() || size.is_some() {
-            eprintln_i18n!("registry-build-warn-explicit-store");
+            gdvm::ui::warn(t!("registry-build-warn-explicit-store"));
         }
         return Ok((sha512, size));
     }
@@ -92,7 +92,7 @@ async fn resolve_build_integrity(
     };
 
     if let Some(file) = file {
-        eprintln_i18n!("registry-build-warn-local-hash", url = url);
+        gdvm::ui::warn(t!("registry-build-warn-local-hash", url = url));
         let (computed_sha, computed_size) = registry::publish::hash_file(file)?;
         verify_overrides(&sha512, size, &computed_sha, computed_size)?;
         return Ok((
@@ -102,11 +102,10 @@ async fn resolve_build_integrity(
     }
 
     if let (Some(sha512), Some(size)) = (sha512.clone(), size) {
-        eprintln_i18n!("registry-build-warn-unverified");
+        gdvm::ui::warn(t!("registry-build-warn-unverified"));
         return Ok((Some(sha512), Some(size)));
     }
 
-    eprintln_i18n!("registry-build-downloading", url = url);
     let tmp = download_to_temp(url).await?;
     let resolved = (|| {
         let (computed_sha, computed_size) = registry::publish::hash_file(&tmp)?;

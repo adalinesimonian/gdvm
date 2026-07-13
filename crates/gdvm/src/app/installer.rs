@@ -29,7 +29,7 @@ use crate::paths::GdvmPaths;
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{ResolvedVersion, Variant, VersionQuery};
-use crate::{eprintln_i18n, progress_utils, t, zip_utils};
+use crate::{t, ui, zip_utils};
 
 #[derive(Debug)]
 pub enum InstallOutcome {
@@ -53,17 +53,15 @@ fn checksum_mismatch_error(display_path: &Path) -> anyhow::Error {
 fn verify_sha_file(file: &mut fs::File, expected: &str, display_path: &Path) -> Result<()> {
     let sha_type = ShaType::from_expected(expected)?;
 
-    let pb = progress_utils::spinner(t!("verifying-checksum"))?;
+    let _task = ui::progress::activity(t!("status-verifying"), t!("subject-cached-archive"));
 
     file.rewind()?;
 
     let local_hash = hash_utils::hash_reader(sha_type, file)?;
 
     if local_hash == expected.to_lowercase() {
-        pb.finish_with_message(t!("checksum-verified"));
         Ok(())
     } else {
-        pb.finish_and_clear();
         Err(checksum_mismatch_error(display_path))
     }
 }
@@ -83,7 +81,6 @@ pub(super) fn verify_download_digests(
     };
 
     if actual.eq_ignore_ascii_case(expected) {
-        eprintln_i18n!("checksum-verified");
         Ok(())
     } else {
         Err(checksum_mismatch_error(display_path))
@@ -139,14 +136,16 @@ impl<'a> Installer<'a> {
             if force {
                 self.library()
                     .remove_locked(gv, variant, registry, &install_str)?;
-                eprintln_i18n!("force-reinstalling-version", version = gv.to_display_str(),);
             } else {
                 return Ok(InstallOutcome::AlreadyInstalled);
             }
         }
 
+        let display = crate::version::display_version(gv, variant, registry);
+        ui::milestone(t!("status-installing"), &display);
+
         if !gv.is_stable() {
-            eprintln_i18n!("warning-prerelease", branch = &gv.release_type);
+            ui::warn(t!("warning-prerelease", branch = &gv.release_type));
         }
 
         self.artifact_cache.ensure_dir()?;
@@ -164,24 +163,19 @@ impl<'a> Installer<'a> {
             && let Ok(mut file) = fs::File::open(&cache_zip_path)
             && verify_sha_file(&mut file, &binary.sha512, &cache_zip_path).is_ok()
         {
-            eprintln_i18n!("using-cached-zip");
             cached_zip = Some(file);
         }
 
         let mut zip_file = match cached_zip {
             Some(file) => file,
             None => {
-                if redownload && cache_zip_path.exists() {
-                    eprintln_i18n!("force-redownload", version = gv.to_display_str());
-                }
-
                 let tmp_file = tempfile::Builder::new()
                     .prefix(".partial-")
                     .suffix(".zip")
                     .tempfile_in(self.artifact_cache.dir())?;
 
                 let mut async_file = tokio::fs::File::from_std(tmp_file.as_file().try_clone()?);
-                let digests = download_to_file(download_url, &mut async_file).await?;
+                let digests = download_to_file(download_url, &mut async_file, &display).await?;
                 drop(async_file);
 
                 verify_download_digests(&digests, &binary.sha512, &cache_zip_path)?;
@@ -201,11 +195,7 @@ impl<'a> Installer<'a> {
                     )));
                 }
 
-                let file = tmp_file.persist(&cache_zip_path)?;
-
-                eprintln_i18n!("cached-zip-stored");
-
-                file
+                tmp_file.persist(&cache_zip_path)?
             }
         };
 
@@ -214,13 +204,15 @@ impl<'a> Installer<'a> {
         self.track_archive_use(&cache_zip_path)?;
 
         // Extract from cache_zip_path
-        zip_utils::extract_zip_from_file(&mut zip_file, &cache_zip_path, &version_path)?;
+        zip_utils::extract_zip_from_file(&mut zip_file, &cache_zip_path, &version_path, &display)?;
 
         let base_url = self.catalogs().catalog(registry)?.registry_base_url();
         let store_dir = self.paths.installs().join(&store_key);
         crate::registry_store::upsert(&store_dir, &base_url, registry, None)?;
 
         self.library().track_install_use(&install_str)?;
+
+        ui::milestone(t!("status-installed"), &display);
 
         Ok(InstallOutcome::Installed)
     }
@@ -238,7 +230,7 @@ impl<'a> Installer<'a> {
         if !path.exists() {
             bail!(t!(
                 "error-archive-not-cached",
-                version = gv.to_display_str()
+                version = crate::version::display_version(gv, variant, registry)
             ));
         }
         self.track_archive_use(&path)?;
@@ -268,10 +260,14 @@ impl<'a> Installer<'a> {
             .library()
             .is_version_installed(&actual_version, variant, registry)?
         {
-            eprintln_i18n!(
+            ui::note(t!(
                 "auto-installing-version",
-                version = &actual_version.to_display_str(),
-            );
+                version = &crate::version::display_version(
+                    &actual_version,
+                    &Variant::from_option(variant),
+                    registry,
+                ),
+            ));
             self.install(
                 &actual_version,
                 &Variant::from_option(variant),

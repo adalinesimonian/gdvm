@@ -36,13 +36,20 @@ pub struct QuerySelection {
     pub registry: Option<String>,
 }
 
-/// Display a version.
-pub fn display_version(version_str: &str, variant: &Variant, registry: Option<&str>) -> String {
-    let base = variant.decorate(version_str);
-    match normalize_registry(registry) {
-        Some(r) => format!("{r}/{base}"),
-        None => base,
+/// Get the resolved version string for display, with any optional components
+/// omitted.
+pub fn display_version(gv: &ResolvedVersion, variant: &Variant, registry: Option<&str>) -> String {
+    let mut spec = gv.to_display_str();
+
+    if !variant.is_default() {
+        spec = format!("{}:{spec}", variant.as_str());
     }
+
+    if let Some(registry) = normalize_registry(registry) {
+        spec = format!("{registry}/{spec}");
+    }
+
+    spec
 }
 
 /// Get the install directory subpath for a given version and variant.
@@ -114,6 +121,60 @@ pub fn legacy_pinned_str(gv: &ResolvedVersion, variant: &Variant) -> String {
 mod tests {
     use super::*;
     use crate::version::{VersionSpec, VersionTarget};
+
+    fn resolved(major: u32, minor: u32, patch: u32, release_type: &str) -> ResolvedVersion {
+        ResolvedVersion {
+            major,
+            minor,
+            patch,
+            subpatch: 0,
+            release_type: release_type.to_string(),
+        }
+    }
+
+    #[test]
+    fn display_version_uses_minimal_spec_form() {
+        assert_eq!(
+            display_version(
+                &resolved(4, 5, 0, "stable"),
+                &Variant::from_option(None),
+                None
+            ),
+            "4.5.0-stable"
+        );
+        assert_eq!(
+            display_version(
+                &resolved(3, 4, 3, "stable"),
+                &Variant::from_option(Some("csharp")),
+                None
+            ),
+            "csharp:3.4.3-stable"
+        );
+        assert_eq!(
+            display_version(
+                &resolved(4, 7, 0, "rc1"),
+                &Variant::from_option(None),
+                Some("myreg")
+            ),
+            "myreg/4.7.0-rc1"
+        );
+        assert_eq!(
+            display_version(
+                &resolved(4, 4, 0, "stable"),
+                &Variant::from_option(Some("customvariant")),
+                Some("myreg")
+            ),
+            "myreg/customvariant:4.4.0-stable"
+        );
+        assert_eq!(
+            display_version(
+                &resolved(4, 5, 0, "stable"),
+                &Variant::from_option(None),
+                Some("official")
+            ),
+            "4.5.0-stable"
+        );
+    }
 
     #[test]
     fn test_install_dir_name() {

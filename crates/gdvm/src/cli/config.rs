@@ -73,7 +73,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
             };
 
             if config.is_sensitive_key(key) {
-                eprintln_i18n!("warning-setting-sensitive");
+                gdvm::ui::warn(t!("warning-setting-sensitive"));
             }
             if !config::KNOWN_KEYS.contains(&key.as_str()) {
                 eprintln_i18n!("error-unknown-config-key");

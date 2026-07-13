@@ -44,16 +44,6 @@ impl Variant {
     pub fn is_default(&self) -> bool {
         self.0 == Self::DEFAULT
     }
-
-    /// Decorate a version string with the variant, unless the variant is the
-    /// default one. Produces a string like `4.4` or `4.4 (csharp)`.
-    pub(super) fn decorate(&self, version_str: &str) -> String {
-        if self.is_default() {
-            version_str.to_string()
-        } else {
-            format!("{version_str} ({})", self.0)
-        }
-    }
 }
 
 impl Default for Variant {

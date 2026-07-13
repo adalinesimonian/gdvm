@@ -136,7 +136,7 @@ async fn download(url: &str) -> anyhow::Result<(gdvm::download_utils::DownloadDi
         .write(true)
         .open(&path)
         .await?;
-    let digests = download_to_file(url, &mut file).await?;
+    let digests = download_to_file(url, &mut file, "test").await?;
     Ok((digests, std::fs::read(&path)?))
 }
 

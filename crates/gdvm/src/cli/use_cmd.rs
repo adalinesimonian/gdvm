@@ -68,11 +68,7 @@ pub(crate) async fn sub_use(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let resolved_variant = Variant::from_option(variant);
     gdvm.defaults()
         .set_default(&resolved_version, &resolved_variant, registry)?;
-    let display = version::display_version(
-        &resolved_version.to_display_str(),
-        &resolved_variant,
-        registry,
-    );
+    let display = version::display_version(&resolved_version, &resolved_variant, registry);
     println_i18n!("default-set-success", version = &display);
 
     Ok(())

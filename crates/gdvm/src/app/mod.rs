@@ -103,11 +103,11 @@ fn project_registry_pairs() -> Vec<(String, String)> {
                 }
                 Err(error) => {
                     let path = candidate.display().to_string();
-                    eprintln_i18n!(
+                    crate::ui::warn(t!(
                         "gdvm-toml-malformed",
                         path = path.as_str(),
                         error = error.as_str()
-                    );
+                    ));
                 }
             }
         }
@@ -163,12 +163,12 @@ impl Gdvm {
         let mut registries = config.registry_pairs();
         let project = project_registry_pairs();
         for conflict in registry_override_conflicts(&registries, &project) {
-            eprintln_i18n!(
+            crate::ui::warn(t!(
                 "registry-project-override-conflict",
                 registry = conflict.name.as_str(),
                 machine_url = conflict.machine_url.as_str(),
                 project_url = conflict.project_url.as_str(),
-            );
+            ));
         }
         registries.extend(project);
         let catalogs = CatalogSet::new(paths.cache_index(), &registries)?;
@@ -343,7 +343,7 @@ impl RunVersionSource for Gdvm {
                     println!(
                         "- {}",
                         crate::version::display_version(
-                            &v.version.to_display_str(),
+                            &v.version,
                             &v.variant,
                             v.registry.as_deref(),
                         )
