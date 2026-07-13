@@ -33,6 +33,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 - It is no longer problematic to run multiple gdvm commands concurrently, e.g. if running multiple installs at once. Each operation that needs to write to gdvm's data now locks whatever specific resource it needs to write to, allowing multiple gdvm commands to safely be run in parallel.
 - Any updates to gdvm's shims will now properly be written to disk after an upgrade.
+- File sizes and download ETA are now properly formatted for the current locale.
 
 ### Changed
 

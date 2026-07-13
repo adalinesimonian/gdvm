@@ -21,7 +21,7 @@ use gdvm::app::{Gdvm, PruneOptions};
 use gdvm::config::{self};
 use gdvm::println_i18n;
 
-use super::format::{OutputFormat, format_bytes, print_json};
+use super::format::{OutputFormat, byte_display_args, print_json};
 
 /// Handle the 'prune' subcommand
 pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
@@ -61,14 +61,26 @@ pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     if !report.installs.is_empty() {
         println_i18n!("prune-installs-header");
         for item in &report.installs {
-            println!("- {} ({})", item.label, format_bytes(item.freed_bytes));
+            let (value, unit) = byte_display_args(item.freed_bytes);
+            println_i18n!(
+                "prune-item",
+                label = item.label.as_str(),
+                value = value,
+                unit = unit
+            );
         }
     }
 
     if !report.archives.is_empty() {
         println_i18n!("prune-archives-header");
         for item in &report.archives {
-            println!("- {} ({})", item.label, format_bytes(item.freed_bytes));
+            let (value, unit) = byte_display_args(item.freed_bytes);
+            println_i18n!(
+                "prune-item",
+                label = item.label.as_str(),
+                value = value,
+                unit = unit
+            );
         }
     }
 
@@ -76,11 +88,11 @@ pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         println_i18n!("prune-preserved-by-link", count = report.preserved_by_link);
     }
 
-    let size = format_bytes(report.freed_bytes);
+    let (value, unit) = byte_display_args(report.freed_bytes);
     if report.dry_run {
-        println_i18n!("prune-would-free", size = size);
+        println_i18n!("prune-would-free", value = value, unit = unit);
     } else {
-        println_i18n!("prune-freed", size = size);
+        println_i18n!("prune-freed", value = value, unit = unit);
     }
 
     Ok(())

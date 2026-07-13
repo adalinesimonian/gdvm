@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use anyhow::{Result, anyhow};
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use sha2::{Digest, Sha256, Sha512};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -519,9 +519,44 @@ fn update_progress(state: &mut TransferState, url: &str) -> Result<(), TransferE
             pb.set_style(
                 ProgressStyle::default_bar()
                     .template(
-                        "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+                        "{spinner:.green} [{bar:40.cyan/blue}] {local_bytes}/{local_total_bytes} ({local_eta})",
                     )?
-                    .progress_chars("#>-"),
+                    .progress_chars("#>-")
+                    .with_key(
+                        "local_bytes",
+                        |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                            write!(
+                                w,
+                                "{}",
+                                crate::progress_utils::format_progress_size(state.pos())
+                            )
+                            .unwrap();
+                        },
+                    )
+                    .with_key(
+                        "local_total_bytes",
+                        |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                            write!(
+                                w,
+                                "{}",
+                                crate::progress_utils::format_progress_size(
+                                    state.len().unwrap_or(0)
+                                )
+                            )
+                            .unwrap();
+                        },
+                    )
+                    .with_key(
+                        "local_eta",
+                        |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                            write!(
+                                w,
+                                "{}",
+                                crate::progress_utils::format_progress_eta(state.eta())
+                            )
+                            .unwrap();
+                        },
+                    ),
             );
             pb
         } else {

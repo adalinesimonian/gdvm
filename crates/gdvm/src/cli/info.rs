@@ -22,7 +22,7 @@ use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version::{VersionSpec, VersionTarget};
 use gdvm::{fs_utils, t, t_attr};
 
-use super::format::{OutputFormat, format_bytes, format_label_value_table, print_json};
+use super::format::{OutputFormat, byte_display_args, format_label_value_table, print_json};
 use super::keyword_to_version_filter;
 use super::link::collect_possible_paths;
 
@@ -127,10 +127,10 @@ pub(crate) async fn sub_info(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         t_attr!("info-executable", "label"),
         t!("info-executable", path = info.executable.as_str()),
     ));
-    rows.push((
-        t_attr!("info-size", "label"),
-        t!("info-size", size = format_bytes(info.size_bytes)),
-    ));
+    rows.push((t_attr!("info-size", "label"), {
+        let (value, unit) = byte_display_args(info.size_bytes);
+        t!("info-size", value = value, unit = unit)
+    }));
     rows.push((
         t_attr!("info-default", "label"),
         t!("info-default", value = i64::from(info.is_default)),

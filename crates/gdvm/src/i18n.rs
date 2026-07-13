@@ -20,7 +20,8 @@ use std::sync::OnceLock;
 
 use anyhow::Result;
 use fluent_bundle::concurrent::FluentBundle;
-use fluent_bundle::{FluentResource, FluentValue};
+use fluent_bundle::types::FluentNumber;
+use fluent_bundle::{FluentArgs, FluentResource, FluentValue};
 use unic_langid::langid;
 
 // Include the Fluent translation files as static strings
@@ -66,9 +67,15 @@ impl I18n {
             let mut bundle = FluentBundle::new_concurrent(vec![locale.clone()]);
             let res = FluentResource::try_new(ftl_code.to_string())
                 .map_err(|e| anyhow::anyhow!("Failed to parse resource for {locale}: {e:?}"))?;
+
             bundle
                 .add_resource(res)
                 .map_err(|e| anyhow::anyhow!("Failed to add resource for {locale}: {e:?}"))?;
+            bundle.set_formatter(Some(format_value));
+            bundle
+                .add_function("NUMBER", number_function)
+                .map_err(|e| anyhow::anyhow!("Failed to add NUMBER for {locale}: {e:?}"))?;
+
             bundles.insert(locale.to_string(), bundle);
         }
 
@@ -96,7 +103,18 @@ impl I18n {
         attr: Option<&str>,
         args: &[(&str, FluentValue)],
     ) -> String {
-        let locale = current_locale();
+        self.translate_message_in(&current_locale(), key, attr, args)
+    }
+
+    /// Translate a key or one of its attributes for a specific locale.
+    pub fn translate_message_in(
+        &self,
+        locale: &str,
+        key: &str,
+        attr: Option<&str>,
+        args: &[(&str, FluentValue)],
+    ) -> String {
+        let locale = locale.to_string();
 
         let fallback_bundle = if let Some(fallback_bundle) = self.bundles.get("en-US") {
             fallback_bundle
@@ -111,13 +129,14 @@ impl I18n {
             fluent_args.set(*k, v.clone());
         }
 
-        let format_from = |bundle: &FluentBundle<FluentResource>| -> Option<String> {
+        let format_from = |locale: &str, bundle: &FluentBundle<FluentResource>| -> Option<String> {
             let msg = bundle.get_message(key)?;
             let pattern = match attr {
                 Some(attr) => msg.get_attribute(attr)?.value(),
                 None => msg.value()?,
             };
             let mut errors = vec![];
+            FORMATTING_LOCALE.with(|cell| *cell.borrow_mut() = locale.to_string());
             Some(
                 bundle
                     .format_pattern(pattern, Some(&fluent_args), &mut errors)
@@ -125,13 +144,81 @@ impl I18n {
             )
         };
 
-        format_from(bundle)
-            .or_else(|| format_from(fallback_bundle))
+        format_from(&locale, bundle)
+            .or_else(|| format_from("en-US", fallback_bundle))
             .unwrap_or_else(|| match attr {
                 Some(attr) => format!("{key}.{attr}"),
                 None => key.to_string(),
             })
     }
+}
+
+thread_local! {
+    /// The locale of the bundle currently being formatted.
+    static FORMATTING_LOCALE: std::cell::RefCell<String> =
+        const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Custom value formatter for bundles.
+fn format_value(
+    value: &FluentValue,
+    _memoizer: &intl_memoizer::concurrent::IntlLangMemoizer,
+) -> Option<String> {
+    match value {
+        FluentValue::Number(n) => {
+            Some(FORMATTING_LOCALE.with(|cell| format_number(n, &cell.borrow())))
+        }
+        _ => None,
+    }
+}
+
+/// Defines the NUMBER function for Fluent.
+fn number_function<'a>(positional: &[FluentValue<'a>], named: &FluentArgs) -> FluentValue<'a> {
+    let Some(FluentValue::Number(number)) = positional.first() else {
+        return FluentValue::Error;
+    };
+
+    let mut number = number.clone();
+    for (name, value) in named.iter() {
+        let FluentValue::Number(digits) = value else {
+            continue;
+        };
+        let digits = digits.value as usize;
+        match name {
+            "minimumFractionDigits" => number.options.minimum_fraction_digits = Some(digits),
+            "maximumFractionDigits" => number.options.maximum_fraction_digits = Some(digits),
+            _ => {}
+        }
+    }
+
+    FluentValue::Number(number)
+}
+
+/// Format a number for a locale using ICU.
+fn format_number(number: &FluentNumber, locale: &str) -> String {
+    use fixed_decimal::{Decimal, FloatPrecision};
+    use icu::decimal::DecimalFormatter;
+
+    let locale: icu::locale::Locale = locale.parse().unwrap_or(icu::locale::Locale::UNKNOWN);
+
+    let Ok(formatter) = DecimalFormatter::try_new(locale.into(), Default::default()) else {
+        return number.value.to_string();
+    };
+
+    let precision = match number.options.maximum_fraction_digits {
+        Some(digits) => FloatPrecision::Magnitude(-(digits as i16)),
+        None => FloatPrecision::RoundTrip,
+    };
+
+    let Ok(mut decimal) = Decimal::try_from_f64(number.value, precision) else {
+        return number.value.to_string();
+    };
+
+    if let Some(digits) = number.options.minimum_fraction_digits {
+        decimal.pad_end(-(digits as i16));
+    }
+
+    formatter.format_to_string(&decimal)
 }
 
 #[macro_export]
@@ -205,4 +292,87 @@ macro_rules! xprintln_i18n {
             $crate::eprintln_i18n!($failure_key);
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn translate(locale: &str, key: &str, args: &[(&str, FluentValue)]) -> String {
+        I18n::get().translate_message_in(locale, key, None, args)
+    }
+
+    #[test]
+    fn terms_render_with_case_variants() {
+        let hy = translate("hy-AM", "help-upgrade", &[]);
+        assert!(hy.contains("gdvm-ը"), "{hy}");
+
+        let hy = translate(
+            "hy-AM",
+            "pinned-success",
+            &[("version", FluentValue::from("4.3"))],
+        );
+        assert!(hy.contains("gdvm.toml-ում"), "{hy}");
+
+        let en = translate("en-US", "help-upgrade", &[]);
+        assert!(en.contains("gdvm"), "{en}");
+    }
+
+    #[test]
+    fn plural_categories_select_correctly() {
+        let one = translate(
+            "ru-RU",
+            "registry-validate-ok",
+            &[("count", FluentValue::from(1))],
+        );
+        assert!(one.contains("артефакт)"), "{one}");
+        let few = translate(
+            "ru-RU",
+            "registry-validate-ok",
+            &[("count", FluentValue::from(3))],
+        );
+        assert!(few.contains("артефакта"), "{few}");
+        let many = translate(
+            "ru-RU",
+            "registry-validate-ok",
+            &[("count", FluentValue::from(7))],
+        );
+        assert!(many.contains("артефактов"), "{many}");
+
+        let one = translate(
+            "en-US",
+            "prune-preserved-by-link",
+            &[("count", FluentValue::from(1))],
+        );
+        assert!(one.contains("install still"), "{one}");
+        let other = translate(
+            "en-US",
+            "prune-preserved-by-link",
+            &[("count", FluentValue::from(2))],
+        );
+        assert!(other.contains("installs still"), "{other}");
+    }
+
+    #[test]
+    fn numbers_format_for_the_locale() {
+        let en = translate(
+            "en-US",
+            "info-size",
+            &[
+                ("value", FluentValue::from(106.7)),
+                ("unit", FluentValue::from("mib")),
+            ],
+        );
+        assert!(en.contains("106.7"), "{en}");
+
+        let no = translate(
+            "nn-NO",
+            "info-size",
+            &[
+                ("value", FluentValue::from(106.7)),
+                ("unit", FluentValue::from("mib")),
+            ],
+        );
+        assert!(no.contains("106,7"), "{no}");
+    }
 }

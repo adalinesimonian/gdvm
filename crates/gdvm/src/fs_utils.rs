@@ -65,6 +65,19 @@ pub fn write_marker_line(path: &Path, value: &str) -> Result<()> {
     Ok(())
 }
 
+/// Turn a byte count into a (value, unit) tuple for formatting.
+pub fn byte_display_args(bytes: u64) -> (f64, &'static str) {
+    const UNITS: [&str; 5] = ["b", "kib", "mib", "gib", "tib"];
+    let mut value = bytes as f64;
+    let mut unit = 0;
+
+    while value >= 1024.0 && unit < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit += 1;
+    }
+    (value, UNITS[unit])
+}
+
 /// Compute the approximate size of a file or directory in bytes.
 pub fn dir_size(path: &Path) -> u64 {
     let Ok(meta) = std::fs::symlink_metadata(path) else {

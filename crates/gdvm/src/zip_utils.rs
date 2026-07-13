@@ -21,7 +21,7 @@ use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use zip::ZipArchive;
 
 use crate::{eprintln_i18n, t};
@@ -107,8 +107,43 @@ pub fn extract_zip_from_file(
     let pb = ProgressBar::new(total_size);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
-            .progress_chars("#>-"),
+            .template(
+                "{spinner:.green} [{bar:40.cyan/blue}] {local_bytes}/{local_total_bytes} ({local_eta})",
+            )?
+            .progress_chars("#>-")
+            .with_key(
+                "local_bytes",
+                |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                    write!(
+                        w,
+                        "{}",
+                        crate::progress_utils::format_progress_size(state.pos())
+                    )
+                    .unwrap();
+                },
+            )
+            .with_key(
+                "local_total_bytes",
+                |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                    write!(
+                        w,
+                        "{}",
+                        crate::progress_utils::format_progress_size(state.len().unwrap_or(0))
+                    )
+                    .unwrap();
+                },
+            )
+            .with_key(
+                "local_eta",
+                |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                    write!(
+                        w,
+                        "{}",
+                        crate::progress_utils::format_progress_eta(state.eta())
+                    )
+                    .unwrap();
+                },
+            ),
     );
     pb.enable_steady_tick(std::time::Duration::from_millis(100));
 
