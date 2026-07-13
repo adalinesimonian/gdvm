@@ -340,19 +340,25 @@ The following features have been deprecated. They will continue to work for the 
 - Fixes bug where console would not be attached or detached as expected
 - Fixes bug on Windows where certain builds could not be started in console mode
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.2.0...v0.2.1
+
 ## v0.2.0
 
 ### New Features
 
-- **Pin command** – Pin a Godot version to the current directory with `gdvm pin` which stores the version in a .gdvmrc file.
-- **Upgrade command** – Update gdvm to the latest release using `gdvm upgrade`. gdvm will also check for updates to itself when it runs.
-- **Automatic Godot symlinks** – You can now run `godot` or `godot_console` directly; they point to gdvm, which picks the correct version for the current directory.
+- Pin a Godot version to the current directory with `gdvm pin` which stores the version in a .gdvmrc file.
+- Update gdvm to the latest release using `gdvm upgrade`. gdvm will also check for updates to itself when it runs.
+- You can now run `godot` or `godot_console` directly; they point to gdvm, which picks the correct version for the current directory.
   This lets you associate these symlinks with .godot files in your OS, and if you use `gdvm pin` in those directories, you can have the correct version of Godot open for you when you open a project file.
 
-### Improvements
+### Changed
 
-- **Better messaging** – Enhanced error messages.
+- Enhanced error messages.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.1.0...v0.2.0
 
 ## v0.1.0
 
-First release!
+### New Features
+
+- First release!
