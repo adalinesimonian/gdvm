@@ -658,6 +658,8 @@ gdvm install 4.3 >/tmp/gdvm-custom-path.log 2>&1
 
 assert_dir_exists "$custom_installs" "custom install directory was not created"
 assert_dir_exists "$custom_cache" "custom cache directory was not created"
+assert_path_absent "$HOME/.gdvm/installs/default/4.3-stable" \
+    "install unexpectedly ended up in the default home installs directory"
 
 install_dir="$(find "$custom_installs" -type d -path '*/default/4.3-stable' | head -n 1)"
 if [[ -z "$install_dir" ]]; then
