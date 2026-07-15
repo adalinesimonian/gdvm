@@ -15,12 +15,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{eprintln_i18n, i18n, t};
-use anyhow::{Result, anyhow};
-use directories::BaseDirs;
-use i18n::I18n;
+
 use path_clean::PathClean;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, absolute};
@@ -260,7 +256,6 @@ fn is_reserved_path(path: &Path) -> bool {
         component
             .as_os_str()
             .to_string_lossy()
-            .split(['/', '\\'])
             .any(|segment| reserved_names.contains(&segment))
     })
 }
