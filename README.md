@@ -73,6 +73,7 @@ godot                # Alias for `gdvm run`.
 godot_console        # Windows variant keeping the console open.
 
 gdvm run csharp:3.5  # Run Godot 3.5 with C#.
+gdvm run "4.5-rc*"   # Run the latest 4.5 release candidate.
 gdvm remove 3.5      # Removes Godot 3.5 without C#.
 
 gdvm list            # List installed versions.

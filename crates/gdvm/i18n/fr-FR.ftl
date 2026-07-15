@@ -47,11 +47,13 @@ help-version-long =
 
     Format : [variante:]version_ou_mot_clé
 
+    Si un * final est présent, il correspondra à la build la plus récente ayant le même préfixe, par ex. « 4.7-dev* » correspond à 4.7-dev1, 4.7-dev2, etc.
+
     Mots-clés : « latest » correspond à la version la plus récente. Par défaut, cela n'inclut que les versions stables, mais les pré-publications peuvent être incluses avec le drapeau --pre.
 
     Variantes : préfixez avec un nom de variante et deux-points, ex. « csharp:4.4 » pour la version C#.
 
-    Exemples : 4.4 installera la dernière version stable de { -godot } 4.4. Si seules des versions de pré-publication existent, la dernière version de pré-publication sera installée. 4.3-rc installera la dernière version candidate de { -godot } 4.3, etc.
+    Exemples : 4.4 installera la dernière version stable de { -godot } 4.4. Si seules des versions de pré-publication existent, la dernière version de pré-publication sera installée. 4.3-rc* installera la dernière version candidate de { -godot } 4.3, etc.
 help-version-installed = La version installée (ex. 4.2 ou 4.2-stable).
 
 help-search = Lister les versions disponibles depuis le registre
@@ -178,6 +180,8 @@ error-spec-empty-variant = Nom de variante vide dans « { $input } »
 error-spec-empty-version = Version vide dans « { $input } »
 error-system-time = Heure système antérieure à l'époque UNIX
 error-unrecognized-version-format = Format de version non reconnu : { $input }
+error-wildcard-position = Le caractère générique (*) ne peut apparaître qu'à la fin du tag de version, par ex. 4.7-dev* (reçu { $input }).
+hint-try-wildcard = Aucune version n'est taguée { $requested }, mais il existe des tags similaires, le plus récent étant { $newest }. Essayez { $suggestion } pour les faire correspondre.
 download-retrying = Téléchargement interrompu, nouvelle tentative ({ $attempt } sur { $max })...
 lock-waiting = En attente de la fin d'un autre processus { -gdvm } (verrou : { $resource })...
 prune-skipped-error = { $item } ignoré : { $error }

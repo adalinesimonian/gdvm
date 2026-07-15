@@ -54,7 +54,11 @@ pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
         .await?;
 
     // Default to showing only stable releases unless `--include-pre` is specified
-    if !include_pre {
+    // or the user explicitly is matching a prerelease version.
+    let explicit_prerelease = requested_version
+        .as_ref()
+        .is_some_and(|q| q.is_explicit_prerelease());
+    if !include_pre && !explicit_prerelease {
         releases.retain(|r| r.is_stable());
     }
 
@@ -77,6 +81,17 @@ pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
 
     if releases.is_empty() {
         println_i18n!("no-matching-releases");
+
+        if let Some(query) = &requested_version
+            && let Some(hint) = gdvm.catalogs().wildcard_suggestion(query, registry).await
+        {
+            println_i18n!(
+                "hint-try-wildcard",
+                requested = query.to_display_str().unwrap_or_default(),
+                suggestion = hint.suggestion,
+                newest = hint.newest
+            );
+        }
     } else {
         println_i18n!("available-releases");
         for r in releases {

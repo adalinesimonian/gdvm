@@ -22,7 +22,7 @@ mod spec;
 mod variant;
 
 pub use query::VersionQuery;
-pub use resolved::{ResolvedVersion, cmp_versions_newest_first};
+pub use resolved::{ResolvedVersion, cmp_versions_newest_first, split_release_tag};
 pub use selection::{
     QuerySelection, ResolvedSelection, display_version, install_dir_subpath, legacy_pinned_str,
     parse_pinned_str, pinned_str,
