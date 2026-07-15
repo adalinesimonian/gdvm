@@ -500,6 +500,7 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 test "Search for 4.x releases" <<'TEST_SCRIPT'
+assert_run_contains 4.3.0-stable -- gdvm search 4 --limit 0
 assert_run_contains 4.3.0-stable -- gdvm search --limit 0 --filter 4
 TEST_SCRIPT
 
@@ -518,10 +519,10 @@ fi
 
 printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"registries":{}}' > "$cache"
 
-cache_only_out="$(gdvm search --cache-only --limit 0 --filter 4 || true)"
+cache_only_out="$(gdvm search --cache-only --limit 0 4 || true)"
 assert_not_contains "$cache_only_out" 4.3.0-stable \
     "cache-only search unexpectedly found releases with empty cache"
-assert_run_contains 4.3.0-stable -- gdvm search --refresh --limit 0 --filter 4
+assert_run_contains 4.3.0-stable -- gdvm search --refresh --limit 0 4
 
 cache_contents="$(cat "$cache")"
 assert_contains "$cache_contents" '"tag_name"' \
@@ -646,12 +647,12 @@ TEST_SCRIPT
 test "Install Godot 4.3" gdvm install 4.3
 
 test "Wildcard release tags resolve the newest build of the release type" <<'TEST_SCRIPT'
-output="$(gdvm search --filter "4.3-dev*")"
+output="$(gdvm search "4.3-dev*")"
 assert_contains "$output" "4.3.0-dev" "lists dev builds without --include-pre"
 TEST_SCRIPT
 
 test "A near miss release type suggests using a wildcard" <<'TEST_SCRIPT'
-output="$(gdvm search --filter 4.4-dev)"
+output="$(gdvm search 4.4-dev)"
 assert_contains "$output" "4.4-dev*" "suggests a wildcard query"
 TEST_SCRIPT
 

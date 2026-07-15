@@ -25,6 +25,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 - All Godot version identifiers displayed by gdvm now adhere to gdvm's `[registry/][variant:]version[-tag]` format for consistency, for example, `csharp:4.3.0-stable`, `myreg/4.7.1-dev1`, and so on. This is a breaking change for any scripts that parse gdvm's output. Scripts that need information from gdvm should use the new `--format json` option (see below) instead of parsing the text output. Future changes to the text output format will no longer be considered breaking changes, so ensure that scripts only use the JSON output format.
 
+### Deprecated
+
+- `gdvm search` now accepts the search filter directly as an argument, e.g. `gdvm search 4`. The `--filter` option has been deprecated and will be removed in a future release.
+
 ### New Features
 
 - `list`, `search`, `show`, `cache-path`, `prune`, `config get`, and `registry list` now accept `--format json`.

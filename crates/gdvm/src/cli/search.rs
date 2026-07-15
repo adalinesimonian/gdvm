@@ -26,7 +26,10 @@ use super::{ensure_registry_trusted, refresh_cache_if_requested};
 
 /// Handle the 'search' subcommand
 pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let filter = matches.get_one::<String>("filter").map(|s| s.as_str());
+    let filter = matches
+        .get_one::<String>("filter")
+        .or_else(|| matches.get_one::<String>("filter-deprecated"))
+        .map(|s| s.as_str());
     let include_pre = matches.get_flag("include-pre");
     let cache_only = matches.get_flag("cache-only");
     let refresh = matches.get_flag("refresh");

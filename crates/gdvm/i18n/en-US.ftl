@@ -60,6 +60,7 @@ help-version-installed = The installed version (e.g. 4.2 or 4.2-stable).
 
 help-search = List available releases from the registry
 help-filter = Optional string to filter release tags
+help-filter-deprecated = [deprecated] Optional string to filter release tags. Use the filter positional argument instead.
 help-include-pre = Include pre-release versions (rc, beta, dev)
 help-cache-only = Use only cached release information without querying the registry
 help-limit = Number of releases to list, default is 10. Use 0 to list all

@@ -58,6 +58,7 @@ help-version-installed = Den installerte versjonen (f.eks. 4.2 eller 4.2-stable)
 
 help-search = List tilgjengelige utgivelser fra registeret
 help-filter = Valgfri streng for å filtrere utgivelsestagger
+help-filter-deprecated = [avvikla] Valgfri streng for å filtrere utgivelsestagger. Bruk posisjonsargumentet for filter i stedet.
 help-include-pre = Inkluder forhåndsversjoner (rc, beta, dev)
 help-cache-only = Bruk bare bufra utgivelsesinformasjon uten å spørre registeret
 help-limit = Antall utgivelser som skal vises, standard er 10. Bruk 0 for å vise alle

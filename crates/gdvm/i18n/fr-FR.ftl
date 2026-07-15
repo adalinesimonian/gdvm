@@ -58,6 +58,7 @@ help-version-installed = La version installée (ex. 4.2 ou 4.2-stable).
 
 help-search = Lister les versions disponibles depuis le registre
 help-filter = Chaîne optionnelle pour filtrer les tags de versions
+help-filter-deprecated = [obsolète] Chaîne optionnelle pour filtrer les tags de versions. Utilisez plutôt l'argument positionnel de filtre.
 help-include-pre = Inclure les versions de pré-publication (rc, beta, dev)
 help-cache-only = Utiliser uniquement les informations de versions en cache sans interroger le registre
 help-limit = Nombre de versions à lister, par défaut 10. Utilisez 0 pour lister toutes
