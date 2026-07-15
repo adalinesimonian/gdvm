@@ -667,7 +667,8 @@ fi
 assert_dir_exists "$install_dir" "Godot install directory was not created"
 
 cat /tmp/gdvm-custom-path.log
-
+gdvm config unset install.path
+gdvm config unset cache.path
 TEST_SCRIPT
 
 test "list --format json is machine-readable" <<'TEST_SCRIPT'
