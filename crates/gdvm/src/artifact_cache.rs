@@ -15,9 +15,10 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use anyhow::Result;
 
 /// Number of hex characters of a content hash used to name a cached archive.
 const ARCHIVE_KEY_HEX_LENGTH: usize = 16;
@@ -60,11 +61,6 @@ impl ArtifactCache {
         self.dir.join(format!("{}.zip", archive_key(sha512)))
     }
 
-    /// Path of the download in progress for the given SHA-512.
-    pub fn partial_path(&self, sha512: &str) -> PathBuf {
-        self.dir.join(format!("{}.partial", archive_key(sha512)))
-    }
-
     pub fn clear_files(&self) -> Result<()> {
         if !self.exists() {
             return Ok(());
@@ -84,8 +80,9 @@ impl ArtifactCache {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn cache_path_is_content_addressed_and_short() {
@@ -104,15 +101,6 @@ mod tests {
         let name = path_a.file_name().unwrap().to_string_lossy();
         assert_eq!(name, format!("{}.zip", "a".repeat(ARCHIVE_KEY_HEX_LENGTH)));
         assert!(name.len() <= ARCHIVE_KEY_HEX_LENGTH + 4);
-
-        assert_eq!(
-            cache
-                .partial_path(&sha_a)
-                .file_name()
-                .unwrap()
-                .to_string_lossy(),
-            format!("{}.partial", "a".repeat(ARCHIVE_KEY_HEX_LENGTH))
-        );
     }
 
     #[test]

@@ -20,8 +20,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::eprintln_i18n;
-use crate::i18n::I18n;
-use crate::version_utils::GodotVersion;
+use crate::version::VersionQuery;
 
 /// Parsed representation of a `project.godot` file.
 pub struct ParsedProject {
@@ -54,11 +53,11 @@ impl ParsedProject {
         }
     }
 
-    /// Convert the parsed fields into a detected `GodotVersion`.
-    pub fn detected_version(&self) -> Option<GodotVersion> {
+    /// Convert the parsed fields into a detected `VersionQuery`.
+    pub fn detected_version(&self) -> Option<VersionQuery> {
         // If the config_version is 4, then it's a Godot 3.x version.
         if self.config_version == Some(4) {
-            return Some(GodotVersion {
+            return Some(VersionQuery {
                 major: Some(3),
                 minor: None,
                 patch: None,
@@ -99,12 +98,12 @@ pub struct ProjectVersionProbe {
 impl ProjectVersionProbe {
     /// Walk upward from the provided path to locate `project.godot`, read its contents, and return
     /// a probe for further parsing.
-    pub fn load<P: AsRef<Path>>(i18n: &I18n, path: P) -> Option<Self> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Option<Self> {
         let project_file = find_project_file(path.as_ref())?;
         let contents = match fs::read_to_string(&project_file) {
             Ok(s) => s,
             Err(_) => {
-                eprintln_i18n!(i18n, "error-failed-reading-project-godot");
+                eprintln_i18n!("error-failed-reading-project-godot");
                 return None;
             }
         };
@@ -125,11 +124,10 @@ impl ProjectVersionProbe {
 /// Returns `None` if the file cannot be found, parsed, or no version
 /// is specified in `config/features`.
 pub fn detect_godot_version_in_path<P: AsRef<Path>>(
-    i18n: &I18n,
     path: P,
-) -> Option<(GodotVersion, Option<String>)> {
+) -> Option<(VersionQuery, Option<String>)> {
     // Find the project root by walking up until we find `project.godot`.
-    let probe = ProjectVersionProbe::load(i18n, path)?;
+    let probe = ProjectVersionProbe::load(path)?;
 
     // Parse the file, looking for the `[application]` section and
     //    `config/features=PackedStringArray(...)`.
@@ -265,8 +263,8 @@ fn is_version_format(s: &str) -> bool {
         .all(|part| part.chars().all(|c| c.is_ascii_digit()))
 }
 
-/// Parse a version string `x.x` or `x.x.x` into a `GodotVersion`.
-fn parse_version_string(version: &str) -> Option<GodotVersion> {
+/// Parse a version string `x.x` or `x.x.x` into a `VersionQuery`.
+fn parse_version_string(version: &str) -> Option<VersionQuery> {
     let parts: Vec<&str> = version.split('.').collect();
     if parts.len() < 2 || parts.len() > 3 {
         return None;
@@ -285,7 +283,7 @@ fn parse_version_string(version: &str) -> Option<GodotVersion> {
         None
     };
 
-    Some(GodotVersion {
+    Some(VersionQuery {
         major: Some(major),
         minor: Some(minor),
         patch,

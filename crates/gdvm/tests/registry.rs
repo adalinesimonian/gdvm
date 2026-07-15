@@ -17,15 +17,15 @@
 
 #![cfg(feature = "integration-tests")]
 
-use gdvm::config::Config;
-use gdvm::godot_manager::{GodotManager, InstallOutcome};
-use gdvm::i18n::I18n;
-use gdvm::registry::{self, publish};
-use gdvm::version_utils::{GodotVersion, Variant};
-use serial_test::serial;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+use gdvm::app::{Gdvm, InstallOutcome};
+use gdvm::config::Config;
+use gdvm::registry::{self, publish};
+use gdvm::version::{Variant, VersionQuery};
+use serial_test::serial;
 use tempfile::TempDir;
 
 struct TestHome {
@@ -75,8 +75,8 @@ impl Drop for TestHome {
 }
 
 /// The `os-arch` platform key for the current host, so the published build matches.
-fn host_platform(i18n: &I18n) -> String {
-    let host = gdvm::host::detect_host(i18n).unwrap();
+fn host_platform() -> String {
+    let host = gdvm::host::detect_host().unwrap();
     format!(
         "{}-{}",
         registry::registry_os_key(host),
@@ -95,11 +95,11 @@ fn make_zip(path: &Path, entry: &str, contents: &[u8]) {
 
 /// Build a local registry containing a single stable build for the host
 /// platform. Returns the registry directory and its platform key.
-fn publish_registry(i18n: &I18n) -> (PathBuf, String) {
+fn publish_registry() -> (PathBuf, String) {
     let reg = TempDir::new().unwrap().keep().join("reg");
     publish::init(&reg, Some("local")).unwrap();
 
-    let platform = host_platform(i18n);
+    let platform = host_platform();
     let archive_src = reg.parent().unwrap().join("godot.zip");
     make_zip(&archive_src, "Godot.test", b"a real-enough godot archive");
 
@@ -122,14 +122,14 @@ fn publish_registry(i18n: &I18n) -> (PathBuf, String) {
 }
 
 /// Build a registry and add it to the config as `localreg`.
-fn publish_local_registry(env: &TestHome, i18n: &I18n) -> (PathBuf, PathBuf, String) {
-    let (reg, platform) = publish_registry(i18n);
+fn publish_local_registry(env: &TestHome) -> (PathBuf, PathBuf, String) {
+    let (reg, platform) = publish_registry();
 
-    let mut config = Config::load(i18n).unwrap();
+    let mut config = Config::load().unwrap();
     config
         .add_registry("localreg", &format!("file://{}", reg.display()))
         .unwrap();
-    config.save(i18n).unwrap();
+    config.save().unwrap();
 
     let stored = reg.join(format!("binaries/4.4-stable/{platform}.zip"));
     let _ = env;
@@ -159,15 +159,15 @@ impl Drop for CwdGuard {
 #[serial]
 async fn install_from_file_registry_extracts_build() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
-    let (reg, _stored, _platform) = publish_local_registry(&env, &i18n);
+    let (reg, _stored, _platform) = publish_local_registry(&env);
 
-    let manager = GodotManager::new(&i18n).await.unwrap();
-    let gv = GodotVersion::from_install_str("4.4-stable")
+    let gdvm = Gdvm::new().await.unwrap();
+    let gv = VersionQuery::from_install_str("4.4-stable")
         .unwrap()
-        .to_determinate();
+        .to_resolved();
 
-    let outcome = manager
+    let outcome = gdvm
+        .installer()
         .install(&gv, &Variant::default(), Some("localreg"), false, false)
         .await
         .expect("install should succeed from a file: registry");
@@ -188,22 +188,22 @@ async fn install_from_file_registry_extracts_build() {
 #[serial]
 async fn install_fails_closed_on_sha512_mismatch() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
-    let (_reg, stored, _platform) = publish_local_registry(&env, &i18n);
+    let (_reg, stored, _platform) = publish_local_registry(&env);
 
-    let manager = GodotManager::new(&i18n).await.unwrap();
-    let gv = GodotVersion::from_install_str("4.4-stable")
+    let gdvm = Gdvm::new().await.unwrap();
+    let gv = VersionQuery::from_install_str("4.4-stable")
         .unwrap()
-        .to_determinate();
+        .to_resolved();
 
-    manager
+    gdvm.installer()
         .install(&gv, &Variant::default(), Some("localreg"), false, false)
         .await
         .expect("initial install should succeed");
 
     fs::write(&stored, b"tampered contents that do not match the hash").unwrap();
 
-    let result = manager
+    let result = gdvm
+        .installer()
         .install(&gv, &Variant::default(), Some("localreg"), true, true)
         .await;
     assert!(
@@ -216,14 +216,13 @@ async fn install_fails_closed_on_sha512_mismatch() {
 #[serial]
 async fn project_gdvm_toml_registry_is_honored_over_machine() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
-    let (reg, _platform) = publish_registry(&i18n);
+    let (reg, _platform) = publish_registry();
 
-    let mut config = Config::load(&i18n).unwrap();
+    let mut config = Config::load().unwrap();
     config
         .add_registry("proj", "file:///gdvm/does-not-exist")
         .unwrap();
-    config.save(&i18n).unwrap();
+    config.save().unwrap();
 
     let project_url = format!("file://{}", reg.to_string_lossy().replace('\\', "/"));
     let project = TempDir::new().unwrap();
@@ -237,14 +236,18 @@ async fn project_gdvm_toml_registry_is_honored_over_machine() {
 
     let installed = {
         let _cwd = CwdGuard::enter(project.path());
-        let manager = GodotManager::new(&i18n).await.unwrap();
+        let gdvm = Gdvm::new().await.unwrap();
 
-        assert_eq!(manager.registry_base_url("proj").unwrap(), project_url);
+        assert_eq!(
+            gdvm.catalogs().registry_base_url("proj").unwrap(),
+            project_url
+        );
 
-        let gv = GodotVersion::from_install_str("4.4-stable")
+        let gv = VersionQuery::from_install_str("4.4-stable")
             .unwrap()
-            .to_determinate();
-        let outcome = manager
+            .to_resolved();
+        let outcome = gdvm
+            .installer()
             .install(&gv, &Variant::default(), Some("proj"), false, false)
             .await
             .expect("install from project-defined registry should succeed");

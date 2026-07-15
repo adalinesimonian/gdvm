@@ -17,14 +17,14 @@
 
 #![cfg(feature = "integration-tests")]
 
-use gdvm::godot_manager::{GodotManager, PruneOptions};
-use gdvm::i18n::I18n;
-use gdvm::usage_tracker::{ArchiveUsage, InstallUsage, LinkRecord, UsageState, UsageTracker};
-use gdvm::version_utils::{GodotVersion, Variant};
-use serial_test::serial;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use gdvm::app::{Gdvm, PruneOptions};
+use gdvm::usage_tracker::{ArchiveUsage, InstallUsage, LinkRecord, UsageState, UsageTracker};
+use gdvm::version::{Variant, VersionQuery};
+use serial_test::serial;
 use tempfile::TempDir;
 
 const DAY: u64 = 24 * 60 * 60;
@@ -72,6 +72,10 @@ impl TestHome {
         self.path().join(".gdvm").join("usage.json")
     }
 
+    fn locks_path(&self) -> PathBuf {
+        self.path().join(".gdvm").join("locks")
+    }
+
     /// Create an install at `key` with a single regular file inside. Returns
     /// the path to the install directory.
     fn make_install(&self, key: &str) -> PathBuf {
@@ -91,11 +95,15 @@ impl TestHome {
     }
 
     fn write_usage(&self, state: &UsageState) {
-        UsageTracker::new(self.usage_path()).save(state).unwrap();
+        UsageTracker::new(self.usage_path(), self.locks_path())
+            .save(state)
+            .unwrap();
     }
 
     fn read_usage(&self) -> UsageState {
-        UsageTracker::new(self.usage_path()).load().unwrap()
+        UsageTracker::new(self.usage_path(), self.locks_path())
+            .load()
+            .unwrap()
     }
 }
 
@@ -117,14 +125,14 @@ fn now_secs() -> u64 {
         .as_secs()
 }
 
-fn determinate(install_str: &str) -> gdvm::version_utils::GodotVersionDeterminate {
-    GodotVersion::from_install_str(install_str)
+fn determinate(install_str: &str) -> gdvm::version::ResolvedVersion {
+    VersionQuery::from_install_str(install_str)
         .unwrap()
-        .to_determinate()
+        .to_resolved()
 }
 
-async fn manager(i18n: &I18n) -> GodotManager<'_> {
-    GodotManager::new(i18n).await.unwrap()
+async fn gdvm() -> Gdvm {
+    Gdvm::new().await.unwrap()
 }
 
 /// Create a symlink at `link` pointing at `target`.
@@ -169,7 +177,6 @@ fn state_with(
 #[serial]
 async fn prune_removes_stale_keeps_recent() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
 
     let stale_key = "store/default/4.3-stable";
     let fresh_key = "store/default/4.4-stable";
@@ -188,8 +195,11 @@ async fn prune_removes_stale_keeps_recent() {
         &[],
     ));
 
-    let mgr = manager(&i18n).await;
-    let report = mgr.prune(30 * DAY, PruneOptions::default()).unwrap();
+    let mgr = gdvm().await;
+    let report = mgr
+        .pruner()
+        .prune(30 * DAY, PruneOptions::default())
+        .unwrap();
 
     assert!(!stale.exists(), "stale install should be removed");
     assert!(fresh.exists(), "fresh install should be kept");
@@ -217,14 +227,16 @@ async fn prune_removes_stale_keeps_recent() {
 #[serial]
 async fn prune_keeps_freshly_created_untracked_install() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
 
     let key = "store/default/4.3-stable";
     let dir = env.make_install(key);
     env.write_usage(&UsageState::default());
 
-    let mgr = manager(&i18n).await;
-    let report = mgr.prune(30 * DAY, PruneOptions::default()).unwrap();
+    let mgr = gdvm().await;
+    let report = mgr
+        .pruner()
+        .prune(30 * DAY, PruneOptions::default())
+        .unwrap();
 
     assert!(dir.exists(), "recently created install should be kept");
     assert!(report.is_empty());
@@ -234,7 +246,6 @@ async fn prune_keeps_freshly_created_untracked_install() {
 #[serial]
 async fn prune_all_preserves_link_referenced_install() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
 
     let linked_key = "store/default/4.3-stable";
     let other_key = "store/default/4.4-stable";
@@ -252,8 +263,9 @@ async fn prune_all_preserves_link_referenced_install() {
         &[(&link_str, linked_key, now - DAY)],
     ));
 
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -273,7 +285,6 @@ async fn prune_all_preserves_link_referenced_install() {
 #[serial]
 async fn prune_force_removes_link_referenced_install() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
 
     let key = "store/default/4.3-stable";
     let dir = env.make_install(key);
@@ -288,13 +299,17 @@ async fn prune_force_removes_link_referenced_install() {
         &[(&link_str, key, now - 40 * DAY)],
     ));
 
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
-    let report = mgr.prune(30 * DAY, PruneOptions::default()).unwrap();
+    let report = mgr
+        .pruner()
+        .prune(30 * DAY, PruneOptions::default())
+        .unwrap();
     assert!(dir.exists(), "link should protect the install by default");
     assert_eq!(report.preserved_by_link, 1);
 
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -322,7 +337,6 @@ async fn prune_force_removes_link_referenced_install() {
 #[serial]
 async fn prune_dry_run_changes_nothing() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
 
     let key = "store/default/4.3-stable";
     let dir = env.make_install(key);
@@ -335,8 +349,9 @@ async fn prune_dry_run_changes_nothing() {
         &[],
     ));
 
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -364,7 +379,6 @@ async fn prune_dry_run_changes_nothing() {
 #[serial]
 async fn prune_all_force_removes_everything() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
 
     let key = "store/default/4.3-stable";
     let dir = env.make_install(key);
@@ -380,8 +394,9 @@ async fn prune_all_force_removes_everything() {
         &[(&link_str, key, now)],
     ));
 
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
     let report = mgr
+        .pruner()
         .prune(
             30 * DAY,
             PruneOptions {
@@ -406,23 +421,25 @@ async fn prune_all_force_removes_everything() {
 #[serial]
 async fn prune_never_removes_the_default_install() {
     let env = TestHome::new();
-    let i18n = I18n::new().unwrap();
 
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
     let default_gv = determinate("4.3-stable");
     let other_gv = determinate("4.4-stable");
     let default_key = mgr
+        .library()
         .install_key(&default_gv, &Variant::default(), None)
         .unwrap();
     let other_key = mgr
+        .library()
         .install_key(&other_gv, &Variant::default(), None)
         .unwrap();
 
     let default_dir = env.make_install(&default_key);
     let other_dir = env.make_install(&other_key);
 
-    mgr.set_default(&default_gv, &Variant::default(), None)
+    mgr.defaults()
+        .set_default(&default_gv, &Variant::default(), None)
         .unwrap();
 
     env.make_cache_file("stalearchive.zip", b"old");
@@ -438,6 +455,7 @@ async fn prune_never_removes_the_default_install() {
     ));
 
     let report = mgr
+        .pruner()
         .prune(
             0,
             PruneOptions {

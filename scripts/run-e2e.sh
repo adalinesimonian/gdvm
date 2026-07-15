@@ -500,7 +500,7 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 test "Search for 4.x releases" <<'TEST_SCRIPT'
-assert_run_contains 4.3-stable -- gdvm search --limit 0 --filter 4
+assert_run_contains 4.3.0-stable -- gdvm search --limit 0 --filter 4
 TEST_SCRIPT
 
 test "Refresh flag repopulates registry cache" <<'TEST_SCRIPT'
@@ -519,13 +519,128 @@ fi
 printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"registries":{}}' > "$cache"
 
 cache_only_out="$(gdvm search --cache-only --limit 0 --filter 4 || true)"
-assert_not_contains "$cache_only_out" 4.3-stable \
+assert_not_contains "$cache_only_out" 4.3.0-stable \
     "cache-only search unexpectedly found releases with empty cache"
-assert_run_contains 4.3-stable -- gdvm search --refresh --limit 0 --filter 4
+assert_run_contains 4.3.0-stable -- gdvm search --refresh --limit 0 --filter 4
 
 cache_contents="$(cat "$cache")"
 assert_contains "$cache_contents" '"tag_name"' \
     "cache was not repopulated with releases"
+TEST_SCRIPT
+
+test "Bash completions complete subcommands, flags, and shell names" <<'TEST_SCRIPT'
+completion_script="$(mktemp)"
+trap 'rm -f "$completion_script"' EXIT
+gdvm completions bash >"$completion_script"
+source "$completion_script"
+
+run_completion() {
+    local cur="$1"
+    shift
+    COMP_WORDS=("$@")
+    COMP_CWORD=$((${#COMP_WORDS[@]} - 1))
+    COMPREPLY=()
+    _gdvm gdvm "$cur" "${COMP_WORDS[COMP_CWORD - 1]}"
+    echo "${COMPREPLY[@]:-}"
+}
+
+assert_eq "$(run_completion ins gdvm ins)" "install" "gdvm ins<TAB> completes to install"
+assert_contains "$(run_completion --re gdvm install --re)" "--redownload" \
+    "gdvm install --re<TAB> offers --redownload"
+assert_contains "$(run_completion "" gdvm completions "")" "powershell" \
+    "gdvm completions <TAB> offers the shell names"
+TEST_SCRIPT
+
+test "Zsh completions complete subcommands, descriptions, and shell names" <<'TEST_SCRIPT'
+if ! command -v zsh >/dev/null 2>&1; then
+    echo "zsh is not available on this platform; skipping"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+        echo "::warning title=Completion test skipped::zsh is not installed on this runner"
+    fi
+    exit 0
+fi
+
+harness="$(mktemp)"
+trap 'rm -f "$harness"' EXIT
+cat >"$harness" <<'ZSH_HARNESS'
+zmodload zsh/zpty || exit 1
+zpty z zsh -f -i
+zpty -w z 'autoload -Uz compinit && compinit -u; eval "$(gdvm completions zsh)"; echo READY'
+buf=""
+for i in {1..200}; do
+    if zpty -r -t z chunk 2>/dev/null; then buf+=$chunk; fi
+    [[ $buf == *READY* ]] && break
+    sleep 0.05
+done
+[[ $buf == *READY* ]] || { print "zsh session never became ready"; exit 1 }
+
+zpty -w -n z $'gdvm ins\t'
+buf=""
+for i in {1..200}; do
+    if zpty -r -t z chunk 2>/dev/null; then buf+=$chunk; fi
+    [[ $buf == *install* ]] && break
+    sleep 0.05
+done
+[[ $buf == *install* ]] || { print "TAB on 'gdvm ins' did not complete to install"; exit 1 }
+
+zpty -w -n z $'\003'
+sleep 0.2
+zpty -w -n z $'gdvm completions \t'
+buf=""
+for i in {1..200}; do
+    if zpty -r -t z chunk 2>/dev/null; then buf+=$chunk; fi
+    [[ $buf == *powershell* ]] && break
+    sleep 0.05
+done
+[[ $buf == *powershell* && $buf == *zsh* ]] || {
+    print "TAB on 'gdvm completions ' did not list the shells"
+    exit 1
+}
+ZSH_HARNESS
+
+assert_succeeds zsh "$harness"
+TEST_SCRIPT
+
+test "Fish completions complete subcommands, descriptions, and shell names" <<'TEST_SCRIPT'
+if ! command -v fish >/dev/null 2>&1; then
+    echo "fish is not available on this platform; skipping"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+        echo "::warning title=Completion test skipped::fish is not installed on this runner"
+    fi
+    exit 0
+fi
+
+subcommands="$(fish -c 'gdvm completions fish | source; complete -C"gdvm ins"')"
+assert_contains "$subcommands" "install" "gdvm ins<TAB> offers install"
+
+shells="$(fish -c 'gdvm completions fish | source; complete -C"gdvm completions "')"
+assert_contains "$shells" "powershell" "gdvm completions <TAB> offers the shell names"
+assert_contains "$shells" "zsh" "gdvm completions <TAB> offers zsh"
+TEST_SCRIPT
+
+test "PowerShell completions complete subcommands and shell names" <<'TEST_SCRIPT'
+if ! command -v pwsh >/dev/null 2>&1; then
+    echo "pwsh is not available on this platform; skipping"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+        echo "::warning title=Completion test skipped::pwsh is not installed on this runner"
+    fi
+    exit 0
+fi
+
+subcommands="$(pwsh -NoProfile -Command 'gdvm completions powershell | Out-String | Invoke-Expression; (TabExpansion2 "gdvm ins" 6).CompletionMatches | Select-Object -ExpandProperty CompletionText')"
+assert_contains "$subcommands" "install" "gdvm ins<TAB> offers install"
+
+shells="$(pwsh -NoProfile -Command 'gdvm completions powershell | Out-String | Invoke-Expression; (TabExpansion2 "gdvm completions " 17).CompletionMatches | Select-Object -ExpandProperty CompletionText')"
+assert_contains "$shells" "powershell" "gdvm completions <TAB> offers the shell names"
+assert_contains "$shells" "zsh" "gdvm completions <TAB> offers zsh"
+TEST_SCRIPT
+
+test "Completion scripts generate for every supported shell" <<'TEST_SCRIPT'
+for shell in bash zsh fish powershell; do
+    script="$(gdvm completions "$shell")"
+    [[ -n "$script" ]] || fail "empty $shell completion script"
+    assert_contains "$script" "gdvm" "$shell script names the binary"
+done
 TEST_SCRIPT
 
 test "Install Godot 4.3" gdvm install 4.3
@@ -552,6 +667,29 @@ fi
 assert_dir_exists "$install_dir" "Godot install directory was not created"
 
 cat /tmp/gdvm-custom-path.log
+
+TEST_SCRIPT
+
+test "list --format json is machine-readable" <<'TEST_SCRIPT'
+output="$(gdvm list --format json)"
+assert_contains "$output" '"version": "4.3.0-stable"' "lists the installed version"
+
+if command -v jq >/dev/null 2>&1; then
+    echo "$output" | jq . >/dev/null \
+        || { echo "list --format json did not emit valid JSON"; exit 1; }
+fi
+TEST_SCRIPT
+
+test "info --format json reports details of an installed version" <<'TEST_SCRIPT'
+output="$(gdvm info 4.3 --format json)"
+assert_contains "$output" '"version": "4.3.0-stable"' "reports the version"
+assert_contains "$output" '"size_bytes"' "reports the size on disk"
+assert_contains "$output" '"executable"' "reports the executable path"
+
+if command -v jq >/dev/null 2>&1; then
+    echo "$output" | jq '.size_bytes > 0' | grep -q true \
+        || { echo "info --format json did not emit valid JSON with a size"; exit 1; }
+fi
 TEST_SCRIPT
 
 # ARM lacks Godot 3.x builds, so the ARM matrix uses 4.4 instead of 3.x.
@@ -574,7 +712,7 @@ gdvm pin 4.3.0
 
 # gdvm.toml should exist with the new explicit-variant format.
 toml="$(cat gdvm.toml)"
-assert_contains "$toml" 'version = "default:4.3-stable"' \
+assert_contains "$toml" 'version = "default:4.3.0-stable"' \
     "gdvm.toml missing the explicit-variant version line"
 
 # .gdvmrc should exist with the old pre-refactor format.
@@ -588,6 +726,16 @@ TEST_SCRIPT
 test "Godot shim points to the pinned version" <<'TEST_SCRIPT'
 assert_run_contains 4.3.stable.official -- godot_shim --version
 TEST_SCRIPT
+
+if [[ "$arch" == "arm" ]]; then
+    test "GDVM_GODOT_VERSION overrides the pin for the shim (ARM)" <<'TEST_SCRIPT'
+GDVM_GODOT_VERSION=4.4.0 assert_run_contains 4.4.stable.official -- godot_shim --version
+TEST_SCRIPT
+else
+    test "GDVM_GODOT_VERSION overrides the pin for the shim (x86)" <<'TEST_SCRIPT'
+GDVM_GODOT_VERSION=3.6.2 assert_run_contains 3.6.2.stable.official -- godot_shim --version
+TEST_SCRIPT
+fi
 
 test "Show without version resolves to pinned 4.3.0" <<'TEST_SCRIPT'
 path="$(gdvm show)"
@@ -637,8 +785,8 @@ test "Install with csharp: variant specifier" <<'TEST_SCRIPT'
 gdvm install csharp:4.3
 
 list_out="$(gdvm list)"
-assert_matches "$list_out" '4\.3.*csharp' \
-    "csharp 4.3 not shown in gdvm list after install"
+assert_matches "$list_out" 'csharp:4\.3\.0-stable' \
+    "csharp 4.3.0 not shown in gdvm list after install"
 TEST_SCRIPT
 
 test "Show with csharp: variant specifier returns existing file" <<'TEST_SCRIPT'
@@ -659,7 +807,7 @@ gdvm pin csharp:4.3.0
 
 # gdvm.toml should carry the csharp variant prefix.
 toml="$(cat gdvm.toml)"
-assert_contains "$toml" 'version = "csharp:4.3-stable"' \
+assert_contains "$toml" 'version = "csharp:4.3.0-stable"' \
     "gdvm.toml missing the csharp variant prefix"
 
 # .gdvmrc should have the old pre-refactor format.
@@ -685,7 +833,7 @@ cd "$tmpdir"
 gdvm pin 4.3.0 --no-legacy
 
 toml="$(cat gdvm.toml)"
-assert_contains "$toml" 'version = "default:4.3-stable"' \
+assert_contains "$toml" 'version = "default:4.3.0-stable"' \
     "gdvm.toml missing the default variant version line"
 
 assert_path_absent .gdvmrc ".gdvmrc should not exist with --no-legacy"
@@ -731,7 +879,7 @@ test "Remove with csharp: variant specifier" <<'TEST_SCRIPT'
 gdvm remove csharp:4.3.0 --yes
 
 list_out="$(gdvm list)"
-assert_not_matches "$list_out" '4\.3.*csharp' \
+assert_not_matches "$list_out" 'csharp:4\.3' \
     "csharp 4.3 should have been removed but still appears in list"
 TEST_SCRIPT
 

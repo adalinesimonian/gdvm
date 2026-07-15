@@ -1,0 +1,107 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This file is part of gdvm.
+ *
+ * gdvm is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * gdvm. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+@font-face {
+  font-family: "InterDisplay";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/inter/InterDisplay-Regular.woff2") format("woff2");
+}
+
+:root {
+  --font-body:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --font-heading: "InterDisplay", var(--font-body);
+  --font-mono: "Fira Code", monospace;
+
+  --bg: #f6f7fb;
+  --fg: #111;
+  --fg-muted: rgb(100 100 100 / 0.9);
+  --surface: #fff;
+  --surface-muted: #f0f0f3;
+  --accent: #8b5cf6;
+  --accent-strong: #7c3aed;
+  --radius: 12px;
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141414;
+    --fg: #e3e3e3;
+    --surface: #1e1e1e;
+    --surface-muted: #262626;
+    --accent: #8b5cf6;
+    --accent-strong: #7c3aed;
+    --shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-size: 16px;
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+a:hover {
+  color: var(--accent-strong);
+}
+
+h2 {
+  margin: 2.5rem 0 1rem;
+  font-size: 1.6rem;
+}
+
+h3 {
+  margin: 2rem 0 1rem;
+  font-size: 1.25rem;
+}
+
+ul {
+  padding-left: 1.25rem;
+}
+
+li + li {
+  margin-top: 0.6rem;
+}
+
+code {
+  font-family: var(--font-mono);
+  background: var(--surface-muted);
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+}

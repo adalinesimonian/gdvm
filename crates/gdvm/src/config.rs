@@ -25,6 +25,12 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, absolute};
 
+use anyhow::{Result, anyhow};
+use directories::BaseDirs;
+use serde::{Deserialize, Serialize};
+
+use crate::t;
+
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days", "install.path", "cache.path"];
 
@@ -106,13 +112,13 @@ impl ConfigOps for Config {
                 Ok(())
             }
             "prune.max-age-days" => {
-                let days: u64 = value
-                    .parse()
-                    .map_err(|_| anyhow!("Invalid value for {key}: {value} (expected a number)"))?;
+                let days: u64 = value.parse().map_err(|_| {
+                    anyhow!(t!("error-config-invalid-number", key = key, value = value))
+                })?;
                 self.prune_max_age_days = Some(days);
                 Ok(())
             }
-            _ => Err(anyhow!("Unknown configuration key: {key}")),
+            _ => Err(anyhow!(t!("error-config-unknown-key", key = key))),
         }
     }
 
@@ -130,7 +136,7 @@ impl ConfigOps for Config {
                 self.prune_max_age_days = None;
                 Ok(())
             }
-            _ => Err(anyhow!("Unknown configuration key: {key}")),
+            _ => Err(anyhow!(t!("error-config-unknown-key", key = key))),
         }
     }
 
@@ -171,7 +177,7 @@ pub fn validate_registry_name(name: &str) -> Result<()> {
         || name.contains("..")
         || name.contains(':')
     {
-        return Err(anyhow!("Invalid registry name: {name}"));
+        return Err(anyhow!(t!("error-registry-invalid-name", name = name)));
     }
     Ok(())
 }
@@ -206,7 +212,7 @@ impl Config {
     /// Remove a registry from config.
     pub fn remove_registry(&mut self, name: &str) -> Result<()> {
         if self.registries.remove(name).is_none() {
-            return Err(anyhow!("Registry '{name}' is not configured"));
+            return Err(anyhow!(t!("error-registry-not-configured", name = name)));
         }
         Ok(())
     }
@@ -230,7 +236,12 @@ impl Config {
     }
 }
 
-pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
+/// The gdvm data directory (~/.gdvm).
+pub fn gdvm_dir() -> Result<PathBuf> {
+    Ok(get_home_dir()?.join(".gdvm"))
+}
+
+pub fn get_home_dir() -> Result<PathBuf> {
     #[cfg(feature = "integration-tests")]
     {
         // Override home directory for testing purposes.
@@ -239,7 +250,7 @@ pub fn get_home_dir(i18n: &I18n) -> Result<PathBuf> {
         }
     }
 
-    let base_dirs = BaseDirs::new().ok_or(anyhow!(t!(i18n, "error-find-user-dirs")))?;
+    let base_dirs = BaseDirs::new().ok_or(anyhow!(t!("error-find-user-dirs")))?;
     Ok(base_dirs.home_dir().to_path_buf())
 }
 
@@ -292,16 +303,15 @@ pub fn get_absolute_path_to_directory(path: &str) -> Result<PathBuf> {
 
 impl Config {
     /// Load configuration from ~/.gdvm/config.toml.
-    pub fn load(i18n: &I18n) -> Result<Self> {
-        let home = get_home_dir(i18n)?;
-        let config_path = home.join(".gdvm").join("config.toml");
+    pub fn load() -> Result<Self> {
+        let config_path = gdvm_dir()?.join("config.toml");
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
             match toml::from_str(&contents) {
                 Ok(config) => Ok(config),
                 Err(e) => {
-                    eprintln_i18n!(i18n, "error-parse-config", error = e.to_string());
-                    eprintln_i18n!(i18n, "error-parse-config-using-default");
+                    crate::ui::error(t!("error-parse-config", error = e.to_string()));
+                    crate::ui::warn(t!("error-parse-config-using-default"));
                     Ok(Self::default())
                 }
             }
@@ -311,13 +321,23 @@ impl Config {
     }
 
     /// Save configuration to ~/.gdvm/config.toml.
-    pub fn save(&self, i18n: &I18n) -> Result<()> {
-        let home = get_home_dir(i18n)?;
-        let config_dir = home.join(".gdvm");
+    pub fn modify<T>(f: impl FnOnce(&mut Config) -> Result<T>) -> Result<T> {
+        let _lock = crate::locks::Lock::acquire(
+            &gdvm_dir()?.join("locks"),
+            crate::locks::Resource::Config,
+        )?;
+        let mut config = Self::load()?;
+        let out = f(&mut config)?;
+        config.save()?;
+        Ok(out)
+    }
+
+    pub fn save(&self) -> Result<()> {
+        let config_dir = gdvm_dir()?;
         fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("config.toml");
         let toml_str = toml::to_string(self).expect("Failed to serialize config");
-        fs::write(config_path, toml_str)?;
+        crate::fs_utils::atomic_write(&config_path, &toml_str)?;
         Ok(())
     }
 }

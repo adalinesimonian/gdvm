@@ -15,19 +15,18 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::i18n::I18n;
+use anyhow::{Result, anyhow};
+
 use crate::metadata_cache::{
     CacheStore, RegistryReleasesCache, ReleaseCache, filter_cached_releases,
 };
 use crate::registry::{OFFICIAL_REGISTRY, Registry, ReleaseMetadata};
 use crate::t;
-use crate::version_utils::{GodotVersion, GodotVersionDeterminate};
+use crate::version::{ResolvedVersion, VersionQuery};
 
 const CACHE_TTL: Duration = Duration::from_secs(48 * 3600); // 48 hours
 
@@ -55,23 +54,22 @@ impl ReleaseCatalog {
         self.registry.base_url_display()
     }
 
-    /// List available releases, optionally filtering with a partial GodotVersion. Respects cache-
+    /// List available releases, optionally filtering with a partial VersionQuery. Respects cache-
     /// only mode and refreshes the registry index when stale.
     pub async fn list_releases(
         &self,
-        filter: Option<&GodotVersion>,
+        filter: Option<&VersionQuery>,
         use_cache_only: bool,
-        i18n: &I18n,
-    ) -> Result<Vec<GodotVersionDeterminate>> {
+    ) -> Result<Vec<ResolvedVersion>> {
         let registry = self.registry.cache_key();
         let mut cache = self.cache_store.load_registry_cache(&registry)?;
         let now = now_seconds()?;
-        let cache_age = now - cache.last_fetched;
+        let cache_age = crate::date_utils::age_secs(now, cache.last_fetched);
         let should_refresh = cache_age > CACHE_TTL.as_secs();
 
         if should_refresh
             && !use_cache_only
-            && let Err(error) = self.update_cache(&mut cache, i18n).await
+            && let Err(error) = self.update_cache(&mut cache).await
         {
             if cache.releases.is_empty() {
                 return Err(error);
@@ -79,7 +77,6 @@ impl ReleaseCatalog {
 
             // Defer to cached data if available.
             crate::eprintln_i18n!(
-                i18n,
                 "warning-fetching-releases-using-cache",
                 error = error.to_string()
             );
@@ -89,11 +86,7 @@ impl ReleaseCatalog {
     }
 
     /// Get the platforms available for a release's variants.
-    pub async fn platforms_by_variant(
-        &self,
-        tag: &str,
-        i18n: &I18n,
-    ) -> Result<HashMap<String, Vec<String>>> {
+    pub async fn platforms_by_variant(&self, tag: &str) -> Result<HashMap<String, Vec<String>>> {
         let key = self.registry.cache_key();
         let mut cache = self.cache_store.load_registry_cache(&key)?;
 
@@ -102,7 +95,7 @@ impl ReleaseCatalog {
             .iter()
             .find(|r| r.tag_name == tag)
             .cloned()
-            .ok_or_else(|| anyhow!(t!(i18n, "error-version-not-found")))?;
+            .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
 
         if let Some(variants) = release.variants {
             return Ok(variants);
@@ -120,11 +113,7 @@ impl ReleaseCatalog {
     }
 
     /// Retrieve release metadata for an exact version, refreshing the cache if needed.
-    pub async fn metadata_for(
-        &self,
-        gv: &GodotVersionDeterminate,
-        i18n: &I18n,
-    ) -> Result<ReleaseMetadata> {
+    pub async fn metadata_for(&self, gv: &ResolvedVersion) -> Result<ReleaseMetadata> {
         let tag = gv.to_remote_str();
         let mut cache = self
             .cache_store
@@ -134,34 +123,31 @@ impl ReleaseCatalog {
             return self.registry.fetch_release(&entry.source).await;
         }
 
-        self.update_cache(&mut cache, i18n).await?;
+        self.update_cache(&mut cache).await?;
         if let Some(entry) = cache.releases.iter().find(|r| r.tag_name == tag) {
             return self.registry.fetch_release(&entry.source).await;
         }
 
-        Err(anyhow!(t!(i18n, "error-version-not-found")))
+        Err(anyhow!(t!("error-version-not-found")))
     }
 
-    pub async fn refresh_cache(&self, i18n: &I18n) -> Result<()> {
+    pub async fn refresh_cache(&self) -> Result<()> {
         let mut cache = self
             .cache_store
             .load_registry_cache(&self.registry.cache_key())?;
-        self.update_cache(&mut cache, i18n).await
+        self.update_cache(&mut cache).await
     }
 
     pub fn cache_store(&self) -> &CacheStore {
         &self.cache_store
     }
 
-    async fn update_cache(&self, cache: &mut RegistryReleasesCache, i18n: &I18n) -> Result<()> {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}")?);
-        pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message(t!(i18n, "fetching-releases"));
+    async fn update_cache(&self, cache: &mut RegistryReleasesCache) -> Result<()> {
+        let task = crate::ui::progress::activity(t!("status-fetching"), t!("subject-releases"));
 
         let index = self.registry.fetch_index().await?;
 
-        pb.finish_with_message(t!(i18n, "releases-fetched"));
+        drop(task);
 
         cache.releases = index
             .into_iter()
@@ -233,7 +219,7 @@ impl CatalogSet {
         let name = registry.unwrap_or(OFFICIAL_REGISTRY);
         self.catalogs
             .get(name)
-            .ok_or_else(|| anyhow!("Unknown registry '{name}'"))
+            .ok_or_else(|| anyhow!(t!("error-registry-unknown", name = name)))
     }
 
     /// The official registry's release catalog.
@@ -289,18 +275,15 @@ fn derive_variants(metadata: &ReleaseMetadata) -> HashMap<String, Vec<String>> {
 fn now_seconds() -> Result<u64> {
     Ok(SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|_| anyhow!("System time before UNIX EPOCH"))?
+        .map_err(|_| anyhow!(t!("error-system-time")))?
         .as_secs())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
 
-    fn i18n() -> I18n {
-        I18n::new().expect("i18n init")
-    }
+    use super::*;
 
     fn make_catalog_with_cache(tags: &[&str], last_fetched: u64) -> (ReleaseCatalog, TempDir) {
         let tmp = TempDir::new().expect("tempdir");
@@ -334,10 +317,9 @@ mod tests {
     async fn uses_cached_releases_when_fresh() {
         let now = now_seconds().unwrap();
         let (catalog, _tmp) = make_catalog_with_cache(&["4.3-stable", "4.2-rc1"], now);
-        let intl = i18n();
 
         let releases = catalog
-            .list_releases(None, false, &intl)
+            .list_releases(None, false)
             .await
             .expect("list releases");
 
@@ -351,8 +333,7 @@ mod tests {
     async fn filters_cached_releases_with_query() {
         let now = now_seconds().unwrap();
         let (catalog, _tmp) = make_catalog_with_cache(&["4.3-stable", "4.2-rc1"], now);
-        let intl = i18n();
-        let filter = GodotVersion {
+        let filter = VersionQuery {
             major: Some(4),
             minor: Some(2),
             patch: None,
@@ -361,7 +342,7 @@ mod tests {
         };
 
         let releases = catalog
-            .list_releases(Some(&filter), true, &intl)
+            .list_releases(Some(&filter), true)
             .await
             .expect("filtered releases");
 

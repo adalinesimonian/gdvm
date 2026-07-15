@@ -25,5 +25,5 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.{md,yml,yaml,json,webmanifest}]
+[*.{md,yml,yaml,js,jsx,mjs,cjs,ts,tsx,mts,cts,css,html,json,webmanifest}]
 indent_size = 2

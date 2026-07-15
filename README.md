@@ -71,12 +71,19 @@ gdvm pin csharp:latest  # Pin the current folder to latest stable with C#,
 gdvm run             # Run the default Godot for the folder.
 godot                # Alias for `gdvm run`.
 godot_console        # Windows variant keeping the console open.
+
 gdvm run csharp:3.5  # Run Godot 3.5 with C#.
 gdvm remove 3.5      # Removes Godot 3.5 without C#.
+
 gdvm list            # List installed versions.
 gdvm search 4        # Search available 4.x versions.
+
 gdvm prune           # Remove idle installs and cached archives.
 gdvm upgrade         # Upgrade gdvm.
+
+gdvm list --format json       # List installed versions in JSON for scripting.
+GDVM_GODOT_VERSION=4.4 godot  # Use a specific version with scripts that expect
+                              # "godot" in PATH.
 ```
 
 > [!NOTE]
@@ -93,6 +100,17 @@ For more information, run `gdvm --help`.
 While for most purposes it is more than enough to run `godot`, the shim provided by gdvm, or `gdvm run` directly, debuggers often need to attach directly to the Godot process. To do so, they typically require a path to the Godot binary to launch or attach to.
 
 See the dedicated guide for details and examples (including a Visual Studio Code debugger configuration): [Using gdvm with debuggers](docs/debuggers.md).
+
+### Shell Completions
+
+The installer sets up tab completions for your shell automatically if you are using bash, zsh, fish, or PowerShell. To set them up manually, add the matching line to your shell's profile:
+
+```sh
+eval "$(gdvm completions bash)"           # bash (~/.bashrc)
+eval "$(gdvm completions zsh)"            # zsh (~/.zshrc)
+gdvm completions fish | source            # fish (~/.config/fish/config.fish)
+gdvm completions powershell | Out-String | Invoke-Expression  # PowerShell ($PROFILE)
+```
 
 ## Registries
 

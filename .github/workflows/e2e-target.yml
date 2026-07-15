@@ -40,7 +40,11 @@ permissions:
 jobs:
   e2e:
     name: End-to-End Tests (${{ inputs.os }}, ${{ inputs.target }})
-    runs-on: ${{ inputs.os }}
+    # Just for end-to-end tests, substitute the macos-latest runner when testing
+    # the x86_64 target, with macos-15-intel since otherwise the tests are
+    # unbelievably slow under Rosetta.
+    # TODO: Remove before Fall 2027 when macos-15-intel is slated for removal.
+    runs-on: ${{ inputs.os == 'macos-latest' && inputs.target == 'x86_64-apple-darwin' && 'macos-15-intel' || inputs.os }}
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -79,7 +83,6 @@ jobs:
           if (-not $sig.TimeStamperCertificate) {
             throw "gdvm.exe is not timestamped"
           }
-            
           Write-Host "gdvm.exe signature OK: $($sig.SignerCertificate.Subject)"
 
       - name: Install 32-bit runtime libraries (Ubuntu i686)
@@ -100,6 +103,16 @@ jobs:
             libxrender1:i386 \
             libgl1:i386 \
             libglu1-mesa:i386
+
+      - name: Install test dependencies (Ubuntu)
+        if: contains(inputs.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fish
+
+      - name: Install test dependencies (macOS)
+        if: contains(inputs.os, 'macos')
+        run: command -v fish >/dev/null 2>&1 || brew install fish
 
       - name: Install gdvm (*nix)
         if: contains(inputs.os, 'ubuntu') || contains(inputs.os, 'macos')
@@ -150,7 +163,7 @@ jobs:
             if ($sig.Status -ne 'Valid') {
               throw "$name signature status: $($sig.Status)"
             }
-              
+
             if (-not $sig.TimeStamperCertificate) {
               throw "$name is not timestamped"
             }

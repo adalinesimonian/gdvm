@@ -15,17 +15,15 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fs,
-    io::{self, Write},
-    path::{Path, PathBuf},
-};
 
 use crate::registry::ReleaseRef;
-use crate::version_utils::{GodotVersion, GodotVersionDeterminate, GodotVersionDeterminateVecExt};
+use crate::version::{ResolvedVersion, VersionQuery};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 /// Metadata for a single Godot release stored in the registry cache.
@@ -109,7 +107,7 @@ impl CacheStore {
 
     fn save_full_cache(&self, full: &FullCache) -> Result<()> {
         let data = serde_json::to_string(full)?;
-        atomic_write(&self.index_path, data)
+        crate::fs_utils::atomic_write(&self.index_path, &data)
     }
 
     fn update_full_cache<F>(&self, update: F) -> Result<()>
@@ -159,63 +157,19 @@ impl CacheStore {
     }
 }
 
-/// Write data to a file atomically by writing to a temp file in the same directory
-/// and renaming it into place. Ensures the parent directory exists before writing.
-fn atomic_write(path: &Path, data: String) -> Result<()> {
-    let parent = path.parent().ok_or_else(|| anyhow!("Invalid cache path"))?;
-
-    fs::create_dir_all(parent)?;
-
-    let tmp_path = path.with_extension("tmp");
-    {
-        let mut tmp = fs::File::create(&tmp_path)?;
-        tmp.write_all(data.as_bytes())?;
-        tmp.sync_all()?;
-    }
-
-    match fs::rename(&tmp_path, path) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            fs::remove_file(path)?;
-            fs::rename(&tmp_path, path)?;
-            Ok(())
-        }
-        Err(e) => Err(e.into()),
-    }
-}
-
 pub fn filter_cached_releases(
     cache: &RegistryReleasesCache,
-    filter: Option<&GodotVersion>,
-) -> Vec<GodotVersionDeterminate> {
-    let mut releases: Vec<GodotVersionDeterminate> = cache
+    filter: Option<&VersionQuery>,
+) -> Vec<ResolvedVersion> {
+    let mut releases: Vec<ResolvedVersion> = cache
         .releases
         .iter()
-        .filter_map(|r| GodotVersion::from_remote_str(&r.tag_name).ok())
-        .map(|gv| gv.to_determinate())
+        .filter_map(|r| VersionQuery::from_remote_str(&r.tag_name).ok())
+        .map(|gv| gv.to_resolved())
         .filter(|r| filter.is_none_or(|f| f.matches(r)))
         .collect();
 
-    releases.sort_by_version();
+    releases.sort_by(|a, b| b.cmp(a));
 
     releases
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn atomic_write_creates_parent_and_overwrites() -> Result<()> {
-        let dir = tempfile::tempdir()?;
-        let path = dir.path().join("nested").join("cache.json");
-
-        atomic_write(&path, "first".to_string())?;
-        assert_eq!(fs::read_to_string(&path)?, "first");
-
-        atomic_write(&path, "second".to_string())?;
-        assert_eq!(fs::read_to_string(&path)?, "second");
-
-        Ok(())
-    }
 }

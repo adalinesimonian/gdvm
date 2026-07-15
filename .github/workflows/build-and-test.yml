@@ -247,20 +247,3 @@ jobs:
       os: macos-latest
       target: aarch64-apple-darwin
       verify_signature: ${{ needs.sign-macos-arm64.result == 'success' }}
-
-  delete-artifacts:
-    name: Delete Artifacts (standalone runs)
-    if: always() && (github.event_name == 'push' || github.event_name == 'pull_request')
-    needs:
-      - e2e-linux-x86_64
-      - e2e-linux-i686
-      - e2e-linux-aarch64
-      - e2e-windows-x86_64
-      - e2e-windows-i686
-      - e2e-windows-arm64
-      - e2e-macos-x86_64
-      - e2e-macos-arm64
-    permissions:
-      contents: read
-      actions: write
-    uses: ./.github/workflows/cleanup-artifacts.yml

@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::godot_manager::GodotManager;
-use gdvm::i18n::I18n;
-use gdvm::version_utils::{GodotVersion, GodotVersionDeterminate, Variant};
-use serial_test::serial;
 use std::fs;
 use std::path::Path;
+
+use gdvm::app::Gdvm;
+use gdvm::version::{ResolvedVersion, Variant, VersionQuery};
+use serial_test::serial;
 use tempfile::TempDir;
 
 struct PinTestEnv {
@@ -93,29 +93,29 @@ impl Drop for PinTestEnv {
     }
 }
 
-fn determinate(install_str: &str) -> GodotVersionDeterminate {
-    GodotVersion::from_install_str(install_str)
+fn determinate(install_str: &str) -> ResolvedVersion {
+    VersionQuery::from_install_str(install_str)
         .unwrap()
-        .to_determinate()
+        .to_resolved()
 }
 
-async fn manager(i18n: &I18n) -> GodotManager<'_> {
-    GodotManager::new(i18n).await.unwrap()
+async fn gdvm() -> Gdvm {
+    Gdvm::new().await.unwrap()
 }
 
 #[tokio::test]
 #[serial]
 async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
-    mgr.pin_version(&determinate("4.3-stable"), &Variant::default(), None, false)
+    mgr.defaults()
+        .pin_version(&determinate("4.3-stable"), &Variant::default(), None, false)
         .unwrap();
 
     let toml = fs::read_to_string(env.project_dir().join("gdvm.toml")).unwrap();
     assert!(
-        toml.contains("version = \"default:4.3-stable\""),
+        toml.contains("version = \"default:4.3.0-stable\""),
         "gdvm.toml should use the new specifier format, got: {toml}"
     );
 
@@ -127,20 +127,20 @@ async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
 #[serial]
 async fn pin_csharp_writes_variant_formats() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
-    mgr.pin_version(
-        &determinate("4.3-stable"),
-        &Variant::from_option(Some("csharp")),
-        None,
-        false,
-    )
-    .unwrap();
+    mgr.defaults()
+        .pin_version(
+            &determinate("4.3-stable"),
+            &Variant::from_option(Some("csharp")),
+            None,
+            false,
+        )
+        .unwrap();
 
     let toml = fs::read_to_string(env.project_dir().join("gdvm.toml")).unwrap();
     assert!(
-        toml.contains("version = \"csharp:4.3-stable\""),
+        toml.contains("version = \"csharp:4.3.0-stable\""),
         "gdvm.toml should carry the csharp variant prefix, got: {toml}"
     );
 
@@ -152,10 +152,10 @@ async fn pin_csharp_writes_variant_formats() {
 #[serial]
 async fn pin_no_legacy_skips_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
-    mgr.pin_version(&determinate("4.3-stable"), &Variant::default(), None, true)
+    mgr.defaults()
+        .pin_version(&determinate("4.3-stable"), &Variant::default(), None, true)
         .unwrap();
 
     assert!(
@@ -172,8 +172,7 @@ async fn pin_no_legacy_skips_gdvmrc() {
 #[serial]
 async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
     fs::write(
         env.project_dir().join("gdvm.toml"),
@@ -182,7 +181,10 @@ async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
     .unwrap();
     fs::write(env.project_dir().join(".gdvmrc"), "4.3.0-stable").unwrap();
 
-    let pinned = mgr.get_pinned_version().expect("a pinned version");
+    let pinned = mgr
+        .defaults()
+        .get_pinned_version()
+        .expect("a pinned version");
     let gv = pinned.version;
     let variant = pinned.variant;
     assert_eq!(gv.major, Some(4));
@@ -194,12 +196,14 @@ async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
 #[serial]
 async fn get_pinned_falls_back_to_legacy_gdvmrc() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
     fs::write(env.project_dir().join(".gdvmrc"), "4.3.0-stable-csharp").unwrap();
 
-    let pinned = mgr.get_pinned_version().expect("a pinned version");
+    let pinned = mgr
+        .defaults()
+        .get_pinned_version()
+        .expect("a pinned version");
     let gv = pinned.version;
     let variant = pinned.variant;
     assert_eq!(gv.major, Some(4));
@@ -211,8 +215,7 @@ async fn get_pinned_falls_back_to_legacy_gdvmrc() {
 #[serial]
 async fn get_pinned_walks_up_parent_directories() {
     let env = PinTestEnv::new();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
     fs::write(
         env.project_dir().join("gdvm.toml"),
@@ -224,7 +227,11 @@ async fn get_pinned_walks_up_parent_directories() {
     fs::create_dir_all(&nested).unwrap();
     std::env::set_current_dir(&nested).unwrap();
 
-    let gv = mgr.get_pinned_version().expect("a pinned version").version;
+    let gv = mgr
+        .defaults()
+        .get_pinned_version()
+        .expect("a pinned version")
+        .version;
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(3));
 }
@@ -234,18 +241,21 @@ async fn get_pinned_walks_up_parent_directories() {
 async fn pin_then_get_roundtrips_variant() {
     let env = PinTestEnv::new();
     let _ = env.project_dir();
-    let i18n = I18n::new().unwrap();
-    let mgr = manager(&i18n).await;
+    let mgr = gdvm().await;
 
-    mgr.pin_version(
-        &determinate("4.3-stable"),
-        &Variant::from_option(Some("csharp")),
-        None,
-        false,
-    )
-    .unwrap();
+    mgr.defaults()
+        .pin_version(
+            &determinate("4.3-stable"),
+            &Variant::from_option(Some("csharp")),
+            None,
+            false,
+        )
+        .unwrap();
 
-    let pinned = mgr.get_pinned_version().expect("a pinned version");
+    let pinned = mgr
+        .defaults()
+        .get_pinned_version()
+        .expect("a pinned version");
     let gv = pinned.version;
     let variant = pinned.variant;
     assert_eq!(gv.major, Some(4));

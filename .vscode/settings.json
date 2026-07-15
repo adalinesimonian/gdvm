@@ -46,5 +46,13 @@
     "-D",
     "warnings"
   ],
+  "rust-analyzer.rustfmt.overrideCommand": [
+    "rustup",
+    "run",
+    "nightly",
+    "rustfmt",
+    "--edition",
+    "2024"
+  ],
   "rust-analyzer.runnables.extraArgs": ["--features", "integration-tests"]
 }

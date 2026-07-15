@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-# SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+# SPDX-FileCopyrightText: Copyright (C) 2026 Adaline Simonian
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This file is part of gdvm.
@@ -16,12 +15,13 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
-# Check if pwsh is installed
-if ! command -v pwsh &>/dev/null; then
-    echo "PowerShell (pwsh) is not installed. Please install it to run this script."
-    echo "See https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux"
-    exit 1
-fi
-
-script_dir="$(dirname "$(realpath "$0")")"
-pwsh -NoProfile -ExecutionPolicy Bypass -File "$script_dir/sort-i18n.ps1" "$@"
+node_modules/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+dist
+*.tsbuildinfo

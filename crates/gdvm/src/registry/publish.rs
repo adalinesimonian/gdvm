@@ -15,19 +15,22 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow, bail};
-use digest_io::IoWrapper;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
-use serde_json::{Serializer, ser::PrettyFormatter};
-use sha2::{Digest, Sha512};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
+use anyhow::{Result, anyhow, bail};
+use digest_io::IoWrapper;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
+use serde_json::Serializer;
+use serde_json::ser::PrettyFormatter;
+use sha2::{Digest, Sha512};
+
 use super::v2;
 use crate::date_utils::now_iso8601;
-use crate::version_utils::Variant;
+use crate::t;
+use crate::version::Variant;
 
 /// Current registry schema version produced by the authoring commands.
 const SCHEMA_VERSION: u32 = 2;
@@ -111,7 +114,7 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
         let file = args
             .file
             .as_deref()
-            .ok_or_else(|| anyhow!("--store requires a local --file"))?;
+            .ok_or_else(|| anyhow!(t!("error-publish-store-requires-file")))?;
         if !file.is_file() {
             bail!("archive not found: {}", file.display());
         }
@@ -128,13 +131,14 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
         let url = args
             .url
             .clone()
-            .ok_or_else(|| anyhow!("either --store or --url must be provided"))?;
+            .ok_or_else(|| anyhow!(t!("error-publish-store-or-url-required")))?;
         let (sha512, size) = match (&args.sha512, args.size) {
             (Some(sha512), Some(size)) => (sha512.clone(), size),
             _ => {
-                let file = args.file.as_deref().ok_or_else(|| {
-                    anyhow!("--url requires either a local --file or explicit --sha512 and --size")
-                })?;
+                let file = args
+                    .file
+                    .as_deref()
+                    .ok_or_else(|| anyhow!(t!("error-publish-url-requires-integrity")))?;
                 if !file.is_file() {
                     bail!("archive not found: {}", file.display());
                 }
@@ -178,8 +182,12 @@ pub fn remove_build(dir: &Path, args: &RemoveBuild) -> Result<()> {
 
     let rel_path = release_rel_path(&args.version);
     let release_path = dir.join(&rel_path);
-    let mut release: v2::ReleaseMetadata =
-        read_json(&release_path)?.ok_or_else(|| anyhow!("no such version: {}", args.version))?;
+    let mut release: v2::ReleaseMetadata = read_json(&release_path)?.ok_or_else(|| {
+        anyhow!(t!(
+            "error-publish-no-such-version",
+            version = args.version.as_str()
+        ))
+    })?;
 
     match (&args.variant, &args.platform) {
         (Some(variant), Some(platform)) => {
@@ -271,7 +279,7 @@ pub fn validate(dir: &Path) -> Result<ValidationReport> {
 
     let actual_order: Vec<&str> = index.releases.iter().map(|r| r.version.as_str()).collect();
     let mut expected_order = actual_order.clone();
-    expected_order.sort_by(|a, b| crate::version_utils::cmp_versions_newest_first(a, b));
+    expected_order.sort_by(|a, b| crate::version::cmp_versions_newest_first(a, b));
     if actual_order != expected_order {
         errors.push("index.json releases are not ordered newest to oldest".to_string());
     }
@@ -378,7 +386,7 @@ fn load_index(dir: &Path) -> Result<v2::Index> {
 fn sort_index(index: &mut v2::Index) {
     index
         .releases
-        .sort_by(|a, b| crate::version_utils::cmp_versions_newest_first(&a.version, &b.version));
+        .sort_by(|a, b| crate::version::cmp_versions_newest_first(&a.version, &b.version));
 }
 
 /// Sort the index newest first and write it to `index.json`.
@@ -392,7 +400,7 @@ fn write_index(dir: &Path, index: &mut v2::Index) -> Result<()> {
 fn touch_manifest(dir: &Path) -> Result<()> {
     let path = dir.join("registry.json");
     let mut manifest: v2::Manifest =
-        read_json(&path)?.ok_or_else(|| anyhow!("missing registry.json"))?;
+        read_json(&path)?.ok_or_else(|| anyhow!(t!("error-publish-missing-manifest")))?;
     manifest.schema = SCHEMA_VERSION;
     manifest.updated_at = Some(now_iso8601());
     write_json(&path, &manifest)
@@ -482,7 +490,7 @@ fn sha512_file(path: &Path) -> Result<String> {
     let mut hasher = IoWrapper(Sha512::new());
     io::copy(&mut file, &mut hasher)?;
     let digest = hasher.0.finalize();
-    Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
+    Ok(crate::hash_utils::to_hex(&digest))
 }
 
 /// Hash a local archive, returning its SHA-512 in hex and size in bytes.
@@ -526,8 +534,9 @@ fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     fn write_archive(dir: &Path, name: &str, contents: &[u8]) -> PathBuf {
         let path = dir.join(name);

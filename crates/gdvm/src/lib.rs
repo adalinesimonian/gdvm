@@ -15,16 +15,22 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
+pub mod app;
 pub mod artifact_cache;
 pub mod config;
 pub mod date_utils;
 pub mod download_utils;
-pub mod godot_manager;
+pub mod fs_utils;
+pub mod gdvm_toml;
+pub mod hash_utils;
 pub mod host;
 pub mod i18n;
+pub mod locks;
 pub mod metadata_cache;
 pub mod migrations;
 pub mod paths;
+pub mod post_upgrade;
+pub mod process_utils;
 pub mod project_version_detector;
 pub mod registry;
 pub mod registry_store;
@@ -32,6 +38,8 @@ pub mod registry_version_resolver;
 pub mod releases;
 pub mod run_version_resolver;
 pub mod self_update;
+pub mod shims;
+pub mod ui;
 pub mod usage_tracker;
-pub mod version_utils;
+pub mod version;
 pub mod zip_utils;

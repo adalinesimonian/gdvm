@@ -19,13 +19,32 @@ mod v2;
 
 pub mod publish;
 
-use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+
 use crate::host::{HostArch, HostOs, HostPlatform};
+use crate::t;
+
+/// Returns true if the registry refers to the official gdvm registry.
+pub fn is_official_registry(registry: Option<&str>) -> bool {
+    match registry {
+        None => true,
+        Some(r) => r == crate::registry::OFFICIAL_REGISTRY,
+    }
+}
+
+/// Normalize a registry name to `None` for the official registry, or
+/// `Some(name)` for a custom registry.
+pub fn normalize_registry(registry: Option<&str>) -> Option<&str> {
+    match registry {
+        Some(r) if r != crate::registry::OFFICIAL_REGISTRY => Some(r),
+        _ => None,
+    }
+}
 
 /// Alias for the official registry. Cannot be overridden by a project pin or
 /// machine config.
@@ -125,7 +144,7 @@ fn host_token(normalized_url: &str) -> String {
 pub fn store_dir_name(url: &str) -> String {
     let normalized = normalize_url(url);
     let digest = Sha256::digest(normalized.as_bytes());
-    let hash: String = digest.iter().take(8).map(|b| format!("{b:02x}")).collect();
+    let hash = crate::hash_utils::to_hex(&digest[..8]);
     format!("{}-{hash}", host_token(&normalized))
 }
 
@@ -194,7 +213,10 @@ impl RegistryUrl {
         } else if s.starts_with("http://") || s.starts_with("https://") {
             Ok(RegistryUrl::Http(s.trim_end_matches('/').to_string()))
         } else {
-            Err(anyhow!("Unsupported registry URL scheme: {s}"))
+            Err(anyhow!(t!(
+                "error-registry-unsupported-url-scheme",
+                url = s
+            )))
         }
     }
 
@@ -267,7 +289,7 @@ pub fn platform_candidates(host: HostPlatform) -> Vec<String> {
 pub fn select_binary<'a>(
     meta: &'a ReleaseMetadata,
     host: HostPlatform,
-    variant: &crate::version_utils::Variant,
+    variant: &crate::version::Variant,
 ) -> Result<&'a BinaryInfo, BinarySelectionError> {
     let platform_map = meta
         .variants
@@ -302,7 +324,7 @@ impl Registry {
     /// Construct a registry with the given name and base URL.
     pub fn new(name: &str, base_url: &str) -> Result<Self> {
         Ok(Self {
-            client: reqwest::ClientBuilder::new().user_agent("gdvm").build()?,
+            client: crate::download_utils::http_client()?,
             name: name.to_string(),
             base_url: RegistryUrl::parse(base_url)?,
         })
@@ -327,15 +349,26 @@ impl Registry {
     async fn fetch_text(&self, rel: &str) -> Result<Option<String>> {
         match &self.base_url {
             RegistryUrl::Http(base) => {
+                crate::download_utils::ensure_url_scheme_allowed(base)?;
                 let url = format!("{base}/{}", rel.trim_start_matches('/'));
-                let resp = self.client.get(&url).send().await?;
+                let resp = crate::download_utils::get_retrying(&self.client, &url, None).await?;
                 if resp.status() == reqwest::StatusCode::NOT_FOUND {
                     return Ok(None);
                 }
                 if !resp.status().is_success() {
-                    return Err(anyhow!("Failed to fetch {url}: HTTP {}", resp.status()));
+                    return Err(anyhow!(t!(
+                        "error-registry-fetch-failed",
+                        url = url,
+                        status = resp.status().to_string()
+                    )));
                 }
-                Ok(Some(resp.text().await?))
+                Ok(Some(
+                    crate::download_utils::response_text_limited(
+                        resp,
+                        crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
+                    )
+                    .await?,
+                ))
             }
             RegistryUrl::File(dir) => {
                 let path = dir.join(rel);
@@ -350,12 +383,19 @@ impl Registry {
 
     /// Fetch and normalize the registry index.
     pub async fn fetch_index(&self) -> Result<Vec<IndexEntry>> {
-        let manifest_text = self
-            .fetch_text("registry.json")
-            .await?
-            .ok_or_else(|| anyhow!("Registry '{}' is missing registry.json", self.name))?;
-        let manifest: v2::Manifest = serde_json::from_str(&manifest_text)
-            .map_err(|e| anyhow!("Failed to parse manifest for '{}': {e}", self.name))?;
+        let manifest_text = self.fetch_text("registry.json").await?.ok_or_else(|| {
+            anyhow!(t!(
+                "error-registry-missing-manifest",
+                name = self.name.as_str()
+            ))
+        })?;
+        let manifest: v2::Manifest = serde_json::from_str(&manifest_text).map_err(|e| {
+            anyhow!(t!(
+                "error-registry-parse-manifest",
+                name = self.name.as_str(),
+                error = e.to_string()
+            ))
+        })?;
         if manifest.schema != 2 {
             return Err(anyhow!(
                 "Registry '{}' declares unsupported schema version {}",
@@ -364,12 +404,19 @@ impl Registry {
             ));
         }
 
-        let index_text = self
-            .fetch_text("index.json")
-            .await?
-            .ok_or_else(|| anyhow!("Registry '{}' is missing index.json", self.name))?;
-        let index: v2::Index = serde_json::from_str(&index_text)
-            .map_err(|e| anyhow!("Failed to parse index for '{}': {e}", self.name))?;
+        let index_text = self.fetch_text("index.json").await?.ok_or_else(|| {
+            anyhow!(t!(
+                "error-registry-missing-index",
+                name = self.name.as_str()
+            ))
+        })?;
+        let index: v2::Index = serde_json::from_str(&index_text).map_err(|e| {
+            anyhow!(t!(
+                "error-registry-parse-index",
+                name = self.name.as_str(),
+                error = e.to_string()
+            ))
+        })?;
         Ok(v2::normalize_index(index))
     }
 
@@ -380,7 +427,7 @@ impl Registry {
                 let text = self
                     .fetch_text(path)
                     .await?
-                    .ok_or_else(|| anyhow!("Failed to fetch release metadata"))?;
+                    .ok_or_else(|| anyhow!(t!("error-registry-fetch-release-failed")))?;
                 let meta: v2::ReleaseMetadata = serde_json::from_str(&text)?;
                 Ok(v2::normalize_release(meta, &self.base_url))
             }
@@ -439,8 +486,7 @@ mod tests {
             os: HostOs::Macos,
             arch: HostArch::X86_64,
         };
-        let selected =
-            select_binary(&meta, host, &crate::version_utils::Variant::default()).unwrap();
+        let selected = select_binary(&meta, host, &crate::version::Variant::default()).unwrap();
         assert_eq!(selected.urls[0], "http://example.com/u.zip");
     }
 
@@ -454,7 +500,7 @@ mod tests {
         let err = select_binary(
             &meta,
             host,
-            &crate::version_utils::Variant::from_option(Some("csharp")),
+            &crate::version::Variant::from_option(Some("csharp")),
         )
         .unwrap_err();
         assert_eq!(err, BinarySelectionError::UnsupportedPlatform);
@@ -467,8 +513,7 @@ mod tests {
             os: HostOs::Windows,
             arch: HostArch::X86_64,
         };
-        let err =
-            select_binary(&meta, host, &crate::version_utils::Variant::default()).unwrap_err();
+        let err = select_binary(&meta, host, &crate::version::Variant::default()).unwrap_err();
         assert_eq!(err, BinarySelectionError::UnsupportedArch);
     }
 

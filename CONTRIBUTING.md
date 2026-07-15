@@ -90,6 +90,23 @@ The compiled binary will be available in the `target/release` directory.
 
 GDVM uses a separate Git branch named [`registry`](https://github.com/adalinesimonian/gdvm/tree/registry) to store a machine-readable list of Godot versions. This branch is updated automatically and usually should not be modified directly by contributors. For more details on its structure and how it works, please see the [registry's `README.md`](https://github.com/adalinesimonian/gdvm/tree/registry?tab=readme-ov-file#gdvm-package-registry).
 
+## Website
+
+The website is built from`gh-pages/`. It's a static site that uses [Vike](https://vike.dev/) and [SolidJS](https://www.solidjs.com/). To run it locally, you need to have [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) installed (this repo configures [Proto](https://moonrepo.dev/proto) to use the correct Node version automatically, so you can just install Proto to avoid managing the versions yourself).
+
+```sh
+cd gh-pages
+
+yarn install
+yarn dev        # Start the dev server.
+yarn build      # Build the site to gh-pages/dist/client.
+yarn typecheck  # Check types.
+```
+
+Any content that is specific to the current release, such as for example install scripts or documentation, needs to be separated from the rest of the site into different files and listed in [`gh-pages/release-content.json`](gh-pages/release-content.json).
+
+The build process will write over these files with the content from the latest release's tag, so that the site always shows the correct install commands and documentation for the currently published release, rather than whatever is in `main`.
+
 ## Internationalization (i18n)
 
 GDVM supports multiple languages using the [Fluent](https://projectfluent.org/) localization system. If you want to add or update translations, follow these steps:
@@ -116,25 +133,11 @@ GDVM supports multiple languages using the [Fluent](https://projectfluent.org/) 
 
 1. **Translate messages**: Add translations for all the keys present in the existing Fluent files.
 2. **Test your translations**: Ensure that the translations are correctly loaded and displayed in the application.
-3. **Check for missing translations**: You can use the scripts in the `scripts/` directory to find missing translations.
-
-   ```sh
-   # For Linux/macOS
-   ./scripts/find-missing-i18n.sh
-   ```
+3. **Lint the translations**: The i18n linter checks that all translation string keys used from code exist in locales, term and message references aren't missing, there aren't any untranslated or extra messages, and also formats and sorts the translation bundles. It requires that the [pwsh](https://github.com/PowerShell/PowerShell) command is available in your PATH.
 
    ```powershell
-   # For Windows PowerShell
-   .\scripts\find-missing-i18n.ps1
-   ```
-
-4. **Format and sort translations**: This script will help you format and sort the translations in the Fluent files using the `en-US.ftl` file as a reference. It requires that the [pwsh](https://github.com/PowerShell/PowerShell) command is available in your PATH.
-
-   ```sh
-   # For PowerShell
-   ./scripts/sort-i18n.ps1          # Checks the Fluent bundles for sort/format issues
-   ./scripts/sort-i18n.ps1 --format # Formats/sorts the Fluent bundles
-   ./scripts/sort-i18n.sh           # Alias for *nix systems, calls the PowerShell script
+   ./scripts/lint-i18n.ps1        # Lint the Fluent bundles.
+   ./scripts/lint-i18n.ps1 --fix  # Fix any formatting issues.
    ```
 
 ## Testing

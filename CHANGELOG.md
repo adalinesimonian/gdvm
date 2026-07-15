@@ -21,7 +21,57 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.1...main
+### Breaking Changes
+
+- All Godot version identifiers displayed by gdvm now adhere to gdvm's `[registry/][variant:]version[-tag]` format for consistency, for example, `csharp:4.3.0-stable`, `myreg/4.7.1-dev1`, and so on. This is a breaking change for any scripts that parse gdvm's output. Scripts that need information from gdvm should use the new `--format json` option (see below) instead of parsing the text output. Future changes to the text output format will no longer be considered breaking changes, so ensure that scripts only use the JSON output format.
+
+### New Features
+
+- `list`, `search`, `show`, `cache-path`, `prune`, `config get`, and `registry list` now accept `--format json`.
+- Added `gdvm info [version]`, which reports details about an installed version.
+- Setting `GDVM_GODOT_VERSION` makes `godot` run that version, taking precedence over any project settings. This is meant for compatibility with scripts that expect to use `godot` in `PATH` and may not be gdvm-aware.
+- Shell completions for bash, zsh, fish, and PowerShell are now provided via the new `gdvm completions <shell>` command. The install scripts now enable completions automatically for your detected shell.
+- Downloads, as well as other web requests, now retry and resume interrupted requests when possible.
+
+### Fixed
+
+- It is no longer problematic to run multiple gdvm commands concurrently, e.g. if running multiple installs at once. Each operation that needs to write to gdvm's data now locks whatever specific resource it needs to write to, allowing multiple gdvm commands to safely be run in parallel.
+- Any updates to gdvm's shims will now properly be written to disk after an upgrade.
+- File sizes and download ETA are now properly formatted for the current locale.
+- Pinned versions written by `gdvm pin` are no longer missing a patch component.
+
+### Changed
+
+- gdvm's progress reporting is now much more tidy and has been refreshed with a new look.
+- gdvm no longer blocks commands with update checks, which are now run in the background.
+- Commands don't start processing gdvm's cache or internal data until after the command line is parsed, which should reduce response time for commands given bad arguments or when `--help` is passed.
+- Network connections now time out after 10 seconds of waiting to establish a connection and 30 seconds of inactivity during a transfer. This will not affect downloads that are actively transferring data, it will only prevent gdvm from hanging indefinitely on a stalled connection.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.14.0...main
+
+## v0.14.0
+
+### Fixed
+
+- Downloaded files are now checksummed as they're written to disk, which prevents anything modifying the file before gdvm checks it.
+- Downloads are now checked against the size declared in the registry.
+- Temporary directories used for downloads are now randomized so that their names cannot be guessed. This prevents planting files in the directory in advance to trick gdvm into using them.
+- When extracting files, gdvm now checks that the file's decompressed size does not exceed the size declared in the registry, and will reject files that do, to help mitigate zip bombs.
+- When extracting files, setuid, setgid, and sticky permission bits are no longer applied when extracting, so downloads can no longer create privileged executables on the local system.
+- Corrupted timestamps or ones set to future dates no longer cause an integer underflow when computing the age of gdvm's caches.
+- Crashes or early exits no longer leave metadata in a partially written state, and no longer leave downloaded files partially written.
+- Version tags are now more strictly validated. It is no longer possible to use a version tag that could trick gdvm into placing an install outside of gdvm's data directory by using a version tag such as `4.4-x/../../evil`.
+- Environment variables in `.env` files meant for Godot no longer bleed into gdvm's own environment, which could have been used to silently change gdvm's behavior.
+- Registry responses are now limited to 64 MiB, so a compromised or misbehaving server can no longer blow up memory with a huge response.
+- Some user-facing text that was inadvertently left hardcoded in English is now localized.
+
+### Changed
+
+- gdvm will no longer follow redirects from `https://` to unencrypted `http://` URLs, which could silently downgrade a secure connection. `GDVM_ALLOW_INSECURE_URLS` can be set to bypass this check.
+- `gdvm upgrade` now treats a missing checksum in the release manifest as an error, and will not install the binary.
+- gdvm now refuses plain `http://` URLs for all requests. Set the `GDVM_ALLOW_INSECURE_URLS` environment variable to allow unencrypted `http://` URLs. Do not do this unless you are in the middle of developing gdvm or a custom registry. Otherwise, you are putting your system at risk by letting gdvm fetch data over an unencrypted connection.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.13.1...v0.14.0
 
 ## v0.13.1
 
@@ -290,19 +340,25 @@ The following features have been deprecated. They will continue to work for the 
 - Fixes bug where console would not be attached or detached as expected
 - Fixes bug on Windows where certain builds could not be started in console mode
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.2.0...v0.2.1
+
 ## v0.2.0
 
 ### New Features
 
-- **Pin command** – Pin a Godot version to the current directory with `gdvm pin` which stores the version in a .gdvmrc file.
-- **Upgrade command** – Update gdvm to the latest release using `gdvm upgrade`. gdvm will also check for updates to itself when it runs.
-- **Automatic Godot symlinks** – You can now run `godot` or `godot_console` directly; they point to gdvm, which picks the correct version for the current directory.
+- Pin a Godot version to the current directory with `gdvm pin` which stores the version in a .gdvmrc file.
+- Update gdvm to the latest release using `gdvm upgrade`. gdvm will also check for updates to itself when it runs.
+- You can now run `godot` or `godot_console` directly; they point to gdvm, which picks the correct version for the current directory.
   This lets you associate these symlinks with .godot files in your OS, and if you use `gdvm pin` in those directories, you can have the correct version of Godot open for you when you open a project file.
 
-### Improvements
+### Changed
 
-- **Better messaging** – Enhanced error messages.
+- Enhanced error messages.
+
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.1.0...v0.2.0
 
 ## v0.1.0
 
-First release!
+### New Features
+
+- First release!

@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use gdvm::{godot_manager::find_godot_executable, i18n::I18n, zip_utils::extract_zip};
 use std::io::Write;
+
+use gdvm::app::find_godot_executable;
+use gdvm::zip_utils::extract_zip;
 use tempfile::tempdir;
 use zip::write::SimpleFileOptions;
 
@@ -34,10 +36,39 @@ fn test_extract_zip_basic() {
     }
 
     let out_dir = dir.path().join("out");
-    let i18n = I18n::new().unwrap();
-    extract_zip(&zip_path, &out_dir, &i18n).unwrap();
+    extract_zip(&zip_path, &out_dir).unwrap();
     let extracted = std::fs::read_to_string(out_dir.join("folder/file.txt")).unwrap();
     assert_eq!(extracted, "hello");
+}
+
+#[cfg(target_family = "unix")]
+#[test]
+fn test_extract_zip_strips_special_permission_bits() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempdir().unwrap();
+    let zip_path = dir.path().join("test.zip");
+    {
+        let file = std::fs::File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options = SimpleFileOptions::default().unix_permissions(0o6755);
+        zip.start_file("folder/evil", options).unwrap();
+        zip.write_all(b"#!/bin/sh\n").unwrap();
+        zip.finish().unwrap();
+    }
+
+    let out_dir = dir.path().join("out");
+    extract_zip(&zip_path, &out_dir).unwrap();
+
+    let mode = std::fs::metadata(out_dir.join("folder/evil"))
+        .unwrap()
+        .permissions()
+        .mode();
+
+    // Setuid, setgid, and sticky bits must not be applied, only the other
+    // permission bits.
+    assert_eq!(mode & 0o7000, 0);
+    assert_eq!(mode & 0o777, 0o755);
 }
 
 #[test]

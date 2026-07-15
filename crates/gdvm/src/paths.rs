@@ -21,6 +21,10 @@ use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use anyhow::Result;
+
+use crate::config::get_home_dir;
+
 /// Centralizes filesystem layout for GDVM under the user home directory.
 pub struct GdvmPaths {
     base: PathBuf,
@@ -34,9 +38,9 @@ pub struct GdvmPaths {
 impl GdvmPaths {
     /// Construct paths rooted at the GDVM base directory, ~/.gdvm, and ensure the base, installs,
     /// cache, and bin directories exist.
-    pub fn new(i18n: &I18n) -> Result<Self> {
-        let base = get_home_dir(i18n)?.join(".gdvm"); // Ensure config can be loaded/saved before creating directories.
-        let config = Config::load(i18n)?;
+    pub fn new() -> Result<Self> {
+        let base = get_home_dir()?.join(".gdvm");
+        let config = Config::load()?;
         let installs = config
             .install_path
             .clone()
@@ -87,6 +91,10 @@ impl GdvmPaths {
         &self.bin_dir
     }
 
+    pub fn locks(&self) -> PathBuf {
+        self.base.join("locks")
+    }
+
     pub fn default_file(&self) -> PathBuf {
         self.base.join("default")
     }
@@ -120,8 +128,9 @@ impl GdvmPaths {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn creates_directories_and_exposes_paths() -> Result<()> {

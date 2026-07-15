@@ -17,7 +17,7 @@
 
 [package]
 name = "gdvm"
-version = "0.13.1"
+version = "0.14.0"
 edition = "2024"
 build = "build.rs"
 description = "Godot Version Manager"
@@ -28,6 +28,7 @@ repository = "https://github.com/adalinesimonian/gdvm"
 
 # For command-line argument parsing:
 clap = { version = "=4.6.1", features = ["wrap_help"] }
+clap_complete = "=4.6.7"
 
 # For cross-platform paths:
 directories = "=6.0.0"
@@ -37,6 +38,11 @@ fluent-bundle = "=0.16.0"
 unic-langid = { version = "=0.9.6", features = ["unic-langid-macros"] }
 anyhow = "=1.0.103"
 terminal_size = "=0.4.4"
+console = "=0.16.4"
+unicode-width = "=0.2.2"
+icu = "=2.2.0"
+fixed_decimal = { version = "=0.7.2", features = ["ryu"] }
+intl-memoizer = "=0.5.3"
 
 # For downloading files:
 reqwest = { version = "=0.13.4", features = [
@@ -47,6 +53,7 @@ reqwest = { version = "=0.13.4", features = [
     "rustls",
     "stream",
 ] }
+fastrand = "=2.4.1"
 indicatif = { version = "=0.18.6", features = ["improved_unicode"] }
 sha2 = "=0.11.0"
 digest-io = "=0.1.0"
@@ -65,13 +72,15 @@ futures-util = "=0.3.32"
 
 # For file system operations:
 zip = "=8.6.0"
-toml = "=1.1.2"
+toml = "=1.1.3"
 rpassword = "=7.5.4"
 dotenvy = "=0.15.7"
+tempfile = "=3.27.0"
+path-clean = "=1.0.1"
 
 # For timestamps:
-jiff = "=0.2.31"
-path-clean = "1.0.1"
+jiff = "=0.2.32"
+jiff-icu = "=0.2.2"
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -81,9 +90,12 @@ winapi = { version = "=0.3.9", features = ["winbase"] }
 daemonize = "=0.5.0"
 
 [dev-dependencies]
-tempfile = "=3.27.0"
 serial_test = "=3.5.0"
 zip = "=8.6.0"
+
+[build-dependencies]
+fluent-syntax = "=0.12.0"
+unicode-width = "=0.2.2"
 
 [features]
 integration-tests = []

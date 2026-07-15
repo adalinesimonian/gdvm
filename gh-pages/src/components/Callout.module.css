@@ -1,0 +1,35 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2024 Adaline Simonian
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This file is part of gdvm.
+ *
+ * gdvm is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * gdvm. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+.callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1rem;
+  margin: 1.5rem 0;
+  background: var(--surface-muted);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--accent);
+  margin-top: calc((1lh - 1em) / 2);
+}

@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 
 use crate::date_utils::now_unix_secs;
 
@@ -81,11 +81,12 @@ impl Default for UsageState {
 /// Loads, updates, and persists the usage state file.
 pub struct UsageTracker {
     path: PathBuf,
+    locks_dir: PathBuf,
 }
 
 impl UsageTracker {
-    pub fn new(path: PathBuf) -> Self {
-        Self { path }
+    pub fn new(path: PathBuf, locks_dir: PathBuf) -> Self {
+        Self { path, locks_dir }
     }
 
     pub fn path(&self) -> &Path {
@@ -108,14 +109,15 @@ impl UsageTracker {
     /// Persist the state to disk.
     pub fn save(&self, state: &UsageState) -> Result<()> {
         let data = serde_json::to_string(state)?;
-        atomic_write(&self.path, data)
+        crate::fs_utils::atomic_write(&self.path, &data)
     }
 
     /// Update the state and persist to disk.
-    fn update<F>(&self, mutate: F) -> Result<()>
+    pub fn update<F>(&self, mutate: F) -> Result<()>
     where
         F: FnOnce(&mut UsageState),
     {
+        let _lock = crate::locks::Lock::acquire(&self.locks_dir, crate::locks::Resource::Usage)?;
         let mut state = self.load()?;
         state.schema = USAGE_SCHEMA_VERSION;
         mutate(&mut state);
@@ -189,42 +191,17 @@ fn link_key(link_path: &Path) -> String {
     absolute.to_string_lossy().to_string()
 }
 
-/// Write data to a file atomically by writing to a temp file in the same folder
-/// and renaming it into place.
-fn atomic_write(path: &Path, data: String) -> Result<()> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| anyhow!("Invalid usage state path"))?;
-
-    fs::create_dir_all(parent)?;
-
-    let tmp_path = path.with_extension("tmp");
-    {
-        let mut tmp = fs::File::create(&tmp_path)?;
-        tmp.write_all(data.as_bytes())?;
-        tmp.sync_all()?;
-    }
-
-    match fs::rename(&tmp_path, path) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            fs::remove_file(path)?;
-            fs::rename(&tmp_path, path)?;
-            Ok(())
-        }
-        Err(e) => Err(e.into()),
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     fn tracker() -> (TempDir, UsageTracker) {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("usage.json");
-        (tmp, UsageTracker::new(path))
+        let locks = tmp.path().join("locks");
+        (tmp, UsageTracker::new(path, locks))
     }
 
     #[test]
