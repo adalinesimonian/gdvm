@@ -143,10 +143,10 @@ impl ConfigOps for Config {
 
     fn list_set_keys(&self) -> Vec<(String, String, bool)> {
         let mut entries = Vec::new();
-        if let Some(installs_location) = self.install_path.as_ref() {
+        if let Some(install_path) = self.install_path.as_ref() {
             entries.push((
                 "install.path".to_string(),
-                installs_location.to_string_lossy().into_owned(),
+                install_path.to_string_lossy().into_owned(),
                 false,
             ));
         }
