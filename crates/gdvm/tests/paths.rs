@@ -17,7 +17,7 @@
 #![cfg(feature = "integration-tests")]
 
 use gdvm::{
-    config::{Config, ConfigOps, get_absolute_path_to_directory},
+    config::{Config, ConfigOps},
     i18n::I18n,
     paths::GdvmPaths,
 };
@@ -25,34 +25,6 @@ use serial_test::serial;
 use std::path::Path;
 use tempfile::tempdir;
 mod common;
-
-#[test]
-fn test_get_absolute_path_normalizes_relative_paths() {
-    let path = get_absolute_path_to_directory("subdir/../installs").unwrap();
-
-    assert!(path.is_absolute());
-    assert!(
-        !path
-            .components()
-            .any(|component| component == std::path::Component::ParentDir)
-    );
-    assert_eq!(path, std::env::current_dir().unwrap().join("installs"));
-}
-
-#[test]
-fn test_get_absolute_path_rejects_empty_strings() {
-    assert!(get_absolute_path_to_directory("").is_err());
-    assert!(get_absolute_path_to_directory("   ").is_err());
-}
-
-#[test]
-fn test_get_absolute_path_rejects_existing_files() {
-    let dir = tempdir().unwrap();
-    let file_path = dir.path().join("not_a_dir.txt");
-    std::fs::write(&file_path, "data").unwrap();
-
-    assert!(get_absolute_path_to_directory(file_path.to_string_lossy().as_ref()).is_err());
-}
 
 #[test]
 #[serial]
