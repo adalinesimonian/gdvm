@@ -20,38 +20,14 @@
 use gdvm::{config::Config, config::ConfigOps, i18n::I18n};
 use serial_test::serial;
 use tempfile::tempdir;
-
-fn with_test_home<F, R>(path: &std::path::Path, f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    let previous = std::env::var("GDVM_TEST_HOME").ok();
-
-    unsafe {
-        std::env::set_var("GDVM_TEST_HOME", path);
-    }
-
-    let result = f();
-
-    if let Some(val) = previous {
-        unsafe {
-            std::env::set_var("GDVM_TEST_HOME", val);
-        }
-    } else {
-        unsafe {
-            std::env::remove_var("GDVM_TEST_HOME");
-        }
-    }
-
-    result
-}
+mod common;
 
 #[test]
 #[serial]
 fn test_load_save_roundtrip() {
     let dir = tempdir().unwrap();
 
-    with_test_home(dir.path(), || {
+    common::with_test_home(dir.path(), || {
         let cfg = Config {
             prune_max_age_days: Some(7),
             ..Default::default()
@@ -59,10 +35,10 @@ fn test_load_save_roundtrip() {
         cfg.save().unwrap();
     });
 
-    let loaded = with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded = common::with_test_home(dir.path(), || Config::load().unwrap());
     assert_eq!(loaded.prune_max_age_days, Some(7));
 
-    with_test_home(dir.path(), || {
+    common::with_test_home(dir.path(), || {
         let cfg = Config {
             prune_max_age_days: Some(14),
             ..Default::default()
@@ -70,7 +46,7 @@ fn test_load_save_roundtrip() {
         cfg.save().unwrap();
     });
 
-    let loaded2 = with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded2 = common::with_test_home(dir.path(), || Config::load().unwrap());
     assert_eq!(loaded2.prune_max_age_days, Some(14));
 }
 
@@ -87,7 +63,7 @@ fn test_legacy_config_option_is_ignored_on_load() {
     )
     .unwrap();
 
-    let loaded = with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded = common::with_test_home(dir.path(), || Config::load().unwrap());
     assert_eq!(loaded.prune_max_age_days, Some(9));
 }
 
@@ -97,7 +73,7 @@ fn test_change_install_path_config() {
     let dir = tempdir().unwrap();
     let i18n = I18n::new().unwrap();
 
-    with_test_home(dir.path(), || {
+    common::with_test_home(dir.path(), || {
         let cfg = Config {
             install_path: Some(dir.path().join("test_installs")),
             ..Default::default()
@@ -105,7 +81,7 @@ fn test_change_install_path_config() {
         cfg.save(&i18n).unwrap();
     });
 
-    let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    let loaded = common::with_test_home(dir.path(), || Config::load(&i18n).unwrap());
     assert_eq!(loaded.install_path, Some(dir.path().join("test_installs")));
 }
 
@@ -115,7 +91,7 @@ fn test_change_cache_path_config() {
     let dir = tempdir().unwrap();
     let i18n = I18n::new().unwrap();
 
-    with_test_home(dir.path(), || {
+    common::with_test_home(dir.path(), || {
         let cfg = Config {
             cache_path: Some(dir.path().join("test_cache")),
             ..Default::default()
@@ -123,7 +99,7 @@ fn test_change_cache_path_config() {
         cfg.save(&i18n).unwrap();
     });
 
-    let loaded = with_test_home(dir.path(), || Config::load(&i18n).unwrap());
+    let loaded = common::with_test_home(dir.path(), || Config::load(&i18n).unwrap());
     assert_eq!(loaded.cache_path, Some(dir.path().join("test_cache")));
 }
 
@@ -133,7 +109,7 @@ fn test_config_rejects_reserved_install_path() {
     let dir = tempdir().unwrap();
     let i18n = I18n::new().unwrap();
 
-    with_test_home(dir.path(), || {
+    common::with_test_home(dir.path(), || {
         let mut cfg = Config::default();
         let reserved = dir.path().join(".gdvm").join("bin");
 
@@ -151,7 +127,7 @@ fn test_config_rejects_overlapping_install_and_cache_paths() {
     let dir = tempdir().unwrap();
     let i18n = I18n::new().unwrap();
 
-    with_test_home(dir.path(), || {
+    common::with_test_home(dir.path(), || {
         let mut cfg = Config::default();
         let installs = dir.path().join("custom-installs");
         let cache = installs.join("cache");

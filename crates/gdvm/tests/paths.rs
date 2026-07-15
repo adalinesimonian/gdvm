@@ -24,31 +24,7 @@ use gdvm::{
 use serial_test::serial;
 use std::path::Path;
 use tempfile::tempdir;
-
-fn with_test_home<F, R>(path: &Path, f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    let previous = std::env::var("GDVM_TEST_HOME").ok();
-
-    unsafe {
-        std::env::set_var("GDVM_TEST_HOME", path);
-    }
-
-    let result = f();
-
-    if let Some(val) = previous {
-        unsafe {
-            std::env::set_var("GDVM_TEST_HOME", val);
-        }
-    } else {
-        unsafe {
-            std::env::remove_var("GDVM_TEST_HOME");
-        }
-    }
-
-    result
-}
+mod common;
 
 #[test]
 fn test_get_absolute_path_normalizes_relative_paths() {
@@ -84,7 +60,7 @@ fn test_gdvm_paths_uses_normalized_absolute_paths() {
     let dir = tempdir().unwrap();
     let i18n = I18n::new().unwrap();
 
-    with_test_home(dir.path(), || {
+    common::with_test_home(dir.path(), || {
         let mut cfg = Config::default();
         cfg.set_value("install.path", "./custom-installs").unwrap();
         cfg.set_value("cache.path", "./custom-cache").unwrap();
