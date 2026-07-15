@@ -96,14 +96,12 @@ impl ConfigOps for Config {
     fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
             "install.path" => {
-                let value = get_absolute_path_to_directory(value)?;
-                validate_path_relationships(&value, key, self.cache_path.as_ref())?;
+                let value = normalize_and_validate_path(Path::new(value), key, self.cache_path.as_ref())?;
                 self.install_path = Some(value);
                 Ok(())
             }
             "cache.path" => {
-                let value = get_absolute_path_to_directory(value)?;
-                validate_path_relationships(&value, key, self.install_path.as_ref())?;
+                let value = normalize_and_validate_path(Path::new(value), key, self.install_path.as_ref())?;
                 self.cache_path = Some(value);
                 Ok(())
             }
@@ -258,10 +256,10 @@ fn is_reserved_path(path: &Path) -> bool {
     })
 }
 
-fn validate_path_relationships(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<()> {
+fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
     let path = absolute(path)?;
     if is_reserved_path(&path) {
-        return Err(anyhow!("Path is reserved for gdvm internals: {path:?}"));
+        return Err(anyhow!("Path is reserved for gdvm internals: {}", path.display()));
     }
 
     if let Some(existing_path) = existing {
@@ -270,28 +268,23 @@ fn validate_path_relationships(path: &Path, key: &str, existing: Option<&PathBuf
             || path.starts_with(&existing_path)
             || existing_path.starts_with(&path)
         {
-            return Err(anyhow!("Configured paths must not overlap: {key}"));
+            return Err(anyhow!("Configured paths must not overlap: {}", key));
         }
     }
 
-    Ok(())
-}
-
-fn get_absolute_path_to_directory(path: &str) -> Result<PathBuf> {
-    let p = PathBuf::from(path);
-    if p.to_string_lossy().trim().is_empty() {
+    if path.to_string_lossy().trim().is_empty() {
         return Err(anyhow!("Path cannot be empty"));
     }
-    if p.is_file() {
-        return Err(anyhow!("Path points to a file, not a directory: {path}"));
+    if path.is_file() {
+        return Err(anyhow!("Path points to a file, not a directory: {}", path.display()));
     }
-    for item in p.components() {
+    for item in path.components() {
         if item.as_os_str().to_string_lossy().trim().is_empty() {
-            return Err(anyhow!("Path contains empty components: {path}"));
+            return Err(anyhow!("Path contains empty components: {}", path.display()));
         }
     }
 
-    Ok(absolute(p.clean())?)
+    Ok(path.clean())
 }
 
 impl Config {
