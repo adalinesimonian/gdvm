@@ -646,10 +646,9 @@ TEST_SCRIPT
 test "Install Godot 4.3" gdvm install 4.3
 
 test "Install uses a custom install path from config" <<'TEST_SCRIPT'
-custom_root="$HOME/.gdvm-e2e-installs"
-custom_installs="$custom_root/custom_installs"
-custom_cache="$custom_root/custom_cache"
-rm -rf "$custom_root"
+custom_installs="$HOME/.gdvm-e2e-installs/custom_installs"
+custom_cache="$HOME/.gdvm-e2e-installs/custom_cache"
+rm -rf "$HOME/.gdvm-e2e-installs"
 mkdir -p "$custom_installs" "$custom_cache"
 
 gdvm config set install.path "$custom_installs"
