@@ -16,14 +16,9 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::config::{Config, get_home_dir};
-use crate::i18n::I18n;
 use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-use anyhow::Result;
-
-use crate::config::get_home_dir;
 
 /// Centralizes filesystem layout for GDVM under the user home directory.
 pub struct GdvmPaths {
