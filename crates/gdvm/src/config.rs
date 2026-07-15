@@ -253,10 +253,8 @@ pub fn get_home_dir() -> Result<PathBuf> {
 fn is_reserved_path(path: &Path) -> bool {
     let reserved_names = [".gdvm", "bin", "cache", "installs"];
     path.components().any(|component| {
-        component
-            .as_os_str()
-            .to_string_lossy()
-            .any(|segment| reserved_names.contains(&segment))
+        let segment = component.as_os_str().to_str().unwrap_or_default();
+        reserved_names.contains(&segment)
     })
 }
 
