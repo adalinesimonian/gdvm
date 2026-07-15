@@ -147,6 +147,16 @@ pub fn get_pre_release_priority(pre_release: &str) -> i32 {
     }
 }
 
+/// Split a release tag into its type and number.
+pub fn split_release_tag(tag: &str) -> (&str, Option<u64>) {
+    let split_at = tag
+        .rfind(|c: char| !c.is_ascii_digit())
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    let (release_type, build) = tag.split_at(split_at);
+    (release_type, build.parse().ok())
+}
+
 impl Eq for ResolvedVersion {}
 
 impl PartialOrd for ResolvedVersion {
@@ -165,10 +175,16 @@ impl Ord for ResolvedVersion {
             .then(self.minor.cmp(&other.minor))
             .then(self.patch.cmp(&other.patch))
             .then(self.subpatch.cmp(&other.subpatch))
-            .then(
+            .then_with(|| {
                 get_pre_release_priority(self.release_type.as_str())
-                    .cmp(&get_pre_release_priority(other.release_type.as_str())),
-            )
+                    .cmp(&get_pre_release_priority(other.release_type.as_str()))
+            })
+            .then_with(|| {
+                let (self_type, self_build) = split_release_tag(&self.release_type);
+                let (other_type, other_build) = split_release_tag(&other.release_type);
+
+                self_type.cmp(other_type).then(self_build.cmp(&other_build))
+            })
     }
 }
 
@@ -198,6 +214,32 @@ mod tests {
         assert_eq!(get_pre_release_priority("beta1"), 2);
         assert_eq!(get_pre_release_priority("dev1"), 1);
         assert_eq!(get_pre_release_priority("unknown"), 0);
+    }
+
+    #[test]
+    fn split_release_tag_separates_type_and_build() {
+        assert_eq!(split_release_tag("dev12"), ("dev", Some(12)));
+        assert_eq!(split_release_tag("stable"), ("stable", None));
+        assert_eq!(split_release_tag("rc1"), ("rc", Some(1)));
+        assert_eq!(split_release_tag("dev"), ("dev", None));
+        assert_eq!(split_release_tag(""), ("", None));
+    }
+
+    #[test]
+    fn numbered_builds_order_numerically() {
+        let v = |s: &str| VersionQuery::from_install_str(s).unwrap().to_resolved();
+
+        assert!(v("4.7-dev10") > v("4.7-dev9"));
+        assert!(v("4.7-dev1") > v("4.7-dev"));
+        assert!(v("4.7-rc1") > v("4.7-beta12"));
+        assert!(v("4.7-stable") > v("4.7-rc3"));
+
+        let mut versions = [v("4.7-dev1"), v("4.7-dev10"), v("4.7-dev2")];
+        versions.sort_by(|a, b| b.cmp(a));
+
+        assert_eq!(versions[0].release_type, "dev10");
+        assert_eq!(versions[1].release_type, "dev2");
+        assert_eq!(versions[2].release_type, "dev1");
     }
 
     #[test]

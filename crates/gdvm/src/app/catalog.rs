@@ -105,6 +105,35 @@ impl<'a> Catalogs<'a> {
             .await
     }
 
+    /// Get an error for when a query fails to resolve to a version.
+    pub async fn version_not_found_error(
+        &self,
+        query: &VersionQuery,
+        variant: Option<&str>,
+        registry: Option<&str>,
+    ) -> anyhow::Error {
+        match self.catalog(registry) {
+            Ok(catalog) => {
+                RegistryVersionResolver::new(catalog, *self.host)
+                    .version_not_found_error(query, variant)
+                    .await
+            }
+            Err(err) => err,
+        }
+    }
+
+    /// Get a suggestion for the user to try using a wildcard.
+    pub async fn wildcard_suggestion(
+        &self,
+        query: &VersionQuery,
+        registry: Option<&str>,
+    ) -> Option<crate::registry_version_resolver::WildcardSuggestion> {
+        let catalog = self.catalog(registry).ok()?;
+        RegistryVersionResolver::new(catalog, *self.host)
+            .wildcard_suggestion(query, None)
+            .await
+    }
+
     /// Select the correct binary for the current host and `variant`.
     pub(super) fn select_platform_binary<'r>(
         &self,

@@ -49,11 +49,13 @@ help-version-long =
 
     Format: [variant:]version_or_keyword
 
+    If a trailing * is present, it will match the newest build with the same prefix, e.g. "4.7-dev*" matches 4.7-dev1, 4.7-dev2, etc.
+
     Keywords: "latest" resolves to the newest version. By default, this includes only stable releases, but pre-releases can be included with the --pre flag.
 
     Variants: prefix with a variant name and colon, e.g. "csharp:4.4" for the C# build.
 
-    Examples: 4.4 will install the latest stable release of { -godot } 4.4. If only pre-release versions exist, the latest pre-release version will be installed. 4.3-rc will install the latest release candidate of { -godot } 4.3, etc.
+    Examples: 4.4 will install the latest stable release of { -godot } 4.4. If only pre-release versions exist, the latest pre-release version will be installed. 4.3-rc* will install the latest release candidate of { -godot } 4.3, etc.
 help-version-installed = The installed version (e.g. 4.2 or 4.2-stable).
 
 help-search = List available releases from the registry
@@ -180,6 +182,8 @@ error-spec-empty-variant = Empty variant name in '{ $input }'
 error-spec-empty-version = Empty version in '{ $input }'
 error-system-time = System time before UNIX EPOCH
 error-unrecognized-version-format = Unrecognized version format: { $input }
+error-wildcard-position = The wildcard (*) may only appear at the end of the release tag, e.g. 4.7-dev* (got { $input }).
+hint-try-wildcard = No release is tagged { $requested }, but there are similar tags, the newest being { $newest }. Try { $suggestion } to match them.
 download-retrying = Download interrupted, retrying (attempt { $attempt } of { $max })...
 lock-waiting = Waiting for another { -gdvm } process to finish (lock: { $resource })...
 prune-skipped-error = Skipping { $item }: { $error }

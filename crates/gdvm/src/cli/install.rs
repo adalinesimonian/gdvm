@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::{Gdvm, InstallOutcome};
+use gdvm::println_i18n;
 use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
-use gdvm::{println_i18n, t};
 
 use super::{
     check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
@@ -48,11 +48,19 @@ pub(crate) async fn sub_install(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()>
         VersionTarget::Pattern(gv) => gv.clone(),
     };
 
-    let gv = gdvm
+    let gv = match gdvm
         .catalogs()
         .resolve_available_version(&requested_version, variant, registry, include_pre, false)
         .await?
-        .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
+    {
+        Some(gv) => gv,
+        None => {
+            return Err(gdvm
+                .catalogs()
+                .version_not_found_error(&requested_version, variant, registry)
+                .await);
+        }
+    };
 
     let resolved_variant = Variant::from_option(variant);
     let display = version::display_version(&gv, &resolved_variant, registry);

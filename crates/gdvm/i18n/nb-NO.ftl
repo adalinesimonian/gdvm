@@ -47,11 +47,13 @@ help-version-long =
 
     Format: [variant:]versjon_eller_nøkkelord
 
+    Hvis en avsluttende * er til stede, treffer den den nyeste utgava med samme prefiks, f.eks. treffer «4.7-dev*» 4.7-dev1, 4.7-dev2 osv.
+
     Nøkkelord: «latest» løser til den nyeste versjonen. Som standard inkluderer dette bare stabile utgivelser, men forhåndsversjoner kan inkluderes med --pre-flagget.
 
     Varianter: prefiks med et variantnavn og kolon, f.eks. «csharp:4.4» for C#-versjonen.
 
-    Eksempler: 4.4 vil installere den siste stabile utgivelsen av { -godot } 4.4. Hvis bare forhåndsversjoner finnes, vil den siste forhåndsversjonen bli installert. 4.3-rc vil installere den siste utgivelsen av { -godot } 4.3, osv.
+    Eksempler: 4.4 vil installere den siste stabile utgivelsen av { -godot } 4.4. Hvis bare forhåndsversjoner finnes, vil den siste forhåndsversjonen bli installert. 4.3-rc* vil installere den siste utgivelsen av { -godot } 4.3, osv.
 help-version-installed = Den installerte versjonen (f.eks. 4.2 eller 4.2-stable).
 
 help-search = List tilgjengelige utgivelser fra registeret
@@ -178,6 +180,8 @@ error-spec-empty-variant = Tomt variantnavn i «{ $input }»
 error-spec-empty-version = Tom versjon i «{ $input }»
 error-system-time = Systemtiden er før UNIX-epoken
 error-unrecognized-version-format = Ukjent versjonsformat: { $input }
+error-wildcard-position = Jokertegnet (*) kan bare stå på slutten av utgivelsestaggen, f.eks. 4.7-dev* (fikk { $input }).
+hint-try-wildcard = Ingen utgivelse har taggen { $requested }, men det finnes lignende tagger, der den nyeste er { $newest }. Prøv { $suggestion } for å treffe dem.
 download-retrying = Nedlastinga ble avbrutt, prøver på nytt (forsøk { $attempt } av { $max })...
 lock-waiting = Venter på at en annen { -gdvm }-prosess skal bli ferdig (lås: { $resource })...
 prune-skipped-error = Hopper over { $item }: { $error }

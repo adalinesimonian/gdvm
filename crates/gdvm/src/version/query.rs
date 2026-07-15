@@ -53,6 +53,14 @@ impl Clone for VersionQuery {
     }
 }
 
+/// Check if a release tag pattern matches a release tag.
+pub fn release_pattern_matches(pattern: &str, tag: &str) -> bool {
+    match pattern.strip_suffix('*') {
+        Some(prefix) => tag.starts_with(prefix),
+        None => tag == pattern,
+    }
+}
+
 impl VersionQuery {
     /// Parse an installed version folder name .
     pub fn from_install_str(s: &str) -> Result<Self, anyhow::Error> {
@@ -145,15 +153,21 @@ impl VersionQuery {
             None => (raw, None),
         };
 
-        if let Some(pre) = &pre_release
-            && !pre
+        if let Some(pre) = &pre_release {
+            if !pre
                 .chars()
-                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+'))
-        {
-            return Err(anyhow::anyhow!(t!(
-                "error-unrecognized-version-format",
-                input = raw
-            )));
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+' | '*'))
+            {
+                return Err(anyhow::anyhow!(t!(
+                    "error-unrecognized-version-format",
+                    input = raw
+                )));
+            }
+
+            let wildcards = pre.matches('*').count();
+            if wildcards > 1 || (wildcards == 1 && !pre.ends_with('*')) {
+                return Err(anyhow::anyhow!(t!("error-wildcard-position", input = raw)));
+            }
         }
 
         // Parse major/minor/patch from version_part, including special 2.0.4.1
@@ -268,11 +282,27 @@ impl VersionQuery {
             return false;
         }
         if let Some(release_type) = &self.release_type
-            && other.release_type.is_some_and(|x| &x != release_type)
+            && other
+                .release_type
+                .is_some_and(|x| !release_pattern_matches(release_type, &x))
         {
             return false;
         }
         true
+    }
+
+    /// Get whether the release tag has a wildcard.
+    pub fn has_release_wildcard(&self) -> bool {
+        self.release_type
+            .as_deref()
+            .is_some_and(|rt| rt.ends_with('*'))
+    }
+
+    /// Get whether the release requested is explicitly requesting a pre-release.
+    pub fn is_explicit_prerelease(&self) -> bool {
+        self.release_type
+            .as_deref()
+            .is_some_and(|rt| !rt.is_empty() && rt != "stable" && rt != "stable*")
     }
 
     /// Returns true when all specified project constraints conflict with the requested version.
@@ -467,6 +497,48 @@ mod tests {
         test_matches_case_inst!("4.1.1-rc1-csharp", "4.1.1-rc1-csharp", true);
         test_matches_case_rem!("4.1.1-rc2", "4.1.1-rc1", false);
         test_matches_case!("stable", "4.1.1-stable", true);
+    }
+
+    #[test]
+    fn wildcard_matches_release_type() {
+        test_matches_case_rem!("4.7-dev*", "4.7-dev", true);
+        test_matches_case_rem!("4.7-dev*", "4.7-dev1", true);
+        test_matches_case_rem!("4.7-dev*", "4.7-dev12", true);
+        test_matches_case_rem!("4.7-rc*", "4.7-rc2", true);
+        test_matches_case_rem!("4.7-dev*", "4.7-beta1", false);
+        test_matches_case_rem!("4.7-dev*", "4.8-dev1", false);
+        test_matches_case_rem!("4.7-*", "4.7-stable", true);
+        test_matches_case_rem!("4.7-*", "4.7-dev3", true);
+    }
+
+    #[test]
+    fn exact_tags_never_prefix_match() {
+        test_matches_case_rem!("4.7-dev1", "4.7-dev12", false);
+        test_matches_case_rem!("4.7-dev", "4.7-dev1", false);
+        test_matches_case_rem!("4.7-dev", "4.7-dev", true);
+        test_matches_case_rem!("4.7-abc123", "4.7-abc123", true);
+        test_matches_case_rem!("4.7-abc12", "4.7-abc123", false);
+    }
+
+    #[test]
+    fn wildcard_only_parses_at_the_end() {
+        assert!(VersionQuery::from_remote_str("4.7-dev*").is_ok());
+        assert!(VersionQuery::from_remote_str("4.7-*").is_ok());
+        assert!(VersionQuery::from_remote_str("4.7-d*v").is_err());
+        assert!(VersionQuery::from_remote_str("4.7-dev**").is_err());
+        assert!(VersionQuery::from_remote_str("4.7-*dev").is_err());
+    }
+
+    #[test]
+    fn wildcard_and_prerelease_helpers() {
+        let q = |s: &str| VersionQuery::from_remote_str(s).unwrap();
+        assert!(q("4.7-dev*").has_release_wildcard());
+        assert!(!q("4.7-dev").has_release_wildcard());
+        assert!(q("4.7-dev*").is_explicit_prerelease());
+        assert!(q("4.7-rc1").is_explicit_prerelease());
+        assert!(!q("4.7-stable").is_explicit_prerelease());
+        assert!(!q("4.7-stable*").is_explicit_prerelease());
+        assert!(!q("4.7").is_explicit_prerelease());
     }
 
     #[test]

@@ -645,6 +645,16 @@ TEST_SCRIPT
 
 test "Install Godot 4.3" gdvm install 4.3
 
+test "Wildcard release tags resolve the newest build of the release type" <<'TEST_SCRIPT'
+output="$(gdvm search --filter "4.3-dev*")"
+assert_contains "$output" "4.3.0-dev" "lists dev builds without --include-pre"
+TEST_SCRIPT
+
+test "A near miss release type suggests using a wildcard" <<'TEST_SCRIPT'
+output="$(gdvm search --filter 4.4-dev)"
+assert_contains "$output" "4.4-dev*" "suggests a wildcard query"
+TEST_SCRIPT
+
 test "list --format json is machine-readable" <<'TEST_SCRIPT'
 output="$(gdvm list --format json)"
 assert_contains "$output" '"version": "4.3.0-stable"' "lists the installed version"

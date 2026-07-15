@@ -51,6 +51,10 @@ export function Usage() {
           <code>gdvm run csharp:3.5</code> — Run Godot 3.5 with C#.
         </li>
         <li>
+          <code>gdvm run "4.5-rc*"</code> — Run the latest 4.5 release
+          candidate.
+        </li>
+        <li>
           <code>gdvm remove 3.5</code> — Remove Godot 3.5 without C#.
         </li>
         <li>
