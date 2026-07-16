@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::version::{Variant, VersionSpec, VersionTarget};
-use gdvm::{println_i18n, t};
+use gdvm::{println_i18n, terr};
 
 use super::{
     check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
@@ -50,7 +50,7 @@ pub(crate) async fn sub_cache_path(gdvm: &Gdvm, matches: &ArgMatches) -> Result<
         .catalogs()
         .resolve_available_version(&requested_version, variant, registry, include_pre, false)
         .await?
-        .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
+        .ok_or_else(|| terr!("error-version-not-found"))?;
 
     let resolved_variant = Variant::from_option(variant);
     let path = gdvm

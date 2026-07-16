@@ -20,6 +20,7 @@ pub mod artifact_cache;
 pub mod config;
 pub mod date_utils;
 pub mod download_utils;
+pub mod error;
 pub mod fs_utils;
 pub mod gdvm_toml;
 pub mod hash_utils;

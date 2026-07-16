@@ -17,11 +17,11 @@
 
 use std::io::Read;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use digest_io::IoWrapper;
 use sha2::{Digest, Sha256, Sha512};
 
-use crate::t;
+use crate::terr;
 
 /// Hex encode a byte slice.
 pub fn to_hex(bytes: &[u8]) -> String {
@@ -48,7 +48,7 @@ impl ShaType {
     /// length is invalid.
     pub fn from_expected(expected: &str) -> Result<Self> {
         Self::from_hash_length(expected)
-            .ok_or_else(|| anyhow!(t!("error-invalid-sha-length", length = expected.len())))
+            .ok_or_else(|| terr!("error-invalid-sha-length", length = expected.len()))
     }
 }
 

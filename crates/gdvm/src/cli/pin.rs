@@ -22,7 +22,7 @@ use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::warn_project_version_mismatch;
 use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
-use gdvm::{eprintln_i18n, println_i18n};
+use gdvm::{println_i18n, terr};
 
 use super::{
     check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
@@ -61,12 +61,10 @@ pub(crate) async fn sub_pin(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
 
     let skip_gdvmrc = matches.get_flag("no-legacy");
 
-    match gdvm
-        .defaults()
+    gdvm.defaults()
         .pin_version(&resolved_version, &resolved_variant, registry, skip_gdvmrc)
-    {
-        Ok(()) => println_i18n!("pinned-success", version = &display),
-        Err(_) => eprintln_i18n!("error-pin-version-not-found", version = &display),
-    }
+        .map_err(|_| terr!("error-pin-version-not-found", version = display.clone()))?;
+
+    println_i18n!("pinned-success", version = &display);
     Ok(())
 }

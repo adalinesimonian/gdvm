@@ -47,15 +47,18 @@ help-version-long =
 
     Format: [variant:]versjon_eller_nøkkelord
 
+    Hvis en avsluttende * er til stede, treffer den den nyeste utgava med samme prefiks, f.eks. treffer «4.7-dev*» 4.7-dev1, 4.7-dev2 osv.
+
     Nøkkelord: «latest» løser til den nyeste versjonen. Som standard inkluderer dette bare stabile utgivelser, men forhåndsversjoner kan inkluderes med --pre-flagget.
 
     Varianter: prefiks med et variantnavn og kolon, f.eks. «csharp:4.4» for C#-versjonen.
 
-    Eksempler: 4.4 vil installere den siste stabile utgivelsen av { -godot } 4.4. Hvis bare forhåndsversjoner finnes, vil den siste forhåndsversjonen bli installert. 4.3-rc vil installere den siste utgivelsen av { -godot } 4.3, osv.
+    Eksempler: 4.4 vil installere den siste stabile utgivelsen av { -godot } 4.4. Hvis bare forhåndsversjoner finnes, vil den siste forhåndsversjonen bli installert. 4.3-rc* vil installere den siste utgivelsen av { -godot } 4.3, osv.
 help-version-installed = Den installerte versjonen (f.eks. 4.2 eller 4.2-stable).
 
 help-search = List tilgjengelige utgivelser fra registeret
 help-filter = Valgfri streng for å filtrere utgivelsestagger
+help-filter-deprecated = [avvikla] Valgfri streng for å filtrere utgivelsestagger. Bruk posisjonsargumentet for filter i stedet.
 help-include-pre = Inkluder forhåndsversjoner (rc, beta, dev)
 help-cache-only = Bruk bare bufra utgivelsesinformasjon uten å spørre registeret
 help-limit = Antall utgivelser som skal vises, standard er 10. Bruk 0 for å vise alle
@@ -89,6 +92,7 @@ prune-item = - { $label } ({ size-display })
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
 help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i cachen.
 help-yes = Hopp over bekreftelsesprompt for fjerning
+help-remove-yes-deprecated = [avvikla] Dette flagget gjør ingenting og vil bli fjerna i ei fremtidig utgave.
 help-link-version = Versjonen som skal lenkes. Hvis den ikke oppgis, blir versjonen løst basert på gjeldende mappe eller standardversjonen.
 help-link-path = Stien der lenka eller kopien skal opprettes, f.eks. «{ $platform ->
     [windows] godot.exe
@@ -163,6 +167,11 @@ error-publish-no-such-version = ingen slik versjon: { $version }
 error-publish-store-or-url-required = enten --store eller --url må oppgis
 error-publish-store-requires-file = --store krever en lokal --file
 error-publish-url-requires-integrity = --url krever enten en lokal --file eller eksplisitte --sha512 og --size
+error-publish-already-initialized = Registeret er allerede initialisert på { $path }
+error-publish-archive-not-found = Arkiv ikke funnet: { $path }
+error-publish-no-such-platform = Ingen slik plattform { $platform } for varianten { $variant }
+error-publish-no-such-variant = Ingen slik variant: { $variant }
+error-publish-invalid-segment = Ugyldig { $what }: { $value }
 error-registry-fetch-failed = Klarte ikke å hente { $url }: HTTP { $status }
 error-registry-fetch-release-failed = Klarte ikke å hente utgivelsesmetadata
 error-registry-invalid-name = Ugyldig registernavn: { $name }
@@ -178,6 +187,13 @@ error-spec-empty-variant = Tomt variantnavn i «{ $input }»
 error-spec-empty-version = Tom versjon i «{ $input }»
 error-system-time = Systemtiden er før UNIX-epoken
 error-unrecognized-version-format = Ukjent versjonsformat: { $input }
+error-non-interactive-trust = Kan ikke spørre om å stole på registeret «{ $registry }» ({ $url }) i ei økt som ikke er interaktiv. Send --yes for å stole på det eksplisitt.
+error-non-interactive-value = Kan ikke be om en verdi for «{ $key }» i ei økt som ikke er interaktiv. Send verdien som et argument i stedet.
+error-registry-unsupported-schema = Registeret «{ $registry }» oppgir en skjemaversjon som ikke støttes: { $schema }.
+label-caused-by = Forårsaka av:
+label-error-coded = Feil { $code }:
+error-wildcard-position = Jokertegnet (*) kan bare stå på slutten av utgivelsestaggen, f.eks. 4.7-dev* (fikk { $input }).
+hint-try-wildcard = Ingen utgivelse har taggen { $requested }, men det finnes lignende tagger, der den nyeste er { $newest }. Prøv { $suggestion } for å treffe dem.
 download-retrying = Nedlastinga ble avbrutt, prøver på nytt (forsøk { $attempt } av { $max })...
 lock-waiting = Venter på at en annen { -gdvm }-prosess skal bli ferdig (lås: { $resource })...
 prune-skipped-error = Hopper over { $item }: { $error }
@@ -207,10 +223,7 @@ error-link-copy = Klarte ikke å kopiere kjørbar: {$error}
 error-no-stable-releases-found = Ingen stabile versjoner funnet.
 
 error-starting-godot = Kunne ikke starte { -godot }: { $error }
-
-confirm-remove = Er du sikker på at du vil fjerne denne versjonen? (ja/nei):
 confirm-yes = ja
-remove-cancelled = Fjerning avbrutt.
 
 default-set-success = Standardversjon {$version} er satt.
 default-unset-success = Standardversjonen er fjerna.
@@ -347,8 +360,8 @@ error-reading-input = Feil ved lesing av inndata
 config-set-success = Konfigurasjonen ble oppdatert.
 config-unset-success = Konfigurasjonsnøkkelen { $key } ble fjernet vellykket.
 config-key-not-set = Konfigurasjonsnøkkel ikke satt.
+config-key-not-set-value = <ikke satt>
 error-unknown-config-key = Ukjent konfigurasjonsnøkkel.
-error-invalid-config-value = Ugyldig verdi for konfigurasjonsnøkkelen { $key }.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk "get", "set" eller "list".
 error-parse-config = Kunne ikke tolke konfigurasjonsfila: { $error }
 error-parse-config-using-default = Bruker standard konfigurasjonsverdier.
@@ -365,7 +378,6 @@ registry-added = La til registeret { $registry } ({ $url }).
 registry-removed = Fjernet registeret { $registry }.
 registry-list-header = Konfigurerte registre:
 registry-tag-official = offisielt
-registry-error = Registerfeil: { $error }
 
 error-invalid-registry-subcommand = Ugyldig register-underkommando. Bruk «add», «remove», «list» eller «refresh».
 registry-trust-warning = { $registry } ({ $url }) er et egendefinert register, ikke det offisielle. { -gdvm } sjekker at nedlastinger stemmer med det registeret oppgir, men kan ikke vite om de er trygge å kjøre. Installer fra det bare hvis du stoler på de som driver det.

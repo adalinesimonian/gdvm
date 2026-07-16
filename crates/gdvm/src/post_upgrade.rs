@@ -17,11 +17,11 @@
 
 use std::path::Path;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use semver::Version;
 
 use crate::locks::{Lock, Resource};
-use crate::{migrations, t};
+use crate::{migrations, terr};
 
 /// Name of the file that stores the gdvm version that last ran.
 const VERSION_FILE: &str = "gdvm_version";
@@ -84,11 +84,11 @@ fn run_stage(base_path: &Path, stage: Stage) -> Result<()> {
     for action in ACTIONS {
         if action.stage == stage {
             (action.run)(base_path).map_err(|err| {
-                anyhow!(t!(
+                terr!(
                     "error-post-upgrade-action-failed",
                     id = action.id,
                     error = err.to_string()
-                ))
+                )
             })?;
         }
     }

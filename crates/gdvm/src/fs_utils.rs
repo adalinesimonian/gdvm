@@ -19,16 +19,16 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
-use crate::t;
+use crate::terr;
 
 /// Write data to a file atomically by writing to a temp file in the same
 /// directory and then renaming it to the target path.
 pub fn atomic_write(path: &Path, data: &str) -> Result<()> {
     let parent = path
         .parent()
-        .ok_or_else(|| anyhow!(t!("error-invalid-path", path = path.display().to_string())))?;
+        .ok_or_else(|| terr!("error-invalid-path", path = path.display().to_string()))?;
 
     fs::create_dir_all(parent)?;
 

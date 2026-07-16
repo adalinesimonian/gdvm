@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
-use crate::t;
+use crate::terr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostOs {
@@ -50,7 +50,7 @@ impl HostPlatform {
             (HostOs::Linux, HostArch::X86) => Ok("i686-unknown-linux-gnu"),
             (HostOs::Macos, HostArch::Aarch64) => Ok("aarch64-apple-darwin"),
             (HostOs::Macos, HostArch::X86_64) => Ok("x86_64-apple-darwin"),
-            _ => Err(anyhow!(t!("unsupported-architecture"))),
+            _ => Err(terr!("unsupported-architecture")),
         }
     }
 }
@@ -63,7 +63,7 @@ pub fn detect_host() -> Result<HostPlatform> {
     } else if cfg!(target_os = "linux") {
         HostOs::Linux
     } else {
-        return Err(anyhow!(t!("unsupported-platform")));
+        return Err(terr!("unsupported-platform"));
     };
 
     let arch = if cfg!(target_arch = "x86_64") {
@@ -73,7 +73,7 @@ pub fn detect_host() -> Result<HostPlatform> {
     } else if cfg!(target_arch = "aarch64") {
         HostArch::Aarch64
     } else {
-        return Err(anyhow!(t!("unsupported-architecture")));
+        return Err(terr!("unsupported-architecture"));
     };
 
     Ok(HostPlatform { os, arch })

@@ -16,20 +16,18 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 #[cfg(target_family = "unix")]
-use std::fs;
-#[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use semver::Version;
 
 use crate::download_utils::download_to_file;
 use crate::host::detect_host;
 use crate::metadata_cache::{CacheStore, GdvmCache};
 use crate::paths::GdvmPaths;
-use crate::{println_i18n, self_update, t, ui};
+use crate::{println_i18n, self_update, t, terr, ui};
 
 #[derive(Clone, Copy)]
 pub struct Updater<'a> {
@@ -69,7 +67,7 @@ impl<'a> Updater<'a> {
 
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| anyhow!(t!("error-system-time")))? // Should never fail.
+            .map_err(|_| terr!("error-system-time"))? // Should never fail.
             .as_secs();
         let cache_age = crate::date_utils::age_secs(now, gdvm_cache.last_update_check);
 
@@ -94,7 +92,7 @@ impl<'a> Updater<'a> {
     pub async fn run_background_check(&self) -> Result<()> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| anyhow!(t!("error-system-time")))? // Should never fail.
+            .map_err(|_| terr!("error-system-time"))? // Should never fail.
             .as_secs();
 
         let manifest =
@@ -191,34 +189,34 @@ impl<'a> Updater<'a> {
 
         let triple = detect_host()?.gdvm_target_triple()?;
         let binary = target.binary_for(triple).ok_or_else(|| {
-            anyhow!(t!(
+            terr!(
                 "upgrade-no-binary",
                 version = target_version.to_string(),
                 target = triple
-            ))
+            )
         })?;
         let bin_url = binary.urls.first().ok_or_else(|| {
-            anyhow!(t!(
+            terr!(
                 "upgrade-no-binary",
                 version = target_version.to_string(),
                 target = triple
-            ))
+            )
         })?;
 
         let expected_sha = binary
             .sha256
             .as_deref()
-            .ok_or_else(|| anyhow!(t!("upgrade-checksum-required")))?;
+            .ok_or_else(|| terr!("upgrade-checksum-required"))?;
 
         // Define install directory
         let install_dir = self.paths.base().join("bin");
         std::fs::create_dir_all(&install_dir)
-            .map_err(|e| anyhow!(t!("upgrade-install-dir-failed", error = e.to_string())))?;
+            .map_err(|e| terr!("upgrade-install-dir-failed", error = e.to_string()))?;
 
         let tmp_file = tempfile::Builder::new()
             .prefix(".gdvm-upgrade-")
             .tempfile_in(&install_dir)
-            .map_err(|e| anyhow!(t!("upgrade-file-create-failed", error = e.to_string())))?;
+            .map_err(|e| terr!("upgrade-file-create-failed", error = e.to_string()))?;
 
         let mut async_file = tokio::fs::File::from_std(tmp_file.as_file().try_clone()?);
         let digests = match download_to_file(bin_url, &mut async_file, &subject).await {
@@ -235,12 +233,12 @@ impl<'a> Updater<'a> {
         if let Some(expected_size) = binary.size
             && digests.size != expected_size
         {
-            return Err(anyhow!(t!(
+            return Err(terr!(
                 "error-size-mismatch",
                 file = "gdvm",
                 expected = expected_size,
                 actual = digests.size
-            )));
+            ));
         }
 
         #[cfg(target_family = "unix")]
@@ -248,7 +246,7 @@ impl<'a> Updater<'a> {
             // Make the new binary executable
             tmp_file
                 .as_file()
-                .set_permissions(fs::Permissions::from_mode(0o755))?;
+                .set_permissions(std::fs::Permissions::from_mode(0o755))?;
         }
 
         // Rename current executable to .bak and replace it with the new file
@@ -256,20 +254,17 @@ impl<'a> Updater<'a> {
         let backup_exe = current_exe.with_extension("bak");
 
         std::fs::rename(&current_exe, &backup_exe)
-            .map_err(|e| anyhow!(t!("upgrade-rename-failed", error = e.to_string())))?;
+            .map_err(|e| terr!("upgrade-rename-failed", error = e.to_string()))?;
 
         if let Err(err) = tmp_file.persist(&current_exe) {
             let _ = std::fs::rename(&backup_exe, &current_exe);
-            return Err(anyhow!(t!(
-                "upgrade-replace-failed",
-                error = err.to_string()
-            )));
+            return Err(terr!("upgrade-replace-failed", error = err.to_string()));
         }
 
         // Update gdvm cache
         let last_update_check = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| anyhow!(t!("error-system-time")))?
+            .map_err(|_| terr!("error-system-time"))?
             .as_secs();
 
         self.cache_store.clear_gdvm_cache(last_update_check)?;

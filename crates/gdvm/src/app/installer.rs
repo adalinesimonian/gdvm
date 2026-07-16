@@ -19,7 +19,7 @@ use std::fs;
 use std::io::Seek;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::Result;
 
 use super::*;
 use crate::artifact_cache::ArtifactCache;
@@ -29,7 +29,7 @@ use crate::paths::GdvmPaths;
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{ResolvedVersion, Variant, VersionQuery};
-use crate::{t, ui, zip_utils};
+use crate::{t, terr, ui, zip_utils};
 
 #[derive(Debug)]
 pub enum InstallOutcome {
@@ -39,14 +39,14 @@ pub enum InstallOutcome {
 
 /// Build the checksum mismatch error for the given file.
 fn checksum_mismatch_error(display_path: &Path) -> anyhow::Error {
-    anyhow!(t!(
+    terr!(
         "error-checksum-mismatch",
         file = display_path
             .file_name()
             .unwrap_or_default()
             .to_string_lossy()
             .to_string()
-    ))
+    )
 }
 
 /// Verifies the SHA of a file against an expected hash.
@@ -183,7 +183,7 @@ impl<'a> Installer<'a> {
                 if let Some(expected_size) = binary.size
                     && digests.size != expected_size
                 {
-                    return Err(anyhow!(t!(
+                    return Err(terr!(
                         "error-size-mismatch",
                         file = cache_zip_path
                             .file_name()
@@ -192,7 +192,7 @@ impl<'a> Installer<'a> {
                             .to_string(),
                         expected = expected_size,
                         actual = digests.size
-                    )));
+                    ));
                 }
 
                 tmp_file.persist(&cache_zip_path)?
@@ -228,7 +228,7 @@ impl<'a> Installer<'a> {
         let binary = self.catalogs().select_platform_binary(&meta, variant)?;
         let path = self.artifact_cache.cached_zip_path(&binary.sha512);
         if !path.exists() {
-            bail!(t!(
+            return Err(terr!(
                 "error-archive-not-cached",
                 version = crate::version::display_version(gv, variant, registry)
             ));

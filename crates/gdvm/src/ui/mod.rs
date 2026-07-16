@@ -88,7 +88,7 @@ pub fn step(label: impl AsRef<str>, subject: impl AsRef<str>) {
 pub fn warn(message: impl AsRef<str>) {
     let theme = theme();
     let label = theme.warn_label.apply_to(t!("label-warning"));
-    let body = theme.warn.apply_to(message.as_ref());
+    let body = message.as_ref();
     with_suspended(move || eprintln!("{label} {body}"));
 }
 
@@ -96,8 +96,32 @@ pub fn warn(message: impl AsRef<str>) {
 pub fn error(message: impl AsRef<str>) {
     let theme = theme();
     let label = theme.error_label.apply_to(t!("label-error"));
-    let body = theme.error.apply_to(message.as_ref());
+    let body = message.as_ref();
     with_suspended(move || eprintln!("{label} {body}"));
+}
+
+/// Report an error and its causes.
+pub fn report_error(err: &anyhow::Error) {
+    let theme = theme();
+    let code = err
+        .chain()
+        .find_map(|cause| cause.downcast_ref::<crate::error::CodedError>())
+        .and_then(|coded| coded.code());
+    let label = match code {
+        Some(code) => t!("label-error-coded", code = code),
+        None => t!("label-error-coded", code = "GDVM0000"),
+    };
+    let label = theme.error_label.apply_to(label);
+    let body = err.to_string();
+
+    with_suspended(move || eprintln!("{label} {body}"));
+
+    for cause in err.chain().skip(1) {
+        let label = t!("label-caused-by");
+        let body = cause.to_string();
+
+        with_suspended(move || eprintln!("  {label} {body}"));
+    }
 }
 
 /// Print a note.

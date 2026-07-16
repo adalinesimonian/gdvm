@@ -18,11 +18,11 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::config::{self};
-use gdvm::{eprintln_i18n, println_i18n, registry, t};
+use gdvm::{println_i18n, registry, t, terr};
 
 /// Download `url` to a unique temporary file and return its path.
 async fn download_to_temp(url: &str) -> Result<PathBuf> {
@@ -48,25 +48,19 @@ fn verify_overrides(
     if let Some(s) = sha512
         && !s.eq_ignore_ascii_case(actual_sha)
     {
-        return Err(anyhow!(
-            "{}",
-            t!(
-                "registry-build-sha-mismatch",
-                expected = s.clone(),
-                actual = actual_sha.to_string()
-            )
+        return Err(terr!(
+            "registry-build-sha-mismatch",
+            expected = s.clone(),
+            actual = actual_sha.to_string()
         ));
     }
     if let Some(s) = size
         && s != actual_size
     {
-        return Err(anyhow!(
-            "{}",
-            t!(
-                "registry-build-size-mismatch",
-                expected = s.to_string(),
-                actual = actual_size.to_string()
-            )
+        return Err(terr!(
+            "registry-build-size-mismatch",
+            expected = s.to_string(),
+            actual = actual_size.to_string()
         ));
     }
     Ok(())
@@ -122,25 +116,17 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
         Some(("add", sub_m)) => {
             let name = sub_m.get_one::<String>("name").unwrap();
             let url = sub_m.get_one::<String>("url").unwrap();
-            match config::Config::modify(|config| Ok(config.add_registry(name, url)))? {
-                Ok(()) => {
-                    println_i18n!(
-                        "registry-added",
-                        registry = name.as_str(),
-                        url = url.as_str()
-                    );
-                }
-                Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
-            }
+            config::Config::modify(|config| config.add_registry(name, url))?;
+            println_i18n!(
+                "registry-added",
+                registry = name.as_str(),
+                url = url.as_str()
+            );
         }
         Some(("remove", sub_m)) => {
             let name = sub_m.get_one::<String>("name").unwrap();
-            match config::Config::modify(|config| Ok(config.remove_registry(name)))? {
-                Ok(()) => {
-                    println_i18n!("registry-removed", registry = name.as_str());
-                }
-                Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
-            }
+            config::Config::modify(|config| config.remove_registry(name))?;
+            println_i18n!("registry-removed", registry = name.as_str());
         }
         Some(("list", sub_m)) => {
             let registries = gdvm.catalogs().registry_list();
@@ -188,14 +174,12 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
         Some(("init", sub_m)) => {
             let dir = PathBuf::from(sub_m.get_one::<String>("dir").unwrap());
             let name = sub_m.get_one::<String>("name").map(|s| s.as_str());
-            match registry::publish::init(&dir, name) {
-                Ok(name) => println_i18n!(
-                    "registry-init-success",
-                    name = name,
-                    path = dir.display().to_string()
-                ),
-                Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
-            }
+            let name = registry::publish::init(&dir, name)?;
+            println_i18n!(
+                "registry-init-success",
+                name = name,
+                path = dir.display().to_string()
+            );
         }
         Some(("add-build", sub_m)) => {
             let dir = PathBuf::from(sub_m.get_one::<String>("dir").unwrap());
@@ -205,33 +189,27 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
             let sha512 = sub_m.get_one::<String>("sha512").cloned();
             let size = sub_m.get_one::<u64>("size").copied();
 
-            match resolve_build_integrity(store, file.as_deref(), url.as_deref(), sha512, size)
-                .await
-            {
-                Ok((sha512, size)) => {
-                    let args = registry::publish::AddBuild {
-                        version: sub_m.get_one::<String>("version").unwrap().clone(),
-                        variant: sub_m.get_one::<String>("variant").cloned(),
-                        platform: sub_m.get_one::<String>("platform").unwrap().clone(),
-                        file,
-                        store,
-                        url,
-                        sha512,
-                        size,
-                    };
-                    let version = args.version.clone();
-                    let platform = args.platform.clone();
-                    match registry::publish::add_build(&dir, &args) {
-                        Ok(()) => println_i18n!(
-                            "registry-build-added",
-                            version = version,
-                            platform = platform
-                        ),
-                        Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
-                    }
-                }
-                Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
-            }
+            let (sha512, size) =
+                resolve_build_integrity(store, file.as_deref(), url.as_deref(), sha512, size)
+                    .await?;
+            let args = registry::publish::AddBuild {
+                version: sub_m.get_one::<String>("version").unwrap().clone(),
+                variant: sub_m.get_one::<String>("variant").cloned(),
+                platform: sub_m.get_one::<String>("platform").unwrap().clone(),
+                file,
+                store,
+                url,
+                sha512,
+                size,
+            };
+            let version = args.version.clone();
+            let platform = args.platform.clone();
+            registry::publish::add_build(&dir, &args)?;
+            println_i18n!(
+                "registry-build-added",
+                version = version,
+                platform = platform
+            );
         }
         Some(("remove-build", sub_m)) => {
             let dir = PathBuf::from(sub_m.get_one::<String>("dir").unwrap());
@@ -241,31 +219,26 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
                 platform: sub_m.get_one::<String>("platform").cloned(),
             };
             let version = args.version.clone();
-            match registry::publish::remove_build(&dir, &args) {
-                Ok(()) => println_i18n!("registry-build-removed", version = version),
-                Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
-            }
+            registry::publish::remove_build(&dir, &args)?;
+            println_i18n!("registry-build-removed", version = version);
         }
         Some(("validate", sub_m)) => {
             let dir = PathBuf::from(sub_m.get_one::<String>("dir").unwrap());
-            match registry::publish::validate(&dir) {
-                Ok(report) if report.is_valid() => {
-                    println_i18n!("registry-validate-ok", count = report.checked);
+            let report = registry::publish::validate(&dir)?;
+            if report.is_valid() {
+                println_i18n!("registry-validate-ok", count = report.checked);
+            } else {
+                let mut message = t!("registry-validate-failed").to_string();
+                for error in &report.errors {
+                    message.push_str(&format!("\n  - {error}"));
                 }
-                Ok(report) => {
-                    eprintln_i18n!("registry-validate-failed");
-                    for error in &report.errors {
-                        eprintln!("  - {error}");
-                    }
-                    std::process::exit(1);
-                }
-                Err(e) => eprintln_i18n!("registry-error", error = e.to_string()),
+                return Err(anyhow::Error::new(gdvm::error::CodedError::new(
+                    "registry-validate-failed",
+                    message,
+                )));
             }
         }
-        _ => eprintln_i18n!(
-            "registry-error",
-            error = t!("error-invalid-registry-subcommand")
-        ),
+        _ => return Err(terr!("error-invalid-registry-subcommand")),
     }
     Ok(())
 }

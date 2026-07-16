@@ -47,15 +47,18 @@ help-version-long =
 
     Format : [variante:]version_ou_mot_clé
 
+    Si un * final est présent, il correspondra à la build la plus récente ayant le même préfixe, par ex. « 4.7-dev* » correspond à 4.7-dev1, 4.7-dev2, etc.
+
     Mots-clés : « latest » correspond à la version la plus récente. Par défaut, cela n'inclut que les versions stables, mais les pré-publications peuvent être incluses avec le drapeau --pre.
 
     Variantes : préfixez avec un nom de variante et deux-points, ex. « csharp:4.4 » pour la version C#.
 
-    Exemples : 4.4 installera la dernière version stable de { -godot } 4.4. Si seules des versions de pré-publication existent, la dernière version de pré-publication sera installée. 4.3-rc installera la dernière version candidate de { -godot } 4.3, etc.
+    Exemples : 4.4 installera la dernière version stable de { -godot } 4.4. Si seules des versions de pré-publication existent, la dernière version de pré-publication sera installée. 4.3-rc* installera la dernière version candidate de { -godot } 4.3, etc.
 help-version-installed = La version installée (ex. 4.2 ou 4.2-stable).
 
 help-search = Lister les versions disponibles depuis le registre
 help-filter = Chaîne optionnelle pour filtrer les tags de versions
+help-filter-deprecated = [obsolète] Chaîne optionnelle pour filtrer les tags de versions. Utilisez plutôt l'argument positionnel de filtre.
 help-include-pre = Inclure les versions de pré-publication (rc, beta, dev)
 help-cache-only = Utiliser uniquement les informations de versions en cache sans interroger le registre
 help-limit = Nombre de versions à lister, par défaut 10. Utilisez 0 pour lister toutes
@@ -89,6 +92,7 @@ prune-item = - { $label } ({ size-display })
 help-force = Forcer la réinstallation même si la version est déjà installée.
 help-redownload = Retélécharger la version même si elle est déjà présente dans le cache.
 help-yes = Ignorer la confirmation de suppression
+help-remove-yes-deprecated = [obsolète] Cette option est sans effet et sera supprimée dans une version ultérieure.
 help-link-version = La version à lier. Si elle n'est pas fournie, la version est résolue en fonction du répertoire courant ou de la version par défaut.
 help-link-path = Le chemin où le lien ou la copie sera créé, par exemple «{ $platform ->
     [windows] godot.exe
@@ -163,6 +167,11 @@ error-publish-no-such-version = version introuvable : { $version }
 error-publish-store-or-url-required = --store ou --url doit être fourni
 error-publish-store-requires-file = --store nécessite un --file local
 error-publish-url-requires-integrity = --url nécessite soit un --file local, soit des --sha512 et --size explicites
+error-publish-already-initialized = Registre déjà initialisé à { $path }
+error-publish-archive-not-found = Archive non trouvée : { $path }
+error-publish-no-such-platform = Aucune plateforme de ce type { $platform } pour la variante { $variant }
+error-publish-no-such-variant = Aucune variante de ce type : { $variant }
+error-publish-invalid-segment = { $what } invalide : { $value }
 error-registry-fetch-failed = Échec de la récupération de { $url } : HTTP { $status }
 error-registry-fetch-release-failed = Échec de la récupération des métadonnées de la version
 error-registry-invalid-name = Nom de registre non valide : { $name }
@@ -178,6 +187,13 @@ error-spec-empty-variant = Nom de variante vide dans « { $input } »
 error-spec-empty-version = Version vide dans « { $input } »
 error-system-time = Heure système antérieure à l'époque UNIX
 error-unrecognized-version-format = Format de version non reconnu : { $input }
+error-non-interactive-trust = Impossible de demander la confiance pour le registre « { $registry } » ({ $url }) dans une session non interactive. Passez --yes pour lui faire confiance explicitement.
+error-non-interactive-value = Impossible de demander une valeur pour « { $key } » dans une session non interactive. Passez la valeur en argument à la place.
+error-registry-unsupported-schema = Le registre « { $registry } » déclare une version de schéma non prise en charge { $schema }.
+label-caused-by = Causé par :
+label-error-coded = Erreur { $code } :
+error-wildcard-position = Le caractère générique (*) ne peut apparaître qu'à la fin du tag de version, par ex. 4.7-dev* (reçu { $input }).
+hint-try-wildcard = Aucune version n'est taguée { $requested }, mais il existe des tags similaires, le plus récent étant { $newest }. Essayez { $suggestion } pour les faire correspondre.
 download-retrying = Téléchargement interrompu, nouvelle tentative ({ $attempt } sur { $max })...
 lock-waiting = En attente de la fin d'un autre processus { -gdvm } (verrou : { $resource })...
 prune-skipped-error = { $item } ignoré : { $error }
@@ -207,10 +223,7 @@ error-link-copy = Échec de la copie de l'exécutable : {$error}
 error-no-stable-releases-found = Aucune version stable trouvée.
 
 error-starting-godot = Échec du démarrage de { -godot } : { $error }
-
-confirm-remove = Êtes-vous sûr de vouloir supprimer cette version ? (oui/non) :
 confirm-yes = oui
-remove-cancelled = Suppression annulée.
 
 default-set-success = {$version} définie avec succès comme version par défaut de { -godot }.
 default-unset-success = Version par défaut de { -godot } supprimée avec succès.
@@ -347,8 +360,8 @@ error-reading-input = Erreur lors de la lecture de l'entrée
 config-set-success = Configuration mise à jour avec succès.
 config-unset-success = Clé de configuration { $key } supprimée avec succès.
 config-key-not-set = Clé de configuration non définie.
+config-key-not-set-value = <non défini>
 error-unknown-config-key = Clé de configuration inconnue.
-error-invalid-config-value = Valeur invalide pour la clé de configuration { $key }.
 error-invalid-config-subcommand = Sous-commande de configuration invalide. Utilisez « get », « set », ou « list ».
 error-parse-config = Échec de l'analyse du fichier de configuration : { $error }
 error-parse-config-using-default = Utilisation des valeurs de configuration par défaut.
@@ -365,7 +378,6 @@ registry-added = Registre { $registry } ajouté ({ $url }).
 registry-removed = Registre { $registry } supprimé.
 registry-list-header = Registres configurés :
 registry-tag-official = officiel
-registry-error = Erreur de registre : { $error }
 
 error-invalid-registry-subcommand = Sous-commande de registre invalide. Utilisez « add », « remove », « list » ou « refresh ».
 registry-trust-warning = { $registry } ({ $url }) est un registre personnalisé, pas le registre officiel. { -gdvm } vérifie que les téléchargements correspondent à ce que le registre annonce, mais il ne peut pas savoir s'ils sont sûrs à exécuter. Ne l'utilisez que si vous faites confiance à la personne qui le gère.

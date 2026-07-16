@@ -306,7 +306,7 @@ pub(crate) fn build_cli() -> Command {
                         .short('y')
                         .long("yes")
                         .num_args(0)
-                        .help(t!("help-yes")),
+                        .help(t!("help-remove-yes-deprecated")),
                 )
                 .arg(deprecated_csharp_flag()),
         )
@@ -314,11 +314,12 @@ pub(crate) fn build_cli() -> Command {
             Command::new("search")
                 .about(t!("help-search"))
                 .arg(format_flag())
+                .arg(Arg::new("filter").required(false).help(t!("help-filter")))
                 .arg(
-                    Arg::new("filter")
+                    Arg::new("filter-deprecated")
                         .long("filter")
                         .num_args(1)
-                        .help(t!("help-filter")),
+                        .help(t!("help-filter-deprecated")),
                 )
                 .arg(
                     Arg::new("include-pre")

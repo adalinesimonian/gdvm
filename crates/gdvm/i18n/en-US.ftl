@@ -49,15 +49,18 @@ help-version-long =
 
     Format: [variant:]version_or_keyword
 
+    If a trailing * is present, it will match the newest build with the same prefix, e.g. "4.7-dev*" matches 4.7-dev1, 4.7-dev2, etc.
+
     Keywords: "latest" resolves to the newest version. By default, this includes only stable releases, but pre-releases can be included with the --pre flag.
 
     Variants: prefix with a variant name and colon, e.g. "csharp:4.4" for the C# build.
 
-    Examples: 4.4 will install the latest stable release of { -godot } 4.4. If only pre-release versions exist, the latest pre-release version will be installed. 4.3-rc will install the latest release candidate of { -godot } 4.3, etc.
+    Examples: 4.4 will install the latest stable release of { -godot } 4.4. If only pre-release versions exist, the latest pre-release version will be installed. 4.3-rc* will install the latest release candidate of { -godot } 4.3, etc.
 help-version-installed = The installed version (e.g. 4.2 or 4.2-stable).
 
 help-search = List available releases from the registry
 help-filter = Optional string to filter release tags
+help-filter-deprecated = [deprecated] Optional string to filter release tags. Use the filter positional argument instead.
 help-include-pre = Include pre-release versions (rc, beta, dev)
 help-cache-only = Use only cached release information without querying the registry
 help-limit = Number of releases to list, default is 10. Use 0 to list all
@@ -91,6 +94,7 @@ prune-item = - { $label } ({ size-display })
 help-force = Force reinstall even if the version is already installed.
 help-redownload = Redownload the version even if it's already downloaded in the cache.
 help-yes = Skip confirmation prompt for removal
+help-remove-yes-deprecated = [deprecated] This flag is a no-op and will be removed in a future release.
 help-link-version = The version to link. If not provided, resolves the version based on the current directory or default version.
 help-link-path = The path where the link or copy will be created, e.g. "{ $platform ->
     [windows] godot.exe
@@ -165,6 +169,11 @@ error-publish-no-such-version = no such version: { $version }
 error-publish-store-or-url-required = either --store or --url must be provided
 error-publish-store-requires-file = --store requires a local --file
 error-publish-url-requires-integrity = --url requires either a local --file or explicit --sha512 and --size
+error-publish-already-initialized = Registry already initialized at { $path }
+error-publish-archive-not-found = Archive not found: { $path }
+error-publish-no-such-platform = No such platform { $platform } for variant { $variant }
+error-publish-no-such-variant = No such variant: { $variant }
+error-publish-invalid-segment = Invalid { $what }: { $value }
 error-registry-fetch-failed = Failed to fetch { $url }: HTTP { $status }
 error-registry-fetch-release-failed = Failed to fetch release metadata
 error-registry-invalid-name = Invalid registry name: { $name }
@@ -180,6 +189,13 @@ error-spec-empty-variant = Empty variant name in '{ $input }'
 error-spec-empty-version = Empty version in '{ $input }'
 error-system-time = System time before UNIX EPOCH
 error-unrecognized-version-format = Unrecognized version format: { $input }
+error-non-interactive-trust = Cannot prompt to trust registry "{ $registry }" ({ $url }) in a non-interactive session. Pass --yes to trust it explicitly.
+error-non-interactive-value = Cannot prompt for a value for "{ $key }" in a non-interactive session. Pass the value as an argument instead.
+error-registry-unsupported-schema = Registry "{ $registry }" declares unsupported schema version { $schema }.
+label-caused-by = Caused by:
+label-error-coded = Error { $code }:
+error-wildcard-position = The wildcard (*) may only appear at the end of the release tag, e.g. 4.7-dev* (got { $input }).
+hint-try-wildcard = No release is tagged { $requested }, but there are similar tags, the newest being { $newest }. Try { $suggestion } to match them.
 download-retrying = Download interrupted, retrying (attempt { $attempt } of { $max })...
 lock-waiting = Waiting for another { -gdvm } process to finish (lock: { $resource })...
 prune-skipped-error = Skipping { $item }: { $error }
@@ -209,10 +225,7 @@ error-link-copy = Failed to copy executable: {$error}
 error-no-stable-releases-found = No stable releases found.
 
 error-starting-godot = Failed to start { -godot }: { $error }
-
-confirm-remove = Are you sure you want to remove this version? (yes/no):
 confirm-yes = yes
-remove-cancelled = Removal cancelled.
 
 default-set-success = Successfully set {$version} as the default { -godot } version.
 default-unset-success = Successfully unset the default { -godot } version.
@@ -349,8 +362,8 @@ error-reading-input = Error reading input
 config-set-success = Configuration updated successfully.
 config-unset-success = Configuration key { $key } unset successfully.
 config-key-not-set = Configuration key not set.
+config-key-not-set-value = <not set>
 error-unknown-config-key = Unknown configuration key.
-error-invalid-config-value = Invalid value for configuration key { $key }.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
 error-parse-config = Failed to parse configuration file: { $error }
 error-parse-config-using-default = Using default configuration values.
@@ -367,7 +380,6 @@ registry-added = Added registry { $registry } ({ $url }).
 registry-removed = Removed registry { $registry }.
 registry-list-header = Configured registries:
 registry-tag-official = official
-registry-error = Registry error: { $error }
 
 error-invalid-registry-subcommand = Invalid registry subcommand. Use "add", "remove", "list", or "refresh".
 registry-trust-warning = { $registry } ({ $url }) is a custom registry, not the official one. { -gdvm } makes sure downloads match what the registry says to expect, but it can't tell whether they are safe to run. Only install from it if you trust whoever runs it.

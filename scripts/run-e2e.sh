@@ -500,6 +500,7 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 test "Search for 4.x releases" <<'TEST_SCRIPT'
+assert_run_contains 4.3.0-stable -- gdvm search 4 --limit 0
 assert_run_contains 4.3.0-stable -- gdvm search --limit 0 --filter 4
 TEST_SCRIPT
 
@@ -518,10 +519,10 @@ fi
 
 printf '%s' '{"gdvm":{"last_update_check":0,"new_version":null,"new_major_version":null},"registries":{}}' > "$cache"
 
-cache_only_out="$(gdvm search --cache-only --limit 0 --filter 4 || true)"
+cache_only_out="$(gdvm search --cache-only --limit 0 4 || true)"
 assert_not_contains "$cache_only_out" 4.3.0-stable \
     "cache-only search unexpectedly found releases with empty cache"
-assert_run_contains 4.3.0-stable -- gdvm search --refresh --limit 0 --filter 4
+assert_run_contains 4.3.0-stable -- gdvm search --refresh --limit 0 4
 
 cache_contents="$(cat "$cache")"
 assert_contains "$cache_contents" '"tag_name"' \
@@ -670,6 +671,21 @@ assert_dir_exists "$install_dir" "Godot install directory was not created"
 cat /tmp/gdvm-custom-path.log
 gdvm config unset install.path
 gdvm config unset cache.path
+TEST_SCRIPT
+
+test "Input prompts error out when not interactive" <<'TEST_SCRIPT'
+output="$(gdvm config set prune.keep-latest </dev/null 2>&1)" && { echo "expected failure"; exit 1; }
+assert_contains "$output" "GDVM7003" "prints an error due to non-interactive stdin"
+TEST_SCRIPT
+
+test "Wildcard release tags resolve the newest build of the release type" <<'TEST_SCRIPT'
+output="$(gdvm search "4.3-dev*")"
+assert_contains "$output" "4.3.0-dev" "lists dev builds without --include-pre"
+TEST_SCRIPT
+
+test "A near miss release type suggests using a wildcard" <<'TEST_SCRIPT'
+output="$(gdvm search 4.4-dev)"
+assert_contains "$output" "4.4-dev*" "suggests a wildcard query"
 TEST_SCRIPT
 
 test "list --format json is machine-readable" <<'TEST_SCRIPT'
@@ -992,7 +1008,7 @@ TEST_SCRIPT
 test "Confirming trust installs from the custom registry" <<'TEST_SCRIPT'
 set -euo pipefail
 
-out="$(printf 'yes\n' | gdvm install e2ereg/4.3 2>&1)"
+out="$(gdvm install e2ereg/4.3 --yes 2>&1)"
 echo "$out"
 
 assert_imatches "$out" 'custom registry' "trust warning was not shown"
@@ -1032,7 +1048,7 @@ cd "\$projdir"
 reg_list="\$(gdvm registry list)"
 assert_contains "\$reg_list" projreg "project-defined registry not listed"
 
-out="\$(printf 'yes\n' | gdvm run --console=true -- --version 2>&1)"
+out="\$(gdvm run --yes --console=true -- --version 2>&1)"
 echo "\$out"
 
 assert_imatches "\$out" 'custom registry' \

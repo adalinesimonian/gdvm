@@ -15,13 +15,11 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::io::{self, Write};
-
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::version::{self, VersionSpec, VersionTarget};
-use gdvm::{eprintln_i18n, println_i18n, t};
+use gdvm::{println_i18n, terr};
 
 use super::check_deprecated_csharp_flag;
 
@@ -35,7 +33,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
 
     let requested_version = match &spec.target {
         VersionTarget::Keyword(_) => {
-            return Err(anyhow!(t!("error-version-not-found")));
+            return Err(terr!("error-version-not-found"));
         }
         VersionTarget::Pattern(gv) => gv.clone(),
     };
@@ -47,7 +45,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
 
     match resolved_versions.len() {
         0 => {
-            eprintln_i18n!("error-version-not-found");
+            return Err(terr!("error-version-not-found"));
         }
         1 => {
             let installed = &resolved_versions[0];
@@ -59,16 +57,6 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
 
             println_i18n!("removing-version", version = &display);
 
-            if !matches.get_flag("yes") {
-                println_i18n!("confirm-remove");
-                io::stdout().flush().unwrap();
-                let mut input = String::new();
-                io::stdin().read_line(&mut input).unwrap();
-                if input.trim().to_lowercase() != t!("confirm-yes") {
-                    println_i18n!("remove-cancelled");
-                    return Ok(());
-                }
-            }
             gdvm.library().remove(
                 &installed.version,
                 &installed.variant,
@@ -77,7 +65,6 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
             println_i18n!("removed-version", version = &display);
         }
         _ => {
-            eprintln_i18n!("error-multiple-versions-found");
             for installed in &resolved_versions {
                 println!(
                     "- {}",
@@ -88,6 +75,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
                     )
                 );
             }
+            return Err(terr!("error-multiple-versions-found"));
         }
     }
 

@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use crate::host::HostPlatform;
 use crate::registry::{registry_arch_key, registry_os_key};
 use crate::releases::ReleaseCatalog;
-use crate::t;
 use crate::version::{ResolvedVersion, Variant, VersionQuery};
+use crate::{t, terr};
 
 /// Provides an API for resolving Godot versions against installed and available releases.
 pub struct RegistryVersionResolver<'a> {
@@ -44,6 +44,16 @@ pub struct ResolveRequest<'a> {
     pub registry: Option<String>,
     pub include_pre: bool,
     pub mode: ResolveMode<'a>,
+}
+
+/// Suggestion to use a wildcard match when the exact tag didn't return anything
+/// but there's a newer release of the same tag base.
+#[derive(Debug, Clone)]
+pub struct WildcardSuggestion {
+    /// The query to suggest, e.g. "4.7-dev*".
+    pub suggestion: String,
+    /// The newest release that query resolves to, e.g. "4.7-dev2".
+    pub newest: String,
 }
 
 #[derive(Debug)]
@@ -193,9 +203,66 @@ impl<'a> RegistryVersionResolver<'a> {
         request.include_pre = include_pre;
         match self.resolve(request).await? {
             ResolveOutcome::Determinate(gv) => Ok(gv),
-            ResolveOutcome::NotFound => Err(anyhow!(t!("error-version-not-found"))),
+            ResolveOutcome::NotFound => Err(self.version_not_found_error(query, variant).await),
             ResolveOutcome::Candidates(_) => unreachable!("auto-install never yields candidates"),
         }
+    }
+
+    /// Get an error for when a version didn't return any results.
+    pub async fn version_not_found_error(
+        &self,
+        query: &VersionQuery,
+        variant: Option<&str>,
+    ) -> anyhow::Error {
+        match self.wildcard_suggestion(query, variant).await {
+            Some(suggestion) => anyhow::Error::new(crate::error::CodedError::new(
+                "error-version-not-found",
+                format!(
+                    "{}\n{}",
+                    t!("error-version-not-found"),
+                    t!(
+                        "hint-try-wildcard",
+                        requested = query.to_display_str().unwrap_or_default(),
+                        suggestion = suggestion.suggestion,
+                        newest = suggestion.newest
+                    )
+                ),
+            )),
+            None => terr!("error-version-not-found"),
+        }
+    }
+
+    /// Get a suggestion for a wildcard query if it would have returned results.
+    pub async fn wildcard_suggestion(
+        &self,
+        query: &VersionQuery,
+        variant: Option<&str>,
+    ) -> Option<WildcardSuggestion> {
+        let release_type = query.release_type.as_deref()?;
+
+        if release_type.ends_with('*') || release_type.is_empty() {
+            return None;
+        }
+
+        let (release_type, _) = crate::version::split_release_tag(release_type);
+
+        if release_type.is_empty() {
+            return None;
+        }
+
+        let mut probe = query.clone();
+        probe.release_type = Some(format!("{release_type}*"));
+
+        let newest = self
+            .resolve_available_impl(&probe, variant, true, true)
+            .await
+            .ok()
+            .flatten()?;
+
+        Some(WildcardSuggestion {
+            suggestion: probe.to_display_str()?,
+            newest: newest.to_remote_str(),
+        })
     }
 
     pub async fn latest_stable(&self) -> Result<ResolvedVersion> {
@@ -213,7 +280,7 @@ impl<'a> RegistryVersionResolver<'a> {
             .iter()
             .find(|r| r.release_type == "stable")
             .cloned()
-            .ok_or_else(|| anyhow!(t!("error-no-stable-releases-found")))
+            .ok_or_else(|| terr!("error-no-stable-releases-found"))
     }
 
     async fn resolve_available_impl(
@@ -263,7 +330,7 @@ impl<'a> RegistryVersionResolver<'a> {
                 .await;
         }
 
-        if query.is_incomplete() {
+        if query.is_incomplete() || query.has_release_wildcard() {
             return self
                 .resolve_available_impl(query, variant, include_pre, false)
                 .await;
@@ -345,6 +412,78 @@ mod tests {
             .expect("write cache");
 
         (ReleaseCatalog::new(registry, cache_store), tmp)
+    }
+
+    #[tokio::test]
+    async fn wildcard_resolves_newest_of_release_type() {
+        let (catalog, _tmp) = catalog_with_tags(&["4.7-dev1", "4.7-dev10", "4.7-dev9", "4.7-dev2"]);
+        let resolver = RegistryVersionResolver::new(&catalog, host());
+        let query = VersionQuery::from_remote_str("4.7-dev*").expect("query");
+
+        let resolved = resolver
+            .resolve_for_auto_install(&query, None, false)
+            .await
+            .expect("resolves");
+        assert_eq!(resolved.release_type, "dev10");
+    }
+
+    #[tokio::test]
+    async fn wildcard_matches_bare_tag_and_numbered_builds() {
+        let (catalog, _tmp) = catalog_with_tags(&["4.7-dev", "4.7-dev2"]);
+        let resolver = RegistryVersionResolver::new(&catalog, host());
+        let query = VersionQuery::from_remote_str("4.7-dev*").expect("query");
+
+        let resolved = resolver
+            .resolve_for_auto_install(&query, None, false)
+            .await
+            .expect("resolves");
+        assert_eq!(resolved.release_type, "dev2");
+    }
+
+    #[tokio::test]
+    async fn exact_tag_resolves_verbatim_without_prefix_matching() {
+        let (catalog, _tmp) = catalog_with_tags(&["4.7-dev", "4.7-dev12"]);
+        let resolver = RegistryVersionResolver::new(&catalog, host());
+
+        let dev = VersionQuery::from_remote_str("4.7-dev").expect("query");
+        let resolved = resolver
+            .resolve_for_auto_install(&dev, None, false)
+            .await
+            .expect("verbatim dev tag resolves");
+        assert_eq!(resolved.release_type, "dev");
+
+        let dev1 = VersionQuery::from_remote_str("4.7-dev1").expect("query");
+        let err = resolver
+            .resolve_for_auto_install(&dev1, None, false)
+            .await
+            .expect_err("dev1 must not match dev12");
+        let message = format!("{err}");
+        assert!(message.contains("4.7-dev*"), "{message}");
+        assert!(message.contains("4.7-dev12"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn wildcard_suggestion_points_at_the_newest_build() {
+        let (catalog, _tmp) = catalog_with_tags(&["4.7-dev1", "4.7-dev2"]);
+        let resolver = RegistryVersionResolver::new(&catalog, host());
+
+        for requested in ["4.7-dev", "4.7-dev3"] {
+            let query = VersionQuery::from_remote_str(requested).expect("query");
+            let suggestion = resolver
+                .wildcard_suggestion(&query, None)
+                .await
+                .expect("suggests the wildcard");
+            assert_eq!(suggestion.suggestion, "4.7-dev*");
+            assert_eq!(suggestion.newest, "4.7-dev2");
+        }
+
+        for requested in ["4.7-rc1", "4.7-dev*", "4.7-123"] {
+            let query = VersionQuery::from_remote_str(requested).expect("query");
+            assert!(
+                resolver.wildcard_suggestion(&query, None).await.is_none(),
+                "{requested} should not produce a suggestion"
+            );
+        }
     }
 
     #[tokio::test]
