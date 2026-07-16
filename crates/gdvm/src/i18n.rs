@@ -248,6 +248,16 @@ macro_rules! t_attr {
 }
 
 #[macro_export]
+macro_rules! terr {
+    ($key:expr $(, $name:ident = $value:expr)* $(,)?) => {
+        ::anyhow::Error::new($crate::error::CodedError::new(
+            $key,
+            $crate::t!($key $(, $name = $value)*),
+        ))
+    };
+}
+
+#[macro_export]
 macro_rules! i18n_print {
     ($print_fn:ident, $key:expr $(, $( $arg_key:ident = $arg_val:expr ),* )? $(,)?) => {
         $print_fn!(

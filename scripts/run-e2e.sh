@@ -646,6 +646,11 @@ TEST_SCRIPT
 
 test "Install Godot 4.3" gdvm install 4.3
 
+test "Input prompts error out when not interactive" <<'TEST_SCRIPT'
+output="$(gdvm config set prune.keep-latest </dev/null 2>&1)" && { echo "expected failure"; exit 1; }
+assert_contains "$output" "GDVM7003" "prints an error due to non-interactive stdin"
+TEST_SCRIPT
+
 test "Wildcard release tags resolve the newest build of the release type" <<'TEST_SCRIPT'
 output="$(gdvm search "4.3-dev*")"
 assert_contains "$output" "4.3.0-dev" "lists dev builds without --include-pre"
@@ -976,7 +981,7 @@ TEST_SCRIPT
 test "Confirming trust installs from the custom registry" <<'TEST_SCRIPT'
 set -euo pipefail
 
-out="$(printf 'yes\n' | gdvm install e2ereg/4.3 2>&1)"
+out="$(gdvm install e2ereg/4.3 --yes 2>&1)"
 echo "$out"
 
 assert_imatches "$out" 'custom registry' "trust warning was not shown"
@@ -1016,7 +1021,7 @@ cd "\$projdir"
 reg_list="\$(gdvm registry list)"
 assert_contains "\$reg_list" projreg "project-defined registry not listed"
 
-out="\$(printf 'yes\n' | gdvm run --console=true -- --version 2>&1)"
+out="\$(gdvm run --yes --console=true -- --version 2>&1)"
 echo "\$out"
 
 assert_imatches "\$out" 'custom registry' \

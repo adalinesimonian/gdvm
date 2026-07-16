@@ -17,11 +17,11 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use async_trait::async_trait;
 
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, Variant, VersionQuery};
-use crate::{eprintln_i18n, t};
+use crate::{eprintln_i18n, terr};
 
 #[async_trait(?Send)]
 pub trait RunVersionSource {
@@ -153,7 +153,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
     /// Resolve the Godot version to use. Installs it if requested.
     pub async fn resolve(&self, request: RunResolutionRequest<'_>) -> Result<RunResolutionResult> {
         let Some(selection) = self.select(&request).await? else {
-            return Err(anyhow!(t!("no-default-set")));
+            return Err(terr!("no-default-set"));
         };
 
         match selection.source {
@@ -168,7 +168,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 .await
                     && !request.force_on_mismatch
                 {
-                    return Err(anyhow!(t!("error-project-version-mismatch", pinned = 0)));
+                    return Err(terr!("error-project-version-mismatch", pinned = 0));
                 }
             }
             RunSource::Pin => {
@@ -181,7 +181,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 .await
                     && !request.force_on_mismatch
                 {
-                    return Err(anyhow!(t!("error-project-version-mismatch", pinned = 1)));
+                    return Err(terr!("error-project-version-mismatch", pinned = 1));
                 }
             }
             RunSource::Project => {

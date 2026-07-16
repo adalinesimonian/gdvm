@@ -20,18 +20,18 @@ use std::fs;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use zip::ZipArchive;
 
-use crate::{t, ui};
+use crate::{t, terr, ui};
 
 pub fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<()> {
     let mut file = fs::File::open(zip_path).map_err(|e| {
-        anyhow!(t!(
+        terr!(
             "error-open-zip",
             path = zip_path.display().to_string(),
             error = e.to_string(),
-        ))
+        )
     })?;
 
     let subject = zip_path
@@ -52,18 +52,18 @@ pub fn extract_zip_from_file(
 ) -> Result<()> {
     // First pass: Calculate total uncompressed size and collect top-level entries
     file.rewind().map_err(|e| {
-        anyhow!(t!(
+        terr!(
             "error-open-zip",
             path = zip_path.display().to_string(),
             error = e.to_string(),
-        ))
+        )
     })?;
     let mut archive = ZipArchive::new(&*file).map_err(|e| {
-        anyhow!(t!(
+        terr!(
             "error-read-zip",
             path = zip_path.display().to_string(),
             error = e.to_string(),
-        ))
+        )
     })?;
 
     let mut total_size: u64 = 0;
@@ -73,7 +73,7 @@ pub fn extract_zip_from_file(
     for i in 0..archive.len() {
         let file = archive
             .by_index(i)
-            .map_err(|e| anyhow!(t!("error-access-file", index = i, error = e.to_string(),)))?;
+            .map_err(|e| terr!("error-access-file", index = i, error = e.to_string(),))?;
 
         if let Some(enclosed) = file.enclosed_name() {
             if let Some(first_component) = enclosed.components().next() {
@@ -85,7 +85,7 @@ pub fn extract_zip_from_file(
                 }
             }
         } else {
-            return Err(anyhow!(t!("error-invalid-file-name")));
+            return Err(terr!("error-invalid-file-name"));
         }
 
         if !file.is_dir() {
@@ -111,27 +111,27 @@ pub fn extract_zip_from_file(
 
     // Second pass: Extract files and update progress
     file.rewind().map_err(|e| {
-        anyhow!(t!(
+        terr!(
             "error-reopen-zip",
             path = zip_path.display().to_string(),
             error = e.to_string(),
-        ))
+        )
     })?;
     let mut archive = ZipArchive::new(&*file).map_err(|e| {
-        anyhow!(t!(
+        terr!(
             "error-read-zip",
             path = zip_path.display().to_string(),
             error = e.to_string(),
-        ))
+        )
     })?;
 
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
-            .map_err(|e| anyhow!(t!("error-access-file", index = i, error = e.to_string(),)))?;
+            .map_err(|e| terr!("error-access-file", index = i, error = e.to_string(),))?;
         let path = file
             .enclosed_name()
-            .ok_or_else(|| anyhow!(t!("error-invalid-file-name")))?;
+            .ok_or_else(|| terr!("error-invalid-file-name"))?;
 
         // Skip empty or root entries to avoid creating files at extract_to
         if path.as_os_str().is_empty() || path == Path::new(".") {
@@ -143,14 +143,14 @@ pub fn extract_zip_from_file(
             // Ensure the file path starts with the prefix
             let stripped_path = path
                 .strip_prefix(prefix)
-                .map_err(|_| anyhow!(t!("error-strip-prefix")))?;
+                .map_err(|_| terr!("error-strip-prefix"))?;
 
             // Prevent extracting files outside the target directory
             if stripped_path
                 .components()
                 .any(|c| c == std::path::Component::ParentDir)
             {
-                return Err(anyhow!(t!("error-invalid-file-name")));
+                return Err(terr!("error-invalid-file-name"));
             }
 
             extract_to.join(stripped_path)
@@ -160,11 +160,11 @@ pub fn extract_zip_from_file(
 
         if file.is_dir() {
             fs::create_dir_all(&out_path).map_err(|e| {
-                anyhow!(t!(
+                terr!(
                     "error-create-dir",
                     path = out_path.display().to_string(),
                     error = e.to_string(),
-                ))
+                )
             })?;
             continue;
         }
@@ -172,21 +172,21 @@ pub fn extract_zip_from_file(
         // Ensure the parent directory exists
         if let Some(parent) = out_path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
-                anyhow!(t!(
+                terr!(
                     "error-create-dir",
                     path = parent.display().to_string(),
                     error = e.to_string(),
-                ))
+                )
             })?;
         }
 
         // Create the output file
         let mut outfile = fs::File::create(&out_path).map_err(|e| {
-            anyhow!(t!(
+            terr!(
                 "error-create-file",
                 path = out_path.display().to_string(),
                 error = e.to_string(),
-            ))
+            )
         })?;
 
         // Read from the ZIP file and write to the output file in chunks
@@ -196,30 +196,30 @@ pub fn extract_zip_from_file(
         let reader = &mut file;
         loop {
             let bytes_read = reader.read(&mut buffer).map_err(|e| {
-                anyhow!(t!(
+                terr!(
                     "error-read-zip-file",
                     file = reader.name().to_string(),
                     error = e.to_string(),
-                ))
+                )
             })?;
             if bytes_read == 0 {
                 break; // Extraction complete for this file
             }
             written += bytes_read as u64;
             if written > declared_size {
-                return Err(anyhow!(t!(
+                return Err(terr!(
                     "error-size-mismatch",
                     file = reader.name().to_string(),
                     expected = declared_size,
                     actual = written
-                )));
+                ));
             }
             outfile.write_all(&buffer[..bytes_read]).map_err(|e| {
-                anyhow!(t!(
+                terr!(
                     "error-write-file",
                     path = out_path.display().to_string(),
                     error = e.to_string(),
-                ))
+                )
             })?;
             task.inc(bytes_read as u64);
         }
@@ -232,11 +232,11 @@ pub fn extract_zip_from_file(
 
             let permissions = Permissions::from_mode(mode & 0o777);
             fs::set_permissions(&out_path, permissions).map_err(|e| {
-                anyhow!(t!(
+                terr!(
                     "error-set-permissions",
                     path = out_path.display().to_string(),
                     error = e.to_string(),
-                ))
+                )
             })?;
         }
     }

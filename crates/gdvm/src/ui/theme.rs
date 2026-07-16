@@ -27,12 +27,8 @@ pub(super) struct Theme {
     pub step: Style,
     /// Warning label.
     pub warn_label: Style,
-    /// Warning contents.
-    pub warn: Style,
     /// Error label.
     pub error_label: Style,
-    /// Error contents.
-    pub error: Style,
     /// Note label.
     pub note_label: Style,
     /// Tips.
@@ -45,9 +41,7 @@ impl Theme {
             milestone: Style::new().magenta().bold().for_stderr(),
             step: Style::new().cyan().bold().for_stderr(),
             warn_label: Style::new().yellow().bold().for_stderr(),
-            warn: Style::new().yellow().for_stderr(),
             error_label: Style::new().red().bold().for_stderr(),
-            error: Style::new().red().for_stderr(),
             note_label: Style::new().cyan().bold().for_stderr(),
             tip: Style::new().magenta().bold().for_stderr(),
         }

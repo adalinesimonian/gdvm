@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use crate::host::HostPlatform;
 use crate::registry::{registry_arch_key, registry_os_key};
 use crate::releases::ReleaseCatalog;
-use crate::t;
 use crate::version::{ResolvedVersion, Variant, VersionQuery};
+use crate::{t, terr};
 
 /// Provides an API for resolving Godot versions against installed and available releases.
 pub struct RegistryVersionResolver<'a> {
@@ -215,17 +215,20 @@ impl<'a> RegistryVersionResolver<'a> {
         variant: Option<&str>,
     ) -> anyhow::Error {
         match self.wildcard_suggestion(query, variant).await {
-            Some(suggestion) => anyhow!(
-                "{}\n{}",
-                t!("error-version-not-found"),
-                t!(
-                    "hint-try-wildcard",
-                    requested = query.to_display_str().unwrap_or_default(),
-                    suggestion = suggestion.suggestion,
-                    newest = suggestion.newest
-                )
-            ),
-            None => anyhow!(t!("error-version-not-found")),
+            Some(suggestion) => anyhow::Error::new(crate::error::CodedError::new(
+                "error-version-not-found",
+                format!(
+                    "{}\n{}",
+                    t!("error-version-not-found"),
+                    t!(
+                        "hint-try-wildcard",
+                        requested = query.to_display_str().unwrap_or_default(),
+                        suggestion = suggestion.suggestion,
+                        newest = suggestion.newest
+                    )
+                ),
+            )),
+            None => terr!("error-version-not-found"),
         }
     }
 
@@ -277,7 +280,7 @@ impl<'a> RegistryVersionResolver<'a> {
             .iter()
             .find(|r| r.release_type == "stable")
             .cloned()
-            .ok_or_else(|| anyhow!(t!("error-no-stable-releases-found")))
+            .ok_or_else(|| terr!("error-no-stable-releases-found"))
     }
 
     async fn resolve_available_impl(

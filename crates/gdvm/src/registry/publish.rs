@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::Result;
 use digest_io::IoWrapper;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -29,7 +29,7 @@ use sha2::{Digest, Sha512};
 
 use super::v2;
 use crate::date_utils::now_iso8601;
-use crate::t;
+use crate::terr;
 use crate::version::Variant;
 
 /// Current registry schema version produced by the authoring commands.
@@ -75,7 +75,10 @@ impl ValidationReport {
 pub fn init(dir: &Path, name: Option<&str>) -> Result<String> {
     let manifest_path = dir.join("registry.json");
     if manifest_path.exists() {
-        bail!("registry already initialized at {}", dir.display());
+        return Err(terr!(
+            "error-publish-already-initialized",
+            path = dir.display().to_string()
+        ));
     }
 
     let name = name.map(|s| s.to_string()).unwrap_or_else(|| dir_name(dir));
@@ -114,9 +117,12 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
         let file = args
             .file
             .as_deref()
-            .ok_or_else(|| anyhow!(t!("error-publish-store-requires-file")))?;
+            .ok_or_else(|| terr!("error-publish-store-requires-file"))?;
         if !file.is_file() {
-            bail!("archive not found: {}", file.display());
+            return Err(terr!(
+                "error-publish-archive-not-found",
+                path = file.display().to_string()
+            ));
         }
         let (sha512, size) = resolve_integrity(file, args)?;
 
@@ -131,16 +137,19 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
         let url = args
             .url
             .clone()
-            .ok_or_else(|| anyhow!(t!("error-publish-store-or-url-required")))?;
+            .ok_or_else(|| terr!("error-publish-store-or-url-required"))?;
         let (sha512, size) = match (&args.sha512, args.size) {
             (Some(sha512), Some(size)) => (sha512.clone(), size),
             _ => {
                 let file = args
                     .file
                     .as_deref()
-                    .ok_or_else(|| anyhow!(t!("error-publish-url-requires-integrity")))?;
+                    .ok_or_else(|| terr!("error-publish-url-requires-integrity"))?;
                 if !file.is_file() {
-                    bail!("archive not found: {}", file.display());
+                    return Err(terr!(
+                        "error-publish-archive-not-found",
+                        path = file.display().to_string()
+                    ));
                 }
                 resolve_integrity(file, args)?
             }
@@ -183,10 +192,10 @@ pub fn remove_build(dir: &Path, args: &RemoveBuild) -> Result<()> {
     let rel_path = release_rel_path(&args.version);
     let release_path = dir.join(&rel_path);
     let mut release: v2::ReleaseMetadata = read_json(&release_path)?.ok_or_else(|| {
-        anyhow!(t!(
+        terr!(
             "error-publish-no-such-version",
             version = args.version.as_str()
-        ))
+        )
     })?;
 
     match (&args.variant, &args.platform) {
@@ -197,7 +206,11 @@ pub fn remove_build(dir: &Path, args: &RemoveBuild) -> Result<()> {
                 .get_mut(&variant_key)
                 .is_some_and(|platforms| platforms.remove(platform).is_some());
             if !removed {
-                bail!("no such platform {platform} for variant {variant_key}");
+                return Err(terr!(
+                    "error-publish-no-such-platform",
+                    platform = platform.clone(),
+                    variant = variant_key
+                ));
             }
             if release
                 .variants
@@ -210,7 +223,10 @@ pub fn remove_build(dir: &Path, args: &RemoveBuild) -> Result<()> {
         (Some(variant), None) => {
             let variant_key = Variant::from_option(Some(variant)).as_str().to_string();
             if release.variants.remove(&variant_key).is_none() {
-                bail!("no such variant: {variant_key}");
+                return Err(terr!(
+                    "error-publish-no-such-variant",
+                    variant = variant_key
+                ));
             }
         }
         (None, _) => {
@@ -368,7 +384,7 @@ pub fn validate(dir: &Path) -> Result<ValidationReport> {
 
 fn require_registry(dir: &Path) -> Result<()> {
     if !dir.join("registry.json").is_file() {
-        bail!("not a registry (no registry.json): {}", dir.display());
+        return Err(terr!("error-publish-missing-manifest"));
     }
     Ok(())
 }
@@ -400,7 +416,7 @@ fn write_index(dir: &Path, index: &mut v2::Index) -> Result<()> {
 fn touch_manifest(dir: &Path) -> Result<()> {
     let path = dir.join("registry.json");
     let mut manifest: v2::Manifest =
-        read_json(&path)?.ok_or_else(|| anyhow!(t!("error-publish-missing-manifest")))?;
+        read_json(&path)?.ok_or_else(|| terr!("error-publish-missing-manifest"))?;
     manifest.schema = SCHEMA_VERSION;
     manifest.updated_at = Some(now_iso8601());
     write_json(&path, &manifest)
@@ -469,7 +485,11 @@ fn slug(version: &str) -> String {
 
 fn validate_segment(value: &str, what: &str) -> Result<()> {
     if value.is_empty() || value.contains('/') || value.contains('\\') || value.contains("..") {
-        bail!("invalid {what}: {value}");
+        return Err(terr!(
+            "error-publish-invalid-segment",
+            what = what,
+            value = value
+        ));
     }
     Ok(())
 }

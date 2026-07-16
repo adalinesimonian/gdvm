@@ -24,10 +24,12 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 ### Breaking Changes
 
 - All Godot version identifiers displayed by gdvm now adhere to gdvm's `[registry/][variant:]version[-tag]` format for consistency, for example, `csharp:4.3.0-stable`, `myreg/4.7.1-dev1`, and so on. This is a breaking change for any scripts that parse gdvm's output. Scripts that need information from gdvm should use the new `--format json` option (see below) instead of parsing the text output. Future changes to the text output format will no longer be considered breaking changes, so ensure that scripts only use the JSON output format.
+- gdvm's `remove` command no longer prompts for interactive confirmation before removing a version.
 
 ### Deprecated
 
 - `gdvm search` now accepts the search filter directly as an argument, e.g. `gdvm search 4`. The `--filter` option has been deprecated and will be removed in a future release.
+- The `-y/--yes` flag in `gdvm remove` has been deprecated as it does nothing anymore. It will be removed in a future release.
 
 ### New Features
 
@@ -37,6 +39,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - Setting `GDVM_GODOT_VERSION` makes `godot` run that version, taking precedence over any project settings. This is meant for compatibility with scripts that expect to use `godot` in `PATH` and may not be gdvm-aware.
 - Shell completions for bash, zsh, fish, and PowerShell are now provided via the new `gdvm completions <shell>` command. The install scripts now enable completions automatically for your detected shell.
 - Downloads, as well as other web requests, now retry and resume interrupted requests when possible.
+- Text surrounding errors (i.e. "Error:" and so on) is now also localized as the errors themselves were.
+- Errors now have unique error codes which are displayed in error messages. These help identify errors regardless of the localized text.
 
 ### Fixed
 
@@ -44,6 +48,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - Any updates to gdvm's shims will now properly be written to disk after an upgrade.
 - File sizes and download ETA are now properly formatted for the current locale.
 - Pinned versions written by `gdvm pin` are no longer missing a patch component.
+- `gdvm config set` run on a terminal with a non-interactive stdin will no longer hang indefinitely waiting for user input, and will instead exit with an error.
 
 ### Changed
 

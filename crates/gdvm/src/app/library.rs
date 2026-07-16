@@ -18,11 +18,11 @@
 use std::fs;
 use std::path::Path;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use super::*;
 use crate::paths::GdvmPaths;
-use crate::t;
+use crate::terr;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{ResolvedVersion, Variant, VersionQuery};
 
@@ -290,7 +290,7 @@ impl<'a> Library<'a> {
             self.usage_tracker.forget_install(install_name)?;
             Ok(())
         } else {
-            Err(anyhow!(t!("error-version-not-found")))
+            Err(terr!("error-version-not-found"))
         }
     }
 
@@ -309,19 +309,19 @@ impl<'a> Library<'a> {
         );
         let version_dir = self.paths.installs().join(&install_name);
         if !version_dir.exists() {
-            return Err(anyhow!(t!(
+            return Err(terr!(
                 "error-version-not-found",
                 version = &crate::version::display_version(gv, variant, registry),
-            )));
+            ));
         }
 
         let godot_executable = find_godot_executable(&version_dir, console)?;
 
         let godot_executable = godot_executable.ok_or_else(|| {
-            anyhow!(t!(
+            terr!(
                 "godot-executable-not-found",
                 version = &crate::version::display_version(gv, variant, registry),
-            ))
+            )
         })?;
 
         self.track_install_use(&install_name)?;

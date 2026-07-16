@@ -306,7 +306,7 @@ pub(crate) fn build_cli() -> Command {
                         .short('y')
                         .long("yes")
                         .num_args(0)
-                        .help(t!("help-yes")),
+                        .help(t!("help-remove-yes-deprecated")),
                 )
                 .arg(deprecated_csharp_flag()),
         )
