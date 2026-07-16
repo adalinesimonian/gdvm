@@ -281,14 +281,6 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
         }
     }
 
-
-
-    for item in path.components() {
-        if item.as_os_str().to_string_lossy().trim().is_empty() {
-            return Err(terr!(format!("Path contains empty components: {}", path.display()).as_str()));
-        }
-    }
-
     Ok(path.clean())
 }
 
