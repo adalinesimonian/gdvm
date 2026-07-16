@@ -259,6 +259,14 @@ fn is_reserved_path(path: &Path) -> Result<bool> {
 
 fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
     let path = absolute(path)?;
+
+    if path.to_string_lossy().trim().is_empty() {
+        return Err(terr!("Path cannot be empty")); // Todo: i18n error
+    }
+    if path.is_file() {
+        return Err(terr!(format!("Path points to a file, not a directory: {}", path.display()).as_str())); // Todo: i18n error
+    }
+
     if let Ok(true) = is_reserved_path(&path) {
         return Err(terr!(format!("Path is reserved for gdvm internals: {}", path.display()).as_str())); // Todo: i18n error
     }
@@ -273,12 +281,8 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
         }
     }
 
-    if path.to_string_lossy().trim().is_empty() {
-        return Err(terr!("Path cannot be empty")); // Todo: i18n error
-    }
-    if path.is_file() {
-        return Err(terr!(format!("Path points to a file, not a directory: {}", path.display()).as_str())); // Todo: i18n error
-    }
+
+
     for item in path.components() {
         if item.as_os_str().to_string_lossy().trim().is_empty() {
             return Err(terr!(format!("Path contains empty components: {}", path.display()).as_str()));
@@ -467,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize_and_validate_path_rejects_existing_files() {
+    fn test_normalize_and_validate_path_rejects_files() {
         let config = Config::default();
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("not_a_dir.txt");
