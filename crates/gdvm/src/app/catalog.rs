@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use crate::host::HostPlatform;
 use crate::registry::{self, BinarySelectionError};
 use crate::registry_version_resolver::RegistryVersionResolver;
 use crate::releases::{CatalogSet, ReleaseCatalog};
-use crate::t;
+use crate::terr;
 use crate::version::{ResolvedVersion, Variant, VersionQuery};
 
 #[derive(Clone, Copy)]
@@ -142,13 +142,13 @@ impl<'a> Catalogs<'a> {
     ) -> Result<&'r registry::BinaryInfo> {
         registry::select_binary(meta, *self.host, variant).map_err(|err| match err {
             BinarySelectionError::UnsupportedPlatform => {
-                anyhow!(t!("unsupported-platform"))
+                terr!("unsupported-platform")
             }
             BinarySelectionError::UnsupportedArch => {
-                anyhow!(t!("unsupported-architecture"))
+                terr!("unsupported-architecture")
             }
             BinarySelectionError::MissingUrl => {
-                anyhow!(t!("error-file-not-found"))
+                terr!("error-file-not-found")
             }
         })
     }

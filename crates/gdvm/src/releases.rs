@@ -19,14 +19,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use crate::metadata_cache::{
     CacheStore, RegistryReleasesCache, ReleaseCache, filter_cached_releases,
 };
 use crate::registry::{OFFICIAL_REGISTRY, Registry, ReleaseMetadata};
-use crate::t;
 use crate::version::{ResolvedVersion, VersionQuery};
+use crate::{t, terr};
 
 const CACHE_TTL: Duration = Duration::from_secs(48 * 3600); // 48 hours
 
@@ -95,7 +95,7 @@ impl ReleaseCatalog {
             .iter()
             .find(|r| r.tag_name == tag)
             .cloned()
-            .ok_or_else(|| anyhow!(t!("error-version-not-found")))?;
+            .ok_or_else(|| terr!("error-version-not-found"))?;
 
         if let Some(variants) = release.variants {
             return Ok(variants);
@@ -128,7 +128,7 @@ impl ReleaseCatalog {
             return self.registry.fetch_release(&entry.source).await;
         }
 
-        Err(anyhow!(t!("error-version-not-found")))
+        Err(terr!("error-version-not-found"))
     }
 
     pub async fn refresh_cache(&self) -> Result<()> {
@@ -219,7 +219,7 @@ impl CatalogSet {
         let name = registry.unwrap_or(OFFICIAL_REGISTRY);
         self.catalogs
             .get(name)
-            .ok_or_else(|| anyhow!(t!("error-registry-unknown", name = name)))
+            .ok_or_else(|| terr!("error-registry-unknown", name = name))
     }
 
     /// The official registry's release catalog.
@@ -275,7 +275,7 @@ fn derive_variants(metadata: &ReleaseMetadata) -> HashMap<String, Vec<String>> {
 fn now_seconds() -> Result<u64> {
     Ok(SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|_| anyhow!(t!("error-system-time")))?
+        .map_err(|_| terr!("error-system-time"))?
         .as_secs())
 }
 

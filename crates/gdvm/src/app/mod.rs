@@ -18,7 +18,7 @@
 use std::fs;
 use std::path::Path;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use crate::artifact_cache::ArtifactCache;
 use crate::config::Config;
@@ -31,7 +31,7 @@ use crate::releases::CatalogSet;
 use crate::run_version_resolver::RunVersionSource;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, VersionQuery};
-use crate::{eprintln_i18n, post_upgrade, println_i18n, t};
+use crate::{eprintln_i18n, post_upgrade, println_i18n, t, terr};
 
 mod catalog;
 mod defaults;
@@ -335,7 +335,7 @@ impl RunVersionSource for Gdvm {
             .await?;
 
         match matches.len() {
-            0 => Err(anyhow!(t!("error-version-not-found"))),
+            0 => Err(terr!("error-version-not-found")),
             1 => Ok(matches[0].version.clone()),
             _ => {
                 eprintln_i18n!("error-multiple-versions-found");
@@ -349,7 +349,7 @@ impl RunVersionSource for Gdvm {
                         )
                     );
                 }
-                Err(anyhow!(t!("error-version-not-found")))
+                Err(terr!("error-version-not-found"))
             }
         }
     }

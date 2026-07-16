@@ -18,7 +18,7 @@
 use std::fmt;
 
 use super::resolved::ResolvedVersion;
-use crate::t;
+use crate::terr;
 
 #[derive(Debug, Default)]
 pub struct VersionQuery {
@@ -158,15 +158,12 @@ impl VersionQuery {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+' | '*'))
             {
-                return Err(anyhow::anyhow!(t!(
-                    "error-unrecognized-version-format",
-                    input = raw
-                )));
+                return Err(terr!("error-unrecognized-version-format", input = raw));
             }
 
             let wildcards = pre.matches('*').count();
             if wildcards > 1 || (wildcards == 1 && !pre.ends_with('*')) {
-                return Err(anyhow::anyhow!(t!("error-wildcard-position", input = raw)));
+                return Err(terr!("error-wildcard-position", input = raw));
             }
         }
 
@@ -175,7 +172,7 @@ impl VersionQuery {
         let component = |i: usize| -> Result<u32, anyhow::Error> {
             pieces[i]
                 .parse()
-                .map_err(|_| anyhow::anyhow!(t!("error-unrecognized-version-format", input = raw)))
+                .map_err(|_| terr!("error-unrecognized-version-format", input = raw))
         };
         let (major, minor, patch, subpatch) = match pieces.len() {
             0 => (None, None, None, None),
@@ -194,10 +191,7 @@ impl VersionQuery {
                 Some(component(3)?),
             ),
             _ => {
-                return Err(anyhow::anyhow!(t!(
-                    "error-unrecognized-version-format",
-                    input = raw
-                )));
+                return Err(terr!("error-unrecognized-version-format", input = raw));
             }
         };
 

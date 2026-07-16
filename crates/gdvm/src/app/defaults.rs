@@ -18,13 +18,13 @@
 use std::fs;
 use std::path::Path;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use super::*;
 use crate::paths::GdvmPaths;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, Variant, VersionQuery};
-use crate::{project_version_detector, t};
+use crate::{project_version_detector, terr};
 
 #[derive(Clone, Copy)]
 pub struct Defaults<'a> {
@@ -58,7 +58,7 @@ impl<'a> Defaults<'a> {
         );
         let version_path = self.paths.installs().join(&install_name);
         if !version_path.exists() {
-            return Err(anyhow!(t!("error-version-not-found")));
+            return Err(terr!("error-version-not-found"));
         }
 
         self.library().track_install_use(&install_name)?;
@@ -83,9 +83,9 @@ impl<'a> Defaults<'a> {
         #[cfg(target_family = "windows")]
         if let Err(e) = std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir) {
             if e.raw_os_error() == Some(1314) {
-                return Err(anyhow!(t!("error-create-symlink-windows")));
+                return Err(terr!("error-create-symlink-windows"));
             }
-            return Err(anyhow!(e));
+            return Err(anyhow::anyhow!(e));
         }
 
         Ok(())

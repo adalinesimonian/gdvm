@@ -22,7 +22,14 @@ use gdvm::i18n::I18n;
 mod cli;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
+async fn main() {
+    if let Err(err) = run().await {
+        gdvm::ui::report_error(&err);
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<()> {
     I18n::init()?;
 
     if std::env::var_os(gdvm::app::Updater::BACKGROUND_CHECK_ENV_VAR).is_some() {
@@ -65,7 +72,7 @@ async fn main() -> Result<()> {
         })
         .await
         {
-            eprintln!("{err}");
+            gdvm::ui::report_error(&err);
 
             // Wait for 5 seconds before exiting on Windows to allow the user to read the error.
             // On other platforms, the wrapper script will display the error message in a dialog.

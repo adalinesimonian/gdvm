@@ -42,6 +42,12 @@
 #
 # extra-message        warning  A message exists in this locale but not in the
 #                               fallback locale (en-US).
+#
+# missing-error-code   error    A key is used with the terr! macro but has no
+#                               stable code in ERROR_CODES (error.rs).
+#
+# duplicate-error-code error    A stable error code or key appears more than
+#                               once in ERROR_CODES (error.rs).
 
 $ErrorActionPreference = "Stop"
 
@@ -361,7 +367,7 @@ function Get-FileSymbols {
 function Get-CodeKeys {
     $keys = @()
     $rsFiles = Get-ChildItem -Path $SrcPath -Recurse -Filter *.rs
-    $pattern = '(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?)!\s*\(\s*)"([^"\\]*(?:\\.[^"\\]*)*)"'
+    $pattern = '(?:i18n\.t(?:_args)?(?:_w)?\s*\(\s*|(?:[xe]?println_i18n|\bt(?:_w)?|\bterr)!\s*\(\s*)"([^"\\]*(?:\\.[^"\\]*)*)"'
     $attrPattern = '\bt_attr!\s*\(\s*"([^"\\]*(?:\\.[^"\\]*)*)"\s*,\s*"([^"\\]*(?:\\.[^"\\]*)*)"'
 
     foreach ($file in $rsFiles) {
@@ -374,6 +380,46 @@ function Get-CodeKeys {
         foreach ($match in [regex]::Matches($content, $attrPattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)) {
             $keys += $match.Groups[1].Value
             $keys += "$($match.Groups[1].Value).$($match.Groups[2].Value)"
+        }
+    }
+
+    return @($keys | Sort-Object -Unique)
+}
+
+function Get-ErrorCodes {
+    $errorRs = Join-Path $SrcPath "error.rs"
+    $entries = @()
+
+    if (Test-Path $errorRs) {
+        $tablePattern = '\(\s*"([^"]+)"\s*,\s*"(GDVM\d{4})"\s*\)'
+        $lineNo = 0
+
+        foreach ($line in (Get-Content -Path $errorRs)) {
+            $lineNo++
+
+            foreach ($match in [regex]::Matches($line, $tablePattern)) {
+                $entries += [PSCustomObject]@{
+                    Key  = $match.Groups[1].Value
+                    Code = $match.Groups[2].Value
+                    Line = $lineNo
+                }
+            }
+        }
+    }
+
+    return $entries
+}
+
+function Get-ErrorKeys {
+    $keys = @()
+    $rsFiles = Get-ChildItem -Path $SrcPath -Recurse -Filter *.rs
+    $pattern = '(?:\bterr!\s*\(\s*|CodedError::new\s*\(\s*)"([^"\\]*(?:\\.[^"\\]*)*)"'
+
+    foreach ($file in $rsFiles) {
+        $content = Get-Content -Path $file.FullName -Raw
+
+        foreach ($match in [regex]::Matches($content, $pattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)) {
+            $keys += $match.Groups[1].Value
         }
     }
 
@@ -425,6 +471,31 @@ if (-not (Test-Path $referenceFile)) {
 }
 
 $codeKeys = Get-CodeKeys
+
+$errorCodes = Get-ErrorCodes
+$codesByKey = @{}
+$seenCodes = @{}
+
+foreach ($entry in $errorCodes) {
+    if ($codesByKey.ContainsKey($entry.Key)) {
+        Write-Issue -Path "crates/gdvm/src/error.rs" -Line $entry.Line -Severity "error" -Rule "duplicate-error-code" -Message "$($entry.Key) is assigned more than one code"
+    }
+
+    $codesByKey[$entry.Key] = $entry.Code
+
+    if ($seenCodes.ContainsKey($entry.Code)) {
+        Write-Issue -Path "crates/gdvm/src/error.rs" -Line $entry.Line -Severity "error" -Rule "duplicate-error-code" -Message "$($entry.Code) is assigned to both $($seenCodes[$entry.Code]) and $($entry.Key)"
+    }
+
+    $seenCodes[$entry.Code] = $entry.Key
+}
+
+foreach ($key in (Get-ErrorKeys)) {
+    if (-not $codesByKey.ContainsKey($key)) {
+        Write-Issue -Path "crates/gdvm/src/error.rs" -Severity "error" -Rule "missing-error-code" -Message "$key is used with terr! but has no entry in ERROR_CODES"
+    }
+}
+
 $reference = Convert-FluentFile -FilePath $referenceFile
 $referenceSymbols = Get-FileSymbols -Parsed $reference
 $referenceOrder = @()

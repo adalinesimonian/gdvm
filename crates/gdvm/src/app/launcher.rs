@@ -20,14 +20,10 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 #[cfg(target_family = "unix")]
-use anyhow::anyhow;
-#[cfg(target_family = "unix")]
 use daemonize::Daemonize;
 
 use super::*;
 use crate::paths::GdvmPaths;
-#[cfg(target_family = "unix")]
-use crate::t;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{ResolvedVersion, Variant};
 
@@ -231,7 +227,7 @@ impl<'a> Launcher<'a> {
             {
                 Daemonize::new()
                     .start()
-                    .map_err(|e| anyhow!(t!("error-starting-godot", error = e.to_string(),)))?;
+                    .map_err(|e| crate::terr!("error-starting-godot", error = e.to_string(),))?;
                 std::process::Command::new(&path)
                     .args(godot_args)
                     .envs(dotenv_vars)
