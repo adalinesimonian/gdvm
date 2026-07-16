@@ -259,7 +259,7 @@ fn is_reserved_path(path: &Path) -> bool {
 fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
     let path = absolute(path)?;
     if is_reserved_path(&path) {
-        return Err(anyhow!("Path is reserved for gdvm internals: {}", path.display()));
+        return Err(terr!(format!("Path is reserved for gdvm internals: {}", path.display()).as_str())); // Todo: i18n error
     }
 
     if let Some(existing_path) = existing {
@@ -268,19 +268,19 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
             || path.starts_with(&existing_path)
             || existing_path.starts_with(&path)
         {
-            return Err(anyhow!("Configured paths must not overlap: {}", key));
+            return Err(terr!(format!("Configured paths must not overlap: {}", key).as_str())); // Todo: i18n error
         }
     }
 
     if path.to_string_lossy().trim().is_empty() {
-        return Err(anyhow!("Path cannot be empty"));
+        return Err(terr!("Path cannot be empty")); // Todo: i18n error
     }
     if path.is_file() {
-        return Err(anyhow!("Path points to a file, not a directory: {}", path.display()));
+        return Err(terr!(format!("Path points to a file, not a directory: {}", path.display()).as_str())); // Todo: i18n error
     }
     for item in path.components() {
         if item.as_os_str().to_string_lossy().trim().is_empty() {
-            return Err(anyhow!("Path contains empty components: {}", path.display()));
+            return Err(terr!(format!("Path contains empty components: {}", path.display()).as_str()));
         }
     }
 
@@ -445,8 +445,9 @@ mod tests {
         );
     }
     #[test]
-    fn test_get_absolute_path_normalizes_relative_paths() {
-        let path = get_absolute_path_to_directory("subdir/../installs").unwrap();
+    fn test_normalize_and_validate_path_normalizes_relative_paths() {
+        let config = Config::default();
+        let path = normalize_and_validate_path(Path::new("subdir/../installs"), "install.path", config.install_path.as_ref()).unwrap();
 
         assert!(path.is_absolute());
         assert!(
@@ -458,17 +459,19 @@ mod tests {
     }
 
     #[test]
-    fn test_get_absolute_path_rejects_empty_strings() {
-        assert!(get_absolute_path_to_directory("").is_err());
-        assert!(get_absolute_path_to_directory("   ").is_err());
+    fn test_normalize_and_validate_path_rejects_empty_strings() {
+        let config = Config::default();
+        assert!(normalize_and_validate_path(Path::new(""), "install.path", config.install_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(Path::new("   "), "install.path", config.install_path.as_ref()).is_err());
     }
 
     #[test]
-    fn test_get_absolute_path_rejects_existing_files() {
+    fn test_normalize_and_validate_path_rejects_existing_files() {
+        let config = Config::default();
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("not_a_dir.txt");
         std::fs::write(&file_path, "data").unwrap();
 
-        assert!(get_absolute_path_to_directory(file_path.to_string_lossy().as_ref()).is_err());
+        assert!(normalize_and_validate_path(Path::new(&file_path.display().to_string()), "install.path", config.install_path.as_ref()).is_err());
     }
 }
