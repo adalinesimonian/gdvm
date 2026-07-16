@@ -33,9 +33,8 @@ pub struct GdvmPaths {
 impl GdvmPaths {
     /// Construct paths rooted at the GDVM base directory, ~/.gdvm, and ensure the base, installs,
     /// cache, and bin directories exist.
-    pub fn new() -> Result<Self> {
+    pub fn new(config: &Config) -> Result<Self> {
         let base = get_home_dir()?.join(".gdvm");
-        let config = Config::load()?;
         let installs = config
             .install_path
             .clone()
