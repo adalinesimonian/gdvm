@@ -248,17 +248,18 @@ pub fn get_home_dir() -> Result<PathBuf> {
     Ok(base_dirs.home_dir().to_path_buf())
 }
 
-fn is_reserved_path(path: &Path) -> bool {
-    let reserved_names = [".gdvm", "bin", "cache", "installs"];
-    path.components().any(|component| {
-        let segment = component.as_os_str().to_str().unwrap_or_default();
-        reserved_names.contains(&segment)
-    })
+fn is_reserved_path(path: &Path) -> Result<bool> {
+    let resolved_path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let candidate = resolved_path;
+    let gdvm_base = gdvm_dir()?;
+    Ok(candidate == gdvm_base
+        || candidate.starts_with(&gdvm_base)
+        || gdvm_base.starts_with(&candidate))
 }
 
 fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
     let path = absolute(path)?;
-    if is_reserved_path(&path) {
+    if let Ok(true) = is_reserved_path(&path) {
         return Err(terr!(format!("Path is reserved for gdvm internals: {}", path.display()).as_str())); // Todo: i18n error
     }
 
@@ -447,7 +448,7 @@ mod tests {
     #[test]
     fn test_normalize_and_validate_path_normalizes_relative_paths() {
         let config = Config::default();
-        let path = normalize_and_validate_path(Path::new("subdir/../installs"), "install.path", config.install_path.as_ref()).unwrap();
+        let path = normalize_and_validate_path(Path::new("../godot"), "install.path", config.install_path.as_ref()).unwrap();
 
         assert!(path.is_absolute());
         assert!(
@@ -455,7 +456,7 @@ mod tests {
                 .components()
                 .any(|component| component == std::path::Component::ParentDir)
         );
-        assert_eq!(path, std::env::current_dir().unwrap().join("installs"));
+        assert_eq!(path, std::env::current_dir().unwrap().join("../godot").clean());
     }
 
     #[test]
