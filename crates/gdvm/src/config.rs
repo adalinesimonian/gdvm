@@ -21,11 +21,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, absolute};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use directories::BaseDirs;
 use serde::{Deserialize, Serialize};
 
-use crate::t;
+use crate::{t, terr};
 
 /// A list of known configuration keys.
 pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days", "install.path", "cache.path"];
@@ -106,13 +106,13 @@ impl ConfigOps for Config {
                 Ok(())
             }
             "prune.max-age-days" => {
-                let days: u64 = value.parse().map_err(|_| {
-                    anyhow!(t!("error-config-invalid-number", key = key, value = value))
-                })?;
+                let days: u64 = value
+                    .parse()
+                    .map_err(|_| terr!("error-config-invalid-number", key = key, value = value))?;
                 self.prune_max_age_days = Some(days);
                 Ok(())
             }
-            _ => Err(anyhow!(t!("error-config-unknown-key", key = key))),
+            _ => Err(terr!("error-config-unknown-key", key = key)),
         }
     }
 
@@ -130,7 +130,7 @@ impl ConfigOps for Config {
                 self.prune_max_age_days = None;
                 Ok(())
             }
-            _ => Err(anyhow!(t!("error-config-unknown-key", key = key))),
+            _ => Err(terr!("error-config-unknown-key", key = key)),
         }
     }
 
@@ -171,7 +171,7 @@ pub fn validate_registry_name(name: &str) -> Result<()> {
         || name.contains("..")
         || name.contains(':')
     {
-        return Err(anyhow!(t!("error-registry-invalid-name", name = name)));
+        return Err(terr!("error-registry-invalid-name", name = name));
     }
     Ok(())
 }
@@ -206,7 +206,7 @@ impl Config {
     /// Remove a registry from config.
     pub fn remove_registry(&mut self, name: &str) -> Result<()> {
         if self.registries.remove(name).is_none() {
-            return Err(anyhow!(t!("error-registry-not-configured", name = name)));
+            return Err(terr!("error-registry-not-configured", name = name));
         }
         Ok(())
     }
@@ -244,7 +244,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
         }
     }
 
-    let base_dirs = BaseDirs::new().ok_or(anyhow!(t!("error-find-user-dirs")))?;
+    let base_dirs = BaseDirs::new().ok_or(terr!("error-find-user-dirs"))?;
     Ok(base_dirs.home_dir().to_path_buf())
 }
 

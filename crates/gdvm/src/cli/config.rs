@@ -18,7 +18,7 @@
 use std::io::Write;
 
 use gdvm::config::{self, ConfigOps};
-use gdvm::{eprintln_i18n, println_i18n, t};
+use gdvm::{println_i18n, t, terr};
 
 /// Handle the 'config' subcommand
 pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
@@ -50,6 +50,8 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
             // If the value argument is not provided, prompt the user.
             let value: String = if let Some(v) = sub_m.get_one::<String>("value") {
                 v.clone()
+            } else if !std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+                return Err(terr!("error-non-interactive-value", key = key.as_str()));
             } else {
                 // Build the prompt message from the Fluent bundle.
                 let prompt = t!("config-set-prompt", key = key.as_str());
@@ -59,8 +61,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                     match rpassword::prompt_password("") {
                         Ok(input) => input,
                         Err(err) => {
-                            eprintln!("{}: {}", t!("error-reading-input"), err);
-                            return Ok(());
+                            return Err(terr!("error-reading-input").context(err));
                         }
                     }
                 } else {
@@ -76,20 +77,15 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                 gdvm::ui::warn(t!("warning-setting-sensitive"));
             }
             if !config::KNOWN_KEYS.contains(&key.as_str()) {
-                eprintln_i18n!("error-unknown-config-key");
-            } else {
-                match config::Config::modify(|config| Ok(config.set_value(key, &value)))? {
-                    Ok(()) => println_i18n!("config-set-success"),
-                    Err(_) => eprintln_i18n!("error-invalid-config-value", key = key),
-                }
+                return Err(terr!("error-unknown-config-key"));
             }
+            config::Config::modify(|config| config.set_value(key, &value))?;
+            println_i18n!("config-set-success");
         }
         Some(("unset", sub_m)) => {
             let key = sub_m.get_one::<String>("key").unwrap();
-            match config::Config::modify(|config| Ok(config.unset_value(key)))? {
-                Ok(()) => println_i18n!("config-unset-success", key = key),
-                Err(_) => eprintln_i18n!("error-unknown-config-key"),
-            }
+            config::Config::modify(|config| config.unset_value(key))?;
+            println_i18n!("config-unset-success", key = key);
         }
         Some(("list", sub_m)) => {
             let show_sensitive = sub_m.get_flag("show-sensitive");
@@ -102,7 +98,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                         match (value_opt, config.is_sensitive_key(key), show_sensitive) {
                             (Some(_), true, false) => "********".to_string(),
                             (Some(val), _, _) => val,
-                            (None, _, _) => "<not set>".to_string(),
+                            (None, _, _) => t!("config-key-not-set-value").to_string(),
                         };
                     println!("{key} = {display_value}");
                 }
@@ -118,7 +114,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                 }
             }
         }
-        _ => eprintln!("{}", t!("error-invalid-config-subcommand")),
+        _ => return Err(terr!("error-invalid-config-subcommand")),
     }
     Ok(())
 }

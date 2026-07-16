@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::config::Config;
 use gdvm::version::VersionQuery;
-use gdvm::{eprintln_i18n, t};
+use gdvm::{eprintln_i18n, t, terr};
 
 mod args;
 mod cache;
@@ -143,12 +143,20 @@ async fn ensure_registry_trusted(
         });
     }
 
+    if !std::io::stdin().is_terminal() {
+        return Err(terr!(
+            "error-non-interactive-trust",
+            registry = name,
+            url = url.as_str()
+        ));
+    }
+
     eprint!("{} ", t!("registry-trust-prompt"));
     io::stdout().flush().ok();
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     if input.trim().to_lowercase() != t!("confirm-yes") {
-        return Err(anyhow!(t!("registry-trust-aborted")));
+        return Err(terr!("registry-trust-aborted"));
     }
 
     Config::modify(|config| {

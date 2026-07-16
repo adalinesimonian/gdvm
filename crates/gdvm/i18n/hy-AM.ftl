@@ -67,15 +67,18 @@ help-version-long =
 
     Ձևաչափ՝ [տարբերակ:]տարբերակ_կամ_բանալի_բառ
 
+    Եթե առկա է վերջում դրված *, այն կհամապատասխանի նույն նախածանցով ամենանոր կառուցմանը, օրինակ՝ «4.7-dev*»-ը համապատասխանում է 4.7-dev1, 4.7-dev2 և այլն։
+
     Բանալի բառեր։ «latest» համապատասխանում է ամենանոր տարբերակին: Լռելյայն ներառվում են միայն կայուն թողարկումները, սակայն նախնական թողարկումները կարելի է ներառել --pre դրոշակով:
 
     Տարբերակներ՝ նախածանցեք տարբերակի անունով և երկու կետով, օրինակ՝ «csharp:4.4» C# տարբերակի համար:
 
-    Օրինակներ՝ 4.4-ը կտեղադրի { -godot } 4.4-ի վերջին կայուն թողարկումը: Եթե միայն նախնական թողարկումներ կան, ապա կտեղադրվի վերջին նախնական թողարկումը: 4.3-rc-ը կտեղադրի { -godot } 4.3-ի վերջին թողարկման թեկնածուն և այլն:
+    Օրինակներ՝ 4.4-ը կտեղադրի { -godot } 4.4-ի վերջին կայուն թողարկումը: Եթե միայն նախնական թողարկումներ կան, ապա կտեղադրվի վերջին նախնական թողարկումը: 4.3-rc*-ը կտեղադրի { -godot } 4.3-ի վերջին թողարկման թեկնածուն և այլն:
 help-version-installed = Տեղադրված տարբերակը (օրինակ՝ 4.2 կամ 4.2-stable):
 
 help-search = Ցուցադրել մատյանի հասանելի թողարկումները
 help-filter = Ընտրովի տող թողարկման պիտակները ֆիլտրելու համար
+help-filter-deprecated = [հնացած] Ընտրովի տող թողարկման պիտակները ֆիլտրելու համար: Փոխարենը օգտագործեք ֆիլտրի դիրքային արգումենտը։
 help-include-pre = Ներառել նախնական թողարկումները (rc, beta, dev)
 help-cache-only = Օգտագործել միայն պահված թողարկման տեղեկատվությունը առանց գրանցամատյանին հարցում անելու
 help-limit = Ցուցադրվող թողարկումների քանակը, լռելյայն 10. Օգտագործեք 0՝ բոլորի ցուցադրման համար
@@ -109,6 +112,7 @@ prune-item = - { $label } ({ size-display })
 help-force = Ստիպել վերատեղադրումը, նույնիսկ եթե տարբերակը արդեն տեղադրված է:
 help-redownload = Նորից ներբեռնել տարբերակը, նույնիսկ եթե այն արդեն տեղադրված է:
 help-yes = Բաց թողնել հեռացման հաստատման հուշումը
+help-remove-yes-deprecated = [հնացած] Այս դրոշակը անօգուտ է և կհեռացվի ապագա թողարկումներում:
 help-link-version = Այն տարբերակը, որը պետք է կապվի։ Եթե այն չի տրվում, տարբերակը որոշվում է ընթացիկ պանակի կամ լռելյայն տարբերակի հիման վրա։
 help-link-path = Ուղին, որտեղ կստեղծվի հղումը կամ պատճենը, օրինակ «{ $platform ->
     [windows] godot.exe
@@ -183,6 +187,11 @@ error-publish-no-such-version = այդպիսի տարբերակ չկա. { $versi
 error-publish-store-or-url-required = պետք է տրամադրվի --store կամ --url
 error-publish-store-requires-file = --store-ը պահանջում է տեղական --file
 error-publish-url-requires-integrity = --url-ը պահանջում է կամ տեղական --file, կամ բացահայտ --sha512 և --size
+error-publish-already-initialized = Ռեեստրը արդեն սկզբնավորված է { $path } հասցեում
+error-publish-archive-not-found = Արխիվը չի գտնվել՝ { $path }
+error-publish-no-such-platform = { $platform } հարթակ չկա { $variant } տարբերակի համար
+error-publish-no-such-variant = { $variant } տարբերակ չկա
+error-publish-invalid-segment = Անվավեր { $what }՝ { $value }
 error-registry-fetch-failed = Չհաջողվեց բեռնել { $url }. HTTP { $status }
 error-registry-fetch-release-failed = Չհաջողվեց բեռնել թողարկման մետատվյալները
 error-registry-invalid-name = Անվավեր ռեգիստրի անուն. { $name }
@@ -198,6 +207,13 @@ error-spec-empty-variant = Դատարկ տարբերակի անուն « { $inpu
 error-spec-empty-version = Դատարկ տարբերակ « { $input } »-ում
 error-system-time = Համակարգի ժամանակը UNIX դարաշրջանից առաջ է
 error-unrecognized-version-format = Տարբերակի չճանաչված ձևաչափ. { $input }
+error-non-interactive-trust = Հնարավոր չէ հարցնել «{ $registry }» ռեգիստրին ({ $url }) վստահելու մասին ոչ ինտերակտիվ նստաշրջանում։ Փոխանցեք --yes՝ դրան բացահայտորեն վստահելու համար։
+error-non-interactive-value = Հնարավոր չէ հարցնել «{ $key }»-ի արժեքը ոչ ինտերակտիվ նստաշրջանում։ Փոխարենը փոխանցեք արժեքը որպես արգումենտ։
+error-registry-unsupported-schema = «{ $registry }» ռեգիստրը հայտարարում է չաջակցվող սխեմայի տարբերակ { $schema }։
+label-caused-by = Պատճառը.
+label-error-coded = Սխալ { $code }.
+error-wildcard-position = Ունիվերսալ նիշը (*) կարող է հայտնվել միայն թողարկման պիտակի վերջում, օրինակ՝ 4.7-dev* (ստացվել է { $input })։
+hint-try-wildcard = { $requested } պիտակով թողարկում չկա, բայց կան նմանատիպ պիտակներ, որոնցից ամենանորը { $newest }-ն է։ Փորձեք { $suggestion }՝ դրանց համապատասխանելու համար։
 download-retrying = Ներբեռնումն ընդհատվեց, կրկին փորձ ({ $attempt } { $max }-ից)...
 lock-waiting = Սպասում է { -gdvm(case: "genitive") } մեկ այլ գործընթացի ավարտին (կողպեք՝ { $resource })...
 prune-skipped-error = { $item }-ը բաց է թողնվում. { $error }
@@ -227,10 +243,7 @@ error-link-copy = Կատարվողը պատճենելու ձախողում՝ {$e
 error-no-stable-releases-found = Կայուն թողարկումներ չեն գտնվել:
 
 error-starting-godot = Չհաջողվեց գործարկել { -godot(case: "definite") }՝ { $error }
-
-confirm-remove = Վստա՞հ եք, որ ցանկանում եք հեռացնել այս տարբերակը: (այո/ոչ):
 confirm-yes = այո
-remove-cancelled = Հեռացումը չեղարկված է:
 
 default-set-success = Հաջողությամբ սահմանվել է {$version} որպես լռելյայն { -godot } տարբերակը։
 default-unset-success = Հաջողությամբ հեռացվեց լռելյայն { -godot } տարբերակը։
@@ -367,8 +380,8 @@ error-reading-input = Մուտքագրված արժեքը սխալ է։ Խնդր
 config-set-success = Կարգավորումը հաջողությամբ թարմացվեց։
 config-unset-success = Կարգավորման բանալին { $key } հաջողությամբ հեռացվեց։
 config-key-not-set = Կարգավորման բանալին սահմանված չէ։
+config-key-not-set-value = <սահմանված չէ>
 error-unknown-config-key = Անհայտ կարգավորման բանալի։
-error-invalid-config-value = Անվավեր արժեք { $key } կարգավորման բանալու համար։
 error-invalid-config-subcommand = Անվավեր ենթահրաման config-ի համար։ Օգտագործեք «get», «set» կամ «list»։
 error-parse-config = Չհաջողվեց վերլուծել կարգավորման ֆայլը․ { $error }
 error-parse-config-using-default = Օգտագործվում են կարգավորման լռելյայն արժեքները։
@@ -385,7 +398,6 @@ registry-added = Ավելացվեց { $registry } ռեեստրը ({ $url }):
 registry-removed = Հեռացվեց { $registry } ռեեստրը:
 registry-list-header = Կարգավորված ռեեստրներ.
 registry-tag-official = պաշտոնական
-registry-error = Ռեեստրի սխալ. { $error }
 
 error-invalid-registry-subcommand = Անվավեր ռեեստրի ենթահրաման: Օգտագործեք «add», «remove», «list» կամ «refresh»:
 registry-trust-warning = { $registry } ({ $url })-ը հատուկ ռեեստր է, ոչ թե պաշտոնականը: { -gdvm(case: "definite") } ստուգում է, որ ներբեռնումները համապատասխանում են ռեեստրի նշածին, բայց չի կարող ջանաչել, թե արդյոք դրանք անվտանգ են գործարկելու համար: Տեղադրեք դրանից միայն այն դեպքում, եթե վստահում եք նրան, ով այն կառավարում է:
