@@ -258,8 +258,9 @@ fn is_reserved_path(path: &Path) -> Result<bool> {
 }
 
 fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
-    let path = absolute(path)?;
 
+    let path = absolute(path.clean())?;
+    
     if path.to_string_lossy().trim().is_empty() {
         return Err(terr!("Path cannot be empty")); // Todo: i18n error
     }
@@ -281,7 +282,7 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
         }
     }
 
-    Ok(path.clean())
+    Ok(path)
 }
 
 impl Config {
