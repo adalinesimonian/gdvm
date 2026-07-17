@@ -65,17 +65,17 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
             gdvm::ui::milestone(t!("status-removed"), &display);
         }
         _ => {
-            for installed in &resolved_versions {
-                println!(
-                    "- {}",
-                    version::display_version(
-                        &installed.version,
-                        &installed.variant,
-                        installed.registry.as_deref(),
+            let list = resolved_versions
+                .iter()
+                .map(|v| {
+                    format!(
+                        "- {}",
+                        version::display_version(&v.version, &v.variant, v.registry.as_deref(),)
                     )
-                );
-            }
-            return Err(terr!("error-multiple-versions-found").into());
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            return Err(terr!("error-multiple-versions-found", list = list.as_str()).into());
         }
     }
 
