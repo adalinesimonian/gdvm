@@ -83,7 +83,7 @@ impl<'a> Defaults<'a> {
         #[cfg(target_family = "windows")]
         if let Err(e) = std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir) {
             if e.raw_os_error() == Some(1314) {
-                return Err(terr!("error-create-symlink-windows"));
+                return Err(terr!("error-create-symlink-windows").into());
             }
             return Err(anyhow::anyhow!(e));
         }
