@@ -126,10 +126,9 @@ pub const ERROR_CODES: &[(&str, &str)] = &[
     ("upgrade-no-binary", "GDVM6003"),
     ("upgrade-checksum-required", "GDVM6004"),
     ("upgrade-install-dir-failed", "GDVM6005"),
-    ("upgrade-file-create-failed", "GDVM6006"),
-    ("upgrade-rename-failed", "GDVM6007"),
-    ("upgrade-replace-failed", "GDVM6008"),
-    ("error-post-upgrade-action-failed", "GDVM6009"),
+    ("upgrade-rename-failed", "GDVM6006"),
+    ("upgrade-replace-failed", "GDVM6007"),
+    ("error-post-upgrade-action-failed", "GDVM6008"),
     //
     // GDVM7xxx: command usage and CLI stuff.
     //

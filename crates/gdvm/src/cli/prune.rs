@@ -84,6 +84,19 @@ pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         }
     }
 
+    if !report.interrupted.is_empty() {
+        println_i18n!("prune-interrupted-header");
+        for item in &report.interrupted {
+            let (value, unit) = byte_display_args(item.freed_bytes);
+            println_i18n!(
+                "prune-item",
+                label = item.label.as_str(),
+                value = value,
+                unit = unit
+            );
+        }
+    }
+
     if report.preserved_by_link > 0 {
         println_i18n!("prune-preserved-by-link", count = report.preserved_by_link);
     }

@@ -19,8 +19,10 @@ use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use gdvm::download_utils::download_to_file;
-use sha2::{Digest, Sha256};
+use gdvm::download_utils::{
+    ExpectedDigests, PriorPartial, download_to_file, download_to_file_resuming, download_verified,
+};
+use sha2::{Digest, Sha256, Sha512};
 
 /// A scripted response for an incoming connection.
 enum Script {
@@ -234,4 +236,304 @@ async fn permanent_errors_do_not_retry() {
         1,
         "a 404 will not change; retrying it wastes time and requests"
     );
+}
+
+/// Download `content`, resuming it from `prefix_len` bytes.
+async fn download_resuming(
+    url: &str,
+    content: &[u8],
+    prefix_len: usize,
+    validator: &str,
+) -> anyhow::Result<(
+    gdvm::download_utils::DownloadDigests,
+    Vec<u8>,
+    Option<String>,
+)> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("out.bin");
+    let meta = dir.path().join("out.bin.meta");
+    std::fs::write(&path, &content[..prefix_len])?;
+
+    let mut file = tokio::fs::File::options()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .await?;
+    let digests = download_to_file_resuming(
+        url,
+        &mut file,
+        Some(PriorPartial {
+            downloaded: prefix_len as u64,
+            validator: validator.to_string(),
+        }),
+        Some(&meta),
+        "test",
+    )
+    .await?;
+    let persisted = std::fs::read_to_string(&meta).ok();
+    Ok((digests, std::fs::read(&path)?, persisted))
+}
+
+#[tokio::test]
+async fn resumes_a_previous_runs_partial_download() {
+    allow_loopback_http();
+    let content = test_content();
+    let half = content.len() / 2;
+    let (url, requests) = serve(content.clone(), vec![Script::Range]);
+
+    let (digests, bytes, _) = download_resuming(&url, &content, half, "\"v1\"")
+        .await
+        .unwrap();
+
+    assert_eq!(bytes, content);
+    assert_eq!(
+        digests.sha256,
+        gdvm::hash_utils::to_hex(&Sha256::digest(&content)),
+        "digests must cover prior bytes and resumed bytes together"
+    );
+
+    let first = &requests.lock().unwrap()[0];
+    assert!(
+        first.contains(&format!("range: bytes={half}-")),
+        "the request must resume from the prior offset: {first}"
+    );
+    assert!(
+        first.contains("if-range: \"v1\""),
+        "the request must carry the persisted validator: {first}"
+    );
+}
+
+#[tokio::test]
+async fn restarts_when_the_server_rejects_the_resume() {
+    allow_loopback_http();
+    let content = test_content();
+    let half = content.len() / 2;
+    let (url, _) = serve(content.clone(), vec![Script::Full]);
+
+    let stale: Vec<u8> = vec![0xAB; half];
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("out.bin");
+    let meta = dir.path().join("out.bin.meta");
+    std::fs::write(&path, &stale).unwrap();
+
+    let mut file = tokio::fs::File::options()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .await
+        .unwrap();
+    let digests = download_to_file_resuming(
+        url.as_str(),
+        &mut file,
+        Some(PriorPartial {
+            downloaded: half as u64,
+            validator: "\"old\"".to_string(),
+        }),
+        Some(&meta),
+        "test",
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(std::fs::read(&path).unwrap(), content);
+    assert_eq!(
+        digests.sha256,
+        gdvm::hash_utils::to_hex(&Sha256::digest(&content)),
+        "a rejected resume must restart cleanly from zero"
+    );
+}
+
+#[tokio::test]
+async fn persists_the_validator_for_the_next_run() {
+    allow_loopback_http();
+    let content = test_content();
+    let full_len = content.len();
+    let (url, _) = serve(
+        content.clone(),
+        vec![Script::Truncated {
+            send: full_len,
+            resumable: true,
+        }],
+    );
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("out.bin");
+    let meta = dir.path().join("out.bin.meta");
+    let mut file = tokio::fs::File::options()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(&path)
+        .await
+        .unwrap();
+
+    download_to_file_resuming(url.as_str(), &mut file, None, Some(&meta), "test")
+        .await
+        .unwrap();
+
+    assert_eq!(
+        std::fs::read_to_string(&meta).unwrap(),
+        "\"v1\"",
+        "the validator must be persisted as soon as the transfer starts"
+    );
+}
+
+#[tokio::test]
+async fn corrupted_prior_bytes_yield_a_mismatching_digest() {
+    allow_loopback_http();
+    let content = test_content();
+    let half = content.len() / 2;
+    let (url, _) = serve(content.clone(), vec![Script::Range]);
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("out.bin");
+    let meta = dir.path().join("out.bin.meta");
+    let mut corrupted = content[..half].to_vec();
+    corrupted[0] ^= 0xFF;
+    std::fs::write(&path, &corrupted).unwrap();
+
+    let mut file = tokio::fs::File::options()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .await
+        .unwrap();
+    let digests = download_to_file_resuming(
+        url.as_str(),
+        &mut file,
+        Some(PriorPartial {
+            downloaded: half as u64,
+            validator: "\"v1\"".to_string(),
+        }),
+        Some(&meta),
+        "test",
+    )
+    .await
+    .unwrap();
+
+    assert_ne!(
+        digests.sha256,
+        gdvm::hash_utils::to_hex(&Sha256::digest(&content)),
+        "the digest must expose the corruption for the caller to catch"
+    );
+}
+
+fn sha512_hex(content: &[u8]) -> String {
+    gdvm::hash_utils::to_hex(&Sha512::digest(content))
+}
+
+#[tokio::test]
+async fn verified_download_lands_only_at_the_final_path() {
+    allow_loopback_http();
+    let content = test_content();
+    let (url, _) = serve(content.clone(), vec![Script::Full]);
+
+    let dir = tempfile::tempdir().unwrap();
+    let final_path = dir.path().join("artifact.zip");
+    let partial = dir.path().join(".partial-artifact.zip");
+    let meta = dir.path().join(".partial-artifact.zip.meta");
+
+    let sha = sha512_hex(&content);
+    download_verified(
+        url.as_str(),
+        &final_path,
+        &partial,
+        &meta,
+        ExpectedDigests {
+            sha: &sha,
+            size: Some(content.len() as u64),
+        },
+        "test",
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(std::fs::read(&final_path).unwrap(), content);
+    assert!(!partial.exists(), "the partial must be renamed away");
+    assert!(!meta.exists(), "the sidecar must be cleaned up");
+}
+
+#[tokio::test]
+async fn corrupted_prior_bytes_trigger_one_fresh_redownload() {
+    allow_loopback_http();
+    let content = test_content();
+    let half = content.len() / 2;
+    let (url, requests) = serve(content.clone(), vec![Script::Range, Script::Full]);
+
+    let dir = tempfile::tempdir().unwrap();
+    let final_path = dir.path().join("artifact.zip");
+    let partial = dir.path().join(".partial-artifact.zip");
+    let meta = dir.path().join(".partial-artifact.zip.meta");
+
+    let mut corrupted = content[..half].to_vec();
+    corrupted[0] ^= 0xFF;
+    std::fs::write(&partial, &corrupted).unwrap();
+    std::fs::write(&meta, "\"v1\"").unwrap();
+
+    let sha = sha512_hex(&content);
+    download_verified(
+        url.as_str(),
+        &final_path,
+        &partial,
+        &meta,
+        ExpectedDigests {
+            sha: &sha,
+            size: None,
+        },
+        "test",
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        std::fs::read(&final_path).unwrap(),
+        content,
+        "the fresh retry must produce the correct file"
+    );
+    assert!(!partial.exists());
+    assert!(!meta.exists());
+
+    let requests = requests.lock().unwrap();
+    assert!(
+        requests[0].contains(&format!("range: bytes={half}-")),
+        "the first attempt must have tried to resume: {}",
+        requests[0]
+    );
+    assert!(
+        !requests[1].contains("range: bytes="),
+        "the retry must download from scratch: {}",
+        requests[1]
+    );
+}
+
+#[tokio::test]
+async fn a_fresh_download_with_a_wrong_digest_is_an_error() {
+    allow_loopback_http();
+    let content = test_content();
+    let (url, _) = serve(content.clone(), vec![Script::Full]);
+
+    let dir = tempfile::tempdir().unwrap();
+    let final_path = dir.path().join("artifact.zip");
+    let partial = dir.path().join(".partial-artifact.zip");
+    let meta = dir.path().join(".partial-artifact.zip.meta");
+
+    let wrong = sha512_hex(b"different content entirely");
+    let err = download_verified(
+        url.as_str(),
+        &final_path,
+        &partial,
+        &meta,
+        ExpectedDigests {
+            sha: &wrong,
+            size: None,
+        },
+        "test",
+    )
+    .await
+    .expect_err("a fresh mismatch is a registry problem, not a retry");
+
+    let message = format!("{err}");
+    assert!(message.contains("artifact.zip"), "{message}");
+    assert!(!final_path.exists(), "nothing may land at the final path");
+    assert!(!partial.exists(), "the failed download must not linger");
 }

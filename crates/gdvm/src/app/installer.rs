@@ -23,7 +23,6 @@ use anyhow::Result;
 
 use super::*;
 use crate::artifact_cache::ArtifactCache;
-use crate::download_utils::download_to_file;
 use crate::hash_utils::{self, ShaType};
 use crate::paths::GdvmPaths;
 use crate::registry_version_resolver::RegistryVersionResolver;
@@ -37,16 +36,48 @@ pub enum InstallOutcome {
     AlreadyInstalled,
 }
 
-/// Build the checksum mismatch error for the given file.
-fn checksum_mismatch_error(display_path: &Path) -> anyhow::Error {
-    terr!(
-        "error-checksum-mismatch",
-        file = display_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string()
-    )
+/// Get the path to where to extract versions before moving them into place.
+fn staging_path_for(version_path: &Path) -> Result<PathBuf> {
+    let name = version_path
+        .file_name()
+        .ok_or_else(|| terr!("error-invalid-path"))?
+        .to_string_lossy();
+    Ok(version_path.with_file_name(format!(".staging-{name}")))
+}
+
+/// Directory where an extracted Godot was staged, along with whether or not it
+/// was committed, i.e. written into its final destination.
+struct StagingDir {
+    path: PathBuf,
+    committed: bool,
+}
+
+impl StagingDir {
+    fn new(path: PathBuf) -> Self {
+        Self {
+            path,
+            committed: false,
+        }
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Move the fully extracted directory into place.
+    fn commit(mut self, version_path: &Path) -> Result<()> {
+        fs::rename(&self.path, version_path)?;
+        self.committed = true;
+        Ok(())
+    }
+}
+
+impl Drop for StagingDir {
+    fn drop(&mut self) {
+        if !self.committed {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
 }
 
 /// Verifies the SHA of a file against an expected hash.
@@ -62,28 +93,7 @@ fn verify_sha_file(file: &mut fs::File, expected: &str, display_path: &Path) -> 
     if local_hash == expected.to_lowercase() {
         Ok(())
     } else {
-        Err(checksum_mismatch_error(display_path))
-    }
-}
-
-/// Checks streamed download digests against an expected hash, choosing SHA-256
-/// or SHA-512 based on the hash length.
-pub(super) fn verify_download_digests(
-    digests: &crate::download_utils::DownloadDigests,
-    expected: &str,
-    display_path: &Path,
-) -> Result<()> {
-    let sha_type = ShaType::from_expected(expected)?;
-
-    let actual = match sha_type {
-        ShaType::Sha256 => &digests.sha256,
-        ShaType::Sha512 => &digests.sha512,
-    };
-
-    if actual.eq_ignore_ascii_case(expected) {
-        Ok(())
-    } else {
-        Err(checksum_mismatch_error(display_path))
+        Err(crate::hash_utils::checksum_mismatch_error(display_path))
     }
 }
 
@@ -132,8 +142,18 @@ impl<'a> Installer<'a> {
             crate::locks::Resource::Install(&install_str),
         )?;
 
+        let display = crate::version::display_version(gv, variant, registry);
+
         if version_path.exists() {
-            if force {
+            let healthy = crate::app::find_godot_executable(&version_path, false)?.is_some();
+
+            if force || !healthy {
+                if !healthy && !force {
+                    ui::warn(t!(
+                        "warning-broken-install-reinstalling",
+                        version = &display
+                    ));
+                }
                 self.library()
                     .remove_locked(gv, variant, registry, &install_str)?;
             } else {
@@ -141,7 +161,6 @@ impl<'a> Installer<'a> {
             }
         }
 
-        let display = crate::version::display_version(gv, variant, registry);
         ui::milestone(t!("status-installing"), &display);
 
         if !gv.is_stable() {
@@ -156,6 +175,15 @@ impl<'a> Installer<'a> {
 
         let download_url = binary.urls.first().unwrap();
         let cache_zip_path = self.artifact_cache.cached_zip_path(&binary.sha512);
+        let partial_path = self.artifact_cache.partial_zip_path(&binary.sha512);
+        let partial_meta_path = self.artifact_cache.partial_meta_path(&binary.sha512);
+
+        // Get rid of any partial downloads older than 24 hours, except for the
+        // partial files that are currently being used for this download.
+        self.artifact_cache.sweep_stale_partials(
+            std::time::Duration::from_secs(24 * 60 * 60),
+            &[&partial_path, &partial_meta_path],
+        );
 
         let mut cached_zip: Option<fs::File> = None;
 
@@ -169,42 +197,34 @@ impl<'a> Installer<'a> {
         let mut zip_file = match cached_zip {
             Some(file) => file,
             None => {
-                let tmp_file = tempfile::Builder::new()
-                    .prefix(".partial-")
-                    .suffix(".zip")
-                    .tempfile_in(self.artifact_cache.dir())?;
-
-                let mut async_file = tokio::fs::File::from_std(tmp_file.as_file().try_clone()?);
-                let digests = download_to_file(download_url, &mut async_file, &display).await?;
-                drop(async_file);
-
-                verify_download_digests(&digests, &binary.sha512, &cache_zip_path)?;
-
-                if let Some(expected_size) = binary.size
-                    && digests.size != expected_size
-                {
-                    return Err(terr!(
-                        "error-size-mismatch",
-                        file = cache_zip_path
-                            .file_name()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_string(),
-                        expected = expected_size,
-                        actual = digests.size
-                    ));
-                }
-
-                tmp_file.persist(&cache_zip_path)?
+                crate::download_utils::download_verified(
+                    download_url,
+                    &cache_zip_path,
+                    &partial_path,
+                    &partial_meta_path,
+                    crate::download_utils::ExpectedDigests {
+                        sha: &binary.sha512,
+                        size: binary.size,
+                    },
+                    &display,
+                )
+                .await?
             }
         };
 
-        fs::create_dir_all(&version_path)?;
-
         self.track_archive_use(&cache_zip_path)?;
 
+        let staging_path = staging_path_for(&version_path)?;
+        if staging_path.exists() {
+            fs::remove_dir_all(&staging_path)?;
+        }
+        fs::create_dir_all(&staging_path)?;
+        let staging = StagingDir::new(staging_path);
+
         // Extract from cache_zip_path
-        zip_utils::extract_zip_from_file(&mut zip_file, &cache_zip_path, &version_path, &display)?;
+        zip_utils::extract_zip_from_file(&mut zip_file, &cache_zip_path, staging.path(), &display)?;
+
+        staging.commit(&version_path)?;
 
         let base_url = self.catalogs().catalog(registry)?.registry_base_url();
         let store_dir = self.paths.installs().join(&store_key);

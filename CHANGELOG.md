@@ -49,6 +49,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - File sizes and download ETA are now properly formatted for the current locale.
 - Pinned versions written by `gdvm pin` are no longer missing a patch component.
 - `gdvm config set` run on a terminal with a non-interactive stdin will no longer hang indefinitely waiting for user input, and will instead exit with an error.
+- Interrupting an install no longer leaves behind a broken, partially installed version.
 
 ### Changed
 
