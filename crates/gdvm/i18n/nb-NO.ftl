@@ -292,6 +292,7 @@ error-post-upgrade-action-failed = Trinnet { $id } mislyktes etter oppgraderinga
 
 error-failed-reading-project-godot = Kunne ikke lese project.godot, kan ikke automatisk bestemme prosjektversjonen.
 warning-using-project-version = Bruker versjon { $version } definert i project.godot.
+warning-gdvmrc-detected = Ei egendefinert { -gdvmrc }-fil ble oppdaga. Støtte for { -gdvmrc }-filer er forelda og vil bli fjerna i en fremtidig utgivelse. Vennligst bytt til den nye festefila som brukes av `{ -gdvm } pin`.
 
 warning-project-version-mismatch =
     {"\u001b"}[33mAdvarsel: Versjonen definert i project.godot samsvarer ikke med den { $pinned ->

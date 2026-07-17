@@ -292,6 +292,7 @@ error-post-upgrade-action-failed = L'étape { $id } a échoué après la mise à
 
 error-failed-reading-project-godot = Échec de la lecture de project.godot, impossible de déterminer automatiquement la version du projet.
 warning-using-project-version = Utilisation de la version { $version } définie dans project.godot.
+warning-gdvmrc-detected = Un fichier { -gdvmrc } personnalisé a été détecté. Le support des fichiers { -gdvmrc } est obsolète et sera supprimé dans une future version. Veuillez passer au nouveau fichier d'épinglage utilisé par `{ -gdvm } pin`.
 
 warning-project-version-mismatch =
     {"\u001b"}[33mAvertissement : La version définie dans project.godot ne correspond pas à la version { $pinned ->

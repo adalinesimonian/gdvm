@@ -209,6 +209,7 @@ async fn get_pinned_falls_back_to_legacy_gdvmrc() {
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(3));
     assert_eq!(variant.as_deref(), Some("csharp"));
+    assert!(pinned.gdvmrc_fallback);
 }
 
 #[tokio::test]

@@ -21,7 +21,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, Variant, VersionQuery};
-use crate::{eprintln_i18n, terr};
+use crate::{eprintln_i18n, t, terr, ui};
 
 #[async_trait(?Send)]
 pub trait RunVersionSource {
@@ -84,7 +84,7 @@ impl RunResolutionRequest<'_> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunSource {
     Explicit,
-    Pin,
+    Pin { gdvmrc_fallback: bool },
     Project,
     Default,
 }
@@ -116,7 +116,9 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
 
         if let Some(selection) = self.source.get_pinned_version().await {
             return Ok(Some(RunSelection {
-                source: RunSource::Pin,
+                source: RunSource::Pin {
+                    gdvmrc_fallback: selection.gdvmrc_fallback,
+                },
                 version: selection.version,
                 variant: request.variant.clone().or(selection.variant),
                 registry: request.registry.clone().or(selection.registry),
@@ -171,7 +173,10 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                     return Err(terr!("error-project-version-mismatch", pinned = 0));
                 }
             }
-            RunSource::Pin => {
+            RunSource::Pin { gdvmrc_fallback } => {
+                if gdvmrc_fallback {
+                    ui::warn(t!("warning-gdvmrc-detected"));
+                }
                 if warn_project_version_mismatch::<S, PathBuf>(
                     self.source,
                     &selection.version,
@@ -331,6 +336,7 @@ mod tests {
                 version,
                 variant: None,
                 registry: self.pin_registry.clone(),
+                gdvmrc_fallback: false,
             })
         }
 
@@ -577,7 +583,12 @@ mod tests {
         };
 
         let selection = resolver.select(&request).await.unwrap().unwrap();
-        assert_eq!(selection.source, RunSource::Pin);
+        assert_eq!(
+            selection.source,
+            RunSource::Pin {
+                gdvmrc_fallback: false
+            }
+        );
         assert_eq!(selection.registry.as_deref(), Some("mybuilds"));
     }
 }

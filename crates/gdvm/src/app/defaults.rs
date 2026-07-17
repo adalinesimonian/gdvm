@@ -142,6 +142,7 @@ impl<'a> Defaults<'a> {
                         version,
                         variant,
                         registry,
+                        gdvmrc_fallback: false,
                     });
                 }
             }
@@ -158,6 +159,7 @@ impl<'a> Defaults<'a> {
                         version,
                         variant,
                         registry,
+                        gdvmrc_fallback: true,
                     });
                 }
             }

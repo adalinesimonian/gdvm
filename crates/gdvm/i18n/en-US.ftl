@@ -294,6 +294,7 @@ error-post-upgrade-action-failed = Step { $id } failed after upgrade.
 
 error-failed-reading-project-godot = Failed reading project.godot, cannot automatically determine project version.
 warning-using-project-version = Using version { $version } defined in project.godot.
+warning-gdvmrc-detected = A custom { -gdvmrc } file was detected. Support for { -gdvmrc } files is deprecated and will be removed in a coming release. Please switch to the new pin file used by `{ -gdvm } pin`.
 
 warning-project-version-mismatch =
     {"\u001b"}[33mWarning: The version defined in project.godot does not match the { $pinned ->
