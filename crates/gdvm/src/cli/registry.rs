@@ -169,7 +169,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
                 Some(name) => gdvm.catalogs().refresh_registry_cache(Some(name)).await?,
                 None => gdvm.catalogs().refresh_all_registry_caches().await?,
             }
-            println_i18n!("cache-refreshed");
+            gdvm::ui::milestone(gdvm::t!("status-refreshed"), gdvm::t!("subject-cache"));
         }
         Some(("init", sub_m)) => {
             let dir = PathBuf::from(sub_m.get_one::<String>("dir").unwrap());

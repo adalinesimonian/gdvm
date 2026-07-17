@@ -103,9 +103,6 @@ help-link-path = Le chemin où le lien ou la copie sera créé, par exemple «{ 
     } ».
 help-link-force = Écraser le lien existant s'il existe
 help-link-copy = Copier l'exécutable au lieu de créer un lien
-
-cache-files-removed = Les fichiers du cache ont été supprimés avec succès.
-cache-metadata-removed = Les métadonnées de cache ont été supprimées avec succès.
 no-cache-files-found = Aucun fichier de cache trouvé.
 no-cache-metadata-found = Aucune métadonnée de cache trouvée.
 gdvm-toml-malformed = { -gdvm-toml } à { $path } ignoré, car il n'a pas pu être analysé : { $error }
@@ -133,10 +130,16 @@ status-installing = Installation
 status-removed = Supprimé
 status-removing = Suppression
 status-running = Exécution
+status-cleared = Vidé
+status-refreshed = Actualisé
+status-skipped = Ignoré
 status-upgraded = Mis à niveau
 status-upgrading = Mise à niveau
 status-verifying = Vérification
 subject-cached-archive = archive en cache
+subject-cache = cache
+subject-cache-files = fichiers du cache
+subject-cache-metadata = métadonnées de cache
 subject-releases = versions
 subject-update-manifest = manifeste de mise à jour
 upgrade-target = { -gdvm } { $version }
@@ -214,8 +217,6 @@ link-created = Lien créé de {$version} vers {$path}
 copy-created = Copie de {$version} vers {$path} effectuée
 no-matching-releases = Aucune version correspondante trouvée.
 available-releases = Versions disponibles :
-cache-cleared = Cache vidé avec succès.
-cache-refreshed = Cache actualisé avec succès.
 
 version-already-installed = Version {$version} déjà installée.
 godot-executable-not-found = Exécutable { -godot } introuvable pour la version {$version}.

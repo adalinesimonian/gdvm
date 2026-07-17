@@ -105,9 +105,6 @@ help-link-path = The path where the link or copy will be created, e.g. "{ $platf
     }".
 help-link-force = Overwrite existing link if it exists
 help-link-copy = Copy the executable instead of creating a link
-
-cache-files-removed = Cache files have been successfully removed.
-cache-metadata-removed = Cache metadata has been successfully removed.
 no-cache-files-found = No cache files were found.
 no-cache-metadata-found = No cache metadata was found.
 gdvm-toml-malformed = ignoring { -gdvm-toml } at { $path } because it could not be parsed: { $error }
@@ -135,10 +132,16 @@ status-installing = Installing
 status-removed = Removed
 status-removing = Removing
 status-running = Running
+status-cleared = Cleared
+status-refreshed = Refreshed
+status-skipped = Skipped
 status-upgraded = Upgraded
 status-upgrading = Upgrading
 status-verifying = Verifying
 subject-cached-archive = cached archive
+subject-cache = cache
+subject-cache-files = cache files
+subject-cache-metadata = cache metadata
 subject-releases = releases
 subject-update-manifest = update manifest
 upgrade-target = { -gdvm } { $version }
@@ -216,8 +219,6 @@ link-created = Linked {$version} to {$path}
 copy-created = Copied {$version} to {$path}
 no-matching-releases = No matching releases found.
 available-releases = Available releases:
-cache-cleared = Cache cleared successfully.
-cache-refreshed = Cache refreshed successfully.
 
 version-already-installed = Version {$version} already installed.
 godot-executable-not-found = { -godot } executable not found for version {$version}.

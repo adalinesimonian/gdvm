@@ -103,9 +103,6 @@ help-link-path = Stien der lenkja eller kopien skal opprettast, t.d. «{ $platfo
     }».
 help-link-force = Overskriv eksisterande lenkje om ho finst
 help-link-copy = Kopier køyrbar i staden for å lage lenkje
-
-cache-files-removed = Cache-filene vart fjerna.
-cache-metadata-removed = Cache-metadataet vart fjerna.
 no-cache-files-found = Ingen cache-filer funne.
 no-cache-metadata-found = Inkje cache-metadata funne.
 gdvm-toml-malformed = ignorerer { -gdvm-toml } på { $path } fordi han ikkje kunne tolkast: { $error }
@@ -133,10 +130,16 @@ status-installing = Installerer
 status-removed = Fjerna
 status-removing = Fjernar
 status-running = Køyrer
+status-cleared = Tømd
+status-refreshed = Oppdatert
+status-skipped = Hoppa over
 status-upgraded = Oppgradert
 status-upgrading = Oppgraderer
 status-verifying = Verifiserer
 subject-cached-archive = bufra arkiv
+subject-cache = cache
+subject-cache-files = cache-filer
+subject-cache-metadata = cache-metadata
 subject-releases = utgjevingar
 subject-update-manifest = oppdateringsmanifest
 upgrade-target = { -gdvm } { $version }
@@ -214,8 +217,6 @@ link-created = Lenkja {$version} til {$path}
 copy-created = Kopierte {$version} til {$path}
 no-matching-releases = Ingen samsvarande utgjevingar funne.
 available-releases = Tilgjengelege utgjevingar:
-cache-cleared = Cachen vart tømd.
-cache-refreshed = Cachen vart oppdatert.
 
 version-already-installed = Versjon {$version} er alt installert.
 godot-executable-not-found = { -godot }-køyrberr fil vart ikkje funnen for versjon {$version}.

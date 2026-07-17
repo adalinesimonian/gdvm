@@ -18,8 +18,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
+use gdvm::terr;
 use gdvm::version::{Variant, VersionSpec, VersionTarget};
-use gdvm::{println_i18n, terr};
 
 use super::{
     check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
@@ -77,13 +77,13 @@ pub(crate) async fn sub_cache_path(gdvm: &Gdvm, matches: &ArgMatches) -> Result<
 /// Handle the 'clear-cache' subcommand
 pub(crate) fn sub_clear_cache(gdvm: &Gdvm) -> Result<()> {
     gdvm.clear_cache()?;
-    println_i18n!("cache-cleared");
+    gdvm::ui::milestone(gdvm::t!("status-cleared"), gdvm::t!("subject-cache"));
     Ok(())
 }
 
 /// Handle the 'refresh' subcommand
 pub(crate) async fn sub_refresh(gdvm: &Gdvm) -> Result<()> {
     gdvm.catalogs().refresh_cache().await?;
-    println_i18n!("cache-refreshed");
+    gdvm::ui::milestone(gdvm::t!("status-refreshed"), gdvm::t!("subject-cache"));
     Ok(())
 }

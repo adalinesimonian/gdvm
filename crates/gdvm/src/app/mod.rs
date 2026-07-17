@@ -31,7 +31,7 @@ use crate::releases::CatalogSet;
 use crate::run_version_resolver::RunVersionSource;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, VersionQuery};
-use crate::{eprintln_i18n, post_upgrade, println_i18n, t, terr};
+use crate::{eprintln_i18n, post_upgrade, t, terr};
 
 mod catalog;
 mod defaults;
@@ -208,16 +208,18 @@ impl Gdvm {
         let cache_index = self.cache_store.index_path();
         if cache_index.exists() {
             fs::remove_file(cache_index)?;
-            println_i18n!("cache-metadata-removed");
+            crate::ui::step(t!("status-removed"), t!("subject-cache-metadata"));
         } else {
-            println_i18n!("no-cache-metadata-found");
+            crate::ui::step(t!("status-skipped"), t!("subject-cache-metadata"));
+            crate::ui::note(t!("no-cache-metadata-found"));
         }
 
         if self.artifact_cache.exists() {
             self.artifact_cache.clear_files()?;
-            println_i18n!("cache-files-removed");
+            crate::ui::step(t!("status-removed"), t!("subject-cache-files"));
         } else {
-            println_i18n!("no-cache-files-found");
+            crate::ui::step(t!("status-skipped"), t!("subject-cache-files"));
+            crate::ui::note(t!("no-cache-files-found"));
         }
         Ok(())
     }
