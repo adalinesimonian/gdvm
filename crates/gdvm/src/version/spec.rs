@@ -49,7 +49,7 @@ impl VersionSpec {
             Some(pos) => {
                 let reg = &input[..pos];
                 if reg.is_empty() {
-                    return Err(terr!("error-spec-empty-registry", input = input));
+                    return Err(terr!("error-spec-empty-registry", input = input).into());
                 }
                 (Some(reg.to_string()), &input[pos + 1..])
             }
@@ -60,7 +60,7 @@ impl VersionSpec {
             Some(pos) => {
                 let var = &remainder[..pos];
                 if var.is_empty() {
-                    return Err(terr!("error-spec-empty-variant", input = input));
+                    return Err(terr!("error-spec-empty-variant", input = input).into());
                 }
                 (Some(var.to_string()), &remainder[pos + 1..])
             }
@@ -68,7 +68,7 @@ impl VersionSpec {
         };
 
         if version_str.is_empty() {
-            return Err(terr!("error-spec-empty-version", input = input));
+            return Err(terr!("error-spec-empty-version", input = input).into());
         }
 
         let target = if is_keyword(version_str) {

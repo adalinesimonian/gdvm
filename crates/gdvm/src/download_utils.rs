@@ -48,7 +48,7 @@ pub fn ensure_url_scheme_allowed(url: &str) -> Result<()> {
     if url_scheme_allowed(url) {
         Ok(())
     } else {
-        Err(terr!("error-insecure-url", url = url.to_string()))
+        Err(terr!("error-insecure-url", url = url.to_string()).into())
     }
 }
 
@@ -133,7 +133,7 @@ pub(crate) async fn get_retrying(
                 if is_retryable_status(status) {
                     let retry_after = parse_retry_after(response.headers());
                     Err(TransferError::Transient {
-                        error: terr!("error-download-failed", status = status.to_string()),
+                        error: terr!("error-download-failed", status = status.to_string()).into(),
                         retry_after,
                     })
                 } else {
@@ -331,7 +331,8 @@ fn verify_digests(
                 .to_string(),
             expected = expected_size,
             actual = digests.size
-        ));
+        )
+        .into());
     }
 
     Ok(())
@@ -372,7 +373,7 @@ pub async fn download_to_file_resuming(
         let mut hasher = StreamHasher::new();
         let src_path = Path::new(path);
         if !src_path.is_file() {
-            return Err(terr!("error-file-not-found"));
+            return Err(terr!("error-file-not-found").into());
         }
         let mut src = tokio::fs::File::open(src_path).await?;
         let mut buffer = vec![0u8; 64 * 1024];
@@ -527,7 +528,8 @@ async fn transfer_attempt(
                     error: terr!(
                         "error-download-failed",
                         status = response.status().to_string()
-                    ),
+                    )
+                    .into(),
                     retry_after: None,
                 });
             }
@@ -542,21 +544,22 @@ async fn transfer_attempt(
                 .or(state.total);
         }
         reqwest::StatusCode::NOT_FOUND => {
-            return Err(TransferError::Permanent(terr!("error-file-not-found")));
+            return Err(TransferError::Permanent(
+                terr!("error-file-not-found").into(),
+            ));
         }
         status if is_retryable_status(status) => {
             let retry_after = parse_retry_after(response.headers());
 
             return Err(TransferError::Transient {
-                error: terr!("error-download-failed", status = status.to_string()),
+                error: terr!("error-download-failed", status = status.to_string()).into(),
                 retry_after,
             });
         }
         status => {
-            return Err(TransferError::Permanent(terr!(
-                "error-download-failed",
-                status = status.to_string()
-            )));
+            return Err(TransferError::Permanent(
+                terr!("error-download-failed", status = status.to_string()).into(),
+            ));
         }
     }
 
@@ -607,7 +610,8 @@ async fn transfer_attempt(
                 "error-size-mismatch",
                 expected = total,
                 actual = hasher.size
-            ),
+            )
+            .into(),
             retry_after: None,
         });
     }
@@ -644,7 +648,8 @@ async fn rehash_prefix(dest: &mut tokio::fs::File, len: u64) -> Result<StreamHas
                 "error-size-mismatch",
                 expected = len,
                 actual = len - remaining
-            ));
+            )
+            .into());
         }
         hasher.update(&buffer[..read]);
         remaining -= read as u64;
@@ -690,12 +695,13 @@ pub const MAX_METADATA_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
 pub async fn response_text_limited(response: reqwest::Response, max_bytes: u64) -> Result<String> {
     let url = response.url().to_string();
 
-    let too_large = || {
+    let too_large = || -> anyhow::Error {
         terr!(
             "error-response-too-large",
             url = url.clone(),
             limit = max_bytes
         )
+        .into()
     };
 
     if let Some(len) = response.content_length()
@@ -715,11 +721,9 @@ pub async fn response_text_limited(response: reqwest::Response, max_bytes: u64) 
     }
 
     String::from_utf8(buf).map_err(|e| {
-        terr!(
-            "error-response-not-utf8",
-            url = url.clone(),
-            error = e.to_string()
-        )
+        terr!("error-response-not-utf8", url = url.clone())
+            .with_source(e)
+            .into()
     })
 }
 

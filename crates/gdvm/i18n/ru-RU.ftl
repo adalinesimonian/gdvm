@@ -165,7 +165,7 @@ error-invalid-sha-length = Неверная длина SHA { $length }
 error-size-mismatch = Несоответствие размера для файла { $file }: ожидалось { $expected } байт, получено { $actual } байт.
 error-insecure-url = Отказ в получении { $url } через незашифрованное соединение. Разрешены только URL-адреса https:// и file://. Установите переменную окружения GDVM_ALLOW_INSECURE_URLS, чтобы разрешить незашифрованные URL-адреса http://.
 error-insecure-redirect = Отказ в переходе по перенаправлению с https:// на незашифрованный URL-адрес http://. Установите переменную окружения GDVM_ALLOW_INSECURE_URLS, чтобы разрешить незашифрованные URL-адреса http://.
-error-response-not-utf8 = Ответ от { $url } не является корректным UTF-8: { $error }
+error-response-not-utf8 = Ответ от { $url } не является корректным UTF-8.
 error-response-too-large = Ответ от { $url } превышает максимально допустимый размер { $limit } байт.
 error-too-many-redirects = Слишком много перенаправлений.
 error-config-invalid-number = Недопустимое значение для { $key }: { $value } (ожидалось число)
@@ -187,8 +187,8 @@ error-registry-invalid-name = Недопустимое имя реестра: { 
 error-registry-missing-index = В реестре «{ $name }» отсутствует index.json
 error-registry-missing-manifest = В реестре «{ $name }» отсутствует registry.json
 error-registry-not-configured = Реестр «{ $name }» не настроен
-error-registry-parse-index = Не удалось разобрать индекс реестра «{ $name }»: { $error }
-error-registry-parse-manifest = Не удалось разобрать манифест реестра «{ $name }»: { $error }
+error-registry-parse-index = Не удалось разобрать индекс реестра «{ $name }».
+error-registry-parse-manifest = Не удалось разобрать манифест реестра «{ $name }».
 error-registry-unknown = Неизвестный реестр «{ $name }»
 error-registry-unsupported-url-scheme = Неподдерживаемая схема URL реестра: { $url }
 error-spec-empty-registry = Пустое имя реестра в «{ $input }»
@@ -225,29 +225,29 @@ available-releases = Доступные релизы:
 version-already-installed = Версия {$version} уже установлена.
 godot-executable-not-found = Исполняемый файл { -godot } не найден для версии {$version}.
 error-link-exists = Путь {$path} уже существует. Используйте --force для перезаписи.
-error-link-symlink = Не удалось создать ссылку из {$link} в {$target}: {$error}
-error-link-copy = Не удалось скопировать исполняемый файл: {$error}
+error-link-symlink = Не удалось создать ссылку из {$link} в {$target}.
+error-link-copy = Не удалось скопировать файл.
 
 error-no-stable-releases-found = Стабильные версии не найдены.
 
-error-starting-godot = Не удалось запустить { -godot }: { $error }
+error-starting-godot = Не удалось запустить { -godot }.
 confirm-yes = да
 
 default-set-success = Успешно установлено {$version} как версия { -godot } по умолчанию.
 default-unset-success = Успешно удалено значение версии { -godot } по умолчанию.
 provide-version-or-unset = Пожалуйста, укажите версию для установки по умолчанию или 'unset' для удаления версии по умолчанию.
 
-error-open-zip = Не удалось открыть ZIP файл { $path }: { $error }
-error-read-zip = Не удалось прочитать ZIP архив { $path }: { $error }
-error-access-file = Не удалось получить доступ к файлу по индексу { $index }: { $error }
-error-reopen-zip = Не удалось повторно открыть ZIP файл { $path }: { $error }
+error-open-zip = Не удалось открыть ZIP файл { $path }.
+error-read-zip = Не удалось прочитать ZIP архив { $path }.
+error-access-file = Не удалось получить доступ к файлу по индексу { $index }.
+error-reopen-zip = Не удалось повторно открыть ZIP файл { $path }.
 error-invalid-file-name = Недопустимое имя файла в ZIP архиве
-error-create-dir = Не удалось создать каталог { $path }: { $error }
-error-create-file = Не удалось создать файл { $path }: { $error }
-error-read-zip-file = Не удалось прочитать из ZIP файла { $file }: { $error }
-error-write-file = Не удалось записать в файл { $path }: { $error }
-error-strip-prefix = Ошибка удаления префикса: { $error }
-error-set-permissions = Не удалось установить разрешения для { $path }: { $error }
+error-create-dir = Не удалось создать каталог { $path }.
+error-create-file = Не удалось создать файл { $path }.
+error-read-zip-file = Не удалось прочитать из ZIP файла { $file }.
+error-write-file = Не удалось записать в файл { $path }.
+error-strip-prefix = Ошибка удаления префикса.
+error-set-permissions = Не удалось установить разрешения для { $path }.
 error-create-symlink-windows = Не удалось создать символьную ссылку. Убедитесь, что {"\u001b"}]8;;ms-settings:developers{"\u001b"}\режим разработчика{"\u001b"}]8;;{"\u001b"}\ включен или запустите от имени администратора.
 
 help-upgrade = Обновить { -gdvm } до последней версии
@@ -255,14 +255,13 @@ help-upgrade-major = Разрешить обновление через осно
 help-upgrade-pre = Обновить до последнего предварительного выпуска
 upgrade-not-needed = { -gdvm } уже на последней версии: { $version }.
 upgrade-current-version-newer = Текущая версия { -gdvm } ({ $current }) новее, чем последняя доступная версия ({ $latest }). Обновление не требуется.
-upgrade-download-failed = Не удалось загрузить обновление: { $error }
-upgrade-install-dir-failed = Не удалось создать директорию установки: { $error }
-upgrade-rename-failed = Не удалось переименовать текущий исполняемый файл: { $error }
-upgrade-replace-failed = Не удалось заменить исполняемый файл на новый: { $error }
+upgrade-install-dir-failed = Не удалось создать директорию установки.
+upgrade-rename-failed = Не удалось переименовать текущий исполняемый файл.
+upgrade-replace-failed = Не удалось заменить исполняемый файл на новый.
 upgrade-no-binary = Нет доступного двоичного файла { -gdvm } для версии { $version } и цели { $target }.
 upgrade-checksum-required = Манифест выпуска не содержит контрольную сумму для этого двоичного файла { -gdvm }. Обновление отклонено.
-error-fetching-gdvm-releases = Ошибка получения релизов { -gdvm }: { $error }
-error-parsing-gdvm-releases = Ошибка разбора релизов { -gdvm }: { $error }
+error-fetching-gdvm-releases = Ошибка получения релизов { -gdvm }.
+error-parsing-gdvm-releases = Ошибка разбора релизов { -gdvm }.
 error-unsupported-gdvm-schema = Неподдерживаемая версия схемы манифеста релизов { -gdvm }: { $schema }. Попробуйте обновить { -gdvm } вручную.
 upgrade-available = 💡 Доступна новая версия { -gdvm }: {$version}. Запустите «{ -gdvm } upgrade», чтобы обновить.
 upgrade-available-major = 💡 Доступно обновление основной версии { -gdvm }: {$version}. Запустите «{ -gdvm } upgrade -m», чтобы обновить.
@@ -285,13 +284,10 @@ pinned-success = Версия {$version} успешно закреплена в 
 error-pin-version-not-found = Невозможно закрепить версию {$version}
 
 error-file-not-found = Файл не найден. Возможно, он не существует на сервере.
-error-download-failed = Загрузка не удалась из-за непредвиденной ошибки: { $error }
+error-download-failed = Загрузка не удалась из-за ошибки HTTP-статуса { $status }.
 error-ensure-godot-binaries-failed = Не удалось гарантировать исполняемые файлы { -godot }.
-    Ошибка: { $error }.
-    Попробуйте удалить { $path } и запустить { -gdvm } снова.
 
 error-post-upgrade-action-failed = Шаг { $id } завершился ошибкой после обновления.
-    Ошибка: { $error }.
     Установка { -gdvm } может быть неполной. Попробуйте запустить { -gdvm } снова.
 
 error-failed-reading-project-godot = Не удалось прочитать project.godot, невозможно автоматически определить версию проекта.
@@ -371,7 +367,7 @@ config-key-not-set = Ключ конфигурации не установлен
 config-key-not-set-value = <не установлено>
 error-unknown-config-key = Неизвестный ключ конфигурации.
 error-invalid-config-subcommand = Недопустимая подкоманда config. Используйте "get", "set" или "list".
-error-parse-config = Не удалось разобрать файл конфигурации: { $error }
+error-parse-config = Не удалось разобрать файл конфигурации.
 error-parse-config-using-default = Используются значения конфигурации по умолчанию.
 
 help-registry = Управление реестрами для установки сборок { -godot }

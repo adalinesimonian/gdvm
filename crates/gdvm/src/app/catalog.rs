@@ -141,15 +141,9 @@ impl<'a> Catalogs<'a> {
         variant: &Variant,
     ) -> Result<&'r registry::BinaryInfo> {
         registry::select_binary(meta, *self.host, variant).map_err(|err| match err {
-            BinarySelectionError::UnsupportedPlatform => {
-                terr!("unsupported-platform")
-            }
-            BinarySelectionError::UnsupportedArch => {
-                terr!("unsupported-architecture")
-            }
-            BinarySelectionError::MissingUrl => {
-                terr!("error-file-not-found")
-            }
+            BinarySelectionError::UnsupportedPlatform => terr!("unsupported-platform").into(),
+            BinarySelectionError::UnsupportedArch => terr!("unsupported-architecture").into(),
+            BinarySelectionError::MissingUrl => terr!("error-file-not-found").into(),
         })
     }
 }

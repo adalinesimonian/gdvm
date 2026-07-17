@@ -84,11 +84,8 @@ fn run_stage(base_path: &Path, stage: Stage) -> Result<()> {
     for action in ACTIONS {
         if action.stage == stage {
             (action.run)(base_path).map_err(|err| {
-                terr!(
-                    "error-post-upgrade-action-failed",
-                    id = action.id,
-                    error = err.to_string()
-                )
+                terr!("error-post-upgrade-action-failed", id = action.id)
+                    .with_string_source(err.to_string())
             })?;
         }
     }

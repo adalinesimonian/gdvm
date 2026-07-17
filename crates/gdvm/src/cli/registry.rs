@@ -52,7 +52,8 @@ fn verify_overrides(
             "registry-build-sha-mismatch",
             expected = s.clone(),
             actual = actual_sha.to_string()
-        ));
+        )
+        .into());
     }
     if let Some(s) = size
         && s != actual_size
@@ -61,7 +62,8 @@ fn verify_overrides(
             "registry-build-size-mismatch",
             expected = s.to_string(),
             actual = actual_size.to_string()
-        ));
+        )
+        .into());
     }
     Ok(())
 }
@@ -238,7 +240,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
                 )));
             }
         }
-        _ => return Err(terr!("error-invalid-registry-subcommand")),
+        _ => return Err(terr!("error-invalid-registry-subcommand").into()),
     }
     Ok(())
 }

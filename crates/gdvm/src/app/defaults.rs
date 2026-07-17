@@ -58,7 +58,7 @@ impl<'a> Defaults<'a> {
         );
         let version_path = self.paths.installs().join(&install_name);
         if !version_path.exists() {
-            return Err(terr!("error-version-not-found"));
+            return Err(terr!("error-version-not-found").into());
         }
 
         self.library().track_install_use(&install_name)?;

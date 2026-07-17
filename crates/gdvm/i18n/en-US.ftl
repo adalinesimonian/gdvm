@@ -164,7 +164,7 @@ error-invalid-sha-length = Invalid SHA length { $length }
 error-size-mismatch = Size mismatch for file { $file }: expected { $expected } bytes, got { $actual } bytes.
 error-insecure-url = Refusing to fetch { $url } over an unencrypted connection. Only https:// and file:// URLs are allowed. Set the GDVM_ALLOW_INSECURE_URLS environment variable to allow unencrypted http:// URLs.
 error-insecure-redirect = Refusing to follow a redirect from https:// to an unencrypted http:// URL. Set the GDVM_ALLOW_INSECURE_URLS environment variable to allow unencrypted http:// URLs.
-error-response-not-utf8 = The response from { $url } is not valid UTF-8: { $error }
+error-response-not-utf8 = The response from { $url } is not valid UTF-8.
 error-response-too-large = The response from { $url } exceeds the maximum allowed size of { $limit } bytes.
 error-too-many-redirects = Too many redirects.
 error-config-invalid-number = Invalid value for { $key }: { $value } (expected a number)
@@ -186,8 +186,8 @@ error-registry-invalid-name = Invalid registry name: { $name }
 error-registry-missing-index = Registry '{ $name }' is missing index.json
 error-registry-missing-manifest = Registry '{ $name }' is missing registry.json
 error-registry-not-configured = Registry '{ $name }' is not configured
-error-registry-parse-index = Failed to parse index for '{ $name }': { $error }
-error-registry-parse-manifest = Failed to parse manifest for '{ $name }': { $error }
+error-registry-parse-index = Failed to parse index for '{ $name }'.
+error-registry-parse-manifest = Failed to parse manifest for '{ $name }'.
 error-registry-unknown = Unknown registry '{ $name }'
 error-registry-unsupported-url-scheme = Unsupported registry URL scheme: { $url }
 error-spec-empty-registry = Empty registry name in '{ $input }'
@@ -224,29 +224,29 @@ available-releases = Available releases:
 version-already-installed = Version {$version} already installed.
 godot-executable-not-found = { -godot } executable not found for version {$version}.
 error-link-exists = Path {$path} already exists. Use --force to overwrite.
-error-link-symlink = Failed to create link from {$link} to {$target}: {$error}
-error-link-copy = Failed to copy executable: {$error}
+error-link-symlink = Failed to create link from {$link} to {$target}.
+error-link-copy = Failed to copy file.
 
 error-no-stable-releases-found = No stable releases found.
 
-error-starting-godot = Failed to start { -godot }: { $error }
+error-starting-godot = Failed to start { -godot }.
 confirm-yes = yes
 
 default-set-success = Successfully set {$version} as the default { -godot } version.
 default-unset-success = Successfully unset the default { -godot } version.
 provide-version-or-unset = Please provide a version to set as default or 'unset' to remove the default version.
 
-error-open-zip = Failed to open ZIP file { $path }: { $error }
-error-read-zip = Failed to read ZIP archive { $path }: { $error }
-error-access-file = Failed to access file at index { $index }: { $error }
-error-reopen-zip = Failed to reopen ZIP file { $path }: { $error }
+error-open-zip = Failed to open ZIP file { $path }.
+error-read-zip = Failed to read ZIP archive { $path }.
+error-access-file = Failed to access file at index { $index }.
+error-reopen-zip = Failed to reopen ZIP file { $path }.
 error-invalid-file-name = Invalid file name in ZIP archive
-error-create-dir = Failed to create directory { $path }: { $error }
-error-create-file = Failed to create file { $path }: { $error }
-error-read-zip-file = Failed to read from ZIP file { $file }: { $error }
-error-write-file = Failed to write to file { $path }: { $error }
-error-strip-prefix = Error stripping prefix: { $error }
-error-set-permissions = Failed to set permissions for { $path }: { $error }
+error-create-dir = Failed to create directory { $path }.
+error-create-file = Failed to create file { $path }.
+error-read-zip-file = Failed to read from ZIP file { $file }.
+error-write-file = Failed to write to file { $path }.
+error-strip-prefix = Error stripping prefix.
+error-set-permissions = Failed to set permissions for { $path }.
 error-create-symlink-windows = Could not create symlink. Please ensure {"\u001b"}]8;;ms-settings:developers{"\u001b"}\Developer Mode{"\u001b"}]8;;{"\u001b"}\ is enabled or run as admin.
 
 help-upgrade = Upgrade { -gdvm } to the latest version
@@ -254,14 +254,13 @@ help-upgrade-major = Allow upgrading across major versions
 help-upgrade-pre = Upgrade to the latest pre-release version
 upgrade-not-needed = { -gdvm } is already at the latest version: { $version }.
 upgrade-current-version-newer = The current { -gdvm } version ({ $current }) is newer than the latest available version ({ $latest }). No upgrade needed.
-upgrade-download-failed = Upgrade download failed: { $error }
-upgrade-install-dir-failed = Failed to create the installation directory: { $error }
-upgrade-rename-failed = Failed to rename the current executable: { $error }
-upgrade-replace-failed = Failed to replace the executable with the new one: { $error }
+upgrade-install-dir-failed = Failed to create the installation directory.
+upgrade-rename-failed = Failed to rename the current executable.
+upgrade-replace-failed = Failed to replace the executable with the new one.
 upgrade-no-binary = No { -gdvm } binary is available for version { $version } and target { $target }.
 upgrade-checksum-required = The release manifest does not include a checksum for this { -gdvm } binary. Refusing to upgrade.
-error-fetching-gdvm-releases = Error fetching { -gdvm } releases: { $error }
-error-parsing-gdvm-releases = Error parsing { -gdvm } releases: { $error }
+error-fetching-gdvm-releases = Error fetching { -gdvm } releases.
+error-parsing-gdvm-releases = Error parsing { -gdvm } releases.
 error-unsupported-gdvm-schema = Unsupported { -gdvm } release manifest schema version: { $schema }. Try upgrading { -gdvm } manually.
 upgrade-available = 💡 A new version of { -gdvm } is available: {$version}. Run "{ -gdvm } upgrade" to update.
 upgrade-available-major = 💡 A major version update of { -gdvm } is available: {$version}. Run "{ -gdvm } upgrade -m" to update.
@@ -284,13 +283,10 @@ pinned-success = Successfully pinned version {$version} in { -gdvm-toml }
 error-pin-version-not-found = Could not pin version {$version}
 
 error-file-not-found = File not found. It may not exist on the server.
-error-download-failed = Download failed due to an unexpected error: { $error }
+error-download-failed = Download failed with HTTP status { $status }.
 error-ensure-godot-binaries-failed = Failed to ensure { -godot } binaries.
-    Error: { $error }.
-    Try removing { $path } and then run { -gdvm } again.
 
 error-post-upgrade-action-failed = Step { $id } failed after upgrade.
-    Error: { $error }.
     Your { -gdvm } installation may be incomplete. Try running { -gdvm } again.
 
 error-failed-reading-project-godot = Failed reading project.godot, cannot automatically determine project version.
@@ -370,7 +366,7 @@ config-key-not-set = Configuration key not set.
 config-key-not-set-value = <not set>
 error-unknown-config-key = Unknown configuration key.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
-error-parse-config = Failed to parse configuration file: { $error }
+error-parse-config = Failed to parse configuration file.
 error-parse-config-using-default = Using default configuration values.
 
 help-registry = Manage registries to install { -godot } builds from

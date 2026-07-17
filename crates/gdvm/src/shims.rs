@@ -22,7 +22,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::eprintln_i18n;
+use crate::terr;
 
 #[cfg(target_os = "windows")]
 const GDVM_SHIM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/shim.exe"));
@@ -44,12 +44,9 @@ pub fn ensure(base_path: &Path) -> Result<()> {
     for exe in targets {
         let exe_path = bin_path.join(exe);
         if let Err(err) = write_bytes_if_different(GDVM_SHIM, &exe_path, Some(0o755)) {
-            eprintln_i18n!(
-                "error-ensure-godot-binaries-failed",
-                error = &err.to_string(),
-                path = &exe_path.to_string_lossy().to_string(),
-            );
-            return Err(err);
+            return Err(terr!("error-ensure-godot-binaries-failed")
+                .with_source(err)
+                .into());
         }
     }
 
@@ -57,11 +54,11 @@ pub fn ensure(base_path: &Path) -> Result<()> {
 }
 
 /// Write `bytes` to `dest` only if the current contents at `dest` are different.
-fn write_bytes_if_different(bytes: &[u8], dest: &Path, perm: Option<u32>) -> Result<()> {
+fn write_bytes_if_different(bytes: &[u8], dest: &Path, perm: Option<u32>) -> std::io::Result<()> {
     #[cfg(not(target_family = "unix"))]
     let _ = perm;
 
-    let write_bytes = || -> Result<()> {
+    let write_bytes = || -> std::io::Result<()> {
         fs::write(dest, bytes)?;
 
         #[cfg(target_family = "unix")]

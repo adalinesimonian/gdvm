@@ -128,7 +128,7 @@ impl ReleaseCatalog {
             return self.registry.fetch_release(&entry.source).await;
         }
 
-        Err(terr!("error-version-not-found"))
+        Err(terr!("error-version-not-found").into())
     }
 
     pub async fn refresh_cache(&self) -> Result<()> {
@@ -219,7 +219,7 @@ impl CatalogSet {
         let name = registry.unwrap_or(OFFICIAL_REGISTRY);
         self.catalogs
             .get(name)
-            .ok_or_else(|| terr!("error-registry-unknown", name = name))
+            .ok_or_else(|| terr!("error-registry-unknown", name = name).into())
     }
 
     /// The official registry's release catalog.

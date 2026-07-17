@@ -235,7 +235,7 @@ fn macos_bundle_from_executable(exe: &Path) -> Option<PathBuf> {
 
 fn link_or_copy_file(target: &Path, link: &Path, copy: bool) -> Result<()> {
     if copy {
-        fs::copy(target, link).map_err(|e| terr!("error-link-copy", error = e.to_string()))?;
+        fs::copy(target, link).map_err(|e| terr!("error-link-copy").with_source(e))?;
         return Ok(());
     }
 
@@ -244,10 +244,10 @@ fn link_or_copy_file(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::windows::fs::symlink_file(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -256,10 +256,10 @@ fn link_or_copy_file(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::unix::fs::symlink(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -277,10 +277,10 @@ fn link_or_copy_dir(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::windows::fs::symlink_dir(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -289,10 +289,10 @@ fn link_or_copy_dir(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::unix::fs::symlink(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -319,10 +319,7 @@ fn copy_dir_recursive(source: &Path, dest: &Path) -> Result<()> {
 fn prepare_link_path(link_path: &Path, force: bool) -> Result<()> {
     if link_path.exists() {
         if !force {
-            return Err(terr!(
-                "error-link-exists",
-                path = link_path.display().to_string()
-            ));
+            return Err(terr!("error-link-exists", path = link_path.display().to_string()).into());
         }
         if link_path.is_dir() {
             fs::remove_dir_all(link_path)?;

@@ -162,7 +162,7 @@ error-invalid-sha-length = Longueur SHA invalide { $length }
 error-size-mismatch = Taille incorrecte pour le fichier { $file } : { $expected } octets attendus, { $actual } octets reçus.
 error-insecure-url = Refus de récupérer { $url } via une connexion non chiffrée. Seules les URL https:// et file:// sont autorisées. Définissez la variable d'environnement GDVM_ALLOW_INSECURE_URLS pour autoriser les URL http:// non chiffrées.
 error-insecure-redirect = Refus de suivre une redirection de https:// vers une URL http:// non chiffrée. Définissez la variable d'environnement GDVM_ALLOW_INSECURE_URLS pour autoriser les URL http:// non chiffrées.
-error-response-not-utf8 = La réponse de { $url } n'est pas en UTF-8 valide : { $error }
+error-response-not-utf8 = La réponse de { $url } n'est pas en UTF-8 valide.
 error-response-too-large = La réponse de { $url } dépasse la taille maximale autorisée de { $limit } octets.
 error-too-many-redirects = Trop de redirections.
 error-config-invalid-number = Valeur non valide pour { $key } : { $value } (nombre attendu)
@@ -184,8 +184,8 @@ error-registry-invalid-name = Nom de registre non valide : { $name }
 error-registry-missing-index = Le fichier index.json est manquant dans le registre « { $name } »
 error-registry-missing-manifest = Le fichier registry.json est manquant dans le registre « { $name } »
 error-registry-not-configured = Le registre « { $name } » n'est pas configuré
-error-registry-parse-index = Échec de l'analyse de l'index de « { $name } » : { $error }
-error-registry-parse-manifest = Échec de l'analyse du manifeste de « { $name } » : { $error }
+error-registry-parse-index = Échec de l'analyse de l'index de « { $name } ».
+error-registry-parse-manifest = Échec de l'analyse du manifeste de « { $name } ».
 error-registry-unknown = Registre inconnu « { $name } »
 error-registry-unsupported-url-scheme = Schéma d'URL de registre non pris en charge : { $url }
 error-spec-empty-registry = Nom de registre vide dans « { $input } »
@@ -222,29 +222,29 @@ available-releases = Versions disponibles :
 version-already-installed = Version {$version} déjà installée.
 godot-executable-not-found = Exécutable { -godot } introuvable pour la version {$version}.
 error-link-exists = Le chemin {$path} existe déjà. Utilisez --force pour écraser.
-error-link-symlink = Échec de la création du lien de {$link} vers {$target} : {$error}
-error-link-copy = Échec de la copie de l'exécutable : {$error}
+error-link-symlink = Échec de la création du lien de {$link} vers {$target}.
+error-link-copy = Échec de la copie du fichier.
 
 error-no-stable-releases-found = Aucune version stable trouvée.
 
-error-starting-godot = Échec du démarrage de { -godot } : { $error }
+error-starting-godot = Échec du démarrage de { -godot }.
 confirm-yes = oui
 
 default-set-success = {$version} définie avec succès comme version par défaut de { -godot }.
 default-unset-success = Version par défaut de { -godot } supprimée avec succès.
 provide-version-or-unset = Veuillez fournir une version à définir par défaut ou 'unset' pour supprimer la version par défaut.
 
-error-open-zip = Échec de l'ouverture du fichier ZIP { $path } : { $error }
-error-read-zip = Échec de la lecture de l'archive ZIP { $path } : { $error }
-error-access-file = Échec de l'accès au fichier à l'index { $index } : { $error }
-error-reopen-zip = Échec de la réouverture du fichier ZIP { $path } : { $error }
+error-open-zip = Échec de l'ouverture du fichier ZIP { $path }.
+error-read-zip = Échec de la lecture de l'archive ZIP { $path }.
+error-access-file = Échec de l'accès au fichier à l'index { $index }.
+error-reopen-zip = Échec de la réouverture du fichier ZIP { $path }.
 error-invalid-file-name = Nom de fichier invalide dans l'archive ZIP
-error-create-dir = Échec de la création du répertoire { $path } : { $error }
-error-create-file = Échec de la création du fichier { $path } : { $error }
-error-read-zip-file = Échec de la lecture du fichier ZIP { $file } : { $error }
-error-write-file = Échec de l'écriture du fichier { $path } : { $error }
-error-strip-prefix = Erreur lors de la suppression du préfixe : { $error }
-error-set-permissions = Échec de la définition des permissions pour { $path } : { $error }
+error-create-dir = Échec de la création du répertoire { $path }.
+error-create-file = Échec de la création du fichier { $path }.
+error-read-zip-file = Échec de la lecture du fichier ZIP { $file }.
+error-write-file = Échec de l'écriture du fichier { $path }.
+error-strip-prefix = Erreur lors de la suppression du préfixe.
+error-set-permissions = Échec de la définition des permissions pour { $path }.
 error-create-symlink-windows = Impossible de créer le lien symbolique. Veuillez vous assurer que le {"\u001b"}]8;;ms-settings:developers{"\u001b"}\Mode Développeur{"\u001b"}]8;;{"\u001b"}\ est activé ou exécutez en tant qu'administrateur.
 
 help-upgrade = Mettre à jour { -gdvm } vers la dernière version
@@ -252,14 +252,13 @@ help-upgrade-major = Autoriser la mise à jour entre versions majeures
 help-upgrade-pre = Mettre à jour vers la dernière pré-version
 upgrade-not-needed = { -gdvm } est déjà à la dernière version : { $version }.
 upgrade-current-version-newer = La version actuelle de { -gdvm } ({ $current }) est plus récente que la dernière version disponible ({ $latest }). Aucune mise à jour nécessaire.
-upgrade-download-failed = Échec du téléchargement de la mise à jour : { $error }
-upgrade-install-dir-failed = Échec de la création du répertoire d'installation : { $error }
-upgrade-rename-failed = Échec du renommage de l'exécutable actuel : { $error }
-upgrade-replace-failed = Échec du remplacement de l'exécutable par le nouveau : { $error }
+upgrade-install-dir-failed = Échec de la création du répertoire d'installation.
+upgrade-rename-failed = Échec du renommage de l'exécutable actuel.
+upgrade-replace-failed = Échec du remplacement de l'exécutable par le nouveau.
 upgrade-no-binary = Aucun binaire { -gdvm } n'est disponible pour la version { $version } et la cible { $target }.
 upgrade-checksum-required = Le manifeste de publication ne contient pas de somme de contrôle pour ce binaire { -gdvm }. Mise à niveau refusée.
-error-fetching-gdvm-releases = Erreur lors de la récupération des versions de { -gdvm } : { $error }
-error-parsing-gdvm-releases = Erreur lors de l'analyse des versions de { -gdvm } : { $error }
+error-fetching-gdvm-releases = Erreur lors de la récupération des versions de { -gdvm }.
+error-parsing-gdvm-releases = Erreur lors de l'analyse des versions de { -gdvm }.
 error-unsupported-gdvm-schema = Version de schéma du manifeste des versions de { -gdvm } non prise en charge : { $schema }. Essayez de mettre à jour { -gdvm } manuellement.
 upgrade-available = 💡 Une nouvelle version de { -gdvm } est disponible : {$version}. Exécutez « { -gdvm } upgrade » pour mettre à jour.
 upgrade-available-major = 💡 Une mise à jour de version majeure de { -gdvm } est disponible : {$version}. Exécutez « { -gdvm } upgrade -m » pour mettre à jour.
@@ -282,13 +281,10 @@ pinned-success = Version {$version} épinglée avec succès dans { -gdvm-toml }
 error-pin-version-not-found = Impossible d'épingler la version {$version}
 
 error-file-not-found = Fichier introuvable. Il peut ne pas exister sur le serveur.
-error-download-failed = Échec du téléchargement dû à une erreur inattendue : { $error }
+error-download-failed = Échec du téléchargement dû à une erreur inattendue avec le statut HTTP { $status }.
 error-ensure-godot-binaries-failed = Échec de l'assurance des binaires { -godot }.
-    Erreur : { $error }.
-    Essayez de supprimer { $path } puis exécutez { -gdvm } à nouveau.
 
 error-post-upgrade-action-failed = L'étape { $id } a échoué après la mise à jour.
-    Erreur : { $error }.
     Votre installation de { -gdvm } est peut-être incomplète. Essayez d'exécuter { -gdvm } à nouveau.
 
 error-failed-reading-project-godot = Échec de la lecture de project.godot, impossible de déterminer automatiquement la version du projet.
@@ -368,7 +364,7 @@ config-key-not-set = Clé de configuration non définie.
 config-key-not-set-value = <non défini>
 error-unknown-config-key = Clé de configuration inconnue.
 error-invalid-config-subcommand = Sous-commande de configuration invalide. Utilisez « get », « set », ou « list ».
-error-parse-config = Échec de l'analyse du fichier de configuration : { $error }
+error-parse-config = Échec de l'analyse du fichier de configuration.
 error-parse-config-using-default = Utilisation des valeurs de configuration par défaut.
 
 help-registry = Gérer les registres depuis lesquels installer des builds de { -godot }

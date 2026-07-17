@@ -49,7 +49,7 @@ impl ShaType {
     /// length is invalid.
     pub fn from_expected(expected: &str) -> Result<Self> {
         Self::from_hash_length(expected)
-            .ok_or_else(|| terr!("error-invalid-sha-length", length = expected.len()))
+            .ok_or_else(|| terr!("error-invalid-sha-length", length = expected.len()).into())
     }
 }
 
@@ -78,4 +78,5 @@ pub(crate) fn checksum_mismatch_error(display_path: &Path) -> anyhow::Error {
             .to_string_lossy()
             .to_string()
     )
+    .into()
 }

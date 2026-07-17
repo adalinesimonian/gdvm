@@ -220,25 +220,24 @@ pub fn newer_prerelease_available(
 pub async fn fetch_manifest(url: &str, timeout: Duration) -> Result<ReleasesManifest> {
     let text = if let Some(path) = url.strip_prefix("file://") {
         std::fs::read_to_string(path)
-            .map_err(|e| terr!("error-fetching-gdvm-releases", error = e.to_string()))?
+            .map_err(|e| terr!("error-fetching-gdvm-releases").with_source(e))?
     } else {
         crate::download_utils::ensure_url_scheme_allowed(url)?;
         let client = crate::download_utils::http_client()?;
         let resp = crate::download_utils::get_retrying(&client, url, Some(timeout))
             .await
-            .map_err(|e| terr!("error-fetching-gdvm-releases", error = e.to_string()))?;
+            .map_err(|e| terr!("error-fetching-gdvm-releases").with_string_source(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(terr!(
-                "error-fetching-gdvm-releases",
-                error = resp.status().to_string()
-            ));
+            return Err(terr!("error-fetching-gdvm-releases")
+                .with_string_source(resp.status().to_string())
+                .into());
         }
         crate::download_utils::response_text_limited(
             resp,
             crate::download_utils::MAX_METADATA_RESPONSE_SIZE,
         )
         .await
-        .map_err(|e| terr!("error-fetching-gdvm-releases", error = e.to_string()))?
+        .map_err(|e| terr!("error-fetching-gdvm-releases").with_string_source(e.to_string()))?
     };
 
     parse_manifest(&text)
@@ -247,13 +246,10 @@ pub async fn fetch_manifest(url: &str, timeout: Duration) -> Result<ReleasesMani
 /// Parse and validate a manifest from its JSON.
 pub fn parse_manifest(text: &str) -> Result<ReleasesManifest> {
     let manifest: ReleasesManifest = serde_json::from_str(text)
-        .map_err(|e| terr!("error-parsing-gdvm-releases", error = e.to_string()))?;
+        .map_err(|e| terr!("error-parsing-gdvm-releases").with_source(e))?;
 
     if manifest.schema != SUPPORTED_SCHEMA_VERSION {
-        return Err(terr!(
-            "error-unsupported-gdvm-schema",
-            schema = manifest.schema
-        ));
+        return Err(terr!("error-unsupported-gdvm-schema", schema = manifest.schema).into());
     }
 
     Ok(manifest)

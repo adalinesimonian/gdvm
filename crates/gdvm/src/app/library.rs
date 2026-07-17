@@ -290,7 +290,7 @@ impl<'a> Library<'a> {
             self.usage_tracker.forget_install(install_name)?;
             Ok(())
         } else {
-            Err(terr!("error-version-not-found"))
+            Err(terr!("error-version-not-found").into())
         }
     }
 
@@ -312,7 +312,8 @@ impl<'a> Library<'a> {
             return Err(terr!(
                 "error-version-not-found",
                 version = &crate::version::display_version(gv, variant, registry),
-            ));
+            )
+            .into());
         }
 
         let godot_executable = find_godot_executable(&version_dir, console)?;

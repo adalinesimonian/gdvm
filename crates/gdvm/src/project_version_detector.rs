@@ -19,8 +19,8 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::eprintln_i18n;
 use crate::version::VersionQuery;
+use crate::{terr, ui};
 
 /// Parsed representation of a `project.godot` file.
 pub struct ParsedProject {
@@ -102,8 +102,12 @@ impl ProjectVersionProbe {
         let project_file = find_project_file(path.as_ref())?;
         let contents = match fs::read_to_string(&project_file) {
             Ok(s) => s,
-            Err(_) => {
-                eprintln_i18n!("error-failed-reading-project-godot");
+            Err(err) => {
+                ui::report_error(
+                    &terr!("error-failed-reading-project-godot")
+                        .with_source(err)
+                        .into(),
+                );
                 return None;
             }
         };

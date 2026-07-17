@@ -33,7 +33,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
 
     let requested_version = match &spec.target {
         VersionTarget::Keyword(_) => {
-            return Err(terr!("error-version-not-found"));
+            return Err(terr!("error-version-not-found").into());
         }
         VersionTarget::Pattern(gv) => gv.clone(),
     };
@@ -45,7 +45,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
 
     match resolved_versions.len() {
         0 => {
-            return Err(terr!("error-version-not-found"));
+            return Err(terr!("error-version-not-found").into());
         }
         1 => {
             let installed = &resolved_versions[0];
@@ -75,7 +75,7 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
                     )
                 );
             }
-            return Err(terr!("error-multiple-versions-found"));
+            return Err(terr!("error-multiple-versions-found").into());
         }
     }
 

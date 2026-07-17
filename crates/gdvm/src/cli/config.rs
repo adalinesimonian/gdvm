@@ -51,7 +51,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
             let value: String = if let Some(v) = sub_m.get_one::<String>("value") {
                 v.clone()
             } else if !std::io::IsTerminal::is_terminal(&std::io::stdin()) {
-                return Err(terr!("error-non-interactive-value", key = key.as_str()));
+                return Err(terr!("error-non-interactive-value", key = key.as_str()).into());
             } else {
                 // Build the prompt message from the Fluent bundle.
                 let prompt = t!("config-set-prompt", key = key.as_str());
@@ -61,7 +61,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                     match rpassword::prompt_password("") {
                         Ok(input) => input,
                         Err(err) => {
-                            return Err(terr!("error-reading-input").context(err));
+                            return Err(terr!("error-reading-input").with_source(err).into());
                         }
                     }
                 } else {
@@ -77,7 +77,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                 gdvm::ui::warn(t!("warning-setting-sensitive"));
             }
             if !config::KNOWN_KEYS.contains(&key.as_str()) {
-                return Err(terr!("error-unknown-config-key"));
+                return Err(terr!("error-unknown-config-key").into());
             }
             config::Config::modify(|config| config.set_value(key, &value))?;
             println_i18n!("config-set-success");
@@ -114,7 +114,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                 }
             }
         }
-        _ => return Err(terr!("error-invalid-config-subcommand")),
+        _ => return Err(terr!("error-invalid-config-subcommand").into()),
     }
     Ok(())
 }

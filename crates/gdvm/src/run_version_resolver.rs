@@ -155,7 +155,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
     /// Resolve the Godot version to use. Installs it if requested.
     pub async fn resolve(&self, request: RunResolutionRequest<'_>) -> Result<RunResolutionResult> {
         let Some(selection) = self.select(&request).await? else {
-            return Err(terr!("no-default-set"));
+            return Err(terr!("no-default-set").into());
         };
 
         match selection.source {
@@ -170,7 +170,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 .await
                     && !request.force_on_mismatch
                 {
-                    return Err(terr!("error-project-version-mismatch", pinned = 0));
+                    return Err(terr!("error-project-version-mismatch", pinned = 0).into());
                 }
             }
             RunSource::Pin { gdvmrc_fallback } => {
@@ -186,7 +186,7 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 .await
                     && !request.force_on_mismatch
                 {
-                    return Err(terr!("error-project-version-mismatch", pinned = 1));
+                    return Err(terr!("error-project-version-mismatch", pinned = 1).into());
                 }
             }
             RunSource::Project => {

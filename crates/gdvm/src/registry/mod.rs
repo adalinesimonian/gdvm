@@ -213,7 +213,7 @@ impl RegistryUrl {
         } else if s.starts_with("http://") || s.starts_with("https://") {
             Ok(RegistryUrl::Http(s.trim_end_matches('/').to_string()))
         } else {
-            Err(terr!("error-registry-unsupported-url-scheme", url = s))
+            Err(terr!("error-registry-unsupported-url-scheme", url = s).into())
         }
     }
 
@@ -357,7 +357,8 @@ impl Registry {
                         "error-registry-fetch-failed",
                         url = url,
                         status = resp.status().to_string()
-                    ));
+                    )
+                    .into());
                 }
                 Ok(Some(
                     crate::download_utils::response_text_limited(
@@ -385,18 +386,15 @@ impl Registry {
             .await?
             .ok_or_else(|| terr!("error-registry-missing-manifest", name = self.name.as_str()))?;
         let manifest: v2::Manifest = serde_json::from_str(&manifest_text).map_err(|e| {
-            terr!(
-                "error-registry-parse-manifest",
-                name = self.name.as_str(),
-                error = e.to_string()
-            )
+            terr!("error-registry-parse-manifest", name = self.name.as_str()).with_source(e)
         })?;
         if manifest.schema != 2 {
             return Err(terr!(
                 "error-registry-unsupported-schema",
                 registry = self.name.as_str(),
                 schema = manifest.schema
-            ));
+            )
+            .into());
         }
 
         let index_text = self
@@ -404,11 +402,7 @@ impl Registry {
             .await?
             .ok_or_else(|| terr!("error-registry-missing-index", name = self.name.as_str()))?;
         let index: v2::Index = serde_json::from_str(&index_text).map_err(|e| {
-            terr!(
-                "error-registry-parse-index",
-                name = self.name.as_str(),
-                error = e.to_string()
-            )
+            terr!("error-registry-parse-index", name = self.name.as_str()).with_source(e)
         })?;
         Ok(v2::normalize_index(index))
     }

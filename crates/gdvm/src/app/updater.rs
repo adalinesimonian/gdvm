@@ -209,7 +209,7 @@ impl<'a> Updater<'a> {
         // Define install directory
         let install_dir = self.paths.base().join("bin");
         std::fs::create_dir_all(&install_dir)
-            .map_err(|e| terr!("upgrade-install-dir-failed", error = e.to_string()))?;
+            .map_err(|e| terr!("upgrade-install-dir-failed").with_source(e))?;
 
         let new_exe = install_dir.join(".gdvm-upgrade-new");
         let partial = install_dir.join(".gdvm-upgrade-new.partial");
@@ -230,10 +230,7 @@ impl<'a> Updater<'a> {
 
         let file = match downloaded {
             Ok(file) => file,
-            Err(err) => {
-                ui::error(t!("upgrade-download-failed", error = err.to_string()));
-                return Err(err);
-            }
+            Err(err) => return Err(err),
         };
 
         #[cfg(target_family = "unix")]
@@ -248,11 +245,11 @@ impl<'a> Updater<'a> {
         let backup_exe = current_exe.with_extension("bak");
 
         std::fs::rename(&current_exe, &backup_exe)
-            .map_err(|e| terr!("upgrade-rename-failed", error = e.to_string()))?;
+            .map_err(|e| terr!("upgrade-rename-failed").with_source(e))?;
 
         if let Err(err) = std::fs::rename(&new_exe, &current_exe) {
             let _ = std::fs::rename(&backup_exe, &current_exe);
-            return Err(terr!("upgrade-replace-failed", error = err.to_string()));
+            return Err(terr!("upgrade-replace-failed").with_source(err).into());
         }
 
         // Update gdvm cache

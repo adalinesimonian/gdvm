@@ -20,8 +20,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
-use crate::eprintln_i18n;
 use crate::i18n::I18n;
+use crate::{terr, ui};
 
 type MigrationFn = fn(&Path) -> Result<()>;
 
@@ -106,11 +106,11 @@ define_migrations! {
             }
 
             if let Err(err) = create_symlink(&new_path, &old_path) {
-                eprintln_i18n!("error-link-symlink",
+                ui::report_error(&terr!(
+                    "error-link-symlink",
                     target = &old_path.to_string_lossy().to_string(),
                     link = &new_path.to_string_lossy().to_string(),
-                    error = &err.to_string(),
-                );
+                ).with_source(err).into());
             }
         }
 
@@ -283,11 +283,14 @@ fn finish_legacy_top(old: &Path, new_target: &Path) {
         return;
     }
     if let Err(err) = create_symlink(new_target, old) {
-        eprintln_i18n!(
-            "error-link-symlink",
-            target = &old.to_string_lossy().to_string(),
-            link = &new_target.to_string_lossy().to_string(),
-            error = &err.to_string(),
+        ui::report_error(
+            &terr!(
+                "error-link-symlink",
+                target = &old.to_string_lossy().to_string(),
+                link = &new_target.to_string_lossy().to_string(),
+            )
+            .with_source(err)
+            .into(),
         );
     }
 }

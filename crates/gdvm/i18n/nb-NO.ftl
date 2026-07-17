@@ -162,7 +162,7 @@ error-invalid-sha-length = Ugyldig SHA-lengde { $length }
 error-size-mismatch = Størrelsesavvik for fila { $file }: forventa { $expected } byte, fikk { $actual } byte.
 error-insecure-url = Nekter å hente { $url } over ei ukryptert tilkobling. Bare https://- og file://-URL-er er tillatte. Sett miljøvariabelen GDVM_ALLOW_INSECURE_URLS for å tillate ukrypterte http://-URL-er.
 error-insecure-redirect = Nekter å følge ei omdirigering fra https:// til en ukryptert http://-URL. Sett miljøvariabelen GDVM_ALLOW_INSECURE_URLS for å tillate ukrypterte http://-URL-er.
-error-response-not-utf8 = Svaret fra { $url } er ikke gyldig UTF-8: { $error }
+error-response-not-utf8 = Svaret fra { $url } er ikke gyldig UTF-8.
 error-response-too-large = Svaret fra { $url } overskrider den maksimale tillatte størrelsen på { $limit } byte.
 error-too-many-redirects = For mange omdirigeringer.
 error-config-invalid-number = Ugyldig verdi for { $key }: { $value } (forventet et tall)
@@ -184,8 +184,8 @@ error-registry-invalid-name = Ugyldig registernavn: { $name }
 error-registry-missing-index = Registeret «{ $name }» mangler index.json
 error-registry-missing-manifest = Registeret «{ $name }» mangler registry.json
 error-registry-not-configured = Registeret «{ $name }» er ikke konfigurert
-error-registry-parse-index = Klarte ikke å tolke indeksen for «{ $name }»: { $error }
-error-registry-parse-manifest = Klarte ikke å tolke manifestet for «{ $name }»: { $error }
+error-registry-parse-index = Klarte ikke å tolke indeksen for «{ $name }».
+error-registry-parse-manifest = Klarte ikke å tolke manifestet for «{ $name }».
 error-registry-unknown = Ukjent register «{ $name }»
 error-registry-unsupported-url-scheme = Registerets URL-skjema støttes ikke: { $url }
 error-spec-empty-registry = Tomt registernavn i «{ $input }»
@@ -222,29 +222,29 @@ available-releases = Tilgjengelige utgivelser:
 version-already-installed = Versjon {$version} er allerede installert.
 godot-executable-not-found = { -godot }-kjørbar fil ble ikke funnet for versjon {$version}.
 error-link-exists = Stien {$path} finnes allerede. Bruk --force for å overskrive.
-error-link-symlink = Klarte ikke å opprette lenke fra {$link} til {$target}: {$error}
-error-link-copy = Klarte ikke å kopiere kjørbar: {$error}
+error-link-symlink = Klarte ikke å opprette lenke fra {$link} til {$target}.
+error-link-copy = Klarte ikke å kopiere fil.
 
 error-no-stable-releases-found = Ingen stabile versjoner funnet.
 
-error-starting-godot = Kunne ikke starte { -godot }: { $error }
+error-starting-godot = Kunne ikke starte { -godot }.
 confirm-yes = ja
 
 default-set-success = Standardversjon {$version} er satt.
 default-unset-success = Standardversjonen er fjerna.
 provide-version-or-unset = Vennligst oppgi en versjon for å sette som standard eller «unset» for å fjerne standardversjonen.
 
-error-open-zip = Kunne ikke åpne ZIP-fila { $path }: { $error }
-error-read-zip = Kunne ikke lese ZIP-arkivet { $path }: { $error }
-error-access-file = Kunne ikke få tilgang til fila ved indeks { $index }: { $error }
-error-reopen-zip = Kunne ikke åpne ZIP-fila på nytt { $path }: { $error }
+error-open-zip = Kunne ikke åpne ZIP-fila { $path }.
+error-read-zip = Kunne ikke lese ZIP-arkivet { $path }.
+error-access-file = Kunne ikke få tilgang til fila ved indeks { $index }.
+error-reopen-zip = Kunne ikke åpne ZIP-fila på nytt { $path }.
 error-invalid-file-name = Ugyldig filnavn i ZIP-arkivet
-error-create-dir = Kunne ikke opprette katalogen { $path }: { $error }
-error-create-file = Kunne ikke opprette fila { $path }: { $error }
-error-read-zip-file = Kunne ikke lese fra ZIP-fila { $file }: { $error }
-error-write-file = Kunne ikke skrive til fila { $path }: { $error }
-error-strip-prefix = Kunne ikke fjerne prefiks: { $error }
-error-set-permissions = Kunne ikke sette tillatelser for { $path }: { $error }
+error-create-dir = Kunne ikke opprette katalogen { $path }.
+error-create-file = Kunne ikke opprette fila { $path }.
+error-read-zip-file = Kunne ikke lese fra ZIP-fila { $file }.
+error-write-file = Kunne ikke skrive til fila { $path }.
+error-strip-prefix = Kunne ikke fjerne prefiks.
+error-set-permissions = Kunne ikke sette tillatelser for { $path }.
 error-create-symlink-windows = Kunne ikke opprette symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklermodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller kjør som administrator.
 
 help-upgrade = Oppgrader { -gdvm } til nyeste versjon
@@ -252,14 +252,13 @@ help-upgrade-major = Tillat oppgradering på tvers av hovedversjoner
 help-upgrade-pre = Oppgrader til nyeste forhåndsutgivelse
 upgrade-not-needed = { -gdvm } er allerede på siste versjon: { $version }.
 upgrade-current-version-newer = Den nåværende { -gdvm }-versjonen ({ $current }) er nyere enn den siste tilgjengelige versjonen ({ $latest }). Ingen oppgradering nødvendig.
-upgrade-download-failed = Nedlasting av oppgradering mislyktes: { $error }
-upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $error }
-upgrade-rename-failed = Klarte ikke å endre navnet på den nåværende kjørbare fila: { $error }
-upgrade-replace-failed = Klarte ikke å erstatte den kjørbare fila med den nye: { $error }
+upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen.
+upgrade-rename-failed = Klarte ikke å endre navnet på den nåværende kjørbare fila.
+upgrade-replace-failed = Klarte ikke å erstatte den kjørbare fila med den nye.
 upgrade-no-binary = Ingen { -gdvm }-binærfil er tilgjengelig for versjon { $version } og målet { $target }.
 upgrade-checksum-required = Utgivelsesmanifestet inneholder ingen sjekksum for denne { -gdvm }-binærfila. Nekter å oppgradere.
-error-fetching-gdvm-releases = Feil ved henting av { -gdvm }-utgivelser: { $error }
-error-parsing-gdvm-releases = Feil ved tolking av { -gdvm }-utgivelser: { $error }
+error-fetching-gdvm-releases = Feil ved henting av { -gdvm }-utgivelser.
+error-parsing-gdvm-releases = Feil ved tolking av { -gdvm }-utgivelser.
 error-unsupported-gdvm-schema = Skjemaversjon for { -gdvm }-utgivelsesmanifestet støttes ikke: { $schema }. Prøv å oppgradere { -gdvm } manuelt.
 upgrade-available = 💡 En ny versjon av { -gdvm } er tilgjengelig: {$version}. Kjør «{ -gdvm } upgrade» for å oppdatere.
 upgrade-available-major = 💡 Ei hovedversjonsoppdatering av { -gdvm } er tilgjengelig: {$version}. Kjør «{ -gdvm } upgrade -m» for å oppdatere.
@@ -282,13 +281,10 @@ pinned-success = Versjon {$version} ble festet i { -gdvm-toml }
 error-pin-version-not-found = Kan ikke feste versjon {$version}
 
 error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren.
-error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }
+error-download-failed = Nedlasting mislyktes med HTTP-status { $status }.
 error-ensure-godot-binaries-failed = Kunne ikke forsikre { -godot }-kjørbare filer.
-    Feil: { $error }.
-    Prøv å slette { $path } og kjør { -gdvm } på nytt.
 
 error-post-upgrade-action-failed = Trinnet { $id } mislyktes etter oppgraderinga.
-    Feil: { $error }.
     { -gdvm }-installasjonen din kan være ufullstendig. Prøv å kjøre { -gdvm } på nytt.
 
 error-failed-reading-project-godot = Kunne ikke lese project.godot, kan ikke automatisk bestemme prosjektversjonen.
@@ -368,7 +364,7 @@ config-key-not-set = Konfigurasjonsnøkkel ikke satt.
 config-key-not-set-value = <ikke satt>
 error-unknown-config-key = Ukjent konfigurasjonsnøkkel.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk "get", "set" eller "list".
-error-parse-config = Kunne ikke tolke konfigurasjonsfila: { $error }
+error-parse-config = Kunne ikke tolke konfigurasjonsfila.
 error-parse-config-using-default = Bruker standard konfigurasjonsverdier.
 
 help-registry = Administrer registre å installere { -godot }-bygg fra

@@ -337,7 +337,7 @@ impl RunVersionSource for Gdvm {
             .await?;
 
         match matches.len() {
-            0 => Err(terr!("error-version-not-found")),
+            0 => Err(terr!("error-version-not-found").into()),
             1 => Ok(matches[0].version.clone()),
             _ => {
                 let list = matches
@@ -354,7 +354,7 @@ impl RunVersionSource for Gdvm {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                Err(terr!("error-multiple-versions-found", list = list.as_str()))
+                Err(terr!("error-multiple-versions-found", list = list.as_str()).into())
             }
         }
     }

@@ -152,7 +152,8 @@ async fn ensure_registry_trusted(
             "error-non-interactive-trust",
             registry = name,
             url = url.as_str()
-        ));
+        )
+        .into());
     }
 
     eprint!("{} ", t!("registry-trust-prompt"));
@@ -160,7 +161,7 @@ async fn ensure_registry_trusted(
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     if input.trim().to_lowercase() != t!("confirm-yes") {
-        return Err(terr!("registry-trust-aborted"));
+        return Err(terr!("registry-trust-aborted").into());
     }
 
     Config::modify(|config| {

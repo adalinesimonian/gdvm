@@ -151,17 +151,31 @@ pub fn code_for(key: &str) -> Option<&'static str> {
 pub struct CodedError {
     code: Option<&'static str>,
     message: String,
+    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
 }
 
 impl CodedError {
     pub fn new(key: &str, message: String) -> Self {
         let code = code_for(key);
         debug_assert!(code.is_some(), "no error code assigned for key {key}");
-        Self { code, message }
+        Self {
+            code,
+            message,
+            source: None,
+        }
     }
 
     pub fn code(&self) -> Option<&'static str> {
         self.code
+    }
+
+    pub fn with_source<E: std::error::Error + Send + Sync + 'static>(mut self, source: E) -> Self {
+        self.source = Some(Box::new(source));
+        self
+    }
+
+    pub fn with_string_source(self, s: impl Into<String>) -> Self {
+        self.with_source(StringSourceError(s.into()))
     }
 }
 
@@ -171,7 +185,24 @@ impl fmt::Display for CodedError {
     }
 }
 
-impl std::error::Error for CodedError {}
+impl std::error::Error for CodedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.source
+            .as_ref()
+            .map(|s| s.as_ref() as &(dyn std::error::Error + 'static))
+    }
+}
+
+#[derive(Debug)]
+struct StringSourceError(String);
+
+impl fmt::Display for StringSourceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for StringSourceError {}
 
 #[cfg(test)]
 mod tests {

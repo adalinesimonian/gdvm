@@ -182,7 +182,7 @@ error-invalid-sha-length = Անվավեր SHA երկարություն { $length
 error-size-mismatch = Չափի անհամապատասխանություն { $file } ֆայլի համար. սպասվում էր { $expected } բայթ, ստացվել է { $actual } բայթ։
 error-insecure-url = Մերժվում է { $url }-ի բեռնումը չգաղտնագրված կապով։ Թույլատրվում են միայն https:// և file:// URL-ները։ Սահմանեք GDVM_ALLOW_INSECURE_URLS միջավայրի փոփոխականը՝ չգաղտնագրված http:// URL-ները թույլատրելու համար։
 error-insecure-redirect = Մերժվում է վերաուղղորդումը https://-ից չգաղտնագրված http:// URL-ի։ Սահմանեք GDVM_ALLOW_INSECURE_URLS միջավայրի փոփոխականը՝ չգաղտնագրված http:// URL-ները թույլատրելու համար։
-error-response-not-utf8 = { $url }-ի պատասխանը վավեր UTF-8 չէ․ { $error }
+error-response-not-utf8 = { $url }-ի պատասխանը վավեր UTF-8 չէ։
 error-response-too-large = { $url }-ի պատասխանը գերազանցում է թույլատրված առավելագույն չափը՝ { $limit } բայթ։
 error-too-many-redirects = Չափազանց շատ վերաուղղորդումներ։
 error-config-invalid-number = Անվավեր արժեք { $key }-ի համար. { $value } (սպասվում էր թիվ)
@@ -204,8 +204,8 @@ error-registry-invalid-name = Անվավեր ռեգիստրի անուն. { $nam
 error-registry-missing-index = « { $name } » ռեգիստրում բացակայում է index.json-ը
 error-registry-missing-manifest = « { $name } » ռեգիստրում բացակայում է registry.json-ը
 error-registry-not-configured = « { $name } » ռեգիստրը կարգավորված չէ
-error-registry-parse-index = Չհաջողվեց վերլուծել « { $name } »-ի ինդեքսը. { $error }
-error-registry-parse-manifest = Չհաջողվեց վերլուծել « { $name } »-ի մանիֆեստը. { $error }
+error-registry-parse-index = Չհաջողվեց վերլուծել « { $name } »-ի ինդեքսը։
+error-registry-parse-manifest = Չհաջողվեց վերլուծել « { $name } »-ի մանիֆեստը։
 error-registry-unknown = Անհայտ ռեգիստր « { $name } »
 error-registry-unsupported-url-scheme = Ռեգիստրի URL-ի չաջակցվող սխեմա. { $url }
 error-spec-empty-registry = Դատարկ ռեգիստրի անուն « { $input } »-ում
@@ -242,29 +242,29 @@ available-releases = Հասանելի թողարկումներ:
 version-already-installed = Տարբերակը արդեն տեղադրված է։ օգտագործեք {$version}:
 godot-executable-not-found = { -godot(case: "genitive") } գործարկվող ֆայլը չի գտնվել {$version} տարբերակի համար:
 error-link-exists = {$path} ուղին արդեն գոյություն ունի։ Օգտագործեք --force՝ վերագրելու համար։
-error-link-symlink = Չհաջողվեց ստեղծել հղումը {$link}-ից դեպի {$target}։ {$error}
-error-link-copy = Կատարվողը պատճենելու ձախողում՝ {$error}
+error-link-symlink = Չհաջողվեց ստեղծել հղումը {$link}-ից դեպի {$target}։
+error-link-copy = Չհաջողվեց պատճենել ֆայլը։
 
 error-no-stable-releases-found = Կայուն թողարկումներ չեն գտնվել:
 
-error-starting-godot = Չհաջողվեց գործարկել { -godot(case: "definite") }՝ { $error }
+error-starting-godot = Չհաջողվեց գործարկել { -godot(case: "definite") }։
 confirm-yes = այո
 
 default-set-success = Հաջողությամբ սահմանվել է {$version} որպես լռելյայն { -godot } տարբերակը։
 default-unset-success = Հաջողությամբ հեռացվեց լռելյայն { -godot } տարբերակը։
 provide-version-or-unset = Խնդրում ենք տրամադրել տարբերակ՝ սահմանելու համար լռելյայն կամ 'unset'՝ լռելյայն տարբերակը հեռացնելու համար։
 
-error-open-zip = Չհաջողվեց բացել ZIP ֆայլը { $path }: { $error }
-error-read-zip = Չհաջողվեց կարդալ ZIP արխիվը { $path }: { $error }
-error-access-file = Չհաջողվեց մուտք գործել ֆայլը ինդեքսով { $index }: { $error }
-error-reopen-zip = Չհաջողվեց կրկին բացել ZIP ֆայլը { $path }: { $error }
+error-open-zip = Չհաջողվեց բացել ZIP ֆայլը { $path }։
+error-read-zip = Չհաջողվեց կարդալ ZIP արխիվը { $path }։
+error-access-file = Չհաջողվեց մուտք գործել ֆայլը ինդեքսով { $index }։
+error-reopen-zip = Չհաջողվեց կրկին բացել ZIP ֆայլը { $path }։
 error-invalid-file-name = Անվավեր ֆայլի անուն ZIP արխիվում
-error-create-dir = Չհաջողվեց ստեղծել գրացուցակը { $path }: { $error }
-error-create-file = Չհաջողվեց ստեղծել ֆայլը { $path }: { $error }
-error-read-zip-file = Չհաջողվեց կարդալ ZIP ֆայլից { $file }: { $error }
-error-write-file = Չհաջողվեց գրել ֆայլը { $path }: { $error }
-error-strip-prefix = Սխալ է հանել նախաբառը՝ { $error }
-error-set-permissions = Չհաջողվեց սահմանել արտոնայինությունները { $path }: { $error }
+error-create-dir = Չհաջողվեց ստեղծել գրացուցակը { $path }։
+error-create-file = Չհաջողվեց ստեղծել ֆայլը { $path }։
+error-read-zip-file = Չհաջողվեց կարդալ ZIP ֆայլից { $file }։
+error-write-file = Չհաջողվեց գրել ֆայլը { $path }։
+error-strip-prefix = Սխալ է հանել նախաբառը։
+error-set-permissions = Չհաջողվեց սահմանել արտոնայինությունները { $path }։
 error-create-symlink-windows = Չհաջողվեց ստեղծել symlink։ Ստուգեք, արդյոք {"\u001b"}]8;;ms-settings:developers{"\u001b"}\developer mode-ը{"\u001b"}]8;;{"\u001b"}\ միացած է կամ գործարկեք ադմինի իրավունքներով:
 
 help-upgrade = Թարմացնել { -gdvm(case: "definite") } վերջին տարբերակին
@@ -272,14 +272,13 @@ help-upgrade-major = Թույլատրել թարմացումը հիմնական 
 help-upgrade-pre = Թարմացնել մինչև վերջին նախնական թողարկումը
 upgrade-not-needed = { -gdvm(case: "definite") } արդեն վերջին տարբերակն է՝ { $version }։
 upgrade-current-version-newer = Ներկայիս { -gdvm } տարբերակը ({ $current }) ավելի նոր է, քան վերջին հասանելի տարբերակը ({ $latest })։ Թարմացումը անհրաժեշտ չէ։
-upgrade-download-failed = Թարմացման բեռնումը ձախողվեց: { $error }
-upgrade-install-dir-failed = Չհաջողվեց ստեղծել տեղադրման ծառարանները: { $error }
-upgrade-rename-failed = Չհաջողվեց փոխանակել գործող գործարկվող ֆայլի անունը: { $error }
-upgrade-replace-failed = Չհաջողվեց փոխարինել գործող գործարկվող ֆայլը նորով: { $error }
+upgrade-install-dir-failed = Չհաջողվեց ստեղծել տեղադրման ծառարանները։
+upgrade-rename-failed = Չհաջողվեց փոխանակել գործող գործարկվող ֆայլի անունը։
+upgrade-replace-failed = Չհաջողվեց փոխարինել գործող գործարկվող ֆայլը նորով։
 upgrade-no-binary = { -gdvm(case: "genitive") } երկուական ֆայլ հասանելի չէ { $version } տարբերակի և { $target } թիրախի համար։
 upgrade-checksum-required = Թողարկման մանիֆեստը չի պարունակում ստուգիչ գումար այս { -gdvm } երկուական ֆայլի համար։ Թարմացումը մերժվում է։
-error-fetching-gdvm-releases = { -gdvm(case: "genitive") } թողարկումները բերելու սխալ․ { $error }
-error-parsing-gdvm-releases = { -gdvm(case: "genitive") } թողարկումները վերլուծելու սխալ․ { $error }
+error-fetching-gdvm-releases = { -gdvm(case: "genitive") } թողարկումները բերելու սխալ։
+error-parsing-gdvm-releases = { -gdvm(case: "genitive") } թողարկումները վերլուծելու սխալ։
 error-unsupported-gdvm-schema = { -gdvm(case: "genitive") } թողարկումների մանիֆեստի սխեմայի չաջակցվող տարբերակ․ { $schema }։ Փորձեք թարմացնել { -gdvm(case: "definite") } ձեռքով։
 upgrade-available = 💡 { -gdvm(case: "genitive") } նոր տարբերակ է հասանելի՝ {$version}: Գործարկեք «{ -gdvm } upgrade» թարմացնելու համար:
 upgrade-available-major = 💡 { -gdvm(case: "genitive") } հիմնական տարբերակի թարմացում է հասանելի՝ {$version}: Գործարկեք «{ -gdvm } upgrade -m» թարմացնելու համար:
@@ -302,13 +301,10 @@ pinned-success = {$version} տարբերակը հաջողությամբ գամվ
 error-pin-version-not-found = Չհաջողվեց գամել {$version} տարբերակը
 
 error-file-not-found = Ֆայլը չի գտնվել։ Հնարավոր է, որ այն գոյություն չունի սերվերի վրա։
-error-download-failed = Ներբեռնումը ձախողվեց անակնկալ սխալի պատճառով։ { $error }
+error-download-failed = Ներբեռնումը ձախողվեց HTTP կարգավիճակով { $status }։
 error-ensure-godot-binaries-failed = Չհաջողվեց ապահովել { -godot(case: "genitive") } գործարկվող ֆայլերը։
-    Սխալ: { $error }։
-    Փորձեք ջնջել { $path } ֆայլը և վերսկսեք { -gdvm(case: "definite") }:
 
 error-post-upgrade-action-failed = { $id } քայլը ձախողվեց թարմացումից հետո։
-    Սխալ: { $error }։
     Ձեր { -gdvm(case: "genitive") } տեղակայումը կարող է թերի լինել: Վերսկսեք { -gdvm(case: "definite") }:
 
 error-failed-reading-project-godot = Չհաջողվեց կարդալ project.godot ֆայլը, հնարավոր չէ ինքնուրույն որոշել նախագծի տարբերակը:
@@ -388,7 +384,7 @@ config-key-not-set = Կարգավորման բանալին սահմանված չ
 config-key-not-set-value = <սահմանված չէ>
 error-unknown-config-key = Անհայտ կարգավորման բանալի։
 error-invalid-config-subcommand = Անվավեր ենթահրաման config-ի համար։ Օգտագործեք «get», «set» կամ «list»։
-error-parse-config = Չհաջողվեց վերլուծել կարգավորման ֆայլը․ { $error }
+error-parse-config = Չհաջողվեց վերլուծել կարգավորման ֆայլը։
 error-parse-config-using-default = Օգտագործվում են կարգավորման լռելյայն արժեքները։
 
 help-registry = Կառավարել ռեեստրները, որոնցից տեղադրվում են { -godot(case: "genitive") } կառուցումները

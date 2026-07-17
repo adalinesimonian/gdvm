@@ -251,7 +251,8 @@ impl<'a> Installer<'a> {
             return Err(terr!(
                 "error-archive-not-cached",
                 version = crate::version::display_version(gv, variant, registry)
-            ));
+            )
+            .into());
         }
         self.track_archive_use(&path)?;
         Ok(path)
