@@ -58,6 +58,8 @@ pub struct PruneReport {
     pub installs: Vec<PrunedItem>,
     /// Cached archives that were removed.
     pub archives: Vec<PrunedItem>,
+    /// Partial downloads and extracted Godots.
+    pub interrupted: Vec<PrunedItem>,
     /// Number of installs preserved because they still have an active link.
     pub preserved_by_link: usize,
     /// Total approximate bytes freed.
@@ -69,7 +71,7 @@ pub struct PruneReport {
 impl PruneReport {
     /// True when nothing was removed.
     pub fn is_empty(&self) -> bool {
-        self.installs.is_empty() && self.archives.is_empty()
+        self.installs.is_empty() && self.archives.is_empty() && self.interrupted.is_empty()
     }
 }
 
@@ -223,6 +225,38 @@ impl<'a> Pruner<'a> {
             });
         }
 
+        const INTERRUPTED_MIN_AGE_SECS: u64 = 60 * 60;
+
+        for (path, size) in self.collect_interrupted_leftovers(INTERRUPTED_MIN_AGE_SECS) {
+            let label = path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            if !opts.dry_run {
+                let removed = if path.is_dir() {
+                    fs::remove_dir_all(&path)
+                } else {
+                    fs::remove_file(&path)
+                };
+
+                if let Err(error) = removed {
+                    eprintln_i18n!(
+                        "prune-skipped-error",
+                        item = label.as_str(),
+                        error = error.to_string()
+                    );
+                    continue;
+                }
+            }
+
+            report.freed_bytes += size;
+            report.interrupted.push(PrunedItem {
+                label,
+                freed_bytes: size,
+            });
+        }
+
         if opts.dry_run {
             return Ok(report);
         }
@@ -313,6 +347,55 @@ impl<'a> Pruner<'a> {
         out
     }
 
+    /// Get a list of partial downloads and staging directories.
+    fn collect_interrupted_leftovers(&self, min_age_secs: u64) -> Vec<(PathBuf, u64)> {
+        let now = std::time::SystemTime::now();
+        let old_enough = |path: &Path| {
+            fs::metadata(path)
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|modified| now.duration_since(modified).ok())
+                .is_some_and(|age| age.as_secs() >= min_age_secs)
+        };
+
+        let mut leftovers: Vec<(PathBuf, u64)> = self
+            .artifact_cache
+            .partial_downloads()
+            .into_iter()
+            .filter(|(path, _)| old_enough(path))
+            .collect();
+
+        let Ok(stores) = fs::read_dir(self.paths.installs()) else {
+            return leftovers;
+        };
+
+        for store in stores.flatten().filter(|e| e.path().is_dir()) {
+            let Ok(variants) = fs::read_dir(store.path()) else {
+                continue;
+            };
+
+            for variant in variants.flatten().filter(|e| e.path().is_dir()) {
+                let Ok(leaves) = fs::read_dir(variant.path()) else {
+                    continue;
+                };
+
+                for leaf in leaves.flatten() {
+                    let name = leaf.file_name().to_string_lossy().to_string();
+                    let path = leaf.path();
+
+                    if name.starts_with(".staging-") && path.is_dir() && old_enough(&path) {
+                        let size = crate::fs_utils::dir_size(&path);
+
+                        leftovers.push((path, size));
+                    }
+                }
+            }
+        }
+
+        leftovers.sort();
+        leftovers
+    }
+
     /// Enumerate every file in the artifact cache directory.
     fn collect_cached_archives(&self) -> Vec<PathBuf> {
         let mut out = Vec::new();
@@ -320,7 +403,11 @@ impl<'a> Pruner<'a> {
             return out;
         };
         for entry in entries.flatten() {
-            if entry.file_type().is_ok_and(|ft| ft.is_file()) {
+            let is_partial = entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(crate::artifact_cache::PARTIAL_PREFIX);
+            if entry.file_type().is_ok_and(|ft| ft.is_file()) && !is_partial {
                 out.push(entry.path());
             }
         }
