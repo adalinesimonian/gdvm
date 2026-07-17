@@ -132,6 +132,7 @@ status-installed = Installert
 status-installing = Installerer
 status-removed = Fjerna
 status-removing = Fjernar
+status-running = Køyrer
 status-upgraded = Oppgradert
 status-upgrading = Oppgraderer
 status-verifying = Verifiserer
@@ -209,8 +210,6 @@ warning-fetching-releases-using-cache = Feil ved henting av utgjevingar: { $erro
 error-version-not-found = Versjonen vart ikkje funnen.
 error-archive-not-cached = Fann ikkje noko arkiv i cachen for {$version}. Installer han fyrst for å fylle cachen.
 error-multiple-versions-found = Fleire versjonar samsvarar med førespurnaden:
-
-running-version = Køyrer versjon {$version}
 link-created = Lenkja {$version} til {$path}
 copy-created = Kopierte {$version} til {$path}
 no-matching-releases = Ingen samsvarande utgjevingar funne.

@@ -134,6 +134,7 @@ status-installed = Installed
 status-installing = Installing
 status-removed = Removed
 status-removing = Removing
+status-running = Running
 status-upgraded = Upgraded
 status-upgrading = Upgrading
 status-verifying = Verifying
@@ -211,8 +212,6 @@ warning-fetching-releases-using-cache = Error fetching releases: { $error }. Usi
 error-version-not-found = Version not found.
 error-archive-not-cached = No cached archive found for {$version}. Install it first to populate the cache.
 error-multiple-versions-found = Multiple versions match your request:
-
-running-version = Running version {$version}
 link-created = Linked {$version} to {$path}
 copy-created = Copied {$version} to {$path}
 no-matching-releases = No matching releases found.

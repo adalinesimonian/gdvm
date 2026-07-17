@@ -132,6 +132,7 @@ status-installed = Installé
 status-installing = Installation
 status-removed = Supprimé
 status-removing = Suppression
+status-running = Exécution
 status-upgraded = Mis à niveau
 status-upgrading = Mise à niveau
 status-verifying = Vérification
@@ -209,8 +210,6 @@ warning-fetching-releases-using-cache = Erreur lors de la récupération des ver
 error-version-not-found = Version introuvable.
 error-archive-not-cached = Aucune archive en cache trouvée pour {$version}. Installez-la d'abord pour remplir le cache.
 error-multiple-versions-found = Plusieurs versions correspondent à votre demande :
-
-running-version = Exécution de la version {$version}
 link-created = Lien créé de {$version} vers {$path}
 copy-created = Copie de {$version} vers {$path} effectuée
 no-matching-releases = Aucune version correspondante trouvée.

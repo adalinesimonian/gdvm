@@ -18,7 +18,6 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::eprintln_i18n;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
 use gdvm::version::{self, VersionSpec, VersionTarget};
 
@@ -129,7 +128,7 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
         resolved.registry.as_deref(),
     );
 
-    eprintln_i18n!("running-version", version = &display);
+    gdvm::ui::milestone(gdvm::t!("status-running"), &display);
 
     gdvm.launcher().run(
         &resolved.version,

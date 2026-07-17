@@ -152,6 +152,7 @@ status-installed = Տեղադրվեց
 status-installing = Տեղադրում
 status-removed = Հեռացված է
 status-removing = Հեռացվում է
+status-running = Գործարկում
 status-upgraded = Թարմացվեց
 status-upgrading = Թարմացում
 status-verifying = Ստուգում
@@ -229,8 +230,6 @@ warning-fetching-releases-using-cache = Սխալ թողարկումների ստ
 error-version-not-found = Տարբերակը չի գտնվել:
 error-archive-not-cached = {$version}-ի համար պահված արխիվ չի գտնվել։ Նախ տեղադրեք այն՝ քեշը լրացնելու համար։
 error-multiple-versions-found = Մի քանի տարբերակներ են համընկնում ձեր հարցմանը:
-
-running-version = Գործարկվում է {$version} տարբերակը
 link-created = {$version}-ը կապվեց {$path}-ին
 copy-created = {$version} տարբերակը պատճենվեց {$path} ուղու վրա
 no-matching-releases = Համապատասխան թողարկումներ չեն գտնվել:
