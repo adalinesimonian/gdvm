@@ -22,7 +22,7 @@ use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::config::Config;
 use gdvm::version::VersionQuery;
-use gdvm::{eprintln_i18n, t, terr};
+use gdvm::{t, terr, ui};
 
 mod args;
 mod cache;
@@ -135,7 +135,11 @@ async fn ensure_registry_trusted(
 
     if assume_yes {
         // Warn and allow the user some time to cancel.
-        eprintln_i18n!("registry-trust-bypass", registry = name, url = url.as_str());
+        ui::warn(t!(
+            "registry-trust-bypass",
+            registry = name,
+            url = url.as_str()
+        ));
         std::thread::sleep(std::time::Duration::from_secs(5));
         return Config::modify(|config| {
             config.trust_registry(&url);

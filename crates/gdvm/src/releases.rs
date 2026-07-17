@@ -76,10 +76,10 @@ impl ReleaseCatalog {
             }
 
             // Defer to cached data if available.
-            crate::eprintln_i18n!(
+            crate::ui::warn(crate::t!(
                 "warning-fetching-releases-using-cache",
                 error = error.to_string()
-            );
+            ));
         }
 
         Ok(filter_cached_releases(&cache, filter))

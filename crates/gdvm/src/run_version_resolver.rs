@@ -21,7 +21,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, Variant, VersionQuery};
-use crate::{eprintln_i18n, t, terr, ui};
+use crate::{t, terr, ui};
 
 #[async_trait(?Send)]
 pub trait RunVersionSource {
@@ -190,10 +190,10 @@ impl<'a, S: RunVersionSource> RunVersionResolver<'a, S> {
                 }
             }
             RunSource::Project => {
-                eprintln_i18n!(
+                ui::warn(t!(
                     "warning-using-project-version",
                     version = selection.version.to_display_str()
-                );
+                ));
             }
             RunSource::Default => {}
         }
@@ -264,12 +264,12 @@ pub async fn warn_project_version_mismatch<S: RunVersionSource, P: AsRef<Path> +
     if let Some((project_version, _variant)) = determined
         && project_version.conflicts_with(requested)
     {
-        eprintln_i18n!(
+        ui::warn(t!(
             "warning-project-version-mismatch",
             project_version = project_version.to_display_str(),
             requested_version = requested.to_display_str(),
             pinned = is_pin as i32,
-        );
+        ));
         eprintln!();
 
         return true;
