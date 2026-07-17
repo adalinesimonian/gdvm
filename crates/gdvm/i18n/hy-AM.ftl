@@ -233,6 +233,7 @@ warning-fetching-releases-using-cache = Սխալ թողարկումների ստ
 error-version-not-found = Տարբերակը չի գտնվել:
 error-archive-not-cached = {$version}-ի համար պահված արխիվ չի գտնվել։ Նախ տեղադրեք այն՝ քեշը լրացնելու համար։
 error-multiple-versions-found = Մի քանի տարբերակներ են համընկնում ձեր հարցմանը:
+    {$list}
 link-created = {$version}-ը կապվեց {$path}-ին
 copy-created = {$version} տարբերակը պատճենվեց {$path} ուղու վրա
 no-matching-releases = Համապատասխան թողարկումներ չեն գտնվել:

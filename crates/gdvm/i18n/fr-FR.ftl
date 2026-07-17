@@ -213,6 +213,7 @@ warning-fetching-releases-using-cache = Erreur lors de la récupération des ver
 error-version-not-found = Version introuvable.
 error-archive-not-cached = Aucune archive en cache trouvée pour {$version}. Installez-la d'abord pour remplir le cache.
 error-multiple-versions-found = Plusieurs versions correspondent à votre demande :
+    {$list}
 link-created = Lien créé de {$version} vers {$path}
 copy-created = Copie de {$version} vers {$path} effectuée
 no-matching-releases = Aucune version correspondante trouvée.

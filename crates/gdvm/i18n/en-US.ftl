@@ -215,6 +215,7 @@ warning-fetching-releases-using-cache = Error fetching releases: { $error }. Usi
 error-version-not-found = Version not found.
 error-archive-not-cached = No cached archive found for {$version}. Install it first to populate the cache.
 error-multiple-versions-found = Multiple versions match your request:
+    {$list}
 link-created = Linked {$version} to {$path}
 copy-created = Copied {$version} to {$path}
 no-matching-releases = No matching releases found.

@@ -213,6 +213,7 @@ warning-fetching-releases-using-cache = Feil ved henting av utgivelser: { $error
 error-version-not-found = Versjonen ble ikke funnet.
 error-archive-not-cached = Fant ingen arkiv i cachen for {$version}. Installer den først for å fylle cachen.
 error-multiple-versions-found = Flere versjoner samsvarer med forespørselen:
+    {$list}
 link-created = Lenket {$version} til {$path}
 copy-created = Kopierte {$version} til {$path}
 no-matching-releases = Ingen samsvarende utgivelser funna.

@@ -340,18 +340,21 @@ impl RunVersionSource for Gdvm {
             0 => Err(terr!("error-version-not-found")),
             1 => Ok(matches[0].version.clone()),
             _ => {
-                eprintln_i18n!("error-multiple-versions-found");
-                for v in &matches {
-                    println!(
-                        "- {}",
-                        crate::version::display_version(
-                            &v.version,
-                            &v.variant,
-                            v.registry.as_deref(),
+                let list = matches
+                    .iter()
+                    .map(|v| {
+                        format!(
+                            "- {}",
+                            crate::version::display_version(
+                                &v.version,
+                                &v.variant,
+                                v.registry.as_deref(),
+                            )
                         )
-                    );
-                }
-                Err(terr!("error-version-not-found"))
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                Err(terr!("error-multiple-versions-found", list = list.as_str()))
             }
         }
     }
