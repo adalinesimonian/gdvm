@@ -133,6 +133,8 @@ status-extracting = Извлечение
 status-fetching = Получение
 status-installed = Установлено
 status-installing = Установка
+status-removed = Удалено
+status-removing = Удаление
 status-upgraded = Обновлено
 status-upgrading = Обновление
 status-verifying = Проверка
@@ -145,8 +147,6 @@ auto-installing-version = Автоматическая установка вер
 
 no-versions-installed = Версии не установлены.
 installed-versions = Установленные версии { -godot }:
-removed-version = Версия {$version} удалена
-removing-version = Удаление версии {$version}
 progress-eta =
     { $magnitude ->
         [seconds] { $secs } с

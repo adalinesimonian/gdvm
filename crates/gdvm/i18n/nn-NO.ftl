@@ -130,6 +130,8 @@ status-extracting = Pakkar ut
 status-fetching = Hentar
 status-installed = Installert
 status-installing = Installerer
+status-removed = Fjerna
+status-removing = Fjernar
 status-upgraded = Oppgradert
 status-upgrading = Oppgraderer
 status-verifying = Verifiserer
@@ -142,8 +144,6 @@ auto-installing-version = Automatisk installasjon av versjon { $version }
 
 no-versions-installed = Ingen versjonar installerte.
 installed-versions = Installerte { -godot }-versjonar:
-removed-version = Fjerna versjonen {$version}
-removing-version = Fjernar versjon {$version}
 progress-eta =
     { $magnitude ->
         [seconds] { $secs }s

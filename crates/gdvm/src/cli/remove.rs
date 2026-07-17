@@ -19,7 +19,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::version::{self, VersionSpec, VersionTarget};
-use gdvm::{println_i18n, terr};
+use gdvm::{t, terr};
 
 use super::check_deprecated_csharp_flag;
 
@@ -55,14 +55,14 @@ pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
                 installed.registry.as_deref(),
             );
 
-            println_i18n!("removing-version", version = &display);
+            gdvm::ui::milestone(t!("status-removing"), &display);
 
             gdvm.library().remove(
                 &installed.version,
                 &installed.variant,
                 installed.registry.as_deref(),
             )?;
-            println_i18n!("removed-version", version = &display);
+            gdvm::ui::milestone(t!("status-removed"), &display);
         }
         _ => {
             for installed in &resolved_versions {
