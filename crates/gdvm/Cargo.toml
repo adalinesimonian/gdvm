@@ -68,7 +68,7 @@ tokio = { version = "=1.53.0", features = [
     "time",
 ] }
 async-trait = "=0.1.89"
-futures-util = "=0.3.32"
+futures-util = "=0.3.33"
 
 # For file system operations:
 zip = "=8.6.0"
