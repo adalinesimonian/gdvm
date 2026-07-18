@@ -232,6 +232,16 @@ impl Gdvm {
         }
     }
 
+    /// The gdvm base directory.
+    pub fn base_path(&self) -> &std::path::Path {
+        self.paths.base()
+    }
+
+    /// The number of partial download files currently in the cache.
+    pub fn partial_download_count(&self) -> usize {
+        self.artifact_cache.partial_downloads().len()
+    }
+
     /// Installed-version inventory and store paths.
     pub fn library(&self) -> Library<'_> {
         Library {

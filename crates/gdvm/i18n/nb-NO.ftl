@@ -98,6 +98,21 @@ no-cache-files-found = Ingen cache-filer funnet.
 no-cache-metadata-found = Ingen cache-metadata funnet.
 gdvm-toml-malformed = ignorerer { -gdvm-toml } på { $path } fordi den ikke kunne tolkes: { $error }
 
+help-diagnose = Kontroller installasjonen og rapporter tilstanden.
+diagnose-base-dir = { -gdvm }-mappe: { $path }
+diagnose-healthy = Ingen problemer funnet.
+diagnose-install-broken = { $version } mangler den kjørbare filen. Kjør «{ -gdvm } install» for den for å installere på nytt.
+diagnose-install-ok = { $version } kan kjøres.
+diagnose-partial-downloads =
+    { $count ->
+        [one] { $count } avbrutt nedlasting i cachen; den gjenopptas automatisk, eller «{ -gdvm } prune» fjerner den.
+       *[other] { $count } avbrutte nedlastinger i cachen; de gjenopptas automatisk, eller «{ -gdvm } prune» fjerner dem.
+    }
+diagnose-path-missing = { $path } er ikke i PATH; godot-shimen vil ikke være tilgjengelig ved navn.
+diagnose-path-ok = bin-mappen er i PATH.
+diagnose-shim-missing = Shimen «{ $name }» mangler eller er ikke kjørbar. Reinstallering av { -gdvm } skriver den på nytt.
+diagnose-shim-ok = Shimen «{ $name }» er installert og kjørbar.
+
 help-console = Kjør { -godot } med konsoll tilkobla. Standard er false på Windows, true på andre plattformer.
 
 help-default = Administrer standardversjonen
@@ -119,6 +134,8 @@ status-fetching = Henter
 status-installed = Installert
 status-installing = Installerer
 status-removed = Fjerna
+status-healthy = Frisk
+status-ok = OK
 prune-item-detail = { $label } ({ size-display })
 status-freed = Frigjort
 status-pruned = Rydda
@@ -189,6 +206,11 @@ error-spec-empty-variant = Tomt variantnavn i «{ $input }»
 error-spec-empty-version = Tom versjon i «{ $input }»
 error-system-time = Systemtiden er før UNIX-epoken
 error-unrecognized-version-format = Ukjent versjonsformat: { $input }
+error-diagnose-problems =
+    { $count ->
+        [one] { $count } problem funnet.
+       *[other] { $count } problemer funne.
+    }
 error-non-interactive-trust = Kan ikke spørre om å stole på registeret «{ $registry }» ({ $url }) i ei økt som ikke er interaktiv. Send --yes for å stole på det eksplisitt.
 error-non-interactive-value = Kan ikke be om en verdi for «{ $key }» i ei økt som ikke er interaktiv. Send verdien som et argument i stedet.
 error-registry-unsupported-schema = Registeret «{ $registry }» oppgir en skjemaversjon som ikke støttes: { $schema }.

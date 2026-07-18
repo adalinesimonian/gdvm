@@ -129,6 +129,11 @@ pub(crate) fn build_cli() -> Command {
                 .arg(yes_flag()),
         )
         .subcommand(
+            Command::new("diagnose")
+                .about(t!("help-diagnose"))
+                .arg(format_flag()),
+        )
+        .subcommand(
             Command::new("list")
                 .about(t!("help-list"))
                 .arg(format_flag()),

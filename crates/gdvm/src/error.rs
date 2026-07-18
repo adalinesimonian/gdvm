@@ -136,6 +136,7 @@ pub const ERROR_CODES: &[(&str, &str)] = &[
     ("error-invalid-registry-subcommand", "GDVM7001"),
     ("error-non-interactive-trust", "GDVM7002"),
     ("error-non-interactive-value", "GDVM7003"),
+    ("error-diagnose-problems", "GDVM7004"),
 ];
 
 /// Get the error code for the given translation key.
