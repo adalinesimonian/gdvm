@@ -1472,11 +1472,11 @@ __metadata:
   linkType: hard
 
 "lucide-solid@npm:^1.24.0":
-  version: 1.24.0
-  resolution: "lucide-solid@npm:1.24.0"
+  version: 1.25.0
+  resolution: "lucide-solid@npm:1.25.0"
   peerDependencies:
     solid-js: ^1.4.7
-  checksum: 10c0/5f6fc73fdbe744bcc6553eb21e8d8ec8f7156dcfde8bfaf55f78c2043c7c4b0109cdfc18d45af6a2edf8043cf086b7d8249b7860d34922b6ef1f3ccbf328d2c9
+  checksum: 10c0/5133b34c4b8edfc50d627752d811ecfcd8e9e46d2b3a537868e5ef1af2f837853a623c336e6a1d66e08fb3e7e12c119cc241f28436576979f9e99d952b675b18
   languageName: node
   linkType: hard
 
