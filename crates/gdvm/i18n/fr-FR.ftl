@@ -98,6 +98,21 @@ no-cache-files-found = Aucun fichier de cache trouvé.
 no-cache-metadata-found = Aucune métadonnée de cache trouvée.
 gdvm-toml-malformed = { -gdvm-toml } à { $path } ignoré, car il n'a pas pu être analysé : { $error }
 
+help-diagnose = Vérifier l'installation et signaler son état.
+diagnose-base-dir = Répertoire { -gdvm } : { $path }
+diagnose-healthy = Aucun problème détecté.
+diagnose-install-broken = { $version } n’a pas d’exécutable. Exécutez « { -gdvm } install » pour cette version afin de la réinstaller.
+diagnose-install-ok = { $version } peut être lancé.
+diagnose-partial-downloads =
+    { $count ->
+        [one] { $count } téléchargement interrompu dans le cache ; il reprend automatiquement, ou « { -gdvm } prune » le supprime.
+       *[other] { $count } téléchargements interrompus dans le cache ; ils reprennent automatiquement, ou « { -gdvm } prune » les supprime.
+    }
+diagnose-path-missing = { $path } n'est pas dans le PATH ; le shim godot ne sera pas accessible par son nom.
+diagnose-path-ok = Le répertoire bin est dans le PATH.
+diagnose-shim-missing = Le shim « { $name } » est manquant ou non exécutable. Réinstaller { -gdvm } le réécrit.
+diagnose-shim-ok = Le shim « { $name } » est installé et exécutable.
+
 help-console = Exécuter { -godot } avec la console attachée. Par défaut false sur Windows, true sur les autres plateformes.
 
 help-default = Gérer la version par défaut
@@ -119,6 +134,8 @@ status-fetching = Récupération
 status-installed = Installé
 status-installing = Installation
 status-removed = Supprimé
+status-healthy = Sain
+status-ok = OK
 prune-item-detail = { $label } ({ size-display })
 status-freed = Libéré
 status-pruned = Purgé
@@ -189,6 +206,11 @@ error-spec-empty-variant = Nom de variante vide dans « { $input } »
 error-spec-empty-version = Version vide dans « { $input } »
 error-system-time = Heure système antérieure à l'époque UNIX
 error-unrecognized-version-format = Format de version non reconnu : { $input }
+error-diagnose-problems =
+    { $count ->
+        [one] { $count } problème détecté.
+       *[other] { $count } problèmes détectés.
+    }
 error-non-interactive-trust = Impossible de demander la confiance pour le registre « { $registry } » ({ $url }) dans une session non interactive. Passez --yes pour lui faire confiance explicitement.
 error-non-interactive-value = Impossible de demander une valeur pour « { $key } » dans une session non interactive. Passez la valeur en argument à la place.
 error-registry-unsupported-schema = Le registre « { $registry } » déclare une version de schéma non prise en charge { $schema }.

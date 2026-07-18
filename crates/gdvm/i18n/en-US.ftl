@@ -100,6 +100,21 @@ no-cache-files-found = No cache files were found.
 no-cache-metadata-found = No cache metadata was found.
 gdvm-toml-malformed = ignoring { -gdvm-toml } at { $path } because it could not be parsed: { $error }
 
+help-diagnose = Verify the installation and report its health.
+diagnose-base-dir = { -gdvm } home: { $path }
+diagnose-healthy = No problems found.
+diagnose-install-broken = { $version } is missing its executable. Run "{ -gdvm } install" for it to reinstall.
+diagnose-install-ok = { $version } can run.
+diagnose-partial-downloads =
+    { $count ->
+        [one] { $count } interrupted download in the cache; it resumes automatically, or "{ -gdvm } prune" removes it.
+       *[other] { $count } interrupted downloads in the cache; they resume automatically, or "{ -gdvm } prune" removes them.
+    }
+diagnose-path-missing = { $path } is not on PATH; the godot shim will not be reachable by name.
+diagnose-path-ok = The bin directory is on PATH.
+diagnose-shim-missing = Shim "{ $name }" is missing or not executable. Reinstalling { -gdvm } rewrites it.
+diagnose-shim-ok = Shim "{ $name }" is installed and executable.
+
 help-console = Run { -godot } with the console attached. Defaults to false on Windows, true on other platforms.
 
 help-default = Manage the default version
@@ -121,6 +136,8 @@ status-fetching = Fetching
 status-installed = Installed
 status-installing = Installing
 status-removed = Removed
+status-healthy = Healthy
+status-ok = OK
 prune-item-detail = { $label } ({ size-display })
 status-freed = Freed
 status-pruned = Pruned
@@ -191,6 +208,11 @@ error-spec-empty-variant = Empty variant name in '{ $input }'
 error-spec-empty-version = Empty version in '{ $input }'
 error-system-time = System time before UNIX EPOCH
 error-unrecognized-version-format = Unrecognized version format: { $input }
+error-diagnose-problems =
+    { $count ->
+        [one] { $count } problem found.
+       *[other] { $count } problems found.
+    }
 error-non-interactive-trust = Cannot prompt to trust registry "{ $registry }" ({ $url }) in a non-interactive session. Pass --yes to trust it explicitly.
 error-non-interactive-value = Cannot prompt for a value for "{ $key }" in a non-interactive session. Pass the value as an argument instead.
 error-registry-unsupported-schema = Registry "{ $registry }" declares unsupported schema version { $schema }.

@@ -185,6 +185,7 @@ fi
 
 echo
 "$outPath" --version
+"$outPath" diagnose
 echo
 
 # Ask to associate .godot files with gdvm (specifically godot in .gdvm/bin)

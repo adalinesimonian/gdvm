@@ -135,7 +135,7 @@ jobs:
         if: ${{ inputs.verify_signature && contains(inputs.os, 'macos') }}
         run: |
           set -euo pipefail
-          ~/.gdvm/bin/gdvm --version
+          ~/.gdvm/bin/gdvm diagnose
           shim="$HOME/.gdvm/bin/godot"
           test -x "$shim"
           codesign --verify --strict --verbose=2 "$shim"
@@ -149,7 +149,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          & "$HOME\.gdvm\bin\gdvm.exe" --version | Out-Null
+          & "$HOME\.gdvm\bin\gdvm.exe" diagnose
 
           foreach ($name in @("godot.exe", "godot_console.exe")) {
             $p = Join-Path $HOME ".gdvm\bin\$name"

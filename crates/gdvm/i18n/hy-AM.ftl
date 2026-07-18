@@ -118,6 +118,21 @@ no-cache-files-found = Պահված թողարկումներ չեն գտնվել
 no-cache-metadata-found = Պահված թողարկումների ինդեքսը չի գտնվել։
 gdvm-toml-malformed = { $path }-ի { -gdvm-toml(case: "definite") } անտեսվում է, քանի որ հնարավոր չէ վերլուծել. { $error }
 
+help-diagnose = Ստուգել տեղադրումը և հաղորդել դրա վիճակը։
+diagnose-base-dir = { -gdvm(case: "genitive") } պանակը՝ { $path }
+diagnose-healthy = Խնդիրներ չեն հայտնաբերվել։
+diagnose-install-broken = { $version }-ը չունի իր գործարկվող ֆայլը։ Գործարկեք «{ -gdvm } install» այդ տարբերակի համար՝ վերատեղադրելու համար։
+diagnose-install-ok = { $version }-ը կարող է գործարկվել։
+diagnose-partial-downloads =
+    { $count ->
+        [one] Քեշում կա { $count } ընդհատված ներբեռնում. այն ինքնաբերաբար վերսկսվում է, կամ «{ -gdvm } prune»-ը հեռացնում է այն։
+       *[other] Քեշում կա { $count } ընդհատված ներբեռնում. դրանք ինքնաբերաբար վերսկսվում են, կամ «{ -gdvm } prune»-ը հեռացնում է դրանք։
+    }
+diagnose-path-missing = { $path }-ը PATH-ում չէ. godot շիմը անունով հասանելի չի լինի։
+diagnose-path-ok = bin պանակը PATH-ում է։
+diagnose-shim-missing = «{ $name }» շիմը բացակայում է կամ գործարկելի չէ։ { -gdvm(case: "genitive") } վերատեղադրումը վերագրում է այն։
+diagnose-shim-ok = «{ $name }» շիմը տեղադրված է և գործարկելի է։
+
 help-console = { -godot(case: "definite") } կատարողական կոնսոլով: լռելյայն է Windows-ում, այլ համակարգչներում ակտիվացվում է:
 
 help-default = Կառավարել լռելյայն տարբերակը
@@ -139,6 +154,8 @@ status-fetching = Բերում
 status-installed = Տեղադրվեց
 status-installing = Տեղադրում
 status-removed = Հեռացված է
+status-healthy = Առողջ է
+status-ok = Լավ է
 prune-item-detail = { $label } ({ size-display })
 status-freed = Ազատվեց
 status-pruned = Մաքրվեց
@@ -209,6 +226,11 @@ error-spec-empty-variant = Դատարկ տարբերակի անուն « { $inpu
 error-spec-empty-version = Դատարկ տարբերակ « { $input } »-ում
 error-system-time = Համակարգի ժամանակը UNIX դարաշրջանից առաջ է
 error-unrecognized-version-format = Տարբերակի չճանաչված ձևաչափ. { $input }
+error-diagnose-problems =
+    { $count ->
+        [one] Հայտնաբերվել է { $count } խնդիր։
+       *[other] Հայտնաբերվել են { $count } խնդիր։
+    }
 error-non-interactive-trust = Հնարավոր չէ հարցնել «{ $registry }» ռեգիստրին ({ $url }) վստահելու մասին ոչ ինտերակտիվ նստաշրջանում։ Փոխանցեք --yes՝ դրան բացահայտորեն վստահելու համար։
 error-non-interactive-value = Հնարավոր չէ հարցնել «{ $key }»-ի արժեքը ոչ ինտերակտիվ նստաշրջանում։ Փոխարենը փոխանցեք արժեքը որպես արգումենտ։
 error-registry-unsupported-schema = «{ $registry }» ռեգիստրը հայտարարում է չաջակցվող սխեմայի տարբերակ { $schema }։
