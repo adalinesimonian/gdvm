@@ -18,122 +18,17 @@
 #![cfg(feature = "integration-tests")]
 
 use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use gdvm::app::{Gdvm, PruneOptions};
-use gdvm::usage_tracker::{ArchiveUsage, InstallUsage, LinkRecord, UsageState, UsageTracker};
-use gdvm::version::{Variant, VersionQuery};
+use gdvm::app::PruneOptions;
+use gdvm::usage_tracker::{ArchiveUsage, InstallUsage, LinkRecord, UsageState};
+use gdvm::version::Variant;
 use serial_test::serial;
-use tempfile::TempDir;
+
+mod common;
+use common::{TestHome, gdvm, now_secs, resolved};
 
 const DAY: u64 = 24 * 60 * 60;
-
-struct TestHome {
-    home: TempDir,
-    prev_home: Option<std::ffi::OsString>,
-}
-
-impl TestHome {
-    fn new() -> Self {
-        let home = TempDir::new().unwrap();
-        let prev_home = std::env::var_os("GDVM_TEST_HOME");
-
-        let gdvm_dir = home.path().join(".gdvm");
-        fs::create_dir_all(&gdvm_dir).unwrap();
-        fs::write(
-            gdvm_dir.join("cache.json"),
-            format!(
-                r#"{{"gdvm":{{"last_update_check":{},"new_version":null,"new_major_version":null}},"registries":{{}}}}"#,
-                now_secs()
-            ),
-        )
-        .unwrap();
-
-        unsafe {
-            std::env::set_var("GDVM_TEST_HOME", home.path());
-        }
-        Self { home, prev_home }
-    }
-
-    fn path(&self) -> &Path {
-        self.home.path()
-    }
-
-    fn installs(&self) -> PathBuf {
-        self.path().join(".gdvm").join("installs")
-    }
-
-    fn cache(&self) -> PathBuf {
-        self.path().join(".gdvm").join("cache")
-    }
-
-    fn usage_path(&self) -> PathBuf {
-        self.path().join(".gdvm").join("usage.json")
-    }
-
-    fn locks_path(&self) -> PathBuf {
-        self.path().join(".gdvm").join("locks")
-    }
-
-    /// Create an install at `key` with a single regular file inside. Returns
-    /// the path to the install directory.
-    fn make_install(&self, key: &str) -> PathBuf {
-        let dir = self.installs().join(key);
-        fs::create_dir_all(&dir).unwrap();
-        fs::write(dir.join("Godot"), b"fake-binary").unwrap();
-        dir
-    }
-
-    /// Create a cached archive file with the given name and contents.
-    fn make_cache_file(&self, name: &str, contents: &[u8]) -> PathBuf {
-        let dir = self.cache();
-        fs::create_dir_all(&dir).unwrap();
-        let path = dir.join(name);
-        fs::write(&path, contents).unwrap();
-        path
-    }
-
-    fn write_usage(&self, state: &UsageState) {
-        UsageTracker::new(self.usage_path(), self.locks_path())
-            .save(state)
-            .unwrap();
-    }
-
-    fn read_usage(&self) -> UsageState {
-        UsageTracker::new(self.usage_path(), self.locks_path())
-            .load()
-            .unwrap()
-    }
-}
-
-impl Drop for TestHome {
-    fn drop(&mut self) {
-        unsafe {
-            match &self.prev_home {
-                Some(v) => std::env::set_var("GDVM_TEST_HOME", v),
-                None => std::env::remove_var("GDVM_TEST_HOME"),
-            }
-        }
-    }
-}
-
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-}
-
-fn determinate(install_str: &str) -> gdvm::version::ResolvedVersion {
-    VersionQuery::from_install_str(install_str)
-        .unwrap()
-        .to_resolved()
-}
-
-async fn gdvm() -> Gdvm {
-    Gdvm::new().await.unwrap()
-}
 
 /// Create a symlink at `link` pointing at `target`.
 fn make_symlink(target: &Path, link: &Path) {
@@ -424,8 +319,8 @@ async fn prune_never_removes_the_default_install() {
 
     let mgr = gdvm().await;
 
-    let default_gv = determinate("4.3-stable");
-    let other_gv = determinate("4.4-stable");
+    let default_gv = resolved("4.3-stable");
+    let other_gv = resolved("4.4-stable");
     let default_key = mgr
         .library()
         .install_key(&default_gv, &Variant::default(), None)

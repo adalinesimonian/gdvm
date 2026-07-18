@@ -18,8 +18,7 @@
 #![cfg(feature = "integration-tests")]
 
 use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use gdvm::app::{Gdvm, InstallOutcome};
 use gdvm::config::Config;
@@ -28,70 +27,8 @@ use gdvm::version::{Variant, VersionQuery};
 use serial_test::serial;
 use tempfile::TempDir;
 
-struct TestHome {
-    home: TempDir,
-    prev_home: Option<std::ffi::OsString>,
-}
-
-impl TestHome {
-    fn new() -> Self {
-        let home = TempDir::new().unwrap();
-        let prev_home = std::env::var_os("GDVM_TEST_HOME");
-
-        let gdvm_dir = home.path().join(".gdvm");
-        fs::create_dir_all(&gdvm_dir).unwrap();
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        fs::write(
-            gdvm_dir.join("cache.json"),
-            format!(
-                r#"{{"gdvm":{{"last_update_check":{now},"new_version":null,"new_major_version":null}},"registries":{{}}}}"#
-            ),
-        )
-        .unwrap();
-
-        unsafe {
-            std::env::set_var("GDVM_TEST_HOME", home.path());
-        }
-        Self { home, prev_home }
-    }
-
-    fn path(&self) -> &Path {
-        self.home.path()
-    }
-}
-
-impl Drop for TestHome {
-    fn drop(&mut self) {
-        unsafe {
-            match &self.prev_home {
-                Some(v) => std::env::set_var("GDVM_TEST_HOME", v),
-                None => std::env::remove_var("GDVM_TEST_HOME"),
-            }
-        }
-    }
-}
-
-/// The `os-arch` platform key for the current host, so the published build matches.
-fn host_platform() -> String {
-    let host = gdvm::host::detect_host().unwrap();
-    format!(
-        "{}-{}",
-        registry::registry_os_key(host),
-        registry::registry_arch_key(host)
-    )
-}
-
-fn make_zip(path: &Path, entry: &str, contents: &[u8]) {
-    let file = fs::File::create(path).unwrap();
-    let mut zip = zip::ZipWriter::new(file);
-    zip.start_file(entry, zip::write::SimpleFileOptions::default())
-        .unwrap();
-    zip.write_all(contents).unwrap();
-    zip.finish().unwrap();
-}
+mod common;
+use common::{CwdGuard, TestHome, host_platform, make_zip};
 
 /// Build a local registry containing a single stable build for the host
 /// platform. Returns the registry directory and its platform key.
@@ -134,25 +71,6 @@ fn publish_local_registry(env: &TestHome) -> (PathBuf, PathBuf, String) {
     let stored = reg.join(format!("binaries/4.4-stable/{platform}.zip"));
     let _ = env;
     (reg, stored, platform)
-}
-
-/// Restores the working directory when dropped.
-struct CwdGuard(Option<PathBuf>);
-
-impl CwdGuard {
-    fn enter(dir: &Path) -> Self {
-        let prev = std::env::current_dir().ok();
-        std::env::set_current_dir(dir).unwrap();
-        CwdGuard(prev)
-    }
-}
-
-impl Drop for CwdGuard {
-    fn drop(&mut self) {
-        if let Some(prev) = self.0.take() {
-            let _ = std::env::set_current_dir(prev);
-        }
-    }
 }
 
 #[tokio::test]

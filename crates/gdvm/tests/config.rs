@@ -19,74 +19,48 @@
 
 use gdvm::config::Config;
 use serial_test::serial;
-use tempfile::tempdir;
 
-fn with_test_home<F, R>(path: &std::path::Path, f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    let previous = std::env::var("GDVM_TEST_HOME").ok();
-
-    unsafe {
-        std::env::set_var("GDVM_TEST_HOME", path);
-    }
-
-    let result = f();
-
-    if let Some(val) = previous {
-        unsafe {
-            std::env::set_var("GDVM_TEST_HOME", val);
-        }
-    } else {
-        unsafe {
-            std::env::remove_var("GDVM_TEST_HOME");
-        }
-    }
-
-    result
-}
+mod common;
+use common::TestHome;
 
 #[test]
 #[serial]
 fn test_load_save_roundtrip() {
-    let dir = tempdir().unwrap();
+    let home = TestHome::new();
 
-    with_test_home(dir.path(), || {
-        let cfg = Config {
-            prune_max_age_days: Some(7),
-            ..Default::default()
-        };
-        cfg.save().unwrap();
-    });
+    let cfg = Config {
+        prune_max_age_days: Some(7),
+        ..Default::default()
+    };
+    cfg.save().unwrap();
 
-    let loaded = with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded = Config::load().unwrap();
     assert_eq!(loaded.prune_max_age_days, Some(7));
 
-    with_test_home(dir.path(), || {
-        let cfg = Config {
-            prune_max_age_days: Some(14),
-            ..Default::default()
-        };
-        cfg.save().unwrap();
-    });
+    let cfg = Config {
+        prune_max_age_days: Some(14),
+        ..Default::default()
+    };
+    cfg.save().unwrap();
 
-    let loaded2 = with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded2 = Config::load().unwrap();
     assert_eq!(loaded2.prune_max_age_days, Some(14));
+
+    drop(home);
 }
 
 #[test]
 #[serial]
 fn test_legacy_config_option_is_ignored_on_load() {
-    let dir = tempdir().unwrap();
+    let home = TestHome::new();
 
-    let config_dir = dir.path().join(".gdvm");
-    std::fs::create_dir_all(&config_dir).unwrap();
+    let config_dir = home.gdvm_dir();
     std::fs::write(
         config_dir.join("config.toml"),
         "github_token = \"secret\"\nprune_max_age_days = 9\n",
     )
     .unwrap();
 
-    let loaded = with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded = Config::load().unwrap();
     assert_eq!(loaded.prune_max_age_days, Some(9));
 }
