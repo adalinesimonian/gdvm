@@ -98,6 +98,10 @@ jobs:
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Enable Corepack
+        if: steps.overlay.outputs.deploy == 'true'
+        run: corepack enable
+
       - name: Setup Node
         if: steps.overlay.outputs.deploy == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
