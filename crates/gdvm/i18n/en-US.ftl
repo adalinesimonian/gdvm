@@ -75,11 +75,6 @@ help-prune-long = { help-prune }
 help-prune-all = Remove all installs and cached archives regardless of age. Installs that still have a live link are kept unless --force is also given.
 help-prune-force = Ignore links, so installs referenced only by a link may also be removed.
 help-prune-dry-run = Show what would be removed without deleting anything.
-
-prune-dry-run-header = The following would be removed (dry run):
-prune-removed-header = Removed the following:
-prune-installs-header = Installs:
-prune-archives-header = Cached archives:
 prune-nothing-dry-run = Nothing would be removed.
 prune-nothing-removed = Nothing to remove; everything is in use or within the age threshold.
 prune-preserved-by-link =
@@ -87,10 +82,6 @@ prune-preserved-by-link =
         [one] Kept { $count } install still referenced by a link.
        *[other] Kept { $count } installs still referenced by a link.
     }
-prune-freed = Freed approximately { size-display }.
-prune-would-free = Would free approximately { size-display }.
-prune-item = - { $label } ({ size-display })
-prune-interrupted-header = Removed leftovers of interrupted downloads and installs:
 warning-broken-install-reinstalling = The installed { $version } is missing its executable, reinstalling it.
 
 help-force = Force reinstall even if the version is already installed.
@@ -130,6 +121,11 @@ status-fetching = Fetching
 status-installed = Installed
 status-installing = Installing
 status-removed = Removed
+prune-item-detail = { $label } ({ size-display })
+status-freed = Freed
+status-pruned = Pruned
+status-would-free = Would free
+status-would-prune = Would prune
 status-removing = Removing
 status-running = Running
 status-cleared = Cleared

@@ -73,6 +73,34 @@ impl PruneReport {
     pub fn is_empty(&self) -> bool {
         self.installs.is_empty() && self.archives.is_empty() && self.interrupted.is_empty()
     }
+
+    /// Record an item that was or would be pruned.
+    fn record_pruned(
+        items: &mut Vec<PrunedItem>,
+        freed_total: &mut u64,
+        dry_run: bool,
+        label: String,
+        freed_bytes: u64,
+    ) {
+        let (value, unit) = crate::fs_utils::byte_display_args(freed_bytes);
+        let status = if dry_run {
+            crate::t!("status-would-prune")
+        } else {
+            crate::t!("status-pruned")
+        };
+        crate::ui::step(
+            status,
+            crate::t!(
+                "prune-item-detail",
+                label = label.as_str(),
+                value = value,
+                unit = unit
+            ),
+        );
+
+        *freed_total += freed_bytes;
+        items.push(PrunedItem { label, freed_bytes });
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -167,18 +195,22 @@ impl<'a> Pruner<'a> {
                     );
                     continue;
                 }
-                report.freed_bytes += freed;
-                report.installs.push(PrunedItem {
-                    label: self.install_label(&key),
-                    freed_bytes: freed,
-                });
+                PruneReport::record_pruned(
+                    &mut report.installs,
+                    &mut report.freed_bytes,
+                    opts.dry_run,
+                    self.install_label(&key),
+                    freed,
+                );
             } else {
                 let freed = dir_size(&path);
-                report.freed_bytes += freed;
-                report.installs.push(PrunedItem {
-                    label: self.install_label(&key),
-                    freed_bytes: freed,
-                });
+                PruneReport::record_pruned(
+                    &mut report.installs,
+                    &mut report.freed_bytes,
+                    opts.dry_run,
+                    self.install_label(&key),
+                    freed,
+                );
             }
         }
 
@@ -218,11 +250,13 @@ impl<'a> Pruner<'a> {
                     continue;
                 }
             }
-            report.freed_bytes += freed;
-            report.archives.push(PrunedItem {
+            PruneReport::record_pruned(
+                &mut report.archives,
+                &mut report.freed_bytes,
+                opts.dry_run,
                 label,
-                freed_bytes: freed,
-            });
+                freed,
+            );
         }
 
         const INTERRUPTED_MIN_AGE_SECS: u64 = 60 * 60;
@@ -250,11 +284,13 @@ impl<'a> Pruner<'a> {
                 }
             }
 
-            report.freed_bytes += size;
-            report.interrupted.push(PrunedItem {
+            PruneReport::record_pruned(
+                &mut report.interrupted,
+                &mut report.freed_bytes,
+                opts.dry_run,
                 label,
-                freed_bytes: size,
-            });
+                size,
+            );
         }
 
         if opts.dry_run {

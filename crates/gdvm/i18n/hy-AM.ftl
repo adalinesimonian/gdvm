@@ -93,11 +93,6 @@ help-prune-long = { help-prune }
 help-prune-all = Հեռացնել բոլոր տեղադրումներն ու քեշավորված արխիվները՝ անկախ հնությունից։ Ակտիվ հղում ունեցող տեղադրումները պահպանվում են, եթե նաև --force տրված չէ։
 help-prune-force = Անտեսել հղումները, որպեսզի միայն հղումով հղվող տեղադրումները նույնպես հնարավոր լինի հեռացնել։
 help-prune-dry-run = Ցույց տալ, թե ինչ կհեռացվեր՝ առանց որևէ բան ջնջելու։
-
-prune-dry-run-header = Հետևյալը կհեռացվեր (փորձնական գործարկում)՝
-prune-removed-header = Հեռացվեց հետևյալը՝
-prune-installs-header = Տեղադրումներ՝
-prune-archives-header = Քեշավորված արխիվներ՝
 prune-nothing-dry-run = Ոչինչ չէր հեռացվի։
 prune-nothing-removed = Հեռացնելու բան չկա. ամեն ինչ օգտագործվում է կամ հնության շեմի սահմաններում է։
 prune-preserved-by-link =
@@ -105,10 +100,6 @@ prune-preserved-by-link =
         [one] Պահպանվեց { $count } տեղադրում, որը դեռ հղվում է հղումով։
        *[other] Պահպանվեց { $count } տեղադրում, որոնք դեռ հղվում են հղումով։
     }
-prune-freed = Ազատվեց մոտավորապես { size-display }։
-prune-would-free = Կազատվեր մոտավորապես { size-display }։
-prune-item = - { $label } ({ size-display })
-prune-interrupted-header = Հեռացվեցին ընդհատված ներբեռնումների և տեղադրումների մնացորդները.
 warning-broken-install-reinstalling = Տեղադրված { $version }-ը չունի իր գործարկվող ֆայլը. այն վերատեղադրվում է։
 
 help-force = Ստիպել վերատեղադրումը, նույնիսկ եթե տարբերակը արդեն տեղադրված է:
@@ -148,6 +139,11 @@ status-fetching = Բերում
 status-installed = Տեղադրվեց
 status-installing = Տեղադրում
 status-removed = Հեռացված է
+prune-item-detail = { $label } ({ size-display })
+status-freed = Ազատվեց
+status-pruned = Մաքրվեց
+status-would-free = Կազատվի
+status-would-prune = Կմաքրվի
 status-removing = Հեռացվում է
 status-running = Գործարկում
 status-cleared = Մաքրվեց

@@ -73,11 +73,6 @@ help-prune-long = { help-prune }
 help-prune-all = Supprimer toutes les installations et archives en cache quel que soit leur âge. Les installations encore référencées par un lien actif sont conservées sauf si --force est également fourni.
 help-prune-force = Ignorer les liens, afin que les installations référencées uniquement par un lien puissent aussi être supprimées.
 help-prune-dry-run = Afficher ce qui serait supprimé sans rien supprimer.
-
-prune-dry-run-header = Les éléments suivants seraient supprimés (simulation) :
-prune-removed-header = Éléments supprimés :
-prune-installs-header = Installations :
-prune-archives-header = Archives en cache :
 prune-nothing-dry-run = Rien ne serait supprimé.
 prune-nothing-removed = Rien à supprimer ; tout est utilisé ou dans le seuil d'ancienneté.
 prune-preserved-by-link =
@@ -85,10 +80,6 @@ prune-preserved-by-link =
         [one] { $count } installation conservée car encore référencée par un lien.
        *[other] { $count } installations conservées car encore référencées par un lien.
     }
-prune-freed = Environ { size-display } libéré(s).
-prune-would-free = Environ { size-display } seraient libéré(s).
-prune-item = - { $label } ({ size-display })
-prune-interrupted-header = Restes de téléchargements et d'installations interrompus supprimés :
 warning-broken-install-reinstalling = L'installation de { $version } n'a pas d'exécutable, réinstallation en cours.
 
 help-force = Forcer la réinstallation même si la version est déjà installée.
@@ -128,6 +119,11 @@ status-fetching = Récupération
 status-installed = Installé
 status-installing = Installation
 status-removed = Supprimé
+prune-item-detail = { $label } ({ size-display })
+status-freed = Libéré
+status-pruned = Purgé
+status-would-free = Libérerait
+status-would-prune = Purgerait
 status-removing = Suppression
 status-running = Exécution
 status-cleared = Vidé

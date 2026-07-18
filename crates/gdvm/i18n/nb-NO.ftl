@@ -73,11 +73,6 @@ help-prune-long = { help-prune }
 help-prune-all = Fjern alle installasjoner og cacha arkiv uavhengig av alder. Installasjoner som fortsatt har en aktiv lenke beholdes med mindre --force også er gitt.
 help-prune-force = Ignorer lenker, slik at installasjoner som bare er referert av en lenke også kan fjernes.
 help-prune-dry-run = Vis hva som ville blitt fjerna uten å slette noe.
-
-prune-dry-run-header = Følgende ville blitt fjerna (tørrkjøring):
-prune-removed-header = Fjerna følgende:
-prune-installs-header = Installasjoner:
-prune-archives-header = Cacha arkiv:
 prune-nothing-dry-run = Ingenting ville blitt fjerna.
 prune-nothing-removed = Ingenting å fjerne; alt er i bruk eller innenfor aldersgrensa.
 prune-preserved-by-link =
@@ -85,10 +80,6 @@ prune-preserved-by-link =
         [one] Beholdt { $count } installasjon som fortsatt er referert av en lenke.
        *[other] Beholdt { $count } installasjoner som fortsatt er refererte av en lenke.
     }
-prune-freed = Frigjorde omtrent { size-display }.
-prune-would-free = Ville frigjort omtrent { size-display }.
-prune-item = - { $label } ({ size-display })
-prune-interrupted-header = Fjerna rester etter avbrutte nedlastinger og installasjoner:
 warning-broken-install-reinstalling = Den installerte { $version } mangler den kjørbare fila, installerer den på nytt.
 
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
@@ -128,6 +119,11 @@ status-fetching = Henter
 status-installed = Installert
 status-installing = Installerer
 status-removed = Fjerna
+prune-item-detail = { $label } ({ size-display })
+status-freed = Frigjort
+status-pruned = Rydda
+status-would-free = Ville frigjort
+status-would-prune = Ville rydda
 status-removing = Fjerner
 status-running = Kjører
 status-cleared = Tømt

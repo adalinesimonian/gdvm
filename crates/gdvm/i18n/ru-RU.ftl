@@ -73,11 +73,6 @@ help-prune-long = { help-prune }
 help-prune-all = Удалить все установки и кэшированные архивы независимо от давности. Установки, на которые всё ещё указывает активная ссылка, сохраняются, если не указан также --force.
 help-prune-force = Игнорировать ссылки, чтобы установки, на которые ссылается только ссылка, тоже могли быть удалены.
 help-prune-dry-run = Показать, что было бы удалено, ничего не удаляя.
-
-prune-dry-run-header = Будет удалено следующее (пробный запуск):
-prune-removed-header = Удалено следующее:
-prune-installs-header = Установки:
-prune-archives-header = Кэшированные архивы:
 prune-nothing-dry-run = Ничего не было бы удалено.
 prune-nothing-removed = Удалять нечего; всё используется или в пределах порога давности.
 prune-preserved-by-link =
@@ -86,10 +81,6 @@ prune-preserved-by-link =
         [few] Сохранены { $count } установки, на которые всё ещё ссылается ссылка.
        *[many] Сохранено { $count } установок, на которые всё ещё ссылается ссылка.
     }
-prune-freed = Освобождено примерно { size-display }.
-prune-would-free = Было бы освобождено примерно { size-display }.
-prune-item = - { $label } ({ size-display })
-prune-interrupted-header = Удалены остатки прерванных загрузок и установок:
 warning-broken-install-reinstalling = У установленной версии { $version } отсутствует исполняемый файл, она переустанавливается.
 
 help-force = Принудительная переустановка, даже если версия уже установлена.
@@ -131,6 +122,11 @@ status-fetching = Получение
 status-installed = Установлено
 status-installing = Установка
 status-removed = Удалено
+prune-item-detail = { $label } ({ size-display })
+status-freed = Освобождено
+status-pruned = Очищено
+status-would-free = Будет освобождено
+status-would-prune = Будет очищено
 status-removing = Удаление
 status-running = Запуск
 status-cleared = Очищен
