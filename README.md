@@ -31,6 +31,15 @@ Whether you're working on multiple projects or need to test features across vari
 
 gdvm is a community-driven project, not affiliated with Godot Engine or the Godot Foundation.
 
+<p align="center">
+  <b><a href="#installation">Installation</a></b> |
+  <b><a href="#usage">Usage</a></b> |
+  <b><a href="#github-actions">GitHub Actions</a></b> |
+  <b><a href="#registries">Registries</a></b> |
+  <b><a href="#contributing">Contributing</a></b> |
+  <b><a href="#licence">Licence</a></b>
+</p>
+
 ## Installation
 
 Install on \*nix systems (including MacOS):
@@ -50,6 +59,19 @@ powershell -NoProfile -Command "(iwr -useb 'https://gdvm.io/install.ps1.txt').Co
 - Windows (64-bit, 32-bit, and 64-bit ARM)
 - macOS (64-bit Intel and Apple Silicon)
 - Linux (64-bit, 32-bit, and 64-bit ARM)
+
+## Contents
+
+- [Usage](#usage)
+  - [Using gdvm with debuggers](#using-gdvm-with-debuggers)
+  - [Shell Completions](#shell-completions)
+- [GitHub Actions](#github-actions)
+- [Registries](#registries)
+  - [Sharing with a project](#sharing-with-a-project)
+  - [Hosting your own](#hosting-your-own)
+- [Contributing](#contributing)
+- [Code of Conduct](#code-of-conduct)
+- [Licence](#licence)
 
 ## Usage
 
