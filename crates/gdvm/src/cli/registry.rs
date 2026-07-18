@@ -133,8 +133,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
         Some(("list", sub_m)) => {
             let registries = gdvm.catalogs().registry_list();
 
-            if super::format::OutputFormat::from_matches(sub_m) == super::format::OutputFormat::Json
-            {
+            if super::format::OutputFormat::is_json(sub_m) {
                 #[derive(serde::Serialize)]
                 struct RegistryEntry {
                     name: String,

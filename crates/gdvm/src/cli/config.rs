@@ -28,8 +28,7 @@ pub(crate) fn sub_config(matches: &clap::ArgMatches) -> anyhow::Result<()> {
             let key = sub_m.get_one::<String>("key").unwrap();
             let value = config.get_value(key);
 
-            if super::format::OutputFormat::from_matches(sub_m) == super::format::OutputFormat::Json
-            {
+            if super::format::OutputFormat::is_json(sub_m) {
                 #[derive(serde::Serialize)]
                 struct ConfigValue<'a> {
                     key: &'a str,

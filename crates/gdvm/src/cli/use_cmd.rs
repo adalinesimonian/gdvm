@@ -19,16 +19,13 @@ use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::println_i18n;
-use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
+use gdvm::version::{self, Variant};
 
-use super::{
-    check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
-    refresh_cache_if_requested,
-};
+use super::VersionRequest;
 
 /// Handle the 'use' subcommand
 pub(crate) async fn sub_use(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let refresh = matches.get_flag("refresh");
+    let _refresh = matches.get_flag("refresh");
 
     let version_input = match matches.get_one::<String>("version") {
         Some(v) => v,
@@ -44,20 +41,12 @@ pub(crate) async fn sub_use(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    refresh_cache_if_requested(gdvm, refresh).await?;
+    let request = VersionRequest::from_matches(matches)?;
+    request.prepare(gdvm, matches).await?;
+    let variant = request.variant();
+    let registry = request.registry();
 
-    let spec = VersionSpec::parse(version_input)?;
-    let variant = check_deprecated_csharp_flag(matches, spec.variant);
-    let variant = variant.as_deref();
-    let registry = spec.registry.as_deref();
-
-    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
-
-    let requested_version = match &spec.target {
-        VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
-        VersionTarget::Pattern(gv) => gv.clone(),
-    };
-
+    let requested_version = request.required_filter().clone();
     let include_pre = matches.get_flag("include-pre");
 
     let resolved_version = gdvm

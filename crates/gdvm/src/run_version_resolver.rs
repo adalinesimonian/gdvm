@@ -61,6 +61,12 @@ pub struct RunResolutionResult {
     pub registry: Option<String>,
 }
 
+impl RunResolutionResult {
+    pub fn display(&self) -> String {
+        crate::version::display_version(&self.version, &self.variant, self.registry.as_deref())
+    }
+}
+
 pub struct RunResolutionRequest<'a> {
     pub explicit: Option<VersionQuery>,
     pub variant: Option<String>,

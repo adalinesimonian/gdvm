@@ -21,46 +21,21 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version::{self, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, terr};
 
-use super::{check_deprecated_csharp_flag, keyword_to_version_filter};
+use super::VersionRequest;
 
 /// Handle the 'link' subcommand
 pub(crate) async fn sub_link(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let version_input = matches.get_one::<String>("version");
     let link_path_raw = matches
         .get_one::<String>("linkpath")
         .map(|s| s.as_str())
         .ok_or_else(|| unreachable!("clap should prevent missing required arg"))?;
-
-    let spec = version_input.map(|v| VersionSpec::parse(v)).transpose()?;
-    let spec_variant = spec.as_ref().and_then(|s| s.variant.clone());
-    let variant = check_deprecated_csharp_flag(matches, spec_variant);
-    let registry = spec.as_ref().and_then(|s| s.registry.clone());
-
-    let explicit_version = match spec.as_ref().map(|s| &s.target) {
-        Some(VersionTarget::Pattern(gv)) => Some(gv.clone()),
-        Some(VersionTarget::Keyword(kw)) => Some(keyword_to_version_filter(kw)),
-        None => None,
-    };
-
     let force = matches.get_flag("force");
     let copy = matches.get_flag("copy");
 
-    let resolver = RunVersionResolver::new(gdvm);
-    let resolved = resolver
-        .resolve(RunResolutionRequest {
-            explicit: explicit_version,
-            variant,
-            registry,
-            include_pre: false,
-            possible_paths: &[],
-            force_on_mismatch: force,
-            install_if_missing: false,
-        })
-        .await?;
+    let request = VersionRequest::from_matches(matches)?;
+    let resolved = request.resolve_selection(gdvm, false, false, force).await?;
 
     let primary_exe = gdvm.library().get_executable_path(
         &resolved.version,
@@ -84,11 +59,7 @@ pub(crate) async fn sub_link(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         }
     };
 
-    let display = version::display_version(
-        &resolved.version,
-        &resolved.variant,
-        resolved.registry.as_deref(),
-    );
+    let display = resolved.display();
 
     // Key used to track this link against its install, so prune can preserve
     // installs that still have a live link.

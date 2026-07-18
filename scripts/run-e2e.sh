@@ -700,6 +700,8 @@ TEST_SCRIPT
 test "A near miss release type suggests using a wildcard" <<'TEST_SCRIPT'
 output="$(gdvm search 4.4-dev)"
 assert_contains "$output" "4.4-dev*" "suggests a wildcard query"
+output="$(gdvm cache-path 4.4-dev 2>&1)" && { echo "expected failure"; exit 1; }
+assert_contains "$output" "4.4-dev*" "the shared resolution path carries the suggestion"
 TEST_SCRIPT
 
 test "list --format json is machine-readable" <<'TEST_SCRIPT'

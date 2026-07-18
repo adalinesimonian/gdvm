@@ -36,7 +36,7 @@ pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
 
     let report = gdvm.pruner().prune(max_age_secs, opts)?;
 
-    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+    if OutputFormat::is_json(matches) {
         return print_json(&report);
     }
 

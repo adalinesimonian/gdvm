@@ -18,7 +18,6 @@
 use std::io::{self, IsTerminal, Write};
 
 use anyhow::Result;
-use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::config::Config;
 use gdvm::version::VersionQuery;
@@ -37,6 +36,7 @@ mod pin;
 mod prune;
 mod registry;
 mod remove;
+mod request;
 mod run;
 mod search;
 mod show;
@@ -55,35 +55,12 @@ pub(crate) use pin::sub_pin;
 pub(crate) use prune::sub_prune;
 pub(crate) use registry::sub_registry;
 pub(crate) use remove::sub_remove;
+pub(crate) use request::VersionRequest;
 pub(crate) use run::{RunConfig, sub_run, sub_run_inner};
 pub(crate) use search::sub_search;
 pub(crate) use show::sub_show;
 pub(crate) use upgrade::sub_upgrade;
 pub(crate) use use_cmd::sub_use;
-
-/// Check if the deprecated `--csharp` flag was explicitly provided.
-fn check_deprecated_csharp_flag(
-    matches: &ArgMatches,
-    spec_variant: Option<String>,
-) -> Option<String> {
-    let explicitly_given =
-        matches.value_source("csharp") != Some(clap::parser::ValueSource::DefaultValue);
-    if !explicitly_given {
-        return spec_variant;
-    }
-    gdvm::ui::warn(t!("warning-deprecated-csharp-flag"));
-
-    // If the new variant field was used, it takes precedence.
-    if spec_variant.is_some() {
-        return spec_variant;
-    }
-
-    if matches.get_flag("csharp") {
-        Some("csharp".to_string())
-    } else {
-        None
-    }
-}
 
 async fn refresh_cache_if_requested(gdvm: &Gdvm, refresh: bool) -> Result<()> {
     if refresh {

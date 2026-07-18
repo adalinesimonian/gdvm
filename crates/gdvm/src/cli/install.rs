@@ -19,48 +19,26 @@ use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::{Gdvm, InstallOutcome};
 use gdvm::println_i18n;
-use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
+use gdvm::version::{self, Variant};
 
-use super::{
-    check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
-    refresh_cache_if_requested,
-};
+use super::VersionRequest;
 
 /// Handle the 'install' subcommand
 pub(crate) async fn sub_install(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let version_input = matches.get_one::<String>("version").unwrap();
     let force_reinstall = matches.get_flag("force");
     let redownload = matches.get_flag("redownload");
-    let refresh = matches.get_flag("refresh");
     let include_pre = matches.get_flag("include-pre");
 
-    refresh_cache_if_requested(gdvm, refresh).await?;
+    let request = VersionRequest::from_matches(matches)?;
+    request.prepare(gdvm, matches).await?;
+    let variant = request.variant();
+    let registry = request.registry();
+    let requested_version = request.required_filter().clone();
 
-    let spec = VersionSpec::parse(version_input)?;
-    let variant = check_deprecated_csharp_flag(matches, spec.variant);
-    let variant = variant.as_deref();
-    let registry = spec.registry.as_deref();
-
-    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
-
-    let requested_version = match &spec.target {
-        VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
-        VersionTarget::Pattern(gv) => gv.clone(),
-    };
-
-    let gv = match gdvm
+    let gv = gdvm
         .catalogs()
-        .resolve_available_version(&requested_version, variant, registry, include_pre, false)
-        .await?
-    {
-        Some(gv) => gv,
-        None => {
-            return Err(gdvm
-                .catalogs()
-                .version_not_found_error(&requested_version, variant, registry)
-                .await);
-        }
-    };
+        .resolve_available_or_not_found(&requested_version, variant, registry, include_pre, false)
+        .await?;
 
     let resolved_variant = Variant::from_option(variant);
     let display = version::display_version(&gv, &resolved_variant, registry);

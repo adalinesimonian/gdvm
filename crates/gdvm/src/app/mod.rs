@@ -31,7 +31,7 @@ use crate::releases::CatalogSet;
 use crate::run_version_resolver::RunVersionSource;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, VersionQuery};
-use crate::{eprintln_i18n, post_upgrade, t, terr};
+use crate::{eprintln_i18n, post_upgrade, t};
 
 mod catalog;
 mod defaults;
@@ -330,33 +330,11 @@ impl RunVersionSource for Gdvm {
     where
         T: Into<VersionQuery> + Clone + Send + Sync,
     {
-        let gv: VersionQuery = gv.clone().into();
-        let matches = self
+        Ok(self
             .library()
-            .resolve_installed_version(&gv, variant, registry)
-            .await?;
-
-        match matches.len() {
-            0 => Err(terr!("error-version-not-found").into()),
-            1 => Ok(matches[0].version.clone()),
-            _ => {
-                let list = matches
-                    .iter()
-                    .map(|v| {
-                        format!(
-                            "- {}",
-                            crate::version::display_version(
-                                &v.version,
-                                &v.variant,
-                                v.registry.as_deref(),
-                            )
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                Err(terr!("error-multiple-versions-found", list = list.as_str()).into())
-            }
-        }
+            .resolve_installed_one(gv, variant, registry)
+            .await?
+            .version)
     }
 }
 

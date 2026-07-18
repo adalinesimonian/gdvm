@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use clap::{Arg, Command, value_parser};
+use clap::{ArgAction, Arg, Command, value_parser};
 use gdvm::config::{self};
 use gdvm::t;
 use gdvm::version::{self};
@@ -55,7 +55,7 @@ fn include_pre_flag() -> Arg {
 fn deprecated_csharp_flag() -> Arg {
     Arg::new("csharp")
         .long("csharp")
-        .num_args(0)
+        .action(ArgAction::SetTrue)
         .hide(true)
         .help(t!("help-csharp"))
 }

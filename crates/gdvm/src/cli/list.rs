@@ -19,7 +19,6 @@ use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::println_i18n;
-use gdvm::version::{self};
 
 use super::format::{OutputFormat, VersionEntry, print_json};
 
@@ -27,7 +26,7 @@ use super::format::{OutputFormat, VersionEntry, print_json};
 pub(crate) fn sub_list(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let versions = gdvm.library().list_installed()?;
 
-    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+    if OutputFormat::is_json(matches) {
         let entries: Vec<VersionEntry> = versions
             .iter()
             .map(|v| VersionEntry {
@@ -44,10 +43,7 @@ pub(crate) fn sub_list(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     } else {
         println_i18n!("installed-versions");
         for v in &versions {
-            println!(
-                "- {}",
-                version::display_version(&v.version, &v.variant, v.registry.as_deref(),)
-            );
+            println!("- {}", v.display());
         }
     }
     Ok(())

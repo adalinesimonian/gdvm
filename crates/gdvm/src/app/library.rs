@@ -33,6 +33,12 @@ pub struct InstalledVersion {
     pub registry: Option<String>,
 }
 
+impl InstalledVersion {
+    pub fn display(&self) -> String {
+        crate::version::display_version(&self.version, &self.variant, self.registry.as_deref())
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Library<'a> {
     pub(super) paths: &'a GdvmPaths,
@@ -349,6 +355,33 @@ impl<'a> Library<'a> {
                     == crate::registry::normalize_registry(registry)
                 && gv.matches(&v.version)
         }))
+    }
+
+    /// Resolve a query against installed versions, requiring exactly one match.
+    pub async fn resolve_installed_one<T>(
+        &self,
+        gv: &T,
+        variant: Option<&str>,
+        registry: Option<&str>,
+    ) -> Result<InstalledVersion>
+    where
+        T: Into<VersionQuery> + Clone,
+    {
+        let mut matches = self
+            .resolve_installed_version(gv, variant, registry)
+            .await?;
+        match matches.len() {
+            0 => Err(crate::terr!("error-version-not-found").into()),
+            1 => Ok(matches.remove(0)),
+            _ => {
+                let list = matches
+                    .iter()
+                    .map(|v| format!("- {}", v.display()))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                Err(crate::terr!("error-multiple-versions-found", list = list.as_str()).into())
+            }
+        }
     }
 
     /// Resolve the Godot version from a string, for an installed version

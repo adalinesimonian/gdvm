@@ -70,7 +70,7 @@ pub(crate) async fn sub_search(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> 
         releases = releases.into_iter().take(*limit).collect();
     }
 
-    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+    if OutputFormat::is_json(matches) {
         let entries: Vec<VersionEntry> = releases
             .iter()
             .map(|r| VersionEntry {

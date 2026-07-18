@@ -18,39 +18,24 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::terr;
-use gdvm::version::{Variant, VersionSpec, VersionTarget};
+use gdvm::version::Variant;
 
-use super::{
-    check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
-    refresh_cache_if_requested,
-};
+use super::VersionRequest;
 
 /// Print the path to the cached download archive for a resolved version.
 pub(crate) async fn sub_cache_path(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let version_input = matches.get_one::<String>("version").unwrap();
-    let refresh = matches.get_flag("refresh");
     let include_pre = matches.get_flag("include-pre");
 
-    refresh_cache_if_requested(gdvm, refresh).await?;
-
-    let spec = VersionSpec::parse(version_input)?;
-    let variant = check_deprecated_csharp_flag(matches, spec.variant);
-    let variant = variant.as_deref();
-    let registry = spec.registry.as_deref();
-
-    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
-
-    let requested_version = match &spec.target {
-        VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
-        VersionTarget::Pattern(gv) => gv.clone(),
-    };
+    let request = VersionRequest::from_matches(matches)?;
+    request.prepare(gdvm, matches).await?;
+    let variant = request.variant();
+    let registry = request.registry();
+    let requested_version = request.required_filter().clone();
 
     let gv = gdvm
         .catalogs()
-        .resolve_available_version(&requested_version, variant, registry, include_pre, false)
-        .await?
-        .ok_or_else(|| terr!("error-version-not-found"))?;
+        .resolve_available_or_not_found(&requested_version, variant, registry, include_pre, false)
+        .await?;
 
     let resolved_variant = Variant::from_option(variant);
     let path = gdvm
@@ -58,7 +43,7 @@ pub(crate) async fn sub_cache_path(gdvm: &Gdvm, matches: &ArgMatches) -> Result<
         .cached_archive_path(&gv, &resolved_variant, registry)
         .await?;
 
-    if super::format::OutputFormat::from_matches(matches) == super::format::OutputFormat::Json {
+    if super::format::OutputFormat::is_json(matches) {
         #[derive(serde::Serialize)]
         struct CachePath {
             path: String,
