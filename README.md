@@ -113,6 +113,29 @@ gdvm completions fish | source            # fish (~/.config/fish/config.fish)
 gdvm completions powershell | Out-String | Invoke-Expression  # PowerShell ($PROFILE)
 ```
 
+## GitHub Actions
+
+Use the [setup-gdvm](https://github.com/marketplace/actions/setup-gdvm) GitHub Action to install gdvm on your CI runners. Once gdvm is set up, you can install and run any Godot version just like you would locally.
+
+```yaml
+steps:
+  - uses: adalinesimonian/setup-gdvm@v1
+
+  - run: gdvm install 4.5
+  - run: godot --version
+```
+
+You can also pin a specific gdvm version:
+
+```yaml
+steps:
+  - uses: adalinesimonian/setup-gdvm@v1
+    with:
+      version: 0.15.0
+```
+
+See the [setup-gdvm repository](https://github.com/adalinesimonian/setup-gdvm) for more details.
+
 ## Registries
 
 gdvm installs official Godot builds by default. Custom registries let you install from anywhere else, such as builds from your own CI pipeline or wherever else.
