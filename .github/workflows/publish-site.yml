@@ -114,13 +114,15 @@ jobs:
         if: steps.overlay.outputs.deploy == 'true'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 
+      - name: Install dependencies
+        if: steps.overlay.outputs.deploy == 'true'
+        working-directory: gh-pages
+        run: yarn --immutable
+
       - name: Build site
         if: steps.overlay.outputs.deploy == 'true'
         working-directory: gh-pages
-        run: |
-          corepack enable
-          yarn --immutable
-          yarn build
+        run: yarn build
 
       - name: Upload artifact
         if: steps.overlay.outputs.deploy == 'true'
