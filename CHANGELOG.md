@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.15.0...main
+
+## v0.15.0
+
 ### Breaking Changes
 
 - All Godot version identifiers displayed by gdvm now adhere to gdvm's `[registry/][variant:]version[-tag]` format for consistency, for example, `csharp:4.3.0-stable`, `myreg/4.7.1-dev1`, and so on. This is a breaking change for any scripts that parse gdvm's output. Scripts that need information from gdvm should use the new `--format json` option (see below) instead of parsing the text output. Future changes to the text output format will no longer be considered breaking changes, so ensure that scripts only use the JSON output format.
@@ -59,7 +63,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 - Commands don't start processing gdvm's cache or internal data until after the command line is parsed, which should reduce response time for commands given bad arguments or when `--help` is passed.
 - Network connections now time out after 10 seconds of waiting to establish a connection and 30 seconds of inactivity during a transfer. This will not affect downloads that are actively transferring data, it will only prevent gdvm from hanging indefinitely on a stalled connection.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.14.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.14.0...v0.15.0
 
 ## v0.14.0
 
