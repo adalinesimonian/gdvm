@@ -58,7 +58,7 @@ indicatif = { version = "=0.18.6", features = ["improved_unicode"] }
 sha2 = "=0.11.0"
 digest-io = "=0.1.0"
 serde_json = "=1.0.150"
-serde = { version = "=1.0.228", features = ["derive"] }
+serde = { version = "=1.0.229", features = ["derive"] }
 semver = "=1.0.28"
 tokio = { version = "=1.53.0", features = [
     "macros",
