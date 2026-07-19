@@ -78,7 +78,7 @@ dotenvy = "=0.15.7"
 tempfile = "=3.27.0"
 
 # For timestamps:
-jiff = "=0.2.33"
+jiff = "=0.2.34"
 jiff-icu = "=0.2.2"
 
 # For starting Godot:
