@@ -60,19 +60,6 @@ powershell -NoProfile -Command "(iwr -useb 'https://gdvm.io/install.ps1.txt').Co
 - macOS (64-bit Intel and Apple Silicon)
 - Linux (64-bit, 32-bit, and 64-bit ARM)
 
-## Contents
-
-- [Usage](#usage)
-  - [Using gdvm with debuggers](#using-gdvm-with-debuggers)
-  - [Shell Completions](#shell-completions)
-- [GitHub Actions](#github-actions)
-- [Registries](#registries)
-  - [Sharing with a project](#sharing-with-a-project)
-  - [Hosting your own](#hosting-your-own)
-- [Contributing](#contributing)
-- [Code of Conduct](#code-of-conduct)
-- [Licence](#licence)
-
 ## Usage
 
 Once installed, you can use the `gdvm` command to manage your Godot installations. Here are some common commands:
