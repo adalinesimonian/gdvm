@@ -67,7 +67,7 @@ tokio = { version = "=1.53.0", features = [
     "io-util",
     "time",
 ] }
-async-trait = "=0.1.89"
+async-trait = "=0.1.91"
 futures-util = "=0.3.33"
 
 # For file system operations:
