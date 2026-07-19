@@ -2079,8 +2079,8 @@ __metadata:
   linkType: hard
 
 "vite-plugin-solid@npm:^2.11.12":
-  version: 2.11.12
-  resolution: "vite-plugin-solid@npm:2.11.12"
+  version: 2.11.13
+  resolution: "vite-plugin-solid@npm:2.11.13"
   dependencies:
     "@babel/core": "npm:^7.23.3"
     "@types/babel__core": "npm:^7.20.4"
@@ -2091,11 +2091,11 @@ __metadata:
   peerDependencies:
     "@testing-library/jest-dom": ^5.16.6 || ^5.17.0 || ^6.*
     solid-js: ^1.7.2
-    vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+    vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0 || ^9.0.0
   peerDependenciesMeta:
     "@testing-library/jest-dom":
       optional: true
-  checksum: 10c0/d1cdb0c96ce8c7f2f9a4e4473553d017e688793052e38a87358923fab69c05907394e7e5af540d7f99b4961450dd0d58833b14fc7f32ec64808446931cea60cb
+  checksum: 10c0/fff093ddcf1d25ff45a3ee5ce16567bfe21440ea9d5bf7667ae9ac94f47146437cd9453595f704121517812f4ff1956addad35b79691c3f7f289ab8e04e18f60
   languageName: node
   linkType: hard
 
