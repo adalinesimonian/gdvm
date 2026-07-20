@@ -449,9 +449,9 @@ __metadata:
   linkType: hard
 
 "@fontsource/fira-code@npm:^5.2.7":
-  version: 5.2.7
-  resolution: "@fontsource/fira-code@npm:5.2.7"
-  checksum: 10c0/389d1356def9018da529bf6055af9d41d6f6ae9ee2ff804a9b0e3bd2f8cf2754967e2b4a25e267d21215278849fb13711b9fe9573c051a1e191ad737e55f125f
+  version: 5.3.0
+  resolution: "@fontsource/fira-code@npm:5.3.0"
+  checksum: 10c0/402416a8a645b4f7e5be72f223626a68c0a60fd836d5f7e8b840a07ed83637663abe70e8d05f88602225248df90bbd733807dab1e819aab65557e9fbdafed8d4
   languageName: node
   linkType: hard
 
