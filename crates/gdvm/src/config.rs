@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-
 use path_clean::PathClean;
 use std::collections::HashMap;
 use std::fs;
@@ -96,17 +95,27 @@ impl ConfigOps for Config {
     fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
             "install.path" => {
-                let value = normalize_and_validate_path(Path::new(value), key, self.cache_path.as_ref())?;
+                let value =
+                    normalize_and_validate_path(Path::new(value), key, self.cache_path.as_ref())?;
                 if value.exists() && !value.read_dir()?.next().is_none() {
-                    return Err(terr!("error-config-dir-not-empty", path = value.display().to_string()).into());
+                    return Err(terr!(
+                        "error-config-dir-not-empty",
+                        path = value.display().to_string()
+                    )
+                    .into());
                 }
                 self.install_path = Some(value);
                 Ok(())
             }
             "cache.path" => {
-                let value = normalize_and_validate_path(Path::new(value), key, self.install_path.as_ref())?;
+                let value =
+                    normalize_and_validate_path(Path::new(value), key, self.install_path.as_ref())?;
                 if value.exists() && !value.read_dir()?.next().is_none() {
-                    return Err(terr!("error-config-dir-not-empty", path = value.display().to_string()).into());
+                    return Err(terr!(
+                        "error-config-dir-not-empty",
+                        path = value.display().to_string()
+                    )
+                    .into());
                 }
                 self.cache_path = Some(value);
                 Ok(())
@@ -258,12 +267,14 @@ fn is_reserved_path(path: &Path) -> bool {
     let resolved_path = path.clean();
     let candidate = resolved_path;
     let gdvm_base = gdvm_dir().expect("Cannot get gdvm path");
-    candidate == gdvm_base
-        || candidate.starts_with(&gdvm_base)
-        || gdvm_base.starts_with(&candidate)
+    candidate == gdvm_base || candidate.starts_with(&gdvm_base) || gdvm_base.starts_with(&candidate)
 }
 
-fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
+fn normalize_and_validate_path(
+    path: &Path,
+    key: &str,
+    existing: Option<&PathBuf>,
+) -> Result<PathBuf> {
     if path.to_string_lossy().trim().is_empty() {
         return Err(terr!("error-config-path-empty").into());
     }
@@ -275,7 +286,11 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
     }
 
     if is_reserved_path(&path) {
-        return Err(terr!("error-config-path-reserved", path = path.display().to_string()).into());
+        return Err(terr!(
+            "error-config-path-reserved",
+            path = path.display().to_string()
+        )
+        .into());
     }
 
     if let Some(existing_path) = existing {
@@ -284,7 +299,12 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
             || path.starts_with(&existing_path)
             || existing_path.starts_with(&path)
         {
-            return Err(terr!("error-config-path-overlap", key = key, path = existing_path.display().to_string()).into());
+            return Err(terr!(
+                "error-config-path-overlap",
+                key = key,
+                path = existing_path.display().to_string()
+            )
+            .into());
         }
     }
 
@@ -314,7 +334,7 @@ impl Config {
                         )?);
                     }
                     Ok(config)
-                },
+                }
                 Err(e) => {
                     crate::ui::report_error(&terr!("error-parse-config").with_source(e).into());
                     crate::ui::warn(t!("error-parse-config-using-default"));
@@ -467,7 +487,12 @@ mod tests {
     #[test]
     fn test_normalize_and_validate_path_normalizes_relative_paths() {
         let config = Config::default();
-        let path = normalize_and_validate_path(Path::new("../godot"), "install.path", config.cache_path.as_ref()).unwrap();
+        let path = normalize_and_validate_path(
+            Path::new("../godot"),
+            "install.path",
+            config.cache_path.as_ref(),
+        )
+        .unwrap();
 
         assert!(path.is_absolute());
         assert!(
@@ -475,14 +500,27 @@ mod tests {
                 .components()
                 .any(|component| component == std::path::Component::ParentDir)
         );
-        assert_eq!(path, std::env::current_dir().unwrap().join("../godot").clean());
+        assert_eq!(
+            path,
+            std::env::current_dir().unwrap().join("../godot").clean()
+        );
     }
 
     #[test]
     fn test_normalize_and_validate_path_rejects_empty_strings() {
         let config = Config::default();
-        assert!(normalize_and_validate_path(Path::new(""), "install.path", config.cache_path.as_ref()).is_err());
-        assert!(normalize_and_validate_path(Path::new("   "), "install.path", config.cache_path.as_ref()).is_err());
+        assert!(
+            normalize_and_validate_path(Path::new(""), "install.path", config.cache_path.as_ref())
+                .is_err()
+        );
+        assert!(
+            normalize_and_validate_path(
+                Path::new("   "),
+                "install.path",
+                config.cache_path.as_ref()
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -492,7 +530,14 @@ mod tests {
         let file_path = dir.path().join("not_a_dir.txt");
         std::fs::write(&file_path, "data").unwrap();
 
-        assert!(normalize_and_validate_path(Path::new(&file_path.display().to_string()), "install.path", config.cache_path.as_ref()).is_err());
+        assert!(
+            normalize_and_validate_path(
+                Path::new(&file_path.display().to_string()),
+                "install.path",
+                config.cache_path.as_ref()
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -500,8 +545,25 @@ mod tests {
         let config = Config::default();
         let gdvm_base = gdvm_dir().unwrap();
 
-        assert!(normalize_and_validate_path(&gdvm_base, "install.path", config.cache_path.as_ref()).is_err());
-        assert!(normalize_and_validate_path(&gdvm_base.join("subdir"), "install.path", config.cache_path.as_ref()).is_err());
-        assert!(normalize_and_validate_path(gdvm_base.parent().unwrap(), "install.path", config.cache_path.as_ref()).is_err());
+        assert!(
+            normalize_and_validate_path(&gdvm_base, "install.path", config.cache_path.as_ref())
+                .is_err()
+        );
+        assert!(
+            normalize_and_validate_path(
+                &gdvm_base.join("subdir"),
+                "install.path",
+                config.cache_path.as_ref()
+            )
+            .is_err()
+        );
+        assert!(
+            normalize_and_validate_path(
+                gdvm_base.parent().unwrap(),
+                "install.path",
+                config.cache_path.as_ref()
+            )
+            .is_err()
+        );
     }
 }
