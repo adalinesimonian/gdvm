@@ -115,6 +115,7 @@ pub const ERROR_CODES: &[(&str, &str)] = &[
     ("error-config-path-file", "GDVM4005"),
     ("error-config-path-reserved", "GDVM4006"),
     ("error-config-path-overlap", "GDVM4007"),
+    ("error-config-dir-not-empty", "GDVM4008"),
     //
     // GDVM5xxx: running Godot and project detection.
     //

@@ -184,6 +184,7 @@ error-config-path-empty = Stien kan ikke være tom.
 error-config-path-file = Stien peker til en fil, ikke en katalog: { $path }
 error-config-path-reserved = Stien er reservert for gdvm-innebygde deler: { $path }
 error-config-path-overlap = Konfigurerte stier må ikke overlappe: { $key }
+error-config-dir-not-empty = Viser bort å bruke stien { $path } fordi den allerede inneholder filer. Velg en tom katalog eller en ny sti.
 error-invalid-path = Ugyldig sti: { $path }
 error-publish-missing-manifest = registry.json mangler
 error-publish-no-such-version = ingen slik versjon: { $version }

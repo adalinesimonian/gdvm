@@ -282,6 +282,10 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
         }
     }
 
+    if path.exists() && !path.read_dir()?.next().is_none() {
+        return Err(terr!("error-config-dir-not-empty", path = path.display().to_string()).into());
+    }
+
     Ok(path)
 }
 

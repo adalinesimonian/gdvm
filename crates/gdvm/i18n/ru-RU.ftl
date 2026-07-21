@@ -188,6 +188,7 @@ error-config-path-empty = Путь не может быть пустым.
 error-config-path-file = Путь указывает на файл, а не на каталог: { $path }
 error-config-path-reserved = Путь зарезервирован для внутренних нужд gdvm: { $path }
 error-config-path-overlap = Настроенные пути не должны пересекаться: { $key }
+error-config-dir-not-empty = Отказано в использовании пути { $path }, потому что он уже содержит файлы. Выберите пустую директорию или новый путь.
 error-invalid-path = Недопустимый путь: { $path }
 error-publish-missing-manifest = отсутствует registry.json
 error-publish-no-such-version = нет такой версии: { $version }

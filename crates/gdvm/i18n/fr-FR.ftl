@@ -184,6 +184,7 @@ error-config-path-empty = Le chemin ne peut pas être vide.
 error-config-path-file = Le chemin pointe vers un fichier, pas vers un répertoire : { $path }
 error-config-path-reserved = Le chemin est réservé aux composants internes de gdvm : { $path }
 error-config-path-overlap = Les chemins configurés ne doivent pas se chevaucher : { $key }
+error-config-dir-not-empty = Refus d'utiliser le chemin { $path } car il contient déjà des fichiers. Choisissez un répertoire vide ou un nouveau chemin.
 error-invalid-path = Chemin non valide : { $path }
 error-publish-missing-manifest = registry.json manquant
 error-publish-no-such-version = version introuvable : { $version }
