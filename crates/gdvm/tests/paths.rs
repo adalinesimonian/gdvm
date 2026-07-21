@@ -18,41 +18,37 @@
 
 use gdvm::{
     config::{Config, ConfigOps},
-    i18n::I18n,
     paths::GdvmPaths,
 };
 use serial_test::serial;
-use std::path::Path;
-use tempfile::tempdir;
+
 mod common;
+use common::TestHome;
 
 #[test]
 #[serial]
 fn test_gdvm_paths_uses_normalized_absolute_paths() {
-    let dir = tempdir().unwrap();
-    let i18n = I18n::new().unwrap();
+    let _home = TestHome::new();
 
-    common::with_test_home(dir.path(), || {
-        let mut cfg = Config::default();
-        cfg.set_value("install.path", "./custom-installs").unwrap();
-        cfg.set_value("cache.path", "./custom-cache").unwrap();
-        cfg.save(&i18n).unwrap();
+    let mut cfg = Config::default();
+    cfg.set_value("install.path", "./custom-installs").unwrap();
+    cfg.set_value("cache.path", "./custom-cache").unwrap();
+    cfg.save().unwrap();
 
-        let paths = GdvmPaths::new(&i18n).unwrap();
+    let paths = GdvmPaths::new(&cfg).unwrap();
 
-        assert!(paths.installs().is_absolute());
-        assert!(paths.cache_dir().is_absolute());
-        assert!(
-            !paths
-                .installs()
-                .components()
-                .any(|component| component == std::path::Component::ParentDir)
-        );
-        assert!(
-            !paths
-                .cache_dir()
-                .components()
-                .any(|component| component == std::path::Component::ParentDir)
-        );
-    });
+    assert!(paths.installs().is_absolute());
+    assert!(paths.cache_dir().is_absolute());
+    assert!(
+        !paths
+            .installs()
+            .components()
+            .any(|component| component == std::path::Component::ParentDir)
+    );
+    assert!(
+        !paths
+            .cache_dir()
+            .components()
+            .any(|component| component == std::path::Component::ParentDir)
+    );
 }
