@@ -259,17 +259,17 @@ fn is_reserved_path(path: &Path) -> bool {
 
 fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
     if path.to_string_lossy().trim().is_empty() {
-        return Err(terr!("Path cannot be empty")); // Todo: i18n error
+        return Err(terr!("error-config-path-empty").into());
     }
-    
+
     let path = absolute(path.clean())?;
-    
+
     if path.is_file() {
-        return Err(terr!(format!("Path points to a file, not a directory: {}", path.display()).as_str())); // Todo: i18n error
+        return Err(terr!("error-config-path-file", path = path.display().to_string()).into());
     }
 
     if is_reserved_path(&path) {
-        return Err(terr!(format!("Path is reserved for gdvm internals: {}", path.display()).as_str())); // Todo: i18n error
+        return Err(terr!("error-config-path-reserved", path = path.display().to_string()).into());
     }
 
     if let Some(existing_path) = existing {
@@ -278,7 +278,7 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
             || path.starts_with(&existing_path)
             || existing_path.starts_with(&path)
         {
-            return Err(terr!(format!("Configured paths must not overlap: {}", key).as_str())); // Todo: i18n error
+            return Err(terr!("error-config-path-overlap", key = key, path = path.display().to_string()).into());
         }
     }
 
