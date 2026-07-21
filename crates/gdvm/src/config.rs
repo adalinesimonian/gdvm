@@ -97,11 +97,17 @@ impl ConfigOps for Config {
         match key {
             "install.path" => {
                 let value = normalize_and_validate_path(Path::new(value), key, self.cache_path.as_ref())?;
+                if value.exists() && !value.read_dir()?.next().is_none() {
+                    return Err(terr!("error-config-dir-not-empty", path = value.display().to_string()).into());
+                }
                 self.install_path = Some(value);
                 Ok(())
             }
             "cache.path" => {
                 let value = normalize_and_validate_path(Path::new(value), key, self.install_path.as_ref())?;
+                if value.exists() && !value.read_dir()?.next().is_none() {
+                    return Err(terr!("error-config-dir-not-empty", path = value.display().to_string()).into());
+                }
                 self.cache_path = Some(value);
                 Ok(())
             }
@@ -282,10 +288,6 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
         }
     }
 
-    if path.exists() && !path.read_dir()?.next().is_none() {
-        return Err(terr!("error-config-dir-not-empty", path = path.display().to_string()).into());
-    }
-
     Ok(path)
 }
 
@@ -298,10 +300,18 @@ impl Config {
             match toml::from_str::<Config>(&contents) {
                 Ok(mut config) => {
                     if !config.install_path.is_none() {
-                        config.set_value("install.path", config.get_value("install.path").unwrap_or_default().as_str())?;
+                        config.install_path = Some(normalize_and_validate_path(
+                            config.install_path.as_ref().unwrap(),
+                            "install.path",
+                            config.cache_path.as_ref(),
+                        )?);
                     }
                     if !config.cache_path.is_none() {
-                        config.set_value("cache.path", config.get_value("cache.path").unwrap_or_default().as_str())?;
+                        config.cache_path = Some(normalize_and_validate_path(
+                            config.cache_path.as_ref().unwrap(),
+                            "cache.path",
+                            config.install_path.as_ref(),
+                        )?);
                     }
                     Ok(config)
                 },
