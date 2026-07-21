@@ -445,7 +445,7 @@ mod tests {
     #[test]
     fn test_normalize_and_validate_path_normalizes_relative_paths() {
         let config = Config::default();
-        let path = normalize_and_validate_path(Path::new("../godot"), "install.path", config.install_path.as_ref()).unwrap();
+        let path = normalize_and_validate_path(Path::new("../godot"), "install.path", config.cache_path.as_ref()).unwrap();
 
         assert!(path.is_absolute());
         assert!(
@@ -459,8 +459,8 @@ mod tests {
     #[test]
     fn test_normalize_and_validate_path_rejects_empty_strings() {
         let config = Config::default();
-        assert!(normalize_and_validate_path(Path::new(""), "install.path", config.install_path.as_ref()).is_err());
-        assert!(normalize_and_validate_path(Path::new("   "), "install.path", config.install_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(Path::new(""), "install.path", config.cache_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(Path::new("   "), "install.path", config.cache_path.as_ref()).is_err());
     }
 
     #[test]
@@ -470,7 +470,7 @@ mod tests {
         let file_path = dir.path().join("not_a_dir.txt");
         std::fs::write(&file_path, "data").unwrap();
 
-        assert!(normalize_and_validate_path(Path::new(&file_path.display().to_string()), "install.path", config.install_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(Path::new(&file_path.display().to_string()), "install.path", config.cache_path.as_ref()).is_err());
     }
 
     #[test]
@@ -478,8 +478,8 @@ mod tests {
         let config = Config::default();
         let gdvm_base = gdvm_dir().unwrap();
 
-        assert!(normalize_and_validate_path(&gdvm_base, "install.path", config.install_path.as_ref()).is_err());
-        assert!(normalize_and_validate_path(&gdvm_base.join("subdir"), "install.path", config.install_path.as_ref()).is_err());
-        assert!(normalize_and_validate_path(gdvm_base.parent().unwrap(), "install.path", config.install_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(&gdvm_base, "install.path", config.cache_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(&gdvm_base.join("subdir"), "install.path", config.cache_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(gdvm_base.parent().unwrap(), "install.path", config.cache_path.as_ref()).is_err());
     }
 }
