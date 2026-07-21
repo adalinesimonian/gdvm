@@ -248,27 +248,27 @@ pub fn get_home_dir() -> Result<PathBuf> {
     Ok(base_dirs.home_dir().to_path_buf())
 }
 
-fn is_reserved_path(path: &Path) -> Result<bool> {
+fn is_reserved_path(path: &Path) -> bool {
     let resolved_path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
     let candidate = resolved_path;
-    let gdvm_base = gdvm_dir()?;
-    Ok(candidate == gdvm_base
+    let gdvm_base = gdvm_dir().expect("Cannot get gdvm path");
+    candidate == gdvm_base
         || candidate.starts_with(&gdvm_base)
-        || gdvm_base.starts_with(&candidate))
+        || gdvm_base.starts_with(&candidate)
 }
 
 fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf>) -> Result<PathBuf> {
-
-    let path = absolute(path.clean())?;
-    
     if path.to_string_lossy().trim().is_empty() {
         return Err(terr!("Path cannot be empty")); // Todo: i18n error
     }
+    
+    let path = absolute(path.clean())?;
+    
     if path.is_file() {
         return Err(terr!(format!("Path points to a file, not a directory: {}", path.display()).as_str())); // Todo: i18n error
     }
 
-    if let Ok(true) = is_reserved_path(&path) {
+    if is_reserved_path(&path) {
         return Err(terr!(format!("Path is reserved for gdvm internals: {}", path.display()).as_str())); // Todo: i18n error
     }
 
@@ -471,5 +471,15 @@ mod tests {
         std::fs::write(&file_path, "data").unwrap();
 
         assert!(normalize_and_validate_path(Path::new(&file_path.display().to_string()), "install.path", config.install_path.as_ref()).is_err());
+    }
+
+    #[test]
+    fn test_normalize_and_validate_path_rejects_reserved_paths() {
+        let config = Config::default();
+        let gdvm_base = gdvm_dir().unwrap();
+
+        assert!(normalize_and_validate_path(&gdvm_base, "install.path", config.install_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(&gdvm_base.join("subdir"), "install.path", config.install_path.as_ref()).is_err());
+        assert!(normalize_and_validate_path(gdvm_base.parent().unwrap(), "install.path", config.install_path.as_ref()).is_err());
     }
 }
