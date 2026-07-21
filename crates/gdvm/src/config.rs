@@ -249,7 +249,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
 }
 
 fn is_reserved_path(path: &Path) -> bool {
-    let resolved_path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let resolved_path = path.clean();
     let candidate = resolved_path;
     let gdvm_base = gdvm_dir().expect("Cannot get gdvm path");
     candidate == gdvm_base
