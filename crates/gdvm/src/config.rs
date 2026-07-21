@@ -284,7 +284,7 @@ fn normalize_and_validate_path(path: &Path, key: &str, existing: Option<&PathBuf
             || path.starts_with(&existing_path)
             || existing_path.starts_with(&path)
         {
-            return Err(terr!("error-config-path-overlap", key = key, path = path.display().to_string()).into());
+            return Err(terr!("error-config-path-overlap", key = key, path = existing_path.display().to_string()).into());
         }
     }
 
