@@ -18,13 +18,10 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version::{VersionSpec, VersionTarget};
 use gdvm::{fs_utils, t, t_attr};
 
+use super::VersionRequest;
 use super::format::{OutputFormat, byte_display_args, format_label_value_table, print_json};
-use super::keyword_to_version_filter;
-use super::link::collect_possible_paths;
 
 /// Information for a specific installed version of Godot.
 #[derive(serde::Serialize)]
@@ -43,34 +40,11 @@ struct VersionInfo {
 
 /// Handle the 'info' subcommand.
 pub(crate) async fn sub_info(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let raw_args: Vec<String> = Vec::new();
-
-    let version_input = matches.get_one::<String>("version");
     let include_pre = matches.get_flag("include-pre");
 
-    let spec = version_input.map(|v| VersionSpec::parse(v)).transpose()?;
-    let variant = spec.as_ref().and_then(|s| s.variant.clone());
-    let registry = spec.as_ref().and_then(|s| s.registry.clone());
-
-    let explicit_version = match spec.as_ref().map(|s| &s.target) {
-        Some(VersionTarget::Pattern(gv)) => Some(gv.clone()),
-        Some(VersionTarget::Keyword(kw)) => Some(keyword_to_version_filter(kw)),
-        None => None,
-    };
-
-    let possible_paths = collect_possible_paths(&raw_args);
-
-    let resolver = RunVersionResolver::new(gdvm);
-    let resolved = resolver
-        .resolve(RunResolutionRequest {
-            explicit: explicit_version,
-            variant,
-            registry,
-            include_pre,
-            possible_paths: &possible_paths,
-            force_on_mismatch: false,
-            install_if_missing: false,
-        })
+    let request = VersionRequest::from_matches(matches)?;
+    let resolved = request
+        .resolve_selection(gdvm, include_pre, false, false)
         .await?;
 
     let library = gdvm.library();
@@ -97,7 +71,7 @@ pub(crate) async fn sub_info(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         last_used: library.last_used(&install_key)?,
     };
 
-    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+    if OutputFormat::is_json(matches) {
         return print_json(&info);
     }
 

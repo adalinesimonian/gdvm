@@ -19,7 +19,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::{Gdvm, PruneOptions};
 use gdvm::config::{self};
-use gdvm::println_i18n;
+use gdvm::t;
 
 use super::format::{OutputFormat, byte_display_args, print_json};
 
@@ -36,63 +36,33 @@ pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
 
     let report = gdvm.pruner().prune(max_age_secs, opts)?;
 
-    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+    if OutputFormat::is_json(matches) {
         return print_json(&report);
     }
 
     if report.is_empty() {
-        if report.dry_run {
-            println_i18n!("prune-nothing-dry-run");
+        gdvm::ui::note(if report.dry_run {
+            t!("prune-nothing-dry-run")
         } else {
-            println_i18n!("prune-nothing-removed");
-        }
-        if report.preserved_by_link > 0 {
-            println_i18n!("prune-preserved-by-link", count = report.preserved_by_link);
-        }
-        return Ok(());
-    }
-
-    if report.dry_run {
-        println_i18n!("prune-dry-run-header");
-    } else {
-        println_i18n!("prune-removed-header");
-    }
-
-    if !report.installs.is_empty() {
-        println_i18n!("prune-installs-header");
-        for item in &report.installs {
-            let (value, unit) = byte_display_args(item.freed_bytes);
-            println_i18n!(
-                "prune-item",
-                label = item.label.as_str(),
-                value = value,
-                unit = unit
-            );
-        }
-    }
-
-    if !report.archives.is_empty() {
-        println_i18n!("prune-archives-header");
-        for item in &report.archives {
-            let (value, unit) = byte_display_args(item.freed_bytes);
-            println_i18n!(
-                "prune-item",
-                label = item.label.as_str(),
-                value = value,
-                unit = unit
-            );
-        }
+            t!("prune-nothing-removed")
+        });
     }
 
     if report.preserved_by_link > 0 {
-        println_i18n!("prune-preserved-by-link", count = report.preserved_by_link);
+        gdvm::ui::note(t!(
+            "prune-preserved-by-link",
+            count = report.preserved_by_link
+        ));
     }
 
-    let (value, unit) = byte_display_args(report.freed_bytes);
-    if report.dry_run {
-        println_i18n!("prune-would-free", value = value, unit = unit);
-    } else {
-        println_i18n!("prune-freed", value = value, unit = unit);
+    if !report.is_empty() {
+        let (value, unit) = byte_display_args(report.freed_bytes);
+        let freed_label = if report.dry_run {
+            t!("status-would-free")
+        } else {
+            t!("status-freed")
+        };
+        gdvm::ui::milestone(freed_label, t!("size-display", value = value, unit = unit));
     }
 
     Ok(())

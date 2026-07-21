@@ -31,6 +31,15 @@ Whether you're working on multiple projects or need to test features across vari
 
 gdvm is a community-driven project, not affiliated with Godot Engine or the Godot Foundation.
 
+<p align="center">
+  <b><a href="#installation">Installation</a></b> |
+  <b><a href="#usage">Usage</a></b> |
+  <b><a href="#github-actions">GitHub Actions</a></b> |
+  <b><a href="#registries">Registries</a></b> |
+  <b><a href="#contributing">Contributing</a></b> |
+  <b><a href="#licence">Licence</a></b>
+</p>
+
 ## Installation
 
 Install on \*nix systems (including MacOS):
@@ -112,6 +121,29 @@ eval "$(gdvm completions zsh)"            # zsh (~/.zshrc)
 gdvm completions fish | source            # fish (~/.config/fish/config.fish)
 gdvm completions powershell | Out-String | Invoke-Expression  # PowerShell ($PROFILE)
 ```
+
+## GitHub Actions
+
+Use the [setup-gdvm](https://github.com/marketplace/actions/setup-gdvm) GitHub Action to install gdvm on your CI runners. Once gdvm is set up, you can install and run any Godot version just like you would locally.
+
+```yaml
+steps:
+  - uses: adalinesimonian/setup-gdvm@v1
+
+  - run: gdvm install 4.5
+  - run: godot --version
+```
+
+You can also pin a specific gdvm version:
+
+```yaml
+steps:
+  - uses: adalinesimonian/setup-gdvm@v1
+    with:
+      version: 0.15.0
+```
+
+See the [setup-gdvm repository](https://github.com/adalinesimonian/setup-gdvm) for more details.
 
 ## Registries
 

@@ -73,11 +73,6 @@ help-prune-long = { help-prune }
 help-prune-all = Fjern alle installasjoner og cacha arkiv uavhengig av alder. Installasjoner som fortsatt har en aktiv lenke beholdes med mindre --force også er gitt.
 help-prune-force = Ignorer lenker, slik at installasjoner som bare er referert av en lenke også kan fjernes.
 help-prune-dry-run = Vis hva som ville blitt fjerna uten å slette noe.
-
-prune-dry-run-header = Følgende ville blitt fjerna (tørrkjøring):
-prune-removed-header = Fjerna følgende:
-prune-installs-header = Installasjoner:
-prune-archives-header = Cacha arkiv:
 prune-nothing-dry-run = Ingenting ville blitt fjerna.
 prune-nothing-removed = Ingenting å fjerne; alt er i bruk eller innenfor aldersgrensa.
 prune-preserved-by-link =
@@ -85,9 +80,7 @@ prune-preserved-by-link =
         [one] Beholdt { $count } installasjon som fortsatt er referert av en lenke.
        *[other] Beholdt { $count } installasjoner som fortsatt er refererte av en lenke.
     }
-prune-freed = Frigjorde omtrent { size-display }.
-prune-would-free = Ville frigjort omtrent { size-display }.
-prune-item = - { $label } ({ size-display })
+warning-broken-install-reinstalling = Den installerte { $version } mangler den kjørbare fila, installerer den på nytt.
 
 help-force = Tving installasjon på nytt selv om versjonen allerede er installert.
 help-redownload = Last ned versjonen på nytt selv om den allerede er lasta ned i cachen.
@@ -101,12 +94,24 @@ help-link-path = Stien der lenka eller kopien skal opprettes, f.eks. «{ $platfo
     }».
 help-link-force = Overskriv eksisterende lenke hvis den finnes
 help-link-copy = Kopier kjørbar i stedet for å lage lenke
-
-cache-files-removed = Cache-filene ble fjerna.
-cache-metadata-removed = Cache-metadataet ble fjerna.
 no-cache-files-found = Ingen cache-filer funnet.
 no-cache-metadata-found = Ingen cache-metadata funnet.
 gdvm-toml-malformed = ignorerer { -gdvm-toml } på { $path } fordi den ikke kunne tolkes: { $error }
+
+help-diagnose = Kontroller installasjonen og rapporter tilstanden.
+diagnose-base-dir = { -gdvm }-mappe: { $path }
+diagnose-healthy = Ingen problemer funnet.
+diagnose-install-broken = { $version } mangler den kjørbare filen. Kjør «{ -gdvm } install» for den for å installere på nytt.
+diagnose-install-ok = { $version } kan kjøres.
+diagnose-partial-downloads =
+    { $count ->
+        [one] { $count } avbrutt nedlasting i cachen; den gjenopptas automatisk, eller «{ -gdvm } prune» fjerner den.
+       *[other] { $count } avbrutte nedlastinger i cachen; de gjenopptas automatisk, eller «{ -gdvm } prune» fjerner dem.
+    }
+diagnose-path-missing = { $path } er ikke i PATH; godot-shimen vil ikke være tilgjengelig ved navn.
+diagnose-path-ok = bin-mappen er i PATH.
+diagnose-shim-missing = Shimen «{ $name }» mangler eller er ikke kjørbar. Reinstallering av { -gdvm } skriver den på nytt.
+diagnose-shim-ok = Shimen «{ $name }» er installert og kjørbar.
 
 help-console = Kjør { -godot } med konsoll tilkobla. Standard er false på Windows, true på andre plattformer.
 
@@ -128,10 +133,26 @@ status-extracting = Pakker ut
 status-fetching = Henter
 status-installed = Installert
 status-installing = Installerer
+status-removed = Fjerna
+status-healthy = Frisk
+status-ok = OK
+prune-item-detail = { $label } ({ size-display })
+status-freed = Frigjort
+status-pruned = Rydda
+status-would-free = Ville frigjort
+status-would-prune = Ville rydda
+status-removing = Fjerner
+status-running = Kjører
+status-cleared = Tømt
+status-refreshed = Oppdatert
+status-skipped = Hoppa over
 status-upgraded = Oppgradert
 status-upgrading = Oppgraderer
 status-verifying = Verifiserer
 subject-cached-archive = bufra arkiv
+subject-cache = cache
+subject-cache-files = cache-filer
+subject-cache-metadata = cache-metadata
 subject-releases = utgivelser
 subject-update-manifest = oppdateringsmanifest
 upgrade-target = { -gdvm } { $version }
@@ -140,8 +161,6 @@ auto-installing-version = Automatisk installasjon av versjon { $version }
 
 no-versions-installed = Ingen versjoner installerte.
 installed-versions = Installerte { -godot }-versjoner:
-removed-version = Fjerna versjonen {$version}
-removing-version = Fjerner versjon {$version}
 progress-eta =
     { $magnitude ->
         [seconds] { $secs }s
@@ -156,7 +175,7 @@ error-invalid-sha-length = Ugyldig SHA-lengde { $length }
 error-size-mismatch = Størrelsesavvik for fila { $file }: forventa { $expected } byte, fikk { $actual } byte.
 error-insecure-url = Nekter å hente { $url } over ei ukryptert tilkobling. Bare https://- og file://-URL-er er tillatte. Sett miljøvariabelen GDVM_ALLOW_INSECURE_URLS for å tillate ukrypterte http://-URL-er.
 error-insecure-redirect = Nekter å følge ei omdirigering fra https:// til en ukryptert http://-URL. Sett miljøvariabelen GDVM_ALLOW_INSECURE_URLS for å tillate ukrypterte http://-URL-er.
-error-response-not-utf8 = Svaret fra { $url } er ikke gyldig UTF-8: { $error }
+error-response-not-utf8 = Svaret fra { $url } er ikke gyldig UTF-8.
 error-response-too-large = Svaret fra { $url } overskrider den maksimale tillatte størrelsen på { $limit } byte.
 error-too-many-redirects = For mange omdirigeringer.
 error-config-invalid-number = Ugyldig verdi for { $key }: { $value } (forventet et tall)
@@ -178,8 +197,8 @@ error-registry-invalid-name = Ugyldig registernavn: { $name }
 error-registry-missing-index = Registeret «{ $name }» mangler index.json
 error-registry-missing-manifest = Registeret «{ $name }» mangler registry.json
 error-registry-not-configured = Registeret «{ $name }» er ikke konfigurert
-error-registry-parse-index = Klarte ikke å tolke indeksen for «{ $name }»: { $error }
-error-registry-parse-manifest = Klarte ikke å tolke manifestet for «{ $name }»: { $error }
+error-registry-parse-index = Klarte ikke å tolke indeksen for «{ $name }».
+error-registry-parse-manifest = Klarte ikke å tolke manifestet for «{ $name }».
 error-registry-unknown = Ukjent register «{ $name }»
 error-registry-unsupported-url-scheme = Registerets URL-skjema støttes ikke: { $url }
 error-spec-empty-registry = Tomt registernavn i «{ $input }»
@@ -187,6 +206,11 @@ error-spec-empty-variant = Tomt variantnavn i «{ $input }»
 error-spec-empty-version = Tom versjon i «{ $input }»
 error-system-time = Systemtiden er før UNIX-epoken
 error-unrecognized-version-format = Ukjent versjonsformat: { $input }
+error-diagnose-problems =
+    { $count ->
+        [one] { $count } problem funnet.
+       *[other] { $count } problemer funne.
+    }
 error-non-interactive-trust = Kan ikke spørre om å stole på registeret «{ $registry }» ({ $url }) i ei økt som ikke er interaktiv. Send --yes for å stole på det eksplisitt.
 error-non-interactive-value = Kan ikke be om en verdi for «{ $key }» i ei økt som ikke er interaktiv. Send verdien som et argument i stedet.
 error-registry-unsupported-schema = Registeret «{ $registry }» oppgir en skjemaversjon som ikke støttes: { $schema }.
@@ -195,6 +219,8 @@ label-error-coded = Feil { $code }:
 error-wildcard-position = Jokertegnet (*) kan bare stå på slutten av utgivelsestaggen, f.eks. 4.7-dev* (fikk { $input }).
 hint-try-wildcard = Ingen utgivelse har taggen { $requested }, men det finnes lignende tagger, der den nyeste er { $newest }. Prøv { $suggestion } for å treffe dem.
 download-retrying = Nedlastinga ble avbrutt, prøver på nytt (forsøk { $attempt } av { $max })...
+download-resuming = Gjenopptar avbrutt nedlasting ({ size-display } allerede lasta ned).
+warning-resume-verification-failed = Den gjenopptatte nedlastinga samsvarte ikke med forventa kontrollsum, laster den ned på nytt fra bunnen av.
 lock-waiting = Venter på at en annen { -gdvm }-prosess skal bli ferdig (lås: { $resource })...
 prune-skipped-error = Hopper over { $item }: { $error }
 prune-skipped-in-use = Hopper over { $item }: den er i bruk av en annen { -gdvm }-prosess.
@@ -205,41 +231,38 @@ warning-fetching-releases-using-cache = Feil ved henting av utgivelser: { $error
 error-version-not-found = Versjonen ble ikke funnet.
 error-archive-not-cached = Fant ingen arkiv i cachen for {$version}. Installer den først for å fylle cachen.
 error-multiple-versions-found = Flere versjoner samsvarer med forespørselen:
-
-running-version = Kjører versjon {$version}
+    {$list}
 link-created = Lenket {$version} til {$path}
 copy-created = Kopierte {$version} til {$path}
 no-matching-releases = Ingen samsvarende utgivelser funna.
 available-releases = Tilgjengelige utgivelser:
-cache-cleared = Cachen ble tømt.
-cache-refreshed = Cachen ble oppdatert.
 
 version-already-installed = Versjon {$version} er allerede installert.
 godot-executable-not-found = { -godot }-kjørbar fil ble ikke funnet for versjon {$version}.
 error-link-exists = Stien {$path} finnes allerede. Bruk --force for å overskrive.
-error-link-symlink = Klarte ikke å opprette lenke fra {$link} til {$target}: {$error}
-error-link-copy = Klarte ikke å kopiere kjørbar: {$error}
+error-link-symlink = Klarte ikke å opprette lenke fra {$link} til {$target}.
+error-link-copy = Klarte ikke å kopiere fil.
 
 error-no-stable-releases-found = Ingen stabile versjoner funnet.
 
-error-starting-godot = Kunne ikke starte { -godot }: { $error }
+error-starting-godot = Kunne ikke starte { -godot }.
 confirm-yes = ja
 
 default-set-success = Standardversjon {$version} er satt.
 default-unset-success = Standardversjonen er fjerna.
 provide-version-or-unset = Vennligst oppgi en versjon for å sette som standard eller «unset» for å fjerne standardversjonen.
 
-error-open-zip = Kunne ikke åpne ZIP-fila { $path }: { $error }
-error-read-zip = Kunne ikke lese ZIP-arkivet { $path }: { $error }
-error-access-file = Kunne ikke få tilgang til fila ved indeks { $index }: { $error }
-error-reopen-zip = Kunne ikke åpne ZIP-fila på nytt { $path }: { $error }
+error-open-zip = Kunne ikke åpne ZIP-fila { $path }.
+error-read-zip = Kunne ikke lese ZIP-arkivet { $path }.
+error-access-file = Kunne ikke få tilgang til fila ved indeks { $index }.
+error-reopen-zip = Kunne ikke åpne ZIP-fila på nytt { $path }.
 error-invalid-file-name = Ugyldig filnavn i ZIP-arkivet
-error-create-dir = Kunne ikke opprette katalogen { $path }: { $error }
-error-create-file = Kunne ikke opprette fila { $path }: { $error }
-error-read-zip-file = Kunne ikke lese fra ZIP-fila { $file }: { $error }
-error-write-file = Kunne ikke skrive til fila { $path }: { $error }
-error-strip-prefix = Kunne ikke fjerne prefiks: { $error }
-error-set-permissions = Kunne ikke sette tillatelser for { $path }: { $error }
+error-create-dir = Kunne ikke opprette katalogen { $path }.
+error-create-file = Kunne ikke opprette fila { $path }.
+error-read-zip-file = Kunne ikke lese fra ZIP-fila { $file }.
+error-write-file = Kunne ikke skrive til fila { $path }.
+error-strip-prefix = Kunne ikke fjerne prefiks.
+error-set-permissions = Kunne ikke sette tillatelser for { $path }.
 error-create-symlink-windows = Kunne ikke opprette symlink. Kontroller at {"\u001b"}]8;;ms-settings:developers{"\u001b"}\utviklermodus{"\u001b"}]8;;{"\u001b"}\ er aktivert eller kjør som administrator.
 
 help-upgrade = Oppgrader { -gdvm } til nyeste versjon
@@ -247,15 +270,13 @@ help-upgrade-major = Tillat oppgradering på tvers av hovedversjoner
 help-upgrade-pre = Oppgrader til nyeste forhåndsutgivelse
 upgrade-not-needed = { -gdvm } er allerede på siste versjon: { $version }.
 upgrade-current-version-newer = Den nåværende { -gdvm }-versjonen ({ $current }) er nyere enn den siste tilgjengelige versjonen ({ $latest }). Ingen oppgradering nødvendig.
-upgrade-download-failed = Nedlasting av oppgradering mislyktes: { $error }
-upgrade-file-create-failed = Klarte ikke å opprette oppgraderingsfila: { $error }
-upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen: { $error }
-upgrade-rename-failed = Klarte ikke å endre navnet på den nåværende kjørbare fila: { $error }
-upgrade-replace-failed = Klarte ikke å erstatte den kjørbare fila med den nye: { $error }
+upgrade-install-dir-failed = Klarte ikke å opprette installasjonskatalogen.
+upgrade-rename-failed = Klarte ikke å endre navnet på den nåværende kjørbare fila.
+upgrade-replace-failed = Klarte ikke å erstatte den kjørbare fila med den nye.
 upgrade-no-binary = Ingen { -gdvm }-binærfil er tilgjengelig for versjon { $version } og målet { $target }.
 upgrade-checksum-required = Utgivelsesmanifestet inneholder ingen sjekksum for denne { -gdvm }-binærfila. Nekter å oppgradere.
-error-fetching-gdvm-releases = Feil ved henting av { -gdvm }-utgivelser: { $error }
-error-parsing-gdvm-releases = Feil ved tolking av { -gdvm }-utgivelser: { $error }
+error-fetching-gdvm-releases = Feil ved henting av { -gdvm }-utgivelser.
+error-parsing-gdvm-releases = Feil ved tolking av { -gdvm }-utgivelser.
 error-unsupported-gdvm-schema = Skjemaversjon for { -gdvm }-utgivelsesmanifestet støttes ikke: { $schema }. Prøv å oppgradere { -gdvm } manuelt.
 upgrade-available = 💡 En ny versjon av { -gdvm } er tilgjengelig: {$version}. Kjør «{ -gdvm } upgrade» for å oppdatere.
 upgrade-available-major = 💡 Ei hovedversjonsoppdatering av { -gdvm } er tilgjengelig: {$version}. Kjør «{ -gdvm } upgrade -m» for å oppdatere.
@@ -278,17 +299,15 @@ pinned-success = Versjon {$version} ble festet i { -gdvm-toml }
 error-pin-version-not-found = Kan ikke feste versjon {$version}
 
 error-file-not-found = Fil ble ikke funnet. Den finnes kanskje ikke på serveren.
-error-download-failed = Nedlasting mislyktes på grunn av en uventa feil: { $error }
+error-download-failed = Nedlasting mislyktes med HTTP-status { $status }.
 error-ensure-godot-binaries-failed = Kunne ikke forsikre { -godot }-kjørbare filer.
-    Feil: { $error }.
-    Prøv å slette { $path } og kjør { -gdvm } på nytt.
 
 error-post-upgrade-action-failed = Trinnet { $id } mislyktes etter oppgraderinga.
-    Feil: { $error }.
     { -gdvm }-installasjonen din kan være ufullstendig. Prøv å kjøre { -gdvm } på nytt.
 
 error-failed-reading-project-godot = Kunne ikke lese project.godot, kan ikke automatisk bestemme prosjektversjonen.
 warning-using-project-version = Bruker versjon { $version } definert i project.godot.
+warning-gdvmrc-detected = Ei egendefinert { -gdvmrc }-fil ble oppdaga. Støtte for { -gdvmrc }-filer er forelda og vil bli fjerna i en fremtidig utgivelse. Vennligst bytt til den nye festefila som brukes av `{ -gdvm } pin`.
 
 warning-project-version-mismatch =
     {"\u001b"}[33mAdvarsel: Versjonen definert i project.godot samsvarer ikke med den { $pinned ->
@@ -363,7 +382,7 @@ config-key-not-set = Konfigurasjonsnøkkel ikke satt.
 config-key-not-set-value = <ikke satt>
 error-unknown-config-key = Ukjent konfigurasjonsnøkkel.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk "get", "set" eller "list".
-error-parse-config = Kunne ikke tolke konfigurasjonsfila: { $error }
+error-parse-config = Kunne ikke tolke konfigurasjonsfila.
 error-parse-config-using-default = Bruker standard konfigurasjonsverdier.
 
 help-registry = Administrer registre å installere { -godot }-bygg fra

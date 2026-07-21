@@ -19,51 +19,49 @@
 
 use gdvm::{config::Config, config::ConfigOps, i18n::I18n};
 use serial_test::serial;
-use tempfile::tempdir;
+
 mod common;
+use common::TestHome;
 
 #[test]
 #[serial]
 fn test_load_save_roundtrip() {
-    let dir = tempdir().unwrap();
+    let home = TestHome::new();
 
-    common::with_test_home(dir.path(), || {
-        let cfg = Config {
-            prune_max_age_days: Some(7),
-            ..Default::default()
-        };
-        cfg.save().unwrap();
-    });
+    let cfg = Config {
+        prune_max_age_days: Some(7),
+        ..Default::default()
+    };
+    cfg.save().unwrap();
 
-    let loaded = common::with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded = Config::load().unwrap();
     assert_eq!(loaded.prune_max_age_days, Some(7));
 
-    common::with_test_home(dir.path(), || {
-        let cfg = Config {
-            prune_max_age_days: Some(14),
-            ..Default::default()
-        };
-        cfg.save().unwrap();
-    });
+    let cfg = Config {
+        prune_max_age_days: Some(14),
+        ..Default::default()
+    };
+    cfg.save().unwrap();
 
-    let loaded2 = common::with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded2 = Config::load().unwrap();
     assert_eq!(loaded2.prune_max_age_days, Some(14));
+
+    drop(home);
 }
 
 #[test]
 #[serial]
 fn test_legacy_config_option_is_ignored_on_load() {
-    let dir = tempdir().unwrap();
+    let home = TestHome::new();
 
-    let config_dir = dir.path().join(".gdvm");
-    std::fs::create_dir_all(&config_dir).unwrap();
+    let config_dir = home.gdvm_dir();
     std::fs::write(
         config_dir.join("config.toml"),
         "github_token = \"secret\"\nprune_max_age_days = 9\n",
     )
     .unwrap();
 
-    let loaded = common::with_test_home(dir.path(), || Config::load().unwrap());
+    let loaded = Config::load().unwrap();
     assert_eq!(loaded.prune_max_age_days, Some(9));
 }
 

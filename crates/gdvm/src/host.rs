@@ -50,7 +50,7 @@ impl HostPlatform {
             (HostOs::Linux, HostArch::X86) => Ok("i686-unknown-linux-gnu"),
             (HostOs::Macos, HostArch::Aarch64) => Ok("aarch64-apple-darwin"),
             (HostOs::Macos, HostArch::X86_64) => Ok("x86_64-apple-darwin"),
-            _ => Err(terr!("unsupported-architecture")),
+            _ => Err(terr!("unsupported-architecture").into()),
         }
     }
 }
@@ -63,7 +63,7 @@ pub fn detect_host() -> Result<HostPlatform> {
     } else if cfg!(target_os = "linux") {
         HostOs::Linux
     } else {
-        return Err(terr!("unsupported-platform"));
+        return Err(terr!("unsupported-platform").into());
     };
 
     let arch = if cfg!(target_arch = "x86_64") {
@@ -73,7 +73,7 @@ pub fn detect_host() -> Result<HostPlatform> {
     } else if cfg!(target_arch = "aarch64") {
         HostArch::Aarch64
     } else {
-        return Err(terr!("unsupported-architecture"));
+        return Err(terr!("unsupported-architecture").into());
     };
 
     Ok(HostPlatform { os, arch })

@@ -31,7 +31,7 @@ use crate::releases::CatalogSet;
 use crate::run_version_resolver::RunVersionSource;
 use crate::usage_tracker::UsageTracker;
 use crate::version::{QuerySelection, ResolvedSelection, ResolvedVersion, VersionQuery};
-use crate::{eprintln_i18n, post_upgrade, println_i18n, t, terr};
+use crate::{eprintln_i18n, post_upgrade, t};
 
 mod catalog;
 mod defaults;
@@ -208,16 +208,18 @@ impl Gdvm {
         let cache_index = self.cache_store.index_path();
         if cache_index.exists() {
             fs::remove_file(cache_index)?;
-            println_i18n!("cache-metadata-removed");
+            crate::ui::step(t!("status-removed"), t!("subject-cache-metadata"));
         } else {
-            println_i18n!("no-cache-metadata-found");
+            crate::ui::step(t!("status-skipped"), t!("subject-cache-metadata"));
+            crate::ui::note(t!("no-cache-metadata-found"));
         }
 
         if self.artifact_cache.exists() {
             self.artifact_cache.clear_files()?;
-            println_i18n!("cache-files-removed");
+            crate::ui::step(t!("status-removed"), t!("subject-cache-files"));
         } else {
-            println_i18n!("no-cache-files-found");
+            crate::ui::step(t!("status-skipped"), t!("subject-cache-files"));
+            crate::ui::note(t!("no-cache-files-found"));
         }
         Ok(())
     }
@@ -228,6 +230,16 @@ impl Gdvm {
             catalogs: &self.catalogs,
             host: &self.host,
         }
+    }
+
+    /// The gdvm base directory.
+    pub fn base_path(&self) -> &std::path::Path {
+        self.paths.base()
+    }
+
+    /// The number of partial download files currently in the cache.
+    pub fn partial_download_count(&self) -> usize {
+        self.artifact_cache.partial_downloads().len()
     }
 
     /// Installed-version inventory and store paths.
@@ -328,30 +340,11 @@ impl RunVersionSource for Gdvm {
     where
         T: Into<VersionQuery> + Clone + Send + Sync,
     {
-        let gv: VersionQuery = gv.clone().into();
-        let matches = self
+        Ok(self
             .library()
-            .resolve_installed_version(&gv, variant, registry)
-            .await?;
-
-        match matches.len() {
-            0 => Err(terr!("error-version-not-found")),
-            1 => Ok(matches[0].version.clone()),
-            _ => {
-                eprintln_i18n!("error-multiple-versions-found");
-                for v in &matches {
-                    println!(
-                        "- {}",
-                        crate::version::display_version(
-                            &v.version,
-                            &v.variant,
-                            v.registry.as_deref(),
-                        )
-                    );
-                }
-                Err(terr!("error-version-not-found"))
-            }
-        }
+            .resolve_installed_one(gv, variant, registry)
+            .await?
+            .version)
     }
 }
 

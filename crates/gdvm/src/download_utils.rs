@@ -48,7 +48,7 @@ pub fn ensure_url_scheme_allowed(url: &str) -> Result<()> {
     if url_scheme_allowed(url) {
         Ok(())
     } else {
-        Err(terr!("error-insecure-url", url = url.to_string()))
+        Err(terr!("error-insecure-url", url = url.to_string()).into())
     }
 }
 
@@ -133,7 +133,7 @@ pub(crate) async fn get_retrying(
                 if is_retryable_status(status) {
                     let retry_after = parse_retry_after(response.headers());
                     Err(TransferError::Transient {
-                        error: terr!("error-download-failed", status = status.to_string()),
+                        error: terr!("error-download-failed", status = status.to_string()).into(),
                         retry_after,
                     })
                 } else {
@@ -229,11 +229,141 @@ impl StreamHasher {
     }
 }
 
+/// Digests for verifying a given download.
+pub struct ExpectedDigests<'a> {
+    /// The checksum.
+    pub sha: &'a str,
+    /// The expected size in bytes.
+    pub size: Option<u64>,
+}
+
+/// Download `url` into `dest`, resuming any partial download and verifying the
+/// download against `expected`.
+pub async fn download_verified(
+    url: &str,
+    dest: &Path,
+    partial_path: &Path,
+    meta_path: &Path,
+    expected: ExpectedDigests<'_>,
+    subject: &str,
+) -> Result<std::fs::File> {
+    // For local registries.
+    let remote = !url.starts_with("file://");
+
+    let read_prior = || -> Option<PriorPartial> {
+        if !remote {
+            return None;
+        }
+        let downloaded = std::fs::metadata(partial_path).ok()?.len();
+        let validator = std::fs::read_to_string(meta_path).ok()?;
+        let validator = validator.trim().to_string();
+        (downloaded > 0 && !validator.is_empty()).then_some(PriorPartial {
+            downloaded,
+            validator,
+        })
+    };
+
+    let mut resumed = read_prior().is_some();
+    loop {
+        let prior = read_prior();
+        if let Some(prior) = &prior {
+            let (value, unit) = crate::fs_utils::byte_display_args(prior.downloaded);
+            ui::note(t!("download-resuming", value = value, unit = unit));
+        } else {
+            let _ = std::fs::remove_file(partial_path);
+        }
+
+        let mut file = tokio::fs::File::options()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(partial_path)
+            .await?;
+        let digests =
+            download_to_file_resuming(url, &mut file, prior, remote.then_some(meta_path), subject)
+                .await?;
+        drop(file);
+
+        match verify_digests(&digests, &expected, dest) {
+            Ok(()) => break,
+            Err(error) => {
+                let _ = std::fs::remove_file(partial_path);
+                let _ = std::fs::remove_file(meta_path);
+                if !resumed {
+                    return Err(error);
+                }
+                resumed = false;
+                ui::warn(t!("warning-resume-verification-failed"));
+            }
+        }
+    }
+
+    let _ = std::fs::remove_file(meta_path);
+    std::fs::rename(partial_path, dest)?;
+    Ok(std::fs::File::open(dest)?)
+}
+
+/// Verify a download's digests and size.
+fn verify_digests(
+    digests: &DownloadDigests,
+    expected: &ExpectedDigests<'_>,
+    display_path: &Path,
+) -> Result<()> {
+    let sha_type = crate::hash_utils::ShaType::from_expected(expected.sha)?;
+    let actual = match sha_type {
+        crate::hash_utils::ShaType::Sha256 => &digests.sha256,
+        crate::hash_utils::ShaType::Sha512 => &digests.sha512,
+    };
+    if !actual.eq_ignore_ascii_case(expected.sha) {
+        return Err(crate::hash_utils::checksum_mismatch_error(display_path));
+    }
+
+    if let Some(expected_size) = expected.size
+        && digests.size != expected_size
+    {
+        return Err(terr!(
+            "error-size-mismatch",
+            file = display_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+            expected = expected_size,
+            actual = digests.size
+        )
+        .into());
+    }
+
+    Ok(())
+}
+
+/// A leftover partial download.
+pub struct PriorPartial {
+    /// Bytes on disk.
+    pub downloaded: u64,
+    /// The validator from the HTTP request from when the download was
+    /// interrupted.
+    pub validator: String,
+}
+
 /// Download `url` to the `dest` file handle. `subject` is the text sent to the
 /// progress indicator describing what's being downloaded.
 pub async fn download_to_file(
     url: &str,
     dest: &mut tokio::fs::File,
+    subject: &str,
+) -> Result<DownloadDigests> {
+    download_to_file_resuming(url, dest, None, None, subject).await
+}
+
+/// Resume a download from a prior partial, if one exists. Otherwise, download
+/// from scratch.
+pub async fn download_to_file_resuming(
+    url: &str,
+    dest: &mut tokio::fs::File,
+    prior: Option<PriorPartial>,
+    validator_sink: Option<&Path>,
     subject: &str,
 ) -> Result<DownloadDigests> {
     ensure_url_scheme_allowed(url)?;
@@ -243,7 +373,7 @@ pub async fn download_to_file(
         let mut hasher = StreamHasher::new();
         let src_path = Path::new(path);
         if !src_path.is_file() {
-            return Err(terr!("error-file-not-found"));
+            return Err(terr!("error-file-not-found").into());
         }
         let mut src = tokio::fs::File::open(src_path).await?;
         let mut buffer = vec![0u8; 64 * 1024];
@@ -260,7 +390,15 @@ pub async fn download_to_file(
     }
 
     let client = http_client()?;
-    let mut state = TransferState::default();
+    let mut state = TransferState {
+        validator_sink: validator_sink.map(Path::to_path_buf),
+        ..TransferState::default()
+    };
+    if let Some(prior) = prior {
+        state.downloaded = prior.downloaded;
+        state.validator = Some(prior.validator);
+        state.range_supported = true;
+    }
     let mut attempt = 1;
 
     loop {
@@ -297,6 +435,8 @@ struct TransferState {
     total: Option<u64>,
     /// The progress indicator.
     task: Option<Task>,
+    /// Where to store the validator when the server provides it.
+    validator_sink: Option<std::path::PathBuf>,
 }
 
 impl TransferState {
@@ -367,44 +507,59 @@ async fn transfer_attempt(
                 .or_else(|| response.headers().get(reqwest::header::LAST_MODIFIED))
                 .and_then(|v| v.to_str().ok())
                 .map(str::to_string);
+
+            if let Some(sink) = &state.validator_sink {
+                // If this fails, that's fine, next download will just start
+                // from scratch.
+                let _ = std::fs::write(sink, state.validator.as_deref().unwrap_or_default());
+            }
         }
         reqwest::StatusCode::PARTIAL_CONTENT => {
-            let starts_at_prefix = response
+            let content_range = response
                 .headers()
                 .get(reqwest::header::CONTENT_RANGE)
                 .and_then(|v| v.to_str().ok())
-                .and_then(|v| v.strip_prefix("bytes "))
-                .and_then(|v| v.split('-').next())
-                .and_then(|v| v.parse::<u64>().ok())
-                == Some(state.downloaded);
+                .and_then(parse_content_range);
 
+            let starts_at_prefix = content_range.map(|(start, _)| start) == Some(state.downloaded);
             if !starts_at_prefix {
                 state.range_supported = false;
                 return Err(TransferError::Transient {
                     error: terr!(
                         "error-download-failed",
                         status = response.status().to_string()
-                    ),
+                    )
+                    .into(),
                     retry_after: None,
                 });
             }
+
+            state.total = content_range
+                .and_then(|(_, total)| total)
+                .or_else(|| {
+                    response
+                        .content_length()
+                        .map(|remaining| state.downloaded + remaining)
+                })
+                .or(state.total);
         }
         reqwest::StatusCode::NOT_FOUND => {
-            return Err(TransferError::Permanent(terr!("error-file-not-found")));
+            return Err(TransferError::Permanent(
+                terr!("error-file-not-found").into(),
+            ));
         }
         status if is_retryable_status(status) => {
             let retry_after = parse_retry_after(response.headers());
 
             return Err(TransferError::Transient {
-                error: terr!("error-download-failed", status = status.to_string()),
+                error: terr!("error-download-failed", status = status.to_string()).into(),
                 retry_after,
             });
         }
         status => {
-            return Err(TransferError::Permanent(terr!(
-                "error-download-failed",
-                status = status.to_string()
-            )));
+            return Err(TransferError::Permanent(
+                terr!("error-download-failed", status = status.to_string()).into(),
+            ));
         }
     }
 
@@ -455,7 +610,8 @@ async fn transfer_attempt(
                 "error-size-mismatch",
                 expected = total,
                 actual = hasher.size
-            ),
+            )
+            .into(),
             retry_after: None,
         });
     }
@@ -492,7 +648,8 @@ async fn rehash_prefix(dest: &mut tokio::fs::File, len: u64) -> Result<StreamHas
                 "error-size-mismatch",
                 expected = len,
                 actual = len - remaining
-            ));
+            )
+            .into());
         }
         hasher.update(&buffer[..read]);
         remaining -= read as u64;
@@ -500,6 +657,18 @@ async fn rehash_prefix(dest: &mut tokio::fs::File, len: u64) -> Result<StreamHas
 
     dest.seek(std::io::SeekFrom::Start(len)).await?;
     Ok(hasher)
+}
+
+/// Parse a `Content-Range` header into a `(start, total)` tuple.
+fn parse_content_range(value: &str) -> Option<(u64, Option<u64>)> {
+    let value = value.strip_prefix("bytes ")?;
+    let (range, total) = value.split_once('/')?;
+    let start = range.split('-').next()?.parse::<u64>().ok()?;
+    let total = match total.trim() {
+        "*" => None,
+        total => Some(total.parse::<u64>().ok()?),
+    };
+    Some((start, total))
 }
 
 /// Update the progress bar. Creates one if it hasn't been made yet.
@@ -526,12 +695,13 @@ pub const MAX_METADATA_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
 pub async fn response_text_limited(response: reqwest::Response, max_bytes: u64) -> Result<String> {
     let url = response.url().to_string();
 
-    let too_large = || {
+    let too_large = || -> anyhow::Error {
         terr!(
             "error-response-too-large",
             url = url.clone(),
             limit = max_bytes
         )
+        .into()
     };
 
     if let Some(len) = response.content_length()
@@ -551,11 +721,9 @@ pub async fn response_text_limited(response: reqwest::Response, max_bytes: u64) 
     }
 
     String::from_utf8(buf).map_err(|e| {
-        terr!(
-            "error-response-not-utf8",
-            url = url.clone(),
-            error = e.to_string()
-        )
+        terr!("error-response-not-utf8", url = url.clone())
+            .with_source(e)
+            .into()
     })
 }
 
@@ -659,6 +827,37 @@ mod tests {
         assert_eq!(parse_retry_after(&headers), None);
 
         assert_eq!(parse_retry_after(&reqwest::header::HeaderMap::new()), None);
+    }
+
+    #[test]
+    fn content_range_parses_start_and_total() {
+        assert_eq!(
+            parse_content_range("bytes 100-199/500"),
+            Some((100, Some(500)))
+        );
+        assert_eq!(parse_content_range("bytes 0-67/68"), Some((0, Some(68))));
+        assert_eq!(parse_content_range("bytes 100-199/*"), Some((100, None)));
+        assert_eq!(parse_content_range("bytes 100-199"), None);
+        assert_eq!(parse_content_range("items 100-199/500"), None);
+        assert_eq!(parse_content_range("bytes x-199/500"), None);
+        assert_eq!(parse_content_range("bytes 100-199/x"), None);
+    }
+
+    #[test]
+    fn resumed_total_prefers_header_then_length() {
+        let downloaded = 100u64;
+        let from_header = Some((downloaded, Some(500u64)));
+        let content_length = Some(400u64);
+
+        let total = from_header
+            .and_then(|(_, total)| total)
+            .or_else(|| content_length.map(|remaining| downloaded + remaining));
+        assert_eq!(total, Some(500));
+
+        let total_without_header = None::<(u64, Option<u64>)>
+            .and_then(|(_, total)| total)
+            .or_else(|| content_length.map(|remaining| downloaded + remaining));
+        assert_eq!(total_without_header, Some(500));
     }
 
     #[tokio::test]

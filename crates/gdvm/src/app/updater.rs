@@ -17,13 +17,11 @@
 
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 use semver::Version;
 
-use crate::download_utils::download_to_file;
 use crate::host::detect_host;
 use crate::metadata_cache::{CacheStore, GdvmCache};
 use crate::paths::GdvmPaths;
@@ -211,54 +209,47 @@ impl<'a> Updater<'a> {
         // Define install directory
         let install_dir = self.paths.base().join("bin");
         std::fs::create_dir_all(&install_dir)
-            .map_err(|e| terr!("upgrade-install-dir-failed", error = e.to_string()))?;
+            .map_err(|e| terr!("upgrade-install-dir-failed").with_source(e))?;
 
-        let tmp_file = tempfile::Builder::new()
-            .prefix(".gdvm-upgrade-")
-            .tempfile_in(&install_dir)
-            .map_err(|e| terr!("upgrade-file-create-failed", error = e.to_string()))?;
+        let new_exe = install_dir.join(".gdvm-upgrade-new");
+        let partial = install_dir.join(".gdvm-upgrade-new.partial");
+        let partial_meta = install_dir.join(".gdvm-upgrade-new.partial.meta");
 
-        let mut async_file = tokio::fs::File::from_std(tmp_file.as_file().try_clone()?);
-        let digests = match download_to_file(bin_url, &mut async_file, &subject).await {
-            Ok(digests) => digests,
-            Err(err) => {
-                ui::error(t!("upgrade-download-failed", error = err.to_string()));
-                return Err(err);
-            }
+        let downloaded = crate::download_utils::download_verified(
+            bin_url,
+            &new_exe,
+            &partial,
+            &partial_meta,
+            crate::download_utils::ExpectedDigests {
+                sha: expected_sha,
+                size: binary.size,
+            },
+            &subject,
+        )
+        .await;
+
+        let file = match downloaded {
+            Ok(file) => file,
+            Err(err) => return Err(err),
         };
-        drop(async_file);
-
-        super::installer::verify_download_digests(&digests, expected_sha, Path::new("gdvm"))?;
-
-        if let Some(expected_size) = binary.size
-            && digests.size != expected_size
-        {
-            return Err(terr!(
-                "error-size-mismatch",
-                file = "gdvm",
-                expected = expected_size,
-                actual = digests.size
-            ));
-        }
 
         #[cfg(target_family = "unix")]
         {
             // Make the new binary executable
-            tmp_file
-                .as_file()
-                .set_permissions(std::fs::Permissions::from_mode(0o755))?;
+            file.set_permissions(std::fs::Permissions::from_mode(0o755))?;
         }
+        drop(file);
 
         // Rename current executable to .bak and replace it with the new file
         let current_exe = std::env::current_exe()?;
         let backup_exe = current_exe.with_extension("bak");
 
         std::fs::rename(&current_exe, &backup_exe)
-            .map_err(|e| terr!("upgrade-rename-failed", error = e.to_string()))?;
+            .map_err(|e| terr!("upgrade-rename-failed").with_source(e))?;
 
-        if let Err(err) = tmp_file.persist(&current_exe) {
+        if let Err(err) = std::fs::rename(&new_exe, &current_exe) {
             let _ = std::fs::rename(&backup_exe, &current_exe);
-            return Err(terr!("upgrade-replace-failed", error = err.to_string()));
+            return Err(terr!("upgrade-replace-failed").with_source(err).into());
         }
 
         // Update gdvm cache

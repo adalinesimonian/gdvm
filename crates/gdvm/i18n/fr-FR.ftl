@@ -73,11 +73,6 @@ help-prune-long = { help-prune }
 help-prune-all = Supprimer toutes les installations et archives en cache quel que soit leur âge. Les installations encore référencées par un lien actif sont conservées sauf si --force est également fourni.
 help-prune-force = Ignorer les liens, afin que les installations référencées uniquement par un lien puissent aussi être supprimées.
 help-prune-dry-run = Afficher ce qui serait supprimé sans rien supprimer.
-
-prune-dry-run-header = Les éléments suivants seraient supprimés (simulation) :
-prune-removed-header = Éléments supprimés :
-prune-installs-header = Installations :
-prune-archives-header = Archives en cache :
 prune-nothing-dry-run = Rien ne serait supprimé.
 prune-nothing-removed = Rien à supprimer ; tout est utilisé ou dans le seuil d'ancienneté.
 prune-preserved-by-link =
@@ -85,9 +80,7 @@ prune-preserved-by-link =
         [one] { $count } installation conservée car encore référencée par un lien.
        *[other] { $count } installations conservées car encore référencées par un lien.
     }
-prune-freed = Environ { size-display } libéré(s).
-prune-would-free = Environ { size-display } seraient libéré(s).
-prune-item = - { $label } ({ size-display })
+warning-broken-install-reinstalling = L'installation de { $version } n'a pas d'exécutable, réinstallation en cours.
 
 help-force = Forcer la réinstallation même si la version est déjà installée.
 help-redownload = Retélécharger la version même si elle est déjà présente dans le cache.
@@ -101,12 +94,24 @@ help-link-path = Le chemin où le lien ou la copie sera créé, par exemple «{ 
     } ».
 help-link-force = Écraser le lien existant s'il existe
 help-link-copy = Copier l'exécutable au lieu de créer un lien
-
-cache-files-removed = Les fichiers du cache ont été supprimés avec succès.
-cache-metadata-removed = Les métadonnées de cache ont été supprimées avec succès.
 no-cache-files-found = Aucun fichier de cache trouvé.
 no-cache-metadata-found = Aucune métadonnée de cache trouvée.
 gdvm-toml-malformed = { -gdvm-toml } à { $path } ignoré, car il n'a pas pu être analysé : { $error }
+
+help-diagnose = Vérifier l'installation et signaler son état.
+diagnose-base-dir = Répertoire { -gdvm } : { $path }
+diagnose-healthy = Aucun problème détecté.
+diagnose-install-broken = { $version } n’a pas d’exécutable. Exécutez « { -gdvm } install » pour cette version afin de la réinstaller.
+diagnose-install-ok = { $version } peut être lancé.
+diagnose-partial-downloads =
+    { $count ->
+        [one] { $count } téléchargement interrompu dans le cache ; il reprend automatiquement, ou « { -gdvm } prune » le supprime.
+       *[other] { $count } téléchargements interrompus dans le cache ; ils reprennent automatiquement, ou « { -gdvm } prune » les supprime.
+    }
+diagnose-path-missing = { $path } n'est pas dans le PATH ; le shim godot ne sera pas accessible par son nom.
+diagnose-path-ok = Le répertoire bin est dans le PATH.
+diagnose-shim-missing = Le shim « { $name } » est manquant ou non exécutable. Réinstaller { -gdvm } le réécrit.
+diagnose-shim-ok = Le shim « { $name } » est installé et exécutable.
 
 help-console = Exécuter { -godot } avec la console attachée. Par défaut false sur Windows, true sur les autres plateformes.
 
@@ -128,10 +133,26 @@ status-extracting = Extraction
 status-fetching = Récupération
 status-installed = Installé
 status-installing = Installation
+status-removed = Supprimé
+status-healthy = Sain
+status-ok = OK
+prune-item-detail = { $label } ({ size-display })
+status-freed = Libéré
+status-pruned = Purgé
+status-would-free = Libérerait
+status-would-prune = Purgerait
+status-removing = Suppression
+status-running = Exécution
+status-cleared = Vidé
+status-refreshed = Actualisé
+status-skipped = Ignoré
 status-upgraded = Mis à niveau
 status-upgrading = Mise à niveau
 status-verifying = Vérification
 subject-cached-archive = archive en cache
+subject-cache = cache
+subject-cache-files = fichiers du cache
+subject-cache-metadata = métadonnées de cache
 subject-releases = versions
 subject-update-manifest = manifeste de mise à jour
 upgrade-target = { -gdvm } { $version }
@@ -140,8 +161,6 @@ auto-installing-version = Installation automatique de la version { $version }
 
 no-versions-installed = Aucune version installée.
 installed-versions = Versions installées de { -godot } :
-removed-version = Version {$version} supprimée
-removing-version = Suppression de la version {$version}
 progress-eta =
     { $magnitude ->
         [seconds] { $secs } s
@@ -156,7 +175,7 @@ error-invalid-sha-length = Longueur SHA invalide { $length }
 error-size-mismatch = Taille incorrecte pour le fichier { $file } : { $expected } octets attendus, { $actual } octets reçus.
 error-insecure-url = Refus de récupérer { $url } via une connexion non chiffrée. Seules les URL https:// et file:// sont autorisées. Définissez la variable d'environnement GDVM_ALLOW_INSECURE_URLS pour autoriser les URL http:// non chiffrées.
 error-insecure-redirect = Refus de suivre une redirection de https:// vers une URL http:// non chiffrée. Définissez la variable d'environnement GDVM_ALLOW_INSECURE_URLS pour autoriser les URL http:// non chiffrées.
-error-response-not-utf8 = La réponse de { $url } n'est pas en UTF-8 valide : { $error }
+error-response-not-utf8 = La réponse de { $url } n'est pas en UTF-8 valide.
 error-response-too-large = La réponse de { $url } dépasse la taille maximale autorisée de { $limit } octets.
 error-too-many-redirects = Trop de redirections.
 error-config-invalid-number = Valeur non valide pour { $key } : { $value } (nombre attendu)
@@ -178,8 +197,8 @@ error-registry-invalid-name = Nom de registre non valide : { $name }
 error-registry-missing-index = Le fichier index.json est manquant dans le registre « { $name } »
 error-registry-missing-manifest = Le fichier registry.json est manquant dans le registre « { $name } »
 error-registry-not-configured = Le registre « { $name } » n'est pas configuré
-error-registry-parse-index = Échec de l'analyse de l'index de « { $name } » : { $error }
-error-registry-parse-manifest = Échec de l'analyse du manifeste de « { $name } » : { $error }
+error-registry-parse-index = Échec de l'analyse de l'index de « { $name } ».
+error-registry-parse-manifest = Échec de l'analyse du manifeste de « { $name } ».
 error-registry-unknown = Registre inconnu « { $name } »
 error-registry-unsupported-url-scheme = Schéma d'URL de registre non pris en charge : { $url }
 error-spec-empty-registry = Nom de registre vide dans « { $input } »
@@ -187,6 +206,11 @@ error-spec-empty-variant = Nom de variante vide dans « { $input } »
 error-spec-empty-version = Version vide dans « { $input } »
 error-system-time = Heure système antérieure à l'époque UNIX
 error-unrecognized-version-format = Format de version non reconnu : { $input }
+error-diagnose-problems =
+    { $count ->
+        [one] { $count } problème détecté.
+       *[other] { $count } problèmes détectés.
+    }
 error-non-interactive-trust = Impossible de demander la confiance pour le registre « { $registry } » ({ $url }) dans une session non interactive. Passez --yes pour lui faire confiance explicitement.
 error-non-interactive-value = Impossible de demander une valeur pour « { $key } » dans une session non interactive. Passez la valeur en argument à la place.
 error-registry-unsupported-schema = Le registre « { $registry } » déclare une version de schéma non prise en charge { $schema }.
@@ -195,6 +219,8 @@ label-error-coded = Erreur { $code } :
 error-wildcard-position = Le caractère générique (*) ne peut apparaître qu'à la fin du tag de version, par ex. 4.7-dev* (reçu { $input }).
 hint-try-wildcard = Aucune version n'est taguée { $requested }, mais il existe des tags similaires, le plus récent étant { $newest }. Essayez { $suggestion } pour les faire correspondre.
 download-retrying = Téléchargement interrompu, nouvelle tentative ({ $attempt } sur { $max })...
+download-resuming = Reprise du téléchargement interrompu ({ size-display } déjà téléchargés).
+warning-resume-verification-failed = Le téléchargement repris ne correspond pas à la somme de contrôle attendue, nouveau téléchargement complet en cours.
 lock-waiting = En attente de la fin d'un autre processus { -gdvm } (verrou : { $resource })...
 prune-skipped-error = { $item } ignoré : { $error }
 prune-skipped-in-use = { $item } ignoré : il est en cours d'utilisation par un autre processus { -gdvm }.
@@ -205,41 +231,38 @@ warning-fetching-releases-using-cache = Erreur lors de la récupération des ver
 error-version-not-found = Version introuvable.
 error-archive-not-cached = Aucune archive en cache trouvée pour {$version}. Installez-la d'abord pour remplir le cache.
 error-multiple-versions-found = Plusieurs versions correspondent à votre demande :
-
-running-version = Exécution de la version {$version}
+    {$list}
 link-created = Lien créé de {$version} vers {$path}
 copy-created = Copie de {$version} vers {$path} effectuée
 no-matching-releases = Aucune version correspondante trouvée.
 available-releases = Versions disponibles :
-cache-cleared = Cache vidé avec succès.
-cache-refreshed = Cache actualisé avec succès.
 
 version-already-installed = Version {$version} déjà installée.
 godot-executable-not-found = Exécutable { -godot } introuvable pour la version {$version}.
 error-link-exists = Le chemin {$path} existe déjà. Utilisez --force pour écraser.
-error-link-symlink = Échec de la création du lien de {$link} vers {$target} : {$error}
-error-link-copy = Échec de la copie de l'exécutable : {$error}
+error-link-symlink = Échec de la création du lien de {$link} vers {$target}.
+error-link-copy = Échec de la copie du fichier.
 
 error-no-stable-releases-found = Aucune version stable trouvée.
 
-error-starting-godot = Échec du démarrage de { -godot } : { $error }
+error-starting-godot = Échec du démarrage de { -godot }.
 confirm-yes = oui
 
 default-set-success = {$version} définie avec succès comme version par défaut de { -godot }.
 default-unset-success = Version par défaut de { -godot } supprimée avec succès.
 provide-version-or-unset = Veuillez fournir une version à définir par défaut ou 'unset' pour supprimer la version par défaut.
 
-error-open-zip = Échec de l'ouverture du fichier ZIP { $path } : { $error }
-error-read-zip = Échec de la lecture de l'archive ZIP { $path } : { $error }
-error-access-file = Échec de l'accès au fichier à l'index { $index } : { $error }
-error-reopen-zip = Échec de la réouverture du fichier ZIP { $path } : { $error }
+error-open-zip = Échec de l'ouverture du fichier ZIP { $path }.
+error-read-zip = Échec de la lecture de l'archive ZIP { $path }.
+error-access-file = Échec de l'accès au fichier à l'index { $index }.
+error-reopen-zip = Échec de la réouverture du fichier ZIP { $path }.
 error-invalid-file-name = Nom de fichier invalide dans l'archive ZIP
-error-create-dir = Échec de la création du répertoire { $path } : { $error }
-error-create-file = Échec de la création du fichier { $path } : { $error }
-error-read-zip-file = Échec de la lecture du fichier ZIP { $file } : { $error }
-error-write-file = Échec de l'écriture du fichier { $path } : { $error }
-error-strip-prefix = Erreur lors de la suppression du préfixe : { $error }
-error-set-permissions = Échec de la définition des permissions pour { $path } : { $error }
+error-create-dir = Échec de la création du répertoire { $path }.
+error-create-file = Échec de la création du fichier { $path }.
+error-read-zip-file = Échec de la lecture du fichier ZIP { $file }.
+error-write-file = Échec de l'écriture du fichier { $path }.
+error-strip-prefix = Erreur lors de la suppression du préfixe.
+error-set-permissions = Échec de la définition des permissions pour { $path }.
 error-create-symlink-windows = Impossible de créer le lien symbolique. Veuillez vous assurer que le {"\u001b"}]8;;ms-settings:developers{"\u001b"}\Mode Développeur{"\u001b"}]8;;{"\u001b"}\ est activé ou exécutez en tant qu'administrateur.
 
 help-upgrade = Mettre à jour { -gdvm } vers la dernière version
@@ -247,15 +270,13 @@ help-upgrade-major = Autoriser la mise à jour entre versions majeures
 help-upgrade-pre = Mettre à jour vers la dernière pré-version
 upgrade-not-needed = { -gdvm } est déjà à la dernière version : { $version }.
 upgrade-current-version-newer = La version actuelle de { -gdvm } ({ $current }) est plus récente que la dernière version disponible ({ $latest }). Aucune mise à jour nécessaire.
-upgrade-download-failed = Échec du téléchargement de la mise à jour : { $error }
-upgrade-file-create-failed = Échec de la création du fichier de mise à jour : { $error }
-upgrade-install-dir-failed = Échec de la création du répertoire d'installation : { $error }
-upgrade-rename-failed = Échec du renommage de l'exécutable actuel : { $error }
-upgrade-replace-failed = Échec du remplacement de l'exécutable par le nouveau : { $error }
+upgrade-install-dir-failed = Échec de la création du répertoire d'installation.
+upgrade-rename-failed = Échec du renommage de l'exécutable actuel.
+upgrade-replace-failed = Échec du remplacement de l'exécutable par le nouveau.
 upgrade-no-binary = Aucun binaire { -gdvm } n'est disponible pour la version { $version } et la cible { $target }.
 upgrade-checksum-required = Le manifeste de publication ne contient pas de somme de contrôle pour ce binaire { -gdvm }. Mise à niveau refusée.
-error-fetching-gdvm-releases = Erreur lors de la récupération des versions de { -gdvm } : { $error }
-error-parsing-gdvm-releases = Erreur lors de l'analyse des versions de { -gdvm } : { $error }
+error-fetching-gdvm-releases = Erreur lors de la récupération des versions de { -gdvm }.
+error-parsing-gdvm-releases = Erreur lors de l'analyse des versions de { -gdvm }.
 error-unsupported-gdvm-schema = Version de schéma du manifeste des versions de { -gdvm } non prise en charge : { $schema }. Essayez de mettre à jour { -gdvm } manuellement.
 upgrade-available = 💡 Une nouvelle version de { -gdvm } est disponible : {$version}. Exécutez « { -gdvm } upgrade » pour mettre à jour.
 upgrade-available-major = 💡 Une mise à jour de version majeure de { -gdvm } est disponible : {$version}. Exécutez « { -gdvm } upgrade -m » pour mettre à jour.
@@ -278,17 +299,15 @@ pinned-success = Version {$version} épinglée avec succès dans { -gdvm-toml }
 error-pin-version-not-found = Impossible d'épingler la version {$version}
 
 error-file-not-found = Fichier introuvable. Il peut ne pas exister sur le serveur.
-error-download-failed = Échec du téléchargement dû à une erreur inattendue : { $error }
+error-download-failed = Échec du téléchargement dû à une erreur inattendue avec le statut HTTP { $status }.
 error-ensure-godot-binaries-failed = Échec de l'assurance des binaires { -godot }.
-    Erreur : { $error }.
-    Essayez de supprimer { $path } puis exécutez { -gdvm } à nouveau.
 
 error-post-upgrade-action-failed = L'étape { $id } a échoué après la mise à jour.
-    Erreur : { $error }.
     Votre installation de { -gdvm } est peut-être incomplète. Essayez d'exécuter { -gdvm } à nouveau.
 
 error-failed-reading-project-godot = Échec de la lecture de project.godot, impossible de déterminer automatiquement la version du projet.
 warning-using-project-version = Utilisation de la version { $version } définie dans project.godot.
+warning-gdvmrc-detected = Un fichier { -gdvmrc } personnalisé a été détecté. Le support des fichiers { -gdvmrc } est obsolète et sera supprimé dans une future version. Veuillez passer au nouveau fichier d'épinglage utilisé par `{ -gdvm } pin`.
 
 warning-project-version-mismatch =
     {"\u001b"}[33mAvertissement : La version définie dans project.godot ne correspond pas à la version { $pinned ->
@@ -363,7 +382,7 @@ config-key-not-set = Clé de configuration non définie.
 config-key-not-set-value = <non défini>
 error-unknown-config-key = Clé de configuration inconnue.
 error-invalid-config-subcommand = Sous-commande de configuration invalide. Utilisez « get », « set », ou « list ».
-error-parse-config = Échec de l'analyse du fichier de configuration : { $error }
+error-parse-config = Échec de l'analyse du fichier de configuration.
 error-parse-config-using-default = Utilisation des valeurs de configuration par défaut.
 
 help-registry = Gérer les registres depuis lesquels installer des builds de { -godot }

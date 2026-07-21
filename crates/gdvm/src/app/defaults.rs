@@ -58,7 +58,7 @@ impl<'a> Defaults<'a> {
         );
         let version_path = self.paths.installs().join(&install_name);
         if !version_path.exists() {
-            return Err(terr!("error-version-not-found"));
+            return Err(terr!("error-version-not-found").into());
         }
 
         self.library().track_install_use(&install_name)?;
@@ -83,7 +83,7 @@ impl<'a> Defaults<'a> {
         #[cfg(target_family = "windows")]
         if let Err(e) = std::os::windows::fs::symlink_dir(&target_dir, &symlink_dir) {
             if e.raw_os_error() == Some(1314) {
-                return Err(terr!("error-create-symlink-windows"));
+                return Err(terr!("error-create-symlink-windows").into());
             }
             return Err(anyhow::anyhow!(e));
         }
@@ -142,6 +142,7 @@ impl<'a> Defaults<'a> {
                         version,
                         variant,
                         registry,
+                        gdvmrc_fallback: false,
                     });
                 }
             }
@@ -158,6 +159,7 @@ impl<'a> Defaults<'a> {
                         version,
                         variant,
                         registry,
+                        gdvmrc_fallback: true,
                     });
                 }
             }

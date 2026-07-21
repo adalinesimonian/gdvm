@@ -32,6 +32,11 @@ pub(crate) enum OutputFormat {
 }
 
 impl OutputFormat {
+    /// Whether `--format` specified JSON.
+    pub(crate) fn is_json(matches: &ArgMatches) -> bool {
+        Self::from_matches(matches) == OutputFormat::Json
+    }
+
     /// Read the `--format` flag from parsed arguments.
     pub(crate) fn from_matches(matches: &ArgMatches) -> Self {
         match matches.get_one::<String>("format").map(String::as_str) {
