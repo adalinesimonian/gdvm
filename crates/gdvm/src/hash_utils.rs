@@ -16,6 +16,7 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use std::io::Read;
+use std::path::Path;
 
 use anyhow::Result;
 use digest_io::IoWrapper;
@@ -48,7 +49,7 @@ impl ShaType {
     /// length is invalid.
     pub fn from_expected(expected: &str) -> Result<Self> {
         Self::from_hash_length(expected)
-            .ok_or_else(|| terr!("error-invalid-sha-length", length = expected.len()))
+            .ok_or_else(|| terr!("error-invalid-sha-length", length = expected.len()).into())
     }
 }
 
@@ -66,4 +67,16 @@ pub fn hash_reader<R: Read>(sha_type: ShaType, reader: &mut R) -> Result<String>
             to_hex(&hasher.0.finalize())
         }
     })
+}
+
+pub(crate) fn checksum_mismatch_error(display_path: &Path) -> anyhow::Error {
+    terr!(
+        "error-checksum-mismatch",
+        file = display_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
+    )
+    .into()
 }

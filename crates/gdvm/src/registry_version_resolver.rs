@@ -228,7 +228,7 @@ impl<'a> RegistryVersionResolver<'a> {
                     )
                 ),
             )),
-            None => terr!("error-version-not-found"),
+            None => terr!("error-version-not-found").into(),
         }
     }
 
@@ -280,7 +280,7 @@ impl<'a> RegistryVersionResolver<'a> {
             .iter()
             .find(|r| r.release_type == "stable")
             .cloned()
-            .ok_or_else(|| terr!("error-no-stable-releases-found"))
+            .ok_or_else(|| terr!("error-no-stable-releases-found").into())
     }
 
     async fn resolve_available_impl(

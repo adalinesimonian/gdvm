@@ -75,11 +75,6 @@ help-prune-long = { help-prune }
 help-prune-all = Remove all installs and cached archives regardless of age. Installs that still have a live link are kept unless --force is also given.
 help-prune-force = Ignore links, so installs referenced only by a link may also be removed.
 help-prune-dry-run = Show what would be removed without deleting anything.
-
-prune-dry-run-header = The following would be removed (dry run):
-prune-removed-header = Removed the following:
-prune-installs-header = Installs:
-prune-archives-header = Cached archives:
 prune-nothing-dry-run = Nothing would be removed.
 prune-nothing-removed = Nothing to remove; everything is in use or within the age threshold.
 prune-preserved-by-link =
@@ -87,9 +82,7 @@ prune-preserved-by-link =
         [one] Kept { $count } install still referenced by a link.
        *[other] Kept { $count } installs still referenced by a link.
     }
-prune-freed = Freed approximately { size-display }.
-prune-would-free = Would free approximately { size-display }.
-prune-item = - { $label } ({ size-display })
+warning-broken-install-reinstalling = The installed { $version } is missing its executable, reinstalling it.
 
 help-force = Force reinstall even if the version is already installed.
 help-redownload = Redownload the version even if it's already downloaded in the cache.
@@ -103,12 +96,24 @@ help-link-path = The path where the link or copy will be created, e.g. "{ $platf
     }".
 help-link-force = Overwrite existing link if it exists
 help-link-copy = Copy the executable instead of creating a link
-
-cache-files-removed = Cache files have been successfully removed.
-cache-metadata-removed = Cache metadata has been successfully removed.
 no-cache-files-found = No cache files were found.
 no-cache-metadata-found = No cache metadata was found.
 gdvm-toml-malformed = ignoring { -gdvm-toml } at { $path } because it could not be parsed: { $error }
+
+help-diagnose = Verify the installation and report its health.
+diagnose-base-dir = { -gdvm } home: { $path }
+diagnose-healthy = No problems found.
+diagnose-install-broken = { $version } is missing its executable. Run "{ -gdvm } install" for it to reinstall.
+diagnose-install-ok = { $version } can run.
+diagnose-partial-downloads =
+    { $count ->
+        [one] { $count } interrupted download in the cache; it resumes automatically, or "{ -gdvm } prune" removes it.
+       *[other] { $count } interrupted downloads in the cache; they resume automatically, or "{ -gdvm } prune" removes them.
+    }
+diagnose-path-missing = { $path } is not on PATH; the godot shim will not be reachable by name.
+diagnose-path-ok = The bin directory is on PATH.
+diagnose-shim-missing = Shim "{ $name }" is missing or not executable. Reinstalling { -gdvm } rewrites it.
+diagnose-shim-ok = Shim "{ $name }" is installed and executable.
 
 help-console = Run { -godot } with the console attached. Defaults to false on Windows, true on other platforms.
 
@@ -130,10 +135,26 @@ status-extracting = Extracting
 status-fetching = Fetching
 status-installed = Installed
 status-installing = Installing
+status-removed = Removed
+status-healthy = Healthy
+status-ok = OK
+prune-item-detail = { $label } ({ size-display })
+status-freed = Freed
+status-pruned = Pruned
+status-would-free = Would free
+status-would-prune = Would prune
+status-removing = Removing
+status-running = Running
+status-cleared = Cleared
+status-refreshed = Refreshed
+status-skipped = Skipped
 status-upgraded = Upgraded
 status-upgrading = Upgrading
 status-verifying = Verifying
 subject-cached-archive = cached archive
+subject-cache = cache
+subject-cache-files = cache files
+subject-cache-metadata = cache metadata
 subject-releases = releases
 subject-update-manifest = update manifest
 upgrade-target = { -gdvm } { $version }
@@ -142,8 +163,6 @@ auto-installing-version = Auto-installing version { $version }
 
 no-versions-installed = No versions installed.
 installed-versions = Installed { -godot } versions:
-removed-version = Removed version {$version}
-removing-version = Removing version {$version}
 progress-eta =
     { $magnitude ->
         [seconds] { $secs }s
@@ -158,7 +177,7 @@ error-invalid-sha-length = Invalid SHA length { $length }
 error-size-mismatch = Size mismatch for file { $file }: expected { $expected } bytes, got { $actual } bytes.
 error-insecure-url = Refusing to fetch { $url } over an unencrypted connection. Only https:// and file:// URLs are allowed. Set the GDVM_ALLOW_INSECURE_URLS environment variable to allow unencrypted http:// URLs.
 error-insecure-redirect = Refusing to follow a redirect from https:// to an unencrypted http:// URL. Set the GDVM_ALLOW_INSECURE_URLS environment variable to allow unencrypted http:// URLs.
-error-response-not-utf8 = The response from { $url } is not valid UTF-8: { $error }
+error-response-not-utf8 = The response from { $url } is not valid UTF-8.
 error-response-too-large = The response from { $url } exceeds the maximum allowed size of { $limit } bytes.
 error-too-many-redirects = Too many redirects.
 error-config-invalid-number = Invalid value for { $key }: { $value } (expected a number)
@@ -180,8 +199,8 @@ error-registry-invalid-name = Invalid registry name: { $name }
 error-registry-missing-index = Registry '{ $name }' is missing index.json
 error-registry-missing-manifest = Registry '{ $name }' is missing registry.json
 error-registry-not-configured = Registry '{ $name }' is not configured
-error-registry-parse-index = Failed to parse index for '{ $name }': { $error }
-error-registry-parse-manifest = Failed to parse manifest for '{ $name }': { $error }
+error-registry-parse-index = Failed to parse index for '{ $name }'.
+error-registry-parse-manifest = Failed to parse manifest for '{ $name }'.
 error-registry-unknown = Unknown registry '{ $name }'
 error-registry-unsupported-url-scheme = Unsupported registry URL scheme: { $url }
 error-spec-empty-registry = Empty registry name in '{ $input }'
@@ -189,6 +208,11 @@ error-spec-empty-variant = Empty variant name in '{ $input }'
 error-spec-empty-version = Empty version in '{ $input }'
 error-system-time = System time before UNIX EPOCH
 error-unrecognized-version-format = Unrecognized version format: { $input }
+error-diagnose-problems =
+    { $count ->
+        [one] { $count } problem found.
+       *[other] { $count } problems found.
+    }
 error-non-interactive-trust = Cannot prompt to trust registry "{ $registry }" ({ $url }) in a non-interactive session. Pass --yes to trust it explicitly.
 error-non-interactive-value = Cannot prompt for a value for "{ $key }" in a non-interactive session. Pass the value as an argument instead.
 error-registry-unsupported-schema = Registry "{ $registry }" declares unsupported schema version { $schema }.
@@ -197,6 +221,8 @@ label-error-coded = Error { $code }:
 error-wildcard-position = The wildcard (*) may only appear at the end of the release tag, e.g. 4.7-dev* (got { $input }).
 hint-try-wildcard = No release is tagged { $requested }, but there are similar tags, the newest being { $newest }. Try { $suggestion } to match them.
 download-retrying = Download interrupted, retrying (attempt { $attempt } of { $max })...
+download-resuming = Resuming interrupted download ({ size-display } already downloaded).
+warning-resume-verification-failed = The resumed download did not match the expected checksum, downloading it again from scratch.
 lock-waiting = Waiting for another { -gdvm } process to finish (lock: { $resource })...
 prune-skipped-error = Skipping { $item }: { $error }
 prune-skipped-in-use = Skipping { $item }: it is in use by another { -gdvm } process.
@@ -207,41 +233,38 @@ warning-fetching-releases-using-cache = Error fetching releases: { $error }. Usi
 error-version-not-found = Version not found.
 error-archive-not-cached = No cached archive found for {$version}. Install it first to populate the cache.
 error-multiple-versions-found = Multiple versions match your request:
-
-running-version = Running version {$version}
+    {$list}
 link-created = Linked {$version} to {$path}
 copy-created = Copied {$version} to {$path}
 no-matching-releases = No matching releases found.
 available-releases = Available releases:
-cache-cleared = Cache cleared successfully.
-cache-refreshed = Cache refreshed successfully.
 
 version-already-installed = Version {$version} already installed.
 godot-executable-not-found = { -godot } executable not found for version {$version}.
 error-link-exists = Path {$path} already exists. Use --force to overwrite.
-error-link-symlink = Failed to create link from {$link} to {$target}: {$error}
-error-link-copy = Failed to copy executable: {$error}
+error-link-symlink = Failed to create link from {$link} to {$target}.
+error-link-copy = Failed to copy file.
 
 error-no-stable-releases-found = No stable releases found.
 
-error-starting-godot = Failed to start { -godot }: { $error }
+error-starting-godot = Failed to start { -godot }.
 confirm-yes = yes
 
 default-set-success = Successfully set {$version} as the default { -godot } version.
 default-unset-success = Successfully unset the default { -godot } version.
 provide-version-or-unset = Please provide a version to set as default or 'unset' to remove the default version.
 
-error-open-zip = Failed to open ZIP file { $path }: { $error }
-error-read-zip = Failed to read ZIP archive { $path }: { $error }
-error-access-file = Failed to access file at index { $index }: { $error }
-error-reopen-zip = Failed to reopen ZIP file { $path }: { $error }
+error-open-zip = Failed to open ZIP file { $path }.
+error-read-zip = Failed to read ZIP archive { $path }.
+error-access-file = Failed to access file at index { $index }.
+error-reopen-zip = Failed to reopen ZIP file { $path }.
 error-invalid-file-name = Invalid file name in ZIP archive
-error-create-dir = Failed to create directory { $path }: { $error }
-error-create-file = Failed to create file { $path }: { $error }
-error-read-zip-file = Failed to read from ZIP file { $file }: { $error }
-error-write-file = Failed to write to file { $path }: { $error }
-error-strip-prefix = Error stripping prefix: { $error }
-error-set-permissions = Failed to set permissions for { $path }: { $error }
+error-create-dir = Failed to create directory { $path }.
+error-create-file = Failed to create file { $path }.
+error-read-zip-file = Failed to read from ZIP file { $file }.
+error-write-file = Failed to write to file { $path }.
+error-strip-prefix = Error stripping prefix.
+error-set-permissions = Failed to set permissions for { $path }.
 error-create-symlink-windows = Could not create symlink. Please ensure {"\u001b"}]8;;ms-settings:developers{"\u001b"}\Developer Mode{"\u001b"}]8;;{"\u001b"}\ is enabled or run as admin.
 
 help-upgrade = Upgrade { -gdvm } to the latest version
@@ -249,15 +272,13 @@ help-upgrade-major = Allow upgrading across major versions
 help-upgrade-pre = Upgrade to the latest pre-release version
 upgrade-not-needed = { -gdvm } is already at the latest version: { $version }.
 upgrade-current-version-newer = The current { -gdvm } version ({ $current }) is newer than the latest available version ({ $latest }). No upgrade needed.
-upgrade-download-failed = Upgrade download failed: { $error }
-upgrade-file-create-failed = Failed to create upgrade file: { $error }
-upgrade-install-dir-failed = Failed to create the installation directory: { $error }
-upgrade-rename-failed = Failed to rename the current executable: { $error }
-upgrade-replace-failed = Failed to replace the executable with the new one: { $error }
+upgrade-install-dir-failed = Failed to create the installation directory.
+upgrade-rename-failed = Failed to rename the current executable.
+upgrade-replace-failed = Failed to replace the executable with the new one.
 upgrade-no-binary = No { -gdvm } binary is available for version { $version } and target { $target }.
 upgrade-checksum-required = The release manifest does not include a checksum for this { -gdvm } binary. Refusing to upgrade.
-error-fetching-gdvm-releases = Error fetching { -gdvm } releases: { $error }
-error-parsing-gdvm-releases = Error parsing { -gdvm } releases: { $error }
+error-fetching-gdvm-releases = Error fetching { -gdvm } releases.
+error-parsing-gdvm-releases = Error parsing { -gdvm } releases.
 error-unsupported-gdvm-schema = Unsupported { -gdvm } release manifest schema version: { $schema }. Try upgrading { -gdvm } manually.
 upgrade-available = 💡 A new version of { -gdvm } is available: {$version}. Run "{ -gdvm } upgrade" to update.
 upgrade-available-major = 💡 A major version update of { -gdvm } is available: {$version}. Run "{ -gdvm } upgrade -m" to update.
@@ -280,17 +301,15 @@ pinned-success = Successfully pinned version {$version} in { -gdvm-toml }
 error-pin-version-not-found = Could not pin version {$version}
 
 error-file-not-found = File not found. It may not exist on the server.
-error-download-failed = Download failed due to an unexpected error: { $error }
+error-download-failed = Download failed with HTTP status { $status }.
 error-ensure-godot-binaries-failed = Failed to ensure { -godot } binaries.
-    Error: { $error }.
-    Try removing { $path } and then run { -gdvm } again.
 
 error-post-upgrade-action-failed = Step { $id } failed after upgrade.
-    Error: { $error }.
     Your { -gdvm } installation may be incomplete. Try running { -gdvm } again.
 
 error-failed-reading-project-godot = Failed reading project.godot, cannot automatically determine project version.
 warning-using-project-version = Using version { $version } defined in project.godot.
+warning-gdvmrc-detected = A custom { -gdvmrc } file was detected. Support for { -gdvmrc } files is deprecated and will be removed in a coming release. Please switch to the new pin file used by `{ -gdvm } pin`.
 
 warning-project-version-mismatch =
     {"\u001b"}[33mWarning: The version defined in project.godot does not match the { $pinned ->
@@ -365,7 +384,7 @@ config-key-not-set = Configuration key not set.
 config-key-not-set-value = <not set>
 error-unknown-config-key = Unknown configuration key.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
-error-parse-config = Failed to parse configuration file: { $error }
+error-parse-config = Failed to parse configuration file.
 error-parse-config-using-default = Using default configuration values.
 
 help-registry = Manage registries to install { -godot } builds from

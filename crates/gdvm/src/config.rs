@@ -112,7 +112,7 @@ impl ConfigOps for Config {
                 self.prune_max_age_days = Some(days);
                 Ok(())
             }
-            _ => Err(terr!("error-config-unknown-key", key = key)),
+            _ => Err(terr!("error-config-unknown-key", key = key).into()),
         }
     }
 
@@ -130,7 +130,7 @@ impl ConfigOps for Config {
                 self.prune_max_age_days = None;
                 Ok(())
             }
-            _ => Err(terr!("error-config-unknown-key", key = key)),
+            _ => Err(terr!("error-config-unknown-key", key = key).into()),
         }
     }
 
@@ -171,7 +171,7 @@ pub fn validate_registry_name(name: &str) -> Result<()> {
         || name.contains("..")
         || name.contains(':')
     {
-        return Err(terr!("error-registry-invalid-name", name = name));
+        return Err(terr!("error-registry-invalid-name", name = name).into());
     }
     Ok(())
 }
@@ -206,7 +206,7 @@ impl Config {
     /// Remove a registry from config.
     pub fn remove_registry(&mut self, name: &str) -> Result<()> {
         if self.registries.remove(name).is_none() {
-            return Err(terr!("error-registry-not-configured", name = name));
+            return Err(terr!("error-registry-not-configured", name = name).into());
         }
         Ok(())
     }
@@ -294,7 +294,7 @@ impl Config {
             match toml::from_str(&contents) {
                 Ok(config) => Ok(config),
                 Err(e) => {
-                    crate::ui::error(t!("error-parse-config", error = e.to_string()));
+                    crate::ui::report_error(&terr!("error-parse-config").with_source(e).into());
                     crate::ui::warn(t!("error-parse-config-using-default"));
                     Ok(Self::default())
                 }

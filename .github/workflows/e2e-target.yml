@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{ inputs.os == 'macos-latest' && inputs.target == 'x86_64-apple-darwin' && 'macos-15-intel' || inputs.os }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
@@ -135,7 +135,7 @@ jobs:
         if: ${{ inputs.verify_signature && contains(inputs.os, 'macos') }}
         run: |
           set -euo pipefail
-          ~/.gdvm/bin/gdvm --version
+          ~/.gdvm/bin/gdvm diagnose
           shim="$HOME/.gdvm/bin/godot"
           test -x "$shim"
           codesign --verify --strict --verbose=2 "$shim"
@@ -149,7 +149,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          & "$HOME\.gdvm\bin\gdvm.exe" --version | Out-Null
+          & "$HOME\.gdvm\bin\gdvm.exe" diagnose
 
           foreach ($name in @("godot.exe", "godot_console.exe")) {
             $p = Join-Path $HOME ".gdvm\bin\$name"

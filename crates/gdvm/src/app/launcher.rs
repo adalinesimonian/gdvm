@@ -227,7 +227,7 @@ impl<'a> Launcher<'a> {
             {
                 Daemonize::new()
                     .start()
-                    .map_err(|e| crate::terr!("error-starting-godot", error = e.to_string(),))?;
+                    .map_err(|e| crate::terr!("error-starting-godot").with_source(e))?;
                 std::process::Command::new(&path)
                     .args(godot_args)
                     .envs(dotenv_vars)

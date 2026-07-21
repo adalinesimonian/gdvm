@@ -18,66 +18,31 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::version::{self, VersionSpec, VersionTarget};
-use gdvm::{println_i18n, terr};
+use gdvm::t;
 
-use super::check_deprecated_csharp_flag;
+use super::VersionRequest;
 
 /// Handle the 'remove' subcommand
 pub(crate) async fn sub_remove(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let version_input = matches.get_one::<String>("version").unwrap();
-    let spec = VersionSpec::parse(version_input)?;
-    let variant = check_deprecated_csharp_flag(matches, spec.variant);
-    let variant = variant.as_deref();
-    let registry = spec.registry.as_deref();
+    let request = VersionRequest::from_matches(matches)?;
+    let variant = request.variant();
+    let registry = request.registry();
+    let requested_version = request.installed_filter()?;
 
-    let requested_version = match &spec.target {
-        VersionTarget::Keyword(_) => {
-            return Err(terr!("error-version-not-found"));
-        }
-        VersionTarget::Pattern(gv) => gv.clone(),
-    };
-
-    let resolved_versions = gdvm
+    let installed = gdvm
         .library()
-        .resolve_installed_version(&requested_version, variant, registry)
+        .resolve_installed_one(requested_version, variant, registry)
         .await?;
 
-    match resolved_versions.len() {
-        0 => {
-            return Err(terr!("error-version-not-found"));
-        }
-        1 => {
-            let installed = &resolved_versions[0];
-            let display = version::display_version(
-                &installed.version,
-                &installed.variant,
-                installed.registry.as_deref(),
-            );
+    let display = installed.display();
 
-            println_i18n!("removing-version", version = &display);
-
-            gdvm.library().remove(
-                &installed.version,
-                &installed.variant,
-                installed.registry.as_deref(),
-            )?;
-            println_i18n!("removed-version", version = &display);
-        }
-        _ => {
-            for installed in &resolved_versions {
-                println!(
-                    "- {}",
-                    version::display_version(
-                        &installed.version,
-                        &installed.variant,
-                        installed.registry.as_deref(),
-                    )
-                );
-            }
-            return Err(terr!("error-multiple-versions-found"));
-        }
-    }
+    gdvm::ui::milestone(t!("status-removing"), &display);
+    gdvm.library().remove(
+        &installed.version,
+        &installed.variant,
+        installed.registry.as_deref(),
+    )?;
+    gdvm::ui::milestone(t!("status-removed"), &display);
 
     Ok(())
 }

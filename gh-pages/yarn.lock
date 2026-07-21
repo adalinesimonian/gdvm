@@ -449,9 +449,9 @@ __metadata:
   linkType: hard
 
 "@fontsource/fira-code@npm:^5.2.7":
-  version: 5.2.7
-  resolution: "@fontsource/fira-code@npm:5.2.7"
-  checksum: 10c0/389d1356def9018da529bf6055af9d41d6f6ae9ee2ff804a9b0e3bd2f8cf2754967e2b4a25e267d21215278849fb13711b9fe9573c051a1e191ad737e55f125f
+  version: 5.3.0
+  resolution: "@fontsource/fira-code@npm:5.3.0"
+  checksum: 10c0/402416a8a645b4f7e5be72f223626a68c0a60fd836d5f7e8b840a07ed83637663abe70e8d05f88602225248df90bbd733807dab1e819aab65557e9fbdafed8d4
   languageName: node
   linkType: hard
 
@@ -1472,11 +1472,11 @@ __metadata:
   linkType: hard
 
 "lucide-solid@npm:^1.24.0":
-  version: 1.24.0
-  resolution: "lucide-solid@npm:1.24.0"
+  version: 1.25.0
+  resolution: "lucide-solid@npm:1.25.0"
   peerDependencies:
     solid-js: ^1.4.7
-  checksum: 10c0/5f6fc73fdbe744bcc6553eb21e8d8ec8f7156dcfde8bfaf55f78c2043c7c4b0109cdfc18d45af6a2edf8043cf086b7d8249b7860d34922b6ef1f3ccbf328d2c9
+  checksum: 10c0/5133b34c4b8edfc50d627752d811ecfcd8e9e46d2b3a537868e5ef1af2f837853a623c336e6a1d66e08fb3e7e12c119cc241f28436576979f9e99d952b675b18
   languageName: node
   linkType: hard
 
@@ -1598,14 +1598,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.5.16":
-  version: 8.5.16
-  resolution: "postcss@npm:8.5.16"
+"postcss@npm:^8.5.17":
+  version: 8.5.19
+  resolution: "postcss@npm:8.5.19"
   dependencies:
     nanoid: "npm:^3.3.12"
     picocolors: "npm:^1.1.1"
     source-map-js: "npm:^1.2.1"
-  checksum: 10c0/625de7a02f662f3a340964d14b487bd5097adf16f5f171e257d19005ba37aea8768ee446557500e88e91ca46b4d14d6cb4a0bf033c6ec0c8c0b660d85719f1ef
+  checksum: 10c0/302af9e4dfa8cce4f43af1798576b3a77ab7b23abac5522328c6c7a830d49b31281cba9d6071e478e6970a05ef82346d1570b8fbffae912f26a4f1a1a07f0a44
   languageName: node
   linkType: hard
 
@@ -1623,7 +1623,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rolldown@npm:~1.1.4":
+"rolldown@npm:~1.1.5":
   version: 1.1.5
   resolution: "rolldown@npm:1.1.5"
   dependencies:
@@ -2079,8 +2079,8 @@ __metadata:
   linkType: hard
 
 "vite-plugin-solid@npm:^2.11.12":
-  version: 2.11.12
-  resolution: "vite-plugin-solid@npm:2.11.12"
+  version: 2.11.13
+  resolution: "vite-plugin-solid@npm:2.11.13"
   dependencies:
     "@babel/core": "npm:^7.23.3"
     "@types/babel__core": "npm:^7.20.4"
@@ -2091,11 +2091,11 @@ __metadata:
   peerDependencies:
     "@testing-library/jest-dom": ^5.16.6 || ^5.17.0 || ^6.*
     solid-js: ^1.7.2
-    vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+    vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0 || ^9.0.0
   peerDependenciesMeta:
     "@testing-library/jest-dom":
       optional: true
-  checksum: 10c0/d1cdb0c96ce8c7f2f9a4e4473553d017e688793052e38a87358923fab69c05907394e7e5af540d7f99b4961450dd0d58833b14fc7f32ec64808446931cea60cb
+  checksum: 10c0/fff093ddcf1d25ff45a3ee5ce16567bfe21440ea9d5bf7667ae9ac94f47146437cd9453595f704121517812f4ff1956addad35b79691c3f7f289ab8e04e18f60
   languageName: node
   linkType: hard
 
@@ -2109,14 +2109,14 @@ __metadata:
   linkType: hard
 
 "vite@npm:>=6.3.0, vite@npm:^8.1.4":
-  version: 8.1.4
-  resolution: "vite@npm:8.1.4"
+  version: 8.1.5
+  resolution: "vite@npm:8.1.5"
   dependencies:
     fsevents: "npm:~2.3.3"
     lightningcss: "npm:^1.32.0"
     picomatch: "npm:^4.0.5"
-    postcss: "npm:^8.5.16"
-    rolldown: "npm:~1.1.4"
+    postcss: "npm:^8.5.17"
+    rolldown: "npm:~1.1.5"
     tinyglobby: "npm:^0.2.17"
   peerDependencies:
     "@types/node": ^20.19.0 || >=22.12.0
@@ -2161,7 +2161,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10c0/4262cdd0dd00ca99b00a8aef91fc00e58b66e80b54adbef49353bfbbae7342c2d6ddf1180351956086ff53ad186bec03784f57b96e36ab4dad1246547236d79b
+  checksum: 10c0/3231e24dd4394d0bc8b4f0f5d6d6a2eda8737e5053042892b4163564456a03d67f953c4c7498621f9517eebc30a492ea136c728a767a122eb84bf6d7cf60e1e6
   languageName: node
   linkType: hard
 

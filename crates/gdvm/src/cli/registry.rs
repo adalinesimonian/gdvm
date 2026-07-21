@@ -52,7 +52,8 @@ fn verify_overrides(
             "registry-build-sha-mismatch",
             expected = s.clone(),
             actual = actual_sha.to_string()
-        ));
+        )
+        .into());
     }
     if let Some(s) = size
         && s != actual_size
@@ -61,7 +62,8 @@ fn verify_overrides(
             "registry-build-size-mismatch",
             expected = s.to_string(),
             actual = actual_size.to_string()
-        ));
+        )
+        .into());
     }
     Ok(())
 }
@@ -131,8 +133,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
         Some(("list", sub_m)) => {
             let registries = gdvm.catalogs().registry_list();
 
-            if super::format::OutputFormat::from_matches(sub_m) == super::format::OutputFormat::Json
-            {
+            if super::format::OutputFormat::is_json(sub_m) {
                 #[derive(serde::Serialize)]
                 struct RegistryEntry {
                     name: String,
@@ -169,7 +170,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
                 Some(name) => gdvm.catalogs().refresh_registry_cache(Some(name)).await?,
                 None => gdvm.catalogs().refresh_all_registry_caches().await?,
             }
-            println_i18n!("cache-refreshed");
+            gdvm::ui::milestone(gdvm::t!("status-refreshed"), gdvm::t!("subject-cache"));
         }
         Some(("init", sub_m)) => {
             let dir = PathBuf::from(sub_m.get_one::<String>("dir").unwrap());
@@ -238,7 +239,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
                 )));
             }
         }
-        _ => return Err(terr!("error-invalid-registry-subcommand")),
+        _ => return Err(terr!("error-invalid-registry-subcommand").into()),
     }
     Ok(())
 }

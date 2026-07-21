@@ -105,6 +105,25 @@ impl<'a> Catalogs<'a> {
             .await
     }
 
+    /// Resolve a query against available releases, returning an error if no
+    /// version is found.
+    pub async fn resolve_available_or_not_found(
+        &self,
+        query: &crate::version::VersionQuery,
+        variant: Option<&str>,
+        registry: Option<&str>,
+        include_pre: bool,
+        use_cache_only: bool,
+    ) -> Result<crate::version::ResolvedVersion> {
+        match self
+            .resolve_available_version(query, variant, registry, include_pre, use_cache_only)
+            .await?
+        {
+            Some(resolved) => Ok(resolved),
+            None => Err(self.version_not_found_error(query, variant, registry).await),
+        }
+    }
+
     /// Get an error for when a query fails to resolve to a version.
     pub async fn version_not_found_error(
         &self,
@@ -141,15 +160,9 @@ impl<'a> Catalogs<'a> {
         variant: &Variant,
     ) -> Result<&'r registry::BinaryInfo> {
         registry::select_binary(meta, *self.host, variant).map_err(|err| match err {
-            BinarySelectionError::UnsupportedPlatform => {
-                terr!("unsupported-platform")
-            }
-            BinarySelectionError::UnsupportedArch => {
-                terr!("unsupported-architecture")
-            }
-            BinarySelectionError::MissingUrl => {
-                terr!("error-file-not-found")
-            }
+            BinarySelectionError::UnsupportedPlatform => terr!("unsupported-platform").into(),
+            BinarySelectionError::UnsupportedArch => terr!("unsupported-architecture").into(),
+            BinarySelectionError::MissingUrl => terr!("error-file-not-found").into(),
         })
     }
 }

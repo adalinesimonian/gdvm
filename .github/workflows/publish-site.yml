@@ -49,7 +49,7 @@ jobs:
       deploy: ${{ steps.overlay.outputs.deploy }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Resolve latest release tag
         id: release
@@ -62,7 +62,7 @@ jobs:
           echo "Latest release: $tag"
 
       - name: Check out content for current release
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.release.outputs.tag }}
           path: release-src
@@ -98,10 +98,15 @@ jobs:
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Enable Corepack
+        if: steps.overlay.outputs.deploy == 'true'
+        run: corepack enable
+
       - name: Setup Node
         if: steps.overlay.outputs.deploy == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
+          cache-dependency-path: gh-pages/yarn.lock
           node-version: latest
           cache: yarn
 
@@ -109,13 +114,15 @@ jobs:
         if: steps.overlay.outputs.deploy == 'true'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 
+      - name: Install dependencies
+        if: steps.overlay.outputs.deploy == 'true'
+        working-directory: gh-pages
+        run: yarn --immutable
+
       - name: Build site
         if: steps.overlay.outputs.deploy == 'true'
         working-directory: gh-pages
-        run: |
-          corepack enable
-          yarn --immutable
-          yarn build
+        run: yarn build
 
       - name: Upload artifact
         if: steps.overlay.outputs.deploy == 'true'

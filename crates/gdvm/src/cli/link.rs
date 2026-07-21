@@ -21,46 +21,21 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version::{self, VersionSpec, VersionTarget};
 use gdvm::{println_i18n, terr};
 
-use super::{check_deprecated_csharp_flag, keyword_to_version_filter};
+use super::VersionRequest;
 
 /// Handle the 'link' subcommand
 pub(crate) async fn sub_link(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let version_input = matches.get_one::<String>("version");
     let link_path_raw = matches
         .get_one::<String>("linkpath")
         .map(|s| s.as_str())
         .ok_or_else(|| unreachable!("clap should prevent missing required arg"))?;
-
-    let spec = version_input.map(|v| VersionSpec::parse(v)).transpose()?;
-    let spec_variant = spec.as_ref().and_then(|s| s.variant.clone());
-    let variant = check_deprecated_csharp_flag(matches, spec_variant);
-    let registry = spec.as_ref().and_then(|s| s.registry.clone());
-
-    let explicit_version = match spec.as_ref().map(|s| &s.target) {
-        Some(VersionTarget::Pattern(gv)) => Some(gv.clone()),
-        Some(VersionTarget::Keyword(kw)) => Some(keyword_to_version_filter(kw)),
-        None => None,
-    };
-
     let force = matches.get_flag("force");
     let copy = matches.get_flag("copy");
 
-    let resolver = RunVersionResolver::new(gdvm);
-    let resolved = resolver
-        .resolve(RunResolutionRequest {
-            explicit: explicit_version,
-            variant,
-            registry,
-            include_pre: false,
-            possible_paths: &[],
-            force_on_mismatch: force,
-            install_if_missing: false,
-        })
-        .await?;
+    let request = VersionRequest::from_matches(matches)?;
+    let resolved = request.resolve_selection(gdvm, false, false, force).await?;
 
     let primary_exe = gdvm.library().get_executable_path(
         &resolved.version,
@@ -84,11 +59,7 @@ pub(crate) async fn sub_link(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         }
     };
 
-    let display = version::display_version(
-        &resolved.version,
-        &resolved.variant,
-        resolved.registry.as_deref(),
-    );
+    let display = resolved.display();
 
     // Key used to track this link against its install, so prune can preserve
     // installs that still have a live link.
@@ -235,7 +206,7 @@ fn macos_bundle_from_executable(exe: &Path) -> Option<PathBuf> {
 
 fn link_or_copy_file(target: &Path, link: &Path, copy: bool) -> Result<()> {
     if copy {
-        fs::copy(target, link).map_err(|e| terr!("error-link-copy", error = e.to_string()))?;
+        fs::copy(target, link).map_err(|e| terr!("error-link-copy").with_source(e))?;
         return Ok(());
     }
 
@@ -244,10 +215,10 @@ fn link_or_copy_file(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::windows::fs::symlink_file(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -256,10 +227,10 @@ fn link_or_copy_file(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::unix::fs::symlink(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -277,10 +248,10 @@ fn link_or_copy_dir(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::windows::fs::symlink_dir(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -289,10 +260,10 @@ fn link_or_copy_dir(target: &Path, link: &Path, copy: bool) -> Result<()> {
         std::os::unix::fs::symlink(target, link).map_err(|e| {
             terr!(
                 "error-link-symlink",
-                error = e.to_string(),
                 target = target.display().to_string(),
                 link = link.display().to_string()
             )
+            .with_source(e)
         })?;
     }
 
@@ -319,10 +290,7 @@ fn copy_dir_recursive(source: &Path, dest: &Path) -> Result<()> {
 fn prepare_link_path(link_path: &Path, force: bool) -> Result<()> {
     if link_path.exists() {
         if !force {
-            return Err(terr!(
-                "error-link-exists",
-                path = link_path.display().to_string()
-            ));
+            return Err(terr!("error-link-exists", path = link_path.display().to_string()).into());
         }
         if link_path.is_dir() {
             fs::remove_dir_all(link_path)?;

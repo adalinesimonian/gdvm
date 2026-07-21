@@ -34,6 +34,7 @@ pub struct QuerySelection {
     pub version: VersionQuery,
     pub variant: Option<String>,
     pub registry: Option<String>,
+    pub gdvmrc_fallback: bool,
 }
 
 /// Get the resolved version string for display, with any optional components

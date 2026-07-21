@@ -16,101 +16,21 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use std::fs;
-use std::path::Path;
 
-use gdvm::app::Gdvm;
-use gdvm::version::{ResolvedVersion, Variant, VersionQuery};
+use gdvm::version::Variant;
 use serial_test::serial;
-use tempfile::TempDir;
 
-struct PinTestEnv {
-    home: TempDir,
-    project: TempDir,
-    prev_home: Option<std::ffi::OsString>,
-    prev_cwd: Option<std::path::PathBuf>,
-}
-
-impl PinTestEnv {
-    fn new() -> Self {
-        let home = TempDir::new().unwrap();
-        let project = TempDir::new().unwrap();
-
-        let prev_home = std::env::var_os("GDVM_TEST_HOME");
-        let prev_cwd = std::env::current_dir().ok();
-
-        // Save an update check timestamp to avoid triggering update checks.
-        let gdvm_dir = home.path().join(".gdvm");
-        fs::create_dir_all(&gdvm_dir).unwrap();
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        fs::write(
-            gdvm_dir.join("cache.json"),
-            format!(
-                r#"{{"gdvm":{{"last_update_check":{now},"new_version":null,"new_major_version":null}},"godot_registry":{{"last_fetched":0,"releases":[]}}}}"#
-            ),
-        )
-        .unwrap();
-
-        unsafe {
-            std::env::set_var("GDVM_TEST_HOME", home.path());
-        }
-        std::env::set_current_dir(project.path()).unwrap();
-
-        Self {
-            home,
-            project,
-            prev_home,
-            prev_cwd,
-        }
-    }
-
-    /// The project directory that is also the cwd.
-    fn project_dir(&self) -> &Path {
-        self.project.path()
-    }
-}
-
-impl Drop for PinTestEnv {
-    fn drop(&mut self) {
-        // Move the cwd out of the temp project dir before it is deleted so the
-        // delete works on Windows.
-        if let Some(cwd) = &self.prev_cwd {
-            let _ = std::env::set_current_dir(cwd);
-        }
-
-        unsafe {
-            match &self.prev_home {
-                Some(v) => std::env::set_var("GDVM_TEST_HOME", v),
-                None => std::env::remove_var("GDVM_TEST_HOME"),
-            }
-        }
-
-        // Own for the lifetime of the test.
-        let _ = &self.home;
-        let _ = &self.project;
-    }
-}
-
-fn determinate(install_str: &str) -> ResolvedVersion {
-    VersionQuery::from_install_str(install_str)
-        .unwrap()
-        .to_resolved()
-}
-
-async fn gdvm() -> Gdvm {
-    Gdvm::new().await.unwrap()
-}
+mod common;
+use common::{TestHome, gdvm, resolved};
 
 #[tokio::test]
 #[serial]
 async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
-    let env = PinTestEnv::new();
+    let env = TestHome::with_project();
     let mgr = gdvm().await;
 
     mgr.defaults()
-        .pin_version(&determinate("4.3-stable"), &Variant::default(), None, false)
+        .pin_version(&resolved("4.3-stable"), &Variant::default(), None, false)
         .unwrap();
 
     let toml = fs::read_to_string(env.project_dir().join("gdvm.toml")).unwrap();
@@ -126,12 +46,12 @@ async fn pin_writes_gdvm_toml_and_legacy_gdvmrc() {
 #[tokio::test]
 #[serial]
 async fn pin_csharp_writes_variant_formats() {
-    let env = PinTestEnv::new();
+    let env = TestHome::with_project();
     let mgr = gdvm().await;
 
     mgr.defaults()
         .pin_version(
-            &determinate("4.3-stable"),
+            &resolved("4.3-stable"),
             &Variant::from_option(Some("csharp")),
             None,
             false,
@@ -151,11 +71,11 @@ async fn pin_csharp_writes_variant_formats() {
 #[tokio::test]
 #[serial]
 async fn pin_no_legacy_skips_gdvmrc() {
-    let env = PinTestEnv::new();
+    let env = TestHome::with_project();
     let mgr = gdvm().await;
 
     mgr.defaults()
-        .pin_version(&determinate("4.3-stable"), &Variant::default(), None, true)
+        .pin_version(&resolved("4.3-stable"), &Variant::default(), None, true)
         .unwrap();
 
     assert!(
@@ -171,7 +91,7 @@ async fn pin_no_legacy_skips_gdvmrc() {
 #[tokio::test]
 #[serial]
 async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
-    let env = PinTestEnv::new();
+    let env = TestHome::with_project();
     let mgr = gdvm().await;
 
     fs::write(
@@ -195,7 +115,7 @@ async fn get_pinned_prefers_gdvm_toml_over_gdvmrc() {
 #[tokio::test]
 #[serial]
 async fn get_pinned_falls_back_to_legacy_gdvmrc() {
-    let env = PinTestEnv::new();
+    let env = TestHome::with_project();
     let mgr = gdvm().await;
 
     fs::write(env.project_dir().join(".gdvmrc"), "4.3.0-stable-csharp").unwrap();
@@ -209,12 +129,13 @@ async fn get_pinned_falls_back_to_legacy_gdvmrc() {
     assert_eq!(gv.major, Some(4));
     assert_eq!(gv.minor, Some(3));
     assert_eq!(variant.as_deref(), Some("csharp"));
+    assert!(pinned.gdvmrc_fallback);
 }
 
 #[tokio::test]
 #[serial]
 async fn get_pinned_walks_up_parent_directories() {
-    let env = PinTestEnv::new();
+    let env = TestHome::with_project();
     let mgr = gdvm().await;
 
     fs::write(
@@ -239,13 +160,13 @@ async fn get_pinned_walks_up_parent_directories() {
 #[tokio::test]
 #[serial]
 async fn pin_then_get_roundtrips_variant() {
-    let env = PinTestEnv::new();
+    let env = TestHome::with_project();
     let _ = env.project_dir();
     let mgr = gdvm().await;
 
     mgr.defaults()
         .pin_version(
-            &determinate("4.3-stable"),
+            &resolved("4.3-stable"),
             &Variant::from_option(Some("csharp")),
             None,
             false,

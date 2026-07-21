@@ -15,25 +15,17 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::io::Write;
+mod common;
 
 use gdvm::app::find_godot_executable;
 use gdvm::zip_utils::extract_zip;
 use tempfile::tempdir;
-use zip::write::SimpleFileOptions;
 
 #[test]
 fn test_extract_zip_basic() {
     let dir = tempdir().unwrap();
     let zip_path = dir.path().join("test.zip");
-    {
-        let file = std::fs::File::create(&zip_path).unwrap();
-        let mut zip = zip::ZipWriter::new(file);
-        let options = SimpleFileOptions::default();
-        zip.start_file("folder/file.txt", options).unwrap();
-        zip.write_all(b"hello").unwrap();
-        zip.finish().unwrap();
-    }
+    common::make_zip(&zip_path, "folder/file.txt", b"hello");
 
     let out_dir = dir.path().join("out");
     extract_zip(&zip_path, &out_dir).unwrap();
@@ -44,7 +36,10 @@ fn test_extract_zip_basic() {
 #[cfg(target_family = "unix")]
 #[test]
 fn test_extract_zip_strips_special_permission_bits() {
+    use std::io::Write;
     use std::os::unix::fs::PermissionsExt;
+
+    use zip::write::SimpleFileOptions;
 
     let dir = tempdir().unwrap();
     let zip_path = dir.path().join("test.zip");

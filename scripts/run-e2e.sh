@@ -673,6 +673,47 @@ gdvm config unset install.path
 gdvm config unset cache.path
 TEST_SCRIPT
 
+test "A stale partial download is safely replaced on the next install" <<'TEST_SCRIPT'
+cache_dir="$HOME/.gdvm/cache"
+archive="$(ls "$cache_dir"/*.zip | head -1)"
+key="$(basename "$archive" .zip)"
+
+gdvm remove 4.3 --yes
+head -c 1048576 "$archive" > "$cache_dir/.partial-$key.zip"
+printf 'x' >> "$cache_dir/.partial-$key.zip"
+printf '"bogus-validator"' > "$cache_dir/.partial-$key.zip.meta"
+rm -f "$archive"
+
+output="$(gdvm install 4.3 2>&1)"
+assert_contains "$output" "Installed" "the install completes despite the stale partial"
+[[ ! -e "$cache_dir/.partial-$key.zip" ]] || { echo "partial survived a completed install"; exit 1; }
+[[ ! -e "$cache_dir/.partial-$key.zip.meta" ]] || { echo "partial metadata survived a completed install"; exit 1; }
+TEST_SCRIPT
+
+test "An install missing an executable is detected and reinstalled" <<'TEST_SCRIPT'
+exe="$(gdvm show 4.3)"
+version_dir="$(dirname "$exe")"
+rm -f "$version_dir"/Godot* "$version_dir"/godot* 2>/dev/null || true
+
+output="$(gdvm install 4.3 2>&1)"
+assert_contains "$output" "missing its executable" "warns about the broken install"
+
+exe="$(gdvm show 4.3)"
+[[ -e "$exe" ]] || { echo "executable missing after reinstall: $exe"; exit 1; }
+TEST_SCRIPT
+
+test "Prune removes leftovers of interrupted downloads and installs" <<'TEST_SCRIPT'
+cache_dir="$HOME/.gdvm/cache"
+mkdir -p "$cache_dir"
+printf 'x%.0s' {1..4096} > "$cache_dir/.partial-e2e.zip"
+touch -d "2 days ago" "$cache_dir/.partial-e2e.zip" 2>/dev/null \
+    || touch -t "$(date -v-2d +%Y%m%d%H%M 2>/dev/null || date +%Y%m%d%H%M)" "$cache_dir/.partial-e2e.zip"
+
+output="$(gdvm prune 2>&1)"
+assert_contains "$output" ".partial-e2e.zip" "reports the removed partial download"
+[[ ! -e "$cache_dir/.partial-e2e.zip" ]] || { echo "partial download survived prune"; exit 1; }
+TEST_SCRIPT
+
 test "Input prompts error out when not interactive" <<'TEST_SCRIPT'
 output="$(gdvm config set prune.keep-latest </dev/null 2>&1)" && { echo "expected failure"; exit 1; }
 assert_contains "$output" "GDVM7003" "prints an error due to non-interactive stdin"
@@ -686,6 +727,8 @@ TEST_SCRIPT
 test "A near miss release type suggests using a wildcard" <<'TEST_SCRIPT'
 output="$(gdvm search 4.4-dev)"
 assert_contains "$output" "4.4-dev*" "suggests a wildcard query"
+output="$(gdvm cache-path 4.4-dev 2>&1)" && { echo "expected failure"; exit 1; }
+assert_contains "$output" "4.4-dev*" "the shared resolution path carries the suggestion"
 TEST_SCRIPT
 
 test "list --format json is machine-readable" <<'TEST_SCRIPT'

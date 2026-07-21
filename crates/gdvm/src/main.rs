@@ -96,6 +96,7 @@ async fn run() -> Result<()> {
     // Match the subcommand and call the appropriate function
     match matches.subcommand() {
         Some(("install", sub_m)) => cli::sub_install(&gdvm, sub_m).await?,
+        Some(("diagnose", sub_m)) => cli::sub_diagnose(&gdvm, sub_m).await?,
         Some(("list", sub_m)) => cli::sub_list(&gdvm, sub_m)?,
         Some(("run", sub_m)) => cli::sub_run(&gdvm, sub_m).await?,
         Some(("show", sub_m)) => cli::sub_show(&gdvm, sub_m).await?,

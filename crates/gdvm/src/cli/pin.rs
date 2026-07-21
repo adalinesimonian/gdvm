@@ -21,31 +21,18 @@ use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
 use gdvm::run_version_resolver::warn_project_version_mismatch;
-use gdvm::version::{self, Variant, VersionSpec, VersionTarget};
+use gdvm::version::{self, Variant};
 use gdvm::{println_i18n, terr};
 
-use super::{
-    check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
-    refresh_cache_if_requested,
-};
+use super::VersionRequest;
 
 /// Handle the 'pin' subcommand
 pub(crate) async fn sub_pin(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let version_str = matches.get_one::<String>("version").unwrap();
-    let refresh = matches.get_flag("refresh");
-    let spec = VersionSpec::parse(version_str)?;
-    let variant = check_deprecated_csharp_flag(matches, spec.variant);
-    let variant = variant.as_deref();
-    let registry = spec.registry.as_deref();
-
-    refresh_cache_if_requested(gdvm, refresh).await?;
-
-    ensure_registry_trusted(gdvm, registry, matches.get_flag("yes")).await?;
-
-    let version = match &spec.target {
-        VersionTarget::Keyword(kw) => keyword_to_version_filter(kw),
-        VersionTarget::Pattern(gv) => gv.clone(),
-    };
+    let request = VersionRequest::from_matches(matches)?;
+    request.prepare(gdvm, matches).await?;
+    let variant = request.variant();
+    let registry = request.registry();
+    let version = request.required_filter().clone();
 
     warn_project_version_mismatch::<_, &Path>(gdvm, &version, true, None).await;
 

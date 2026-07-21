@@ -18,50 +18,21 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version::{VersionSpec, VersionTarget};
 
+use super::VersionRequest;
 use super::format::{OutputFormat, print_json};
-use super::link::collect_possible_paths;
-use super::{check_deprecated_csharp_flag, keyword_to_version_filter, refresh_cache_if_requested};
 
 /// Handle the 'show' subcommand
 pub(crate) async fn sub_show(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
-    let raw_args: Vec<String> = Vec::new();
-
-    let version_input = matches.get_one::<String>("version");
     let console = matches.get_flag("console");
     let force_on_mismatch = matches.get_flag("force");
-    let refresh = matches.get_flag("refresh");
-
-    refresh_cache_if_requested(gdvm, refresh).await?;
-
-    let possible_paths = collect_possible_paths(&raw_args);
-
-    let spec = version_input.map(|v| VersionSpec::parse(v)).transpose()?;
-    let spec_variant = spec.as_ref().and_then(|s| s.variant.clone());
-    let variant = check_deprecated_csharp_flag(matches, spec_variant);
-    let registry = spec.as_ref().and_then(|s| s.registry.clone());
-
-    let explicit_version = match spec.as_ref().map(|s| &s.target) {
-        Some(VersionTarget::Pattern(gv)) => Some(gv.clone()),
-        Some(VersionTarget::Keyword(kw)) => Some(keyword_to_version_filter(kw)),
-        None => None,
-    };
-
     let include_pre = matches.get_flag("include-pre");
 
-    let resolver = RunVersionResolver::new(gdvm);
-    let resolved = resolver
-        .resolve(RunResolutionRequest {
-            explicit: explicit_version,
-            variant,
-            registry,
-            include_pre,
-            possible_paths: &possible_paths,
-            force_on_mismatch,
-            install_if_missing: false,
-        })
+    let request = VersionRequest::from_matches(matches)?;
+    request.prepare(gdvm, matches).await?;
+
+    let resolved = request
+        .resolve_selection(gdvm, include_pre, false, force_on_mismatch)
         .await?;
 
     let exe_path = gdvm.library().get_executable_path(
@@ -71,7 +42,7 @@ pub(crate) async fn sub_show(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         console,
     )?;
 
-    if OutputFormat::from_matches(matches) == OutputFormat::Json {
+    if OutputFormat::is_json(matches) {
         #[derive(serde::Serialize)]
         struct Shown {
             version: String,

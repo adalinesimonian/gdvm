@@ -18,15 +18,11 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
-use gdvm::eprintln_i18n;
 use gdvm::run_version_resolver::{RunResolutionRequest, RunVersionResolver};
-use gdvm::version::{self, VersionSpec, VersionTarget};
+use gdvm::version::{VersionSpec, VersionTarget};
 
 use super::link::collect_possible_paths;
-use super::{
-    check_deprecated_csharp_flag, ensure_registry_trusted, keyword_to_version_filter,
-    refresh_cache_if_requested,
-};
+use super::{VersionRequest, ensure_registry_trusted, keyword_to_version_filter};
 
 /// Handle the 'run' subcommand
 pub(crate) async fn sub_run(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
@@ -39,17 +35,11 @@ pub(crate) async fn sub_run(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
     let version_input = matches.get_one::<String>("version");
     let console = matches.get_flag("console");
     let force_on_mismatch = matches.get_flag("force");
-    let refresh = matches.get_flag("refresh");
-
-    refresh_cache_if_requested(gdvm, refresh).await?;
-
-    let spec_variant = version_input
-        .map(|v| VersionSpec::parse(v))
-        .transpose()?
-        .and_then(|s| s.variant);
-
-    let variant = check_deprecated_csharp_flag(matches, spec_variant);
     let include_pre = matches.get_flag("include-pre");
+
+    let request = VersionRequest::from_matches(matches)?;
+    request.prepare(gdvm, matches).await?;
+    let variant = request.variant_owned();
 
     sub_run_inner(RunConfig {
         gdvm,
@@ -123,13 +113,9 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
 
     let resolved = resolver.resolve(request).await?;
 
-    let display = version::display_version(
-        &resolved.version,
-        &resolved.variant,
-        resolved.registry.as_deref(),
-    );
+    let display = resolved.display();
 
-    eprintln_i18n!("running-version", version = &display);
+    gdvm::ui::milestone(gdvm::t!("status-running"), &display);
 
     gdvm.launcher().run(
         &resolved.version,

@@ -78,7 +78,8 @@ pub fn init(dir: &Path, name: Option<&str>) -> Result<String> {
         return Err(terr!(
             "error-publish-already-initialized",
             path = dir.display().to_string()
-        ));
+        )
+        .into());
     }
 
     let name = name.map(|s| s.to_string()).unwrap_or_else(|| dir_name(dir));
@@ -122,7 +123,8 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
             return Err(terr!(
                 "error-publish-archive-not-found",
                 path = file.display().to_string()
-            ));
+            )
+            .into());
         }
         let (sha512, size) = resolve_integrity(file, args)?;
 
@@ -149,7 +151,8 @@ pub fn add_build(dir: &Path, args: &AddBuild) -> Result<()> {
                     return Err(terr!(
                         "error-publish-archive-not-found",
                         path = file.display().to_string()
-                    ));
+                    )
+                    .into());
                 }
                 resolve_integrity(file, args)?
             }
@@ -210,7 +213,8 @@ pub fn remove_build(dir: &Path, args: &RemoveBuild) -> Result<()> {
                     "error-publish-no-such-platform",
                     platform = platform.clone(),
                     variant = variant_key
-                ));
+                )
+                .into());
             }
             if release
                 .variants
@@ -223,10 +227,7 @@ pub fn remove_build(dir: &Path, args: &RemoveBuild) -> Result<()> {
         (Some(variant), None) => {
             let variant_key = Variant::from_option(Some(variant)).as_str().to_string();
             if release.variants.remove(&variant_key).is_none() {
-                return Err(terr!(
-                    "error-publish-no-such-variant",
-                    variant = variant_key
-                ));
+                return Err(terr!("error-publish-no-such-variant", variant = variant_key).into());
             }
         }
         (None, _) => {
@@ -384,7 +385,7 @@ pub fn validate(dir: &Path) -> Result<ValidationReport> {
 
 fn require_registry(dir: &Path) -> Result<()> {
     if !dir.join("registry.json").is_file() {
-        return Err(terr!("error-publish-missing-manifest"));
+        return Err(terr!("error-publish-missing-manifest").into());
     }
     Ok(())
 }
@@ -485,11 +486,7 @@ fn slug(version: &str) -> String {
 
 fn validate_segment(value: &str, what: &str) -> Result<()> {
     if value.is_empty() || value.contains('/') || value.contains('\\') || value.contains("..") {
-        return Err(terr!(
-            "error-publish-invalid-segment",
-            what = what,
-            value = value
-        ));
+        return Err(terr!("error-publish-invalid-segment", what = what, value = value).into());
     }
     Ok(())
 }

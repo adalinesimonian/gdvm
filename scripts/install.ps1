@@ -144,6 +144,7 @@ if ($failedPaths.Count -gt 0) {
 
 Write-Host ""
 & "$outFile" --version
+& "$outFile" diagnose
 Write-Host ""
 
 $iconUrl = 'https://godotengine.org/favicon.ico'
