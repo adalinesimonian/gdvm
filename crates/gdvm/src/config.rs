@@ -295,8 +295,16 @@ impl Config {
         let config_path = gdvm_dir()?.join("config.toml");
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
-            match toml::from_str(&contents) {
-                Ok(config) => Ok(config),
+            match toml::from_str::<Config>(&contents) {
+                Ok(mut config) => {
+                    if !config.install_path.is_none() {
+                        config.set_value("install.path", config.get_value("install.path").unwrap_or_default().as_str())?;
+                    }
+                    if !config.cache_path.is_none() {
+                        config.set_value("cache.path", config.get_value("cache.path").unwrap_or_default().as_str())?;
+                    }
+                    Ok(config)
+                },
                 Err(e) => {
                     crate::ui::report_error(&terr!("error-parse-config").with_source(e).into());
                     crate::ui::warn(t!("error-parse-config-using-default"));
