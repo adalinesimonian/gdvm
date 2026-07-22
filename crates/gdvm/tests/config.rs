@@ -17,7 +17,7 @@
 
 #![cfg(feature = "integration-tests")]
 
-use gdvm::config::Config;
+use gdvm::config::{Config, ConfigOps};
 use serial_test::serial;
 
 mod common;
@@ -63,4 +63,65 @@ fn test_legacy_config_option_is_ignored_on_load() {
 
     let loaded = Config::load().unwrap();
     assert_eq!(loaded.prune_max_age_days, Some(9));
+}
+
+#[test]
+#[serial]
+fn test_change_install_path_config() {
+    let home = TestHome::new();
+
+    let cfg = Config {
+        install_path: Some(home.path().join("test_installs")),
+        ..Default::default()
+    };
+    cfg.save().unwrap();
+
+    let loaded = Config::load().unwrap();
+    assert_eq!(loaded.install_path, Some(home.path().join("test_installs")));
+}
+
+#[test]
+#[serial]
+fn test_change_cache_path_config() {
+    let home = TestHome::new();
+
+    let cfg = Config {
+        cache_path: Some(home.path().join("test_cache")),
+        ..Default::default()
+    };
+    cfg.save().unwrap();
+
+    let loaded = Config::load().unwrap();
+    assert_eq!(loaded.cache_path, Some(home.path().join("test_cache")));
+}
+
+#[test]
+#[serial]
+fn test_config_rejects_reserved_install_path() {
+    let home = TestHome::new();
+    let mut cfg = Config::default();
+    let reserved = home.path().join(".gdvm").join("bin");
+
+    assert!(
+        cfg.set_value("install.path", reserved.to_string_lossy().as_ref())
+            .is_err()
+    );
+    cfg.save().unwrap();
+}
+
+#[test]
+#[serial]
+fn test_config_rejects_overlapping_install_and_cache_paths() {
+    let home = TestHome::new();
+    let mut cfg = Config::default();
+    let installs = home.path().join("custom-installs");
+    let cache = installs.join("cache");
+
+    cfg.set_value("install.path", installs.to_string_lossy().as_ref())
+        .unwrap();
+    assert!(
+        cfg.set_value("cache.path", cache.to_string_lossy().as_ref())
+            .is_err()
+    );
+    cfg.save().unwrap();
 }

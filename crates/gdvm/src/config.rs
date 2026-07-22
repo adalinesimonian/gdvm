@@ -17,16 +17,17 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf, absolute};
 
 use anyhow::Result;
 use directories::BaseDirs;
+use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
 
 use crate::{t, terr};
 
 /// A list of known configuration keys.
-pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days"];
+pub const KNOWN_KEYS: &[&str] = &["prune.max-age-days", "install.path", "cache.path"];
 
 /// The default maximum age, in days, before an unused asset becomes eligible
 /// for pruning, unless `prune.max-age-days` is configured.
@@ -40,6 +41,10 @@ pub struct RegistryConfig {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_path: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_path: Option<PathBuf>,
     /// Maximum age, in days, before an unused asset becomes eligible for
     /// pruning. When unset, `DEFAULT_PRUNE_MAX_AGE_DAYS` is used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -74,6 +79,14 @@ pub trait ConfigOps {
 impl ConfigOps for Config {
     fn get_value(&self, key: &str) -> Option<String> {
         match key {
+            "install.path" => self
+                .install_path
+                .clone()
+                .map(|p| p.to_string_lossy().into_owned()),
+            "cache.path" => self
+                .cache_path
+                .clone()
+                .map(|p| p.to_string_lossy().into_owned()),
             "prune.max-age-days" => self.prune_max_age_days.map(|d| d.to_string()),
             _ => None,
         }
@@ -81,6 +94,26 @@ impl ConfigOps for Config {
 
     fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
+            "install.path" => {
+                let value = normalize_and_validate_path(
+                    Path::new(value),
+                    key,
+                    self.cache_path.as_ref(),
+                    false,
+                )?;
+                self.install_path = Some(value);
+                Ok(())
+            }
+            "cache.path" => {
+                let value = normalize_and_validate_path(
+                    Path::new(value),
+                    key,
+                    self.install_path.as_ref(),
+                    false,
+                )?;
+                self.cache_path = Some(value);
+                Ok(())
+            }
             "prune.max-age-days" => {
                 let days: u64 = value
                     .parse()
@@ -94,6 +127,14 @@ impl ConfigOps for Config {
 
     fn unset_value(&mut self, key: &str) -> Result<()> {
         match key {
+            "install.path" => {
+                self.install_path = None;
+                Ok(())
+            }
+            "cache.path" => {
+                self.cache_path = None;
+                Ok(())
+            }
             "prune.max-age-days" => {
                 self.prune_max_age_days = None;
                 Ok(())
@@ -109,6 +150,20 @@ impl ConfigOps for Config {
 
     fn list_set_keys(&self) -> Vec<(String, String, bool)> {
         let mut entries = Vec::new();
+        if let Some(install_path) = self.install_path.as_ref() {
+            entries.push((
+                "install.path".to_string(),
+                install_path.to_string_lossy().into_owned(),
+                false,
+            ));
+        }
+        if let Some(cache_path) = self.cache_path.as_ref() {
+            entries.push((
+                "cache.path".to_string(),
+                cache_path.to_string_lossy().into_owned(),
+                false,
+            ));
+        }
         if let Some(days) = self.prune_max_age_days {
             entries.push(("prune.max-age-days".to_string(), days.to_string(), false));
         }
@@ -202,14 +257,88 @@ pub fn get_home_dir() -> Result<PathBuf> {
     Ok(base_dirs.home_dir().to_path_buf())
 }
 
+fn is_reserved_path(path: &Path) -> bool {
+    let resolved_path = path.clean();
+    let candidate = resolved_path;
+    let gdvm_base = gdvm_dir().expect("Cannot get gdvm path");
+    candidate == gdvm_base || candidate.starts_with(&gdvm_base) || gdvm_base.starts_with(&candidate)
+}
+
+fn normalize_and_validate_path(
+    path: &Path,
+    key: &str,
+    existing: Option<&PathBuf>,
+    ignore_not_empty: bool,
+) -> Result<PathBuf> {
+    if path.to_string_lossy().trim().is_empty() {
+        return Err(terr!("error-config-path-empty").into());
+    }
+
+    let path = absolute(path)?.clean();
+
+    if path.is_file() {
+        return Err(terr!("error-config-path-file", path = path.display().to_string()).into());
+    }
+
+    if is_reserved_path(&path) {
+        return Err(terr!(
+            "error-config-path-reserved",
+            path = path.display().to_string()
+        )
+        .into());
+    }
+
+    if let Some(existing_path) = existing {
+        let existing_path = absolute(existing_path)?;
+        if path == existing_path
+            || path.starts_with(&existing_path)
+            || existing_path.starts_with(&path)
+        {
+            return Err(terr!(
+                "error-config-path-overlap",
+                key = key,
+                path = existing_path.display().to_string()
+            )
+            .into());
+        }
+    }
+    if path.exists() && !path.read_dir()?.next().is_none() && !ignore_not_empty {
+        return Err(terr!(
+            "error-config-dir-not-empty",
+            path = path.display().to_string()
+        )
+        .into());
+    }
+
+    Ok(path)
+}
+
 impl Config {
     /// Load configuration from ~/.gdvm/config.toml.
     pub fn load() -> Result<Self> {
         let config_path = gdvm_dir()?.join("config.toml");
         if config_path.exists() {
             let contents = fs::read_to_string(&config_path).expect("Failed to read config.toml");
-            match toml::from_str(&contents) {
-                Ok(config) => Ok(config),
+            match toml::from_str::<Config>(&contents) {
+                Ok(mut config) => {
+                    if !config.install_path.is_none() {
+                        config.install_path = Some(normalize_and_validate_path(
+                            config.install_path.as_ref().unwrap(),
+                            "install.path",
+                            config.cache_path.as_ref(),
+                            true,
+                        )?);
+                    }
+                    if !config.cache_path.is_none() {
+                        config.cache_path = Some(normalize_and_validate_path(
+                            config.cache_path.as_ref().unwrap(),
+                            "cache.path",
+                            config.install_path.as_ref(),
+                            true,
+                        )?);
+                    }
+                    Ok(config)
+                }
                 Err(e) => {
                     crate::ui::report_error(&terr!("error-parse-config").with_source(e).into());
                     crate::ui::warn(t!("error-parse-config-using-default"));
@@ -357,6 +486,103 @@ mod tests {
         assert_eq!(
             parsed.registry_url("mybuilds"),
             Some("https://example.com/godot")
+        );
+    }
+    #[test]
+    fn test_normalize_and_validate_path_normalizes_relative_paths() {
+        let config = Config::default();
+        let path = normalize_and_validate_path(
+            Path::new("../godot"),
+            "install.path",
+            config.cache_path.as_ref(),
+            false,
+        )
+        .unwrap();
+
+        assert!(path.is_absolute());
+        assert!(
+            !path
+                .components()
+                .any(|component| component == std::path::Component::ParentDir)
+        );
+        assert_eq!(
+            path,
+            std::env::current_dir().unwrap().join("../godot").clean()
+        );
+    }
+
+    #[test]
+    fn test_normalize_and_validate_path_rejects_empty_strings() {
+        let config = Config::default();
+        assert!(
+            normalize_and_validate_path(
+                Path::new(""),
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
+        );
+        assert!(
+            normalize_and_validate_path(
+                Path::new("   "),
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_normalize_and_validate_path_rejects_files() {
+        let config = Config::default();
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("not_a_dir.txt");
+        std::fs::write(&file_path, "data").unwrap();
+
+        assert!(
+            normalize_and_validate_path(
+                Path::new(&file_path.display().to_string()),
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_normalize_and_validate_path_rejects_reserved_paths() {
+        let config = Config::default();
+        let gdvm_base = gdvm_dir().unwrap();
+
+        assert!(
+            normalize_and_validate_path(
+                &gdvm_base,
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
+        );
+        assert!(
+            normalize_and_validate_path(
+                &gdvm_base.join("subdir"),
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
+        );
+        assert!(
+            normalize_and_validate_path(
+                gdvm_base.parent().unwrap(),
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
         );
     }
 }

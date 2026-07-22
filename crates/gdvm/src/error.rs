@@ -111,6 +111,11 @@ pub const ERROR_CODES: &[(&str, &str)] = &[
     ("error-unknown-config-key", "GDVM4001"),
     ("error-config-unknown-key", "GDVM4002"),
     ("error-config-invalid-number", "GDVM4003"),
+    ("error-config-path-empty", "GDVM4004"),
+    ("error-config-path-file", "GDVM4005"),
+    ("error-config-path-reserved", "GDVM4006"),
+    ("error-config-path-overlap", "GDVM4007"),
+    ("error-config-dir-not-empty", "GDVM4008"),
     //
     // GDVM5xxx: running Godot and project detection.
     //
