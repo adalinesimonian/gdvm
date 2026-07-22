@@ -17,7 +17,7 @@
 
 #![cfg(feature = "integration-tests")]
 
-use gdvm::{config::Config, config::ConfigOps};
+use gdvm::config::{Config, ConfigOps};
 use serial_test::serial;
 
 mod common;

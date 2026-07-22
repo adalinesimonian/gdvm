@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-use path_clean::PathClean;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf, absolute};
 
 use anyhow::Result;
 use directories::BaseDirs;
+use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
 
 use crate::{t, terr};
@@ -95,28 +95,22 @@ impl ConfigOps for Config {
     fn set_value(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
             "install.path" => {
-                let value =
-                    normalize_and_validate_path(Path::new(value), key, self.cache_path.as_ref())?;
-                if value.exists() && !value.read_dir()?.next().is_none() {
-                    return Err(terr!(
-                        "error-config-dir-not-empty",
-                        path = value.display().to_string()
-                    )
-                    .into());
-                }
+                let value = normalize_and_validate_path(
+                    Path::new(value),
+                    key,
+                    self.cache_path.as_ref(),
+                    false,
+                )?;
                 self.install_path = Some(value);
                 Ok(())
             }
             "cache.path" => {
-                let value =
-                    normalize_and_validate_path(Path::new(value), key, self.install_path.as_ref())?;
-                if value.exists() && !value.read_dir()?.next().is_none() {
-                    return Err(terr!(
-                        "error-config-dir-not-empty",
-                        path = value.display().to_string()
-                    )
-                    .into());
-                }
+                let value = normalize_and_validate_path(
+                    Path::new(value),
+                    key,
+                    self.install_path.as_ref(),
+                    false,
+                )?;
                 self.cache_path = Some(value);
                 Ok(())
             }
@@ -274,6 +268,7 @@ fn normalize_and_validate_path(
     path: &Path,
     key: &str,
     existing: Option<&PathBuf>,
+    ignore_not_empty: bool,
 ) -> Result<PathBuf> {
     if path.to_string_lossy().trim().is_empty() {
         return Err(terr!("error-config-path-empty").into());
@@ -307,6 +302,13 @@ fn normalize_and_validate_path(
             .into());
         }
     }
+    if path.exists() && !path.read_dir()?.next().is_none() && !ignore_not_empty {
+        return Err(terr!(
+            "error-config-dir-not-empty",
+            path = path.display().to_string()
+        )
+        .into());
+    }
 
     Ok(path)
 }
@@ -324,6 +326,7 @@ impl Config {
                             config.install_path.as_ref().unwrap(),
                             "install.path",
                             config.cache_path.as_ref(),
+                            true,
                         )?);
                     }
                     if !config.cache_path.is_none() {
@@ -331,6 +334,7 @@ impl Config {
                             config.cache_path.as_ref().unwrap(),
                             "cache.path",
                             config.install_path.as_ref(),
+                            true,
                         )?);
                     }
                     Ok(config)
@@ -491,6 +495,7 @@ mod tests {
             Path::new("../godot"),
             "install.path",
             config.cache_path.as_ref(),
+            false,
         )
         .unwrap();
 
@@ -510,14 +515,20 @@ mod tests {
     fn test_normalize_and_validate_path_rejects_empty_strings() {
         let config = Config::default();
         assert!(
-            normalize_and_validate_path(Path::new(""), "install.path", config.cache_path.as_ref())
-                .is_err()
+            normalize_and_validate_path(
+                Path::new(""),
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
         );
         assert!(
             normalize_and_validate_path(
                 Path::new("   "),
                 "install.path",
-                config.cache_path.as_ref()
+                config.cache_path.as_ref(),
+                false
             )
             .is_err()
         );
@@ -534,7 +545,8 @@ mod tests {
             normalize_and_validate_path(
                 Path::new(&file_path.display().to_string()),
                 "install.path",
-                config.cache_path.as_ref()
+                config.cache_path.as_ref(),
+                false
             )
             .is_err()
         );
@@ -546,14 +558,20 @@ mod tests {
         let gdvm_base = gdvm_dir().unwrap();
 
         assert!(
-            normalize_and_validate_path(&gdvm_base, "install.path", config.cache_path.as_ref())
-                .is_err()
+            normalize_and_validate_path(
+                &gdvm_base,
+                "install.path",
+                config.cache_path.as_ref(),
+                false
+            )
+            .is_err()
         );
         assert!(
             normalize_and_validate_path(
                 &gdvm_base.join("subdir"),
                 "install.path",
-                config.cache_path.as_ref()
+                config.cache_path.as_ref(),
+                false
             )
             .is_err()
         );
@@ -561,7 +579,8 @@ mod tests {
             normalize_and_validate_path(
                 gdvm_base.parent().unwrap(),
                 "install.path",
-                config.cache_path.as_ref()
+                config.cache_path.as_ref(),
+                false
             )
             .is_err()
         );

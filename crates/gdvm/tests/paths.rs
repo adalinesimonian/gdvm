@@ -16,10 +16,8 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(feature = "integration-tests")]
 
-use gdvm::{
-    config::{Config, ConfigOps},
-    paths::GdvmPaths,
-};
+use gdvm::config::{Config, ConfigOps};
+use gdvm::paths::GdvmPaths;
 use serial_test::serial;
 
 mod common;
