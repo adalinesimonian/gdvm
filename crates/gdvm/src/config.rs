@@ -274,7 +274,7 @@ fn normalize_and_validate_path(
         return Err(terr!("error-config-path-empty").into());
     }
 
-    let path = absolute(path.clean())?;
+    let path = absolute(path)?.clean();
 
     if path.is_file() {
         return Err(terr!("error-config-path-file", path = path.display().to_string()).into());
