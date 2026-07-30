@@ -79,9 +79,6 @@ catch {
     Write-Host "Error: $_" -ForegroundColor Yellow
 }
 
-# Grant execution rights
-& icacls $outFile /grant Everyone:F > $null
-
 Write-Host "✅ gdvm was installed to $outFile" -ForegroundColor Green
 
 $failedPaths = @()

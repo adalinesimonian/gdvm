@@ -110,3 +110,63 @@ fn a_second_run_is_idempotent() {
         "an unchanged shim must not be rewritten on every run"
     );
 }
+
+#[cfg(target_os = "windows")]
+fn explicit_win_perms(path: &std::path::Path) -> Vec<String> {
+    let output = Command::new("icacls")
+        .arg(path)
+        .output()
+        .expect("icacls runs");
+    assert!(output.status.success(), "icacls listing failed: {output:?}");
+
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let prefix = format!("{} ", path.display());
+
+    stdout
+        .lines()
+        .take_while(|line| !line.trim().is_empty())
+        .map(|line| line.strip_prefix(prefix.as_str()).unwrap_or(line).trim())
+        .filter(|ace| !ace.is_empty() && !ace.contains("(I)"))
+        .map(str::to_owned)
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+#[serial]
+fn everyone_perms_gets_revoked() {
+    let home = TestHome::new();
+
+    let exe = home.gdvm_dir().join("bin").join("gdvm.exe");
+    std::fs::create_dir_all(exe.parent().unwrap()).unwrap();
+    std::fs::write(&exe, b"gdvm").unwrap();
+
+    let before = explicit_win_perms(&exe);
+
+    let status = Command::new("icacls")
+        .arg(&exe)
+        .args(["/grant", "*S-1-1-0:(F)"]) // SID for Everyone.
+        .status()
+        .expect("icacls runs");
+    assert!(status.success(), "icacls grant failed");
+
+    let granted: Vec<_> = explicit_win_perms(&exe)
+        .into_iter()
+        .filter(|ace| !before.contains(ace))
+        .collect();
+    assert!(
+        !granted.is_empty(),
+        "Everyone must have full control at the start of the test"
+    );
+
+    let output = run_gdvm(&home, "diagnose");
+    assert!(output.status.success(), "{output:?}");
+
+    let after = explicit_win_perms(&exe);
+    for ace in &granted {
+        assert!(
+            !after.contains(ace),
+            "gdvm must revoke the Everyone perms it finds on its own executable, but {ace} remains"
+        );
+    }
+}
