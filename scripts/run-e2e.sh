@@ -688,7 +688,7 @@ assert_contains "$output" ".partial-e2e.zip" "reports the removed partial downlo
 TEST_SCRIPT
 
 test "Input prompts error out when not interactive" <<'TEST_SCRIPT'
-output="$(gdvm config set prune.keep-latest </dev/null 2>&1)" && { echo "expected failure"; exit 1; }
+output="$(gdvm config set prune.max-age-days </dev/null 2>&1)" && { echo "expected failure"; exit 1; }
 assert_contains "$output" "GDVM7003" "prints an error due to non-interactive stdin"
 TEST_SCRIPT
 

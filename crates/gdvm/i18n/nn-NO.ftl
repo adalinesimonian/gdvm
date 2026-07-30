@@ -101,6 +101,10 @@ gdvm-toml-malformed = ignorerer { -gdvm-toml } på { $path } fordi han ikkje kun
 help-diagnose = Kontroller installasjonen og rapporter tilstanden.
 diagnose-base-dir = { -gdvm }-mappe: { $path }
 diagnose-healthy = Ingen problem funne.
+diagnose-config-malformed = Konfigurasjonsfila på { $path } er ikkje gyldig TOML, so standardverdiar vert bruka og { -gdvm } skriv ikkje til ho: { $error }
+diagnose-config-ok = Konfigurasjonsfila er gyldig.
+diagnose-config-unreadable = Konfigurasjonsfila på { $path } kunne ikkje lesast, so standardverdiar vert bruka og { -gdvm } skriv ikkje til ho: { $error }
+diagnose-config-value-ignored = { $key } i konfigurasjonsfila kunne ikkje brukast og vert ignorert: { $detail }
 diagnose-install-broken = { $version } manglar den køyrberre fila. Køyr «{ -gdvm } install» for han for å installere på nytt.
 diagnose-install-ok = { $version } kan køyrast.
 diagnose-partial-downloads =
@@ -365,9 +369,9 @@ help-config-get = Hent ein konfigurasjonsverdi
 help-config-set = Set ein konfigurasjonsverdi
 help-config-unset = Fjern ein konfigurasjonsverdi
 help-config-list = List alle konfigurasjonsverdiar
-help-config-key = Konfigurasjonsnykelen (t.d. prune.max-age-days)
+help-config-key = Konfigurasjonsnykelen
 help-config-value = Verdien som skal setjast for konfigurasjonsnykelen
-help-config-unset-key = Konfigurasjonsnykelen som skal fjernast (t.d. prune.max-age-days)
+help-config-unset-key = Konfigurasjonsnykelen som skal fjernast
 help-config-show-sensitive = Vis sensitive konfigurasjonsverdiar i klårtekst
 help-config-available = List alle tilgjengelege konfigurasjonsnyklar og verdiar, inkludert standardverdiar
 warning-setting-sensitive = Du set ein sensitiv verdi som vil verta lagra i klårtekst i heimemappa di.
@@ -377,10 +381,17 @@ config-set-success = Konfigurasjonen vart oppdatert.
 config-unset-success = Konfigurasjonsnykelen { $key } vart fjerna vellukka.
 config-key-not-set = Konfigurasjonsnykel ikkje sett.
 config-key-not-set-value = <ikkje sett>
-error-unknown-config-key = Ukjend konfigurasjonsnykel.
 error-invalid-config-subcommand = Ugyldig config-underkommando. Bruk «get», «set» eller «list».
 error-parse-config = Kunne ikkje tolke konfigurasjonsfila.
 error-parse-config-using-default = Brukar standard konfigurasjonsverdiar.
+config-file-unreadable = Konfigurasjonsfila på { $path } kunne ikkje lesast.
+config-value-ignored = Ignorerer { $key } i konfigurasjonsfila: { $detail }
+config-problems-multiple =
+    { $count ->
+        [one] Det er { $count } problem med konfigurasjonsfila på { $path }. Køyr «{ -gdvm } diagnose» for å sjå det.
+       *[other] Det er { $count } problem med konfigurasjonsfila på { $path }. Køyr «{ -gdvm } diagnose» for å sjå dei.
+    }
+error-config-unusable-not-saving = Skriv ikkje til konfigurasjonsfila på { $path }, fordi { -gdvm } ikkje kunne lesa ho og ville skrive over innhaldet. Rett opp eller fjern fila, og prøv att.
 
 help-registry = Administrer register å installere { -godot }-bygg frå
 help-registry-add = Legg til eit register

@@ -20,6 +20,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::ArgMatches;
 use gdvm::app::Gdvm;
+use gdvm::config::{ConfigFile, ConfigFileState};
 use gdvm::{t, terr};
 
 use super::format::OutputFormat;
@@ -64,6 +65,65 @@ pub(crate) async fn sub_diagnose(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
                 "problem",
                 t!("diagnose-shim-missing", name = name.as_str()),
             );
+        }
+    }
+
+    match ConfigFile::load() {
+        Ok(config) => {
+            let path = ConfigFile::path()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default();
+            let error = config.error().unwrap_or_default().to_string();
+            match config.state() {
+                ConfigFileState::Unreadable => {
+                    problems += 1;
+                    record(
+                        &mut checks,
+                        "config",
+                        "problem",
+                        t!(
+                            "diagnose-config-unreadable",
+                            path = path.as_str(),
+                            error = error.as_str()
+                        ),
+                    );
+                }
+                ConfigFileState::Malformed => {
+                    problems += 1;
+                    record(
+                        &mut checks,
+                        "config",
+                        "problem",
+                        t!(
+                            "diagnose-config-malformed",
+                            path = path.as_str(),
+                            error = error.as_str()
+                        ),
+                    );
+                }
+                ConfigFileState::Usable if config.problems().is_empty() => {
+                    record(&mut checks, "config", "ok", t!("diagnose-config-ok"));
+                }
+                ConfigFileState::Usable => {
+                    for problem in config.problems() {
+                        problems += 1;
+                        record(
+                            &mut checks,
+                            "config",
+                            "problem",
+                            t!(
+                                "diagnose-config-value-ignored",
+                                key = problem.key.as_str(),
+                                detail = problem.detail.as_str()
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            problems += 1;
+            record(&mut checks, "config", "problem", err.to_string());
         }
     }
 

@@ -102,6 +102,10 @@ gdvm-toml-malformed = файл { -gdvm-toml } в { $path } игнорирует�
 help-diagnose = Проверить установку и сообщить о её состоянии.
 diagnose-base-dir = Каталог { -gdvm }: { $path }
 diagnose-healthy = Проблем не обнаружено.
+diagnose-config-malformed = Файл конфигурации по пути { $path } не является корректным TOML, поэтому используются значения по умолчанию, и { -gdvm } не будет в него писать: { $error }
+diagnose-config-ok = Файл конфигурации корректен.
+diagnose-config-unreadable = Файл конфигурации по пути { $path } не удалось прочитать, поэтому используются значения по умолчанию, и { -gdvm } не будет в него писать: { $error }
+diagnose-config-value-ignored = Значение { $key } в файле конфигурации не удалось использовать, оно игнорируется: { $detail }
 diagnose-install-broken = У { $version } отсутствует исполняемый файл. Выполните «{ -gdvm } install» для этой версии, чтобы переустановить её.
 diagnose-install-ok = { $version } может запускаться.
 diagnose-partial-downloads =
@@ -373,9 +377,9 @@ help-config-get = Получить значение параметра конф�
 help-config-set = Установить значение параметра конфигурации
 help-config-unset = Удалить значение параметра конфигурации
 help-config-list = Показать все параметры конфигурации
-help-config-key = Ключ конфигурации (например, prune.max-age-days)
+help-config-key = Ключ конфигурации
 help-config-value = Значение для установки ключа конфигурации
-help-config-unset-key = Ключ конфигурации для удаления (например, prune.max-age-days)
+help-config-unset-key = Ключ конфигурации для удаления
 help-config-show-sensitive = Показать чувствительные параметры конфигурации в открытом виде
 help-config-available = Показать все доступные ключи конфигурации и их значения, включая значения по умолчанию
 warning-setting-sensitive = Вы устанавливаете чувствительное значение, которое будет сохранено в открытом виде в вашем домашнем каталоге.
@@ -385,10 +389,18 @@ config-set-success = Конфигурация успешно обновлена.
 config-unset-success = Ключ конфигурации { $key } успешно удалён.
 config-key-not-set = Ключ конфигурации не установлен.
 config-key-not-set-value = <не установлено>
-error-unknown-config-key = Неизвестный ключ конфигурации.
 error-invalid-config-subcommand = Недопустимая подкоманда config. Используйте "get", "set" или "list".
 error-parse-config = Не удалось разобрать файл конфигурации.
 error-parse-config-using-default = Используются значения конфигурации по умолчанию.
+config-file-unreadable = Не удалось прочитать файл конфигурации по пути { $path }.
+config-value-ignored = Значение { $key } в файле конфигурации игнорируется: { $detail }
+config-problems-multiple =
+    { $count ->
+        [one] В файле конфигурации по пути { $path } { $count } проблема. Выполните «{ -gdvm } diagnose», чтобы её увидеть.
+        [few] В файле конфигурации по пути { $path } { $count } проблемы. Выполните «{ -gdvm } diagnose», чтобы их увидеть.
+       *[other] В файле конфигурации по пути { $path } { $count } проблем. Выполните «{ -gdvm } diagnose», чтобы их увидеть.
+    }
+error-config-unusable-not-saving = Запись в файл конфигурации по пути { $path } не выполняется, так как { -gdvm } не смог его прочитать и перезаписал бы его содержимое. Исправьте или удалите файл и повторите попытку.
 
 help-registry = Управление реестрами для установки сборок { -godot }
 help-registry-add = Добавить реестр

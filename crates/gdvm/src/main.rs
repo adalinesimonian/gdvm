@@ -17,6 +17,7 @@
 
 use anyhow::Result;
 use gdvm::app::Gdvm;
+use gdvm::config::ConfigFile;
 use gdvm::i18n::I18n;
 
 mod cli;
@@ -89,6 +90,10 @@ async fn run() -> Result<()> {
 
     if let Some(("completions", sub_m)) = matches.subcommand() {
         return cli::sub_completions(sub_m);
+    }
+
+    if matches.subcommand_name() == Some("diagnose") {
+        ConfigFile::suppress_problem_report();
     }
 
     let gdvm = Gdvm::new().await?;

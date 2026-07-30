@@ -19,8 +19,28 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use directories::BaseDirs;
 
-use crate::config::get_home_dir;
+use crate::terr;
+
+/// The user's home directory.
+pub fn get_home_dir() -> Result<PathBuf> {
+    #[cfg(feature = "integration-tests")]
+    {
+        // Override home directory for testing purposes.
+        if let Ok(override_dir) = std::env::var("GDVM_TEST_HOME") {
+            return Ok(PathBuf::from(override_dir));
+        }
+    }
+
+    let base_dirs = BaseDirs::new().ok_or(terr!("error-find-user-dirs"))?;
+    Ok(base_dirs.home_dir().to_path_buf())
+}
+
+/// The gdvm data directory (~/.gdvm).
+pub fn gdvm_dir() -> Result<PathBuf> {
+    Ok(get_home_dir()?.join(".gdvm"))
+}
 
 /// Centralizes filesystem layout for GDVM under the user home directory.
 pub struct GdvmPaths {
@@ -36,7 +56,7 @@ impl GdvmPaths {
     /// Construct paths rooted at the GDVM base directory, ~/.gdvm, and ensure the base, installs,
     /// cache, and bin directories exist.
     pub fn new() -> Result<Self> {
-        let base = get_home_dir()?.join(".gdvm");
+        let base = gdvm_dir()?;
         let installs = base.join("installs");
         let cache_dir = base.join("cache");
         let cache_index = base.join("cache.json");

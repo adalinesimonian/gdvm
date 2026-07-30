@@ -166,22 +166,108 @@ define_migrations! {
     4 => |base_path, _i18n| {
         // Remove the legacy `github_token` value from config.toml to avoid
         // secrets sticking around.
-        let config_path = base_path.join("config.toml");
-        if !config_path.is_file() {
-            return Ok(());
-        }
+        edit_config(base_path, |document| {
+            Ok(document.remove("github_token").is_some())
+        })
+    },
+    5 => |base_path, _i18n| {
+        // Move old keys into their new namespaces.
+        edit_config(base_path, |document| {
+            let mut changed = false;
+            for (old_key, new_key) in [
+                ("prune_max_age_days", "prune.max-age-days"),
+                ("trusted_registries", "trusted-registries"),
+            ] {
+                if document_has(document, new_key) {
+                    changed |= document.remove(old_key).is_some();
+                    continue;
+                }
 
-        let contents = fs::read_to_string(&config_path)?;
-        let Ok(mut table) = contents.parse::<toml::Table>() else {
-            return Ok(());
+                let Some((key, item)) = document.as_table_mut().remove_entry(old_key) else {
+                    continue;
+                };
+
+                move_into(document, new_key, key, item);
+
+                changed = true;
+            }
+            Ok(changed)
+        })
+    }
+}
+
+fn edit_config(
+    base_path: &Path,
+    edit: impl FnOnce(&mut toml_edit::DocumentMut) -> Result<bool>,
+) -> Result<()> {
+    let config_path = base_path.join("config.toml");
+    if !config_path.is_file() {
+        return Ok(());
+    }
+
+    let contents = fs::read_to_string(&config_path)?;
+    let Ok(mut document) = contents.parse::<toml_edit::DocumentMut>() else {
+        return Ok(());
+    };
+
+    if edit(&mut document)? {
+        crate::fs_utils::atomic_write(&config_path, &document.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn document_has(document: &toml_edit::DocumentMut, path: &str) -> bool {
+    let mut segments = path.split('.');
+    let Some(first) = segments.next() else {
+        return false;
+    };
+    let Some(mut item) = document.get(first) else {
+        return false;
+    };
+    for segment in segments {
+        match item.get(segment) {
+            Some(next) => item = next,
+            None => return false,
+        }
+    }
+    true
+}
+
+fn move_into(
+    document: &mut toml_edit::DocumentMut,
+    path: &str,
+    old_key: toml_edit::Key,
+    item: toml_edit::Item,
+) {
+    let mut segments: Vec<&str> = path.split('.').collect();
+    let Some(leaf) = segments.pop() else {
+        return;
+    };
+
+    let prefix = old_key.leaf_decor().prefix().cloned();
+    let mut table = document.as_table_mut();
+
+    for segment in &segments {
+        let is_new = !table.contains_key(segment);
+        let entry = table[*segment].or_insert(toml_edit::table());
+        let Some(next) = entry.as_table_mut() else {
+            return;
         };
 
-        if table.remove("github_token").is_some() {
-            let serialized = toml::to_string(&table)?;
-            fs::write(&config_path, serialized)?;
+        if is_new {
+            next.set_dotted(true);
         }
 
-        Ok(())
+        table = next;
+    }
+
+    table[leaf] = item;
+
+    if let Some(prefix) = prefix
+        && let Some(mut key) = table.key_mut(leaf)
+    {
+        key.leaf_decor_mut().set_prefix(prefix);
     }
 }
 
@@ -402,10 +488,10 @@ mod tests {
             !contents.contains("super-secret"),
             "token value must be removed, got: {contents}"
         );
-        assert!(contents.contains("prune_max_age_days"));
+        assert!(contents.contains("max-age-days = 12"));
 
         let dv = fs::read_to_string(base.join("data_version")).unwrap();
-        assert!(dv.lines().any(|l| l.trim() == "4"));
+        assert!(dv.lines().any(|l| l.trim() == "5"));
     }
 
     #[test]
@@ -418,6 +504,87 @@ mod tests {
 
         assert!(!base.join("config.toml").exists());
         let dv = fs::read_to_string(base.join("data_version")).unwrap();
-        assert!(dv.lines().any(|l| l.trim() == "4"));
+        assert!(dv.lines().any(|l| l.trim() == "5"));
+    }
+
+    #[test]
+    fn migration_v5_moves_keys_under_their_namespace() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+
+        fs::write(
+            base.join("config.toml"),
+            "# Blah blah blah blah.\nprune_max_age_days = 365\ntrusted_registries = [\"https://example.com/reg\"]\n\n\
+             # Work registry.\n[registries.work]\nurl = \"https://example.com/godot\"\n",
+        )
+        .unwrap();
+        fs::write(base.join("data_version"), "4\n").unwrap();
+
+        run_migrations(base).unwrap();
+
+        let contents = fs::read_to_string(base.join("config.toml")).unwrap();
+
+        assert!(!contents.contains("prune_max_age_days"));
+        assert!(!contents.contains("trusted_registries"));
+        assert!(contents.contains("prune.max-age-days = 365"));
+        assert!(contents.contains("trusted-registries = [\"https://example.com/reg\"]"));
+        assert!(contents.contains("# Blah blah blah blah."));
+        assert!(contents.contains("# Work registry."));
+        assert!(contents.contains("[registries.work]"));
+    }
+
+    #[test]
+    fn migration_v5_leaves_an_already_migrated_config_alone() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+        let original = "[prune]\nmax-age-days = 30\n";
+
+        fs::write(base.join("config.toml"), original).unwrap();
+        fs::write(base.join("data_version"), "4\n").unwrap();
+
+        run_migrations(base).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(base.join("config.toml")).unwrap(),
+            original
+        );
+    }
+
+    #[test]
+    fn migration_v5_prefers_the_new_key_when_both_are_present() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+
+        fs::write(
+            base.join("config.toml"),
+            "prune_max_age_days = 365\n\n[prune]\nmax-age-days = 30\n",
+        )
+        .unwrap();
+        fs::write(base.join("data_version"), "4\n").unwrap();
+
+        run_migrations(base).unwrap();
+
+        let contents = fs::read_to_string(base.join("config.toml")).unwrap();
+
+        assert!(!contents.contains("prune_max_age_days"));
+        assert!(contents.contains("max-age-days = 30"));
+        assert!(!contents.contains("365"));
+    }
+
+    #[test]
+    fn migration_v5_leaves_a_malformed_config_alone() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path();
+        let original = "not toml =====\nprune_max_age_days = 365\n";
+
+        fs::write(base.join("config.toml"), original).unwrap();
+        fs::write(base.join("data_version"), "4\n").unwrap();
+
+        run_migrations(base).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(base.join("config.toml")).unwrap(),
+            original
+        );
     }
 }

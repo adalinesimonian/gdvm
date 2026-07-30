@@ -21,7 +21,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use gdvm::app::{Gdvm, InstallOutcome};
-use gdvm::config::Config;
+use gdvm::config::ConfigFile;
 use gdvm::registry::{self, publish};
 use gdvm::version::{Variant, VersionQuery};
 use serial_test::serial;
@@ -62,7 +62,7 @@ fn publish_registry() -> (PathBuf, String) {
 fn publish_local_registry(env: &TestHome) -> (PathBuf, PathBuf, String) {
     let (reg, platform) = publish_registry();
 
-    let mut config = Config::load().unwrap();
+    let mut config = ConfigFile::load().unwrap();
     config
         .add_registry("localreg", &format!("file://{}", reg.display()))
         .unwrap();
@@ -136,7 +136,7 @@ async fn project_gdvm_toml_registry_is_honored_over_machine() {
     let env = TestHome::new();
     let (reg, _platform) = publish_registry();
 
-    let mut config = Config::load().unwrap();
+    let mut config = ConfigFile::load().unwrap();
     config
         .add_registry("proj", "file:///gdvm/does-not-exist")
         .unwrap();
