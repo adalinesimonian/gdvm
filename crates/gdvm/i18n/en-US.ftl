@@ -103,6 +103,10 @@ gdvm-toml-malformed = ignoring { -gdvm-toml } at { $path } because it could not 
 help-diagnose = Verify the installation and report its health.
 diagnose-base-dir = { -gdvm } home: { $path }
 diagnose-healthy = No problems found.
+diagnose-config-malformed = The configuration file at { $path } is not valid TOML, so defaults are in use and { -gdvm } will not write to it: { $error }
+diagnose-config-ok = Configuration file is valid.
+diagnose-config-unreadable = The configuration file at { $path } could not be read, so defaults are in use and { -gdvm } will not write to it: { $error }
+diagnose-config-value-ignored = { $key } in the configuration file could not be used and is being ignored: { $detail }
 diagnose-install-broken = { $version } is missing its executable. Run "{ -gdvm } install" for it to reinstall.
 diagnose-install-ok = { $version } can run.
 diagnose-partial-downloads =
@@ -370,9 +374,9 @@ help-config-get = Get a configuration value
 help-config-set = Set a configuration value
 help-config-unset = Unset a configuration value
 help-config-list = List all configuration values
-help-config-key = The configuration key (e.g., prune.max-age-days)
+help-config-key = The configuration key
 help-config-value = The value to set for the configuration key
-help-config-unset-key = The configuration key to unset (e.g., prune.max-age-days)
+help-config-unset-key = The configuration key to unset
 help-config-show-sensitive = Show sensitive configuration values in plaintext
 help-config-available = List all available configuration keys and their values, including defaults
 warning-setting-sensitive = You are setting a sensitive value which will be stored in plaintext in your home directory.
@@ -382,10 +386,17 @@ config-set-success = Configuration updated successfully.
 config-unset-success = Configuration key { $key } unset successfully.
 config-key-not-set = Configuration key not set.
 config-key-not-set-value = <not set>
-error-unknown-config-key = Unknown configuration key.
 error-invalid-config-subcommand = Invalid config subcommand. Use "get", "set", or "list".
 error-parse-config = Failed to parse configuration file.
 error-parse-config-using-default = Using default configuration values.
+config-file-unreadable = The configuration file at { $path } could not be read.
+config-value-ignored = Ignoring { $key } in the configuration file: { $detail }
+config-problems-multiple =
+    { $count ->
+        [one] There is { $count } problem with the configuration file at { $path }. Run "{ -gdvm } diagnose" to see it.
+       *[other] There are { $count } problems with the configuration file at { $path }. Run "{ -gdvm } diagnose" to see them.
+    }
+error-config-unusable-not-saving = Not writing to the configuration file at { $path }, because gdvm could not read it and would overwrite whatever is in it. Fix or remove the file, then try again.
 
 help-registry = Manage registries to install { -godot } builds from
 help-registry-add = Add a registry

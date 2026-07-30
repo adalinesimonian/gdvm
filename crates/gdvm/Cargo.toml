@@ -80,6 +80,7 @@ tempfile = "=3.27.0"
 # For timestamps:
 jiff = "=0.2.34"
 jiff-icu = "=0.2.2"
+toml_edit = { version = "=0.25.13", features = ["serde"] }
 
 # For starting Godot:
 [target.'cfg(target_os = "windows")'.dependencies]

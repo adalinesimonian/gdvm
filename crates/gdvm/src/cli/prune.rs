@@ -31,8 +31,8 @@ pub(crate) fn sub_prune(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
         dry_run: matches.get_flag("dry-run"),
     };
 
-    let config = config::Config::load().unwrap_or_default();
-    let max_age_secs = config.prune_max_age_days().saturating_mul(24 * 60 * 60);
+    let config = config::ConfigFile::load()?.into_config();
+    let max_age_secs = config.prune.max_age_days().saturating_mul(24 * 60 * 60);
 
     let report = gdvm.pruner().prune(max_age_secs, opts)?;
 

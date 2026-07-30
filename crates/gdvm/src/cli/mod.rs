@@ -19,7 +19,7 @@ use std::io::{self, IsTerminal, Write};
 
 use anyhow::Result;
 use gdvm::app::Gdvm;
-use gdvm::config::Config;
+use gdvm::config::ConfigFile;
 use gdvm::version::VersionQuery;
 use gdvm::{t, terr, ui};
 
@@ -108,7 +108,7 @@ async fn ensure_registry_trusted(
         url = url.as_str()
     ));
 
-    if Config::load()?.is_registry_trusted(&url) {
+    if ConfigFile::load()?.config().is_registry_trusted(&url) {
         return Ok(());
     }
 
@@ -120,8 +120,8 @@ async fn ensure_registry_trusted(
             url = url.as_str()
         ));
         std::thread::sleep(std::time::Duration::from_secs(5));
-        return Config::modify(|config| {
-            config.trust_registry(&url);
+        return ConfigFile::modify(|file| {
+            file.trust_registry(&url);
             Ok(())
         });
     }
@@ -143,8 +143,8 @@ async fn ensure_registry_trusted(
         return Err(terr!("registry-trust-aborted").into());
     }
 
-    Config::modify(|config| {
-        config.trust_registry(&url);
+    ConfigFile::modify(|file| {
+        file.trust_registry(&url);
         Ok(())
     })
 }

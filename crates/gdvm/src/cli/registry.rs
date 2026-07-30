@@ -118,7 +118,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
         Some(("add", sub_m)) => {
             let name = sub_m.get_one::<String>("name").unwrap();
             let url = sub_m.get_one::<String>("url").unwrap();
-            config::Config::modify(|config| config.add_registry(name, url))?;
+            config::ConfigFile::modify(|file| file.add_registry(name, url))?;
             println_i18n!(
                 "registry-added",
                 registry = name.as_str(),
@@ -127,7 +127,7 @@ pub(crate) async fn sub_registry(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()
         }
         Some(("remove", sub_m)) => {
             let name = sub_m.get_one::<String>("name").unwrap();
-            config::Config::modify(|config| config.remove_registry(name))?;
+            config::ConfigFile::modify(|file| file.remove_registry(name))?;
             println_i18n!("registry-removed", registry = name.as_str());
         }
         Some(("list", sub_m)) => {

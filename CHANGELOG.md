@@ -21,6 +21,19 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### New Features
+
+- `gdvm diagnose` now checks the config for problems.
+
+### Fixed
+
+- Configuration settings that gdvm cannot read or parse are no longer silently overwritten.
+- Comments, blank lines, and key ordering in `config.toml` are now preserved when gdvm writes to it.
+
+### Changed
+
+- Keys in `config.toml` are now namespaced, e.g. `prune.max-age-days`.
+
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.15.0...main
 
 ## v0.15.0

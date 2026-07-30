@@ -21,7 +21,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use crate::artifact_cache::ArtifactCache;
-use crate::config::Config;
+use crate::config::ConfigFile;
 use crate::host::{HostPlatform, detect_host};
 use crate::metadata_cache::CacheStore;
 #[cfg(test)]
@@ -159,7 +159,12 @@ impl Gdvm {
         let artifact_cache = ArtifactCache::new(paths.cache_dir().to_path_buf());
         artifact_cache.ensure_dir()?;
 
-        let config = Config::load().unwrap_or_default();
+        post_upgrade::run(paths.base())?;
+
+        let config_file = ConfigFile::load()?;
+        config_file.report_problems();
+
+        let config = config_file.into_config();
         let mut registries = config.registry_pairs();
         let project = project_registry_pairs();
         for conflict in registry_override_conflicts(&registries, &project) {
@@ -185,8 +190,6 @@ impl Gdvm {
             host,
             dotenv_vars: dotenv_vars(),
         };
-
-        post_upgrade::run(gdvm.paths.base())?;
 
         // Report any available upgrade from the last update check.
         if std::env::var_os(Updater::BACKGROUND_CHECK_ENV_VAR).is_none() {

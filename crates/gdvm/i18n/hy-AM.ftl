@@ -121,6 +121,10 @@ gdvm-toml-malformed = { $path }-ի { -gdvm-toml(case: "definite") } անտեսվ
 help-diagnose = Ստուգել տեղադրումը և հաղորդել դրա վիճակը։
 diagnose-base-dir = { -gdvm(case: "genitive") } պանակը՝ { $path }
 diagnose-healthy = Խնդիրներ չեն հայտնաբերվել։
+diagnose-config-malformed = { $path } հասցեի կարգավորման ֆայլը վավեր TOML չէ, ուստի օգտագործվում են լռելյայն արժեքները, և { -gdvm(case: "definite") } դրա մեջ չի գրի․ { $error }
+diagnose-config-ok = Կարգավորման ֆայլը վավեր է։
+diagnose-config-unreadable = { $path } հասցեի կարգավորման ֆայլը հնարավոր չեղավ կարդալ, ուստի օգտագործվում են լռելյայն արժեքները, և { -gdvm(case: "definite") } դրա մեջ չի գրի․ { $error }
+diagnose-config-value-ignored = Կարգավորման ֆայլի { $key } արժեքը հնարավոր չէ օգտագործել և անտեսվում է․ { $detail }
 diagnose-install-broken = { $version }-ը չունի իր գործարկվող ֆայլը։ Գործարկեք «{ -gdvm } install» այդ տարբերակի համար՝ վերատեղադրելու համար։
 diagnose-install-ok = { $version }-ը կարող է գործարկվել։
 diagnose-partial-downloads =
@@ -388,9 +392,9 @@ help-config-get = Ստանալ կարգավորման արժեքը
 help-config-set = Սահմանել կարգավորման արժեքը
 help-config-unset = Հեռացնել կարգավորման արժեքը
 help-config-list = Ցուցադրել բոլոր կարգավորումների արժեքները
-help-config-key = Կարգավորման բանալին (օր․՝ prune.max-age-days)
+help-config-key = Կարգավորման բանալին
 help-config-value = Կարգավորման բանալու համար սահմանվող արժեքը
-help-config-unset-key = Կարգավորման բանալին, որը պետք է հեռացնել (օր․՝ prune.max-age-days)
+help-config-unset-key = Կարգավորման բանալին, որը պետք է հեռացնել
 help-config-show-sensitive = Ցույց տալ զգայուն կարգավորումների արժեքները բաց տեքստով
 help-config-available = Ցուցադրել բոլոր հասանելի կարգավորման բանալիները և դրանց արժեքները, ներառյալ լռելյայնները
 warning-setting-sensitive = Դուք սահմանում եք զգայուն արժեք, որը կպահպանվի բաց տեքստով ձեր գլխավոր թղթապանակում։
@@ -400,10 +404,17 @@ config-set-success = Կարգավորումը հաջողությամբ թարմ�
 config-unset-success = Կարգավորման բանալին { $key } հաջողությամբ հեռացվեց։
 config-key-not-set = Կարգավորման բանալին սահմանված չէ։
 config-key-not-set-value = <սահմանված չէ>
-error-unknown-config-key = Անհայտ կարգավորման բանալի։
 error-invalid-config-subcommand = Անվավեր ենթահրաման config-ի համար։ Օգտագործեք «get», «set» կամ «list»։
 error-parse-config = Չհաջողվեց վերլուծել կարգավորման ֆայլը։
 error-parse-config-using-default = Օգտագործվում են կարգավորման լռելյայն արժեքները։
+config-file-unreadable = { $path } հասցեի կարգավորման ֆայլը հնարավոր չեղավ կարդալ։
+config-value-ignored = Կարգավորման ֆայլում { $key }-ն անտեսվում է․ { $detail }
+config-problems-multiple =
+    { $count ->
+        [one] { $path } հասցեի կարգավորման ֆայլում կա { $count } խնդիր։ Այն տեսնելու համար գործարկեք «{ -gdvm } diagnose»։
+       *[other] { $path } հասցեի կարգավորման ֆայլում կա { $count } խնդիր։ Դրանք տեսնելու համար գործարկեք «{ -gdvm } diagnose»։
+    }
+error-config-unusable-not-saving = { $path } հասցեի կարգավորման ֆայլը չի գրվում, քանի որ { -gdvm(case: "definite") } չկարողացավ կարդալ այն և կջնջեր դրա պարունակությունը։ Ուղղեք կամ հեռացրեք ֆայլը և նորից փորձեք։
 
 help-registry = Կառավարել ռեեստրները, որոնցից տեղադրվում են { -godot(case: "genitive") } կառուցումները
 help-registry-add = Ավելացնել ռեեստր

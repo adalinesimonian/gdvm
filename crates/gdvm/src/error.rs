@@ -108,9 +108,10 @@ pub const ERROR_CODES: &[(&str, &str)] = &[
     // GDVM4xxx: configuration.
     //
     ("error-parse-config", "GDVM4000"),
-    ("error-unknown-config-key", "GDVM4001"),
+    // Removed error-unknown-config-key GDVM4001.
     ("error-config-unknown-key", "GDVM4002"),
     ("error-config-invalid-number", "GDVM4003"),
+    ("error-config-unusable-not-saving", "GDVM4004"),
     //
     // GDVM5xxx: running Godot and project detection.
     //

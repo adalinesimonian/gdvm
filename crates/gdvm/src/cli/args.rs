@@ -73,6 +73,15 @@ fn deprecated_csharp_flag_with_value() -> Arg {
         .long_help(t!("help-run-csharp-long"))
 }
 
+fn config_key_arg(help: impl Into<clap::builder::StyledStr>) -> Arg {
+    Arg::new("key")
+        .required(true)
+        .value_parser(clap::builder::PossibleValuesParser::new(
+            config::ConfigKey::ALL.iter().map(|key| key.as_str()),
+        ))
+        .help(help)
+}
+
 /// Build the gdvm command-line interface.
 pub(crate) fn build_cli() -> Command {
     Command::new("gdvm")
@@ -440,12 +449,12 @@ pub(crate) fn build_cli() -> Command {
                     Command::new("get")
                         .about(t!("help-config-get"))
                         .arg(format_flag())
-                        .arg(Arg::new("key").required(true).help(t!("help-config-key"))),
+                        .arg(config_key_arg(t!("help-config-key"))),
                 )
                 .subcommand(
                     Command::new("set")
                         .about(t!("help-config-set"))
-                        .arg(Arg::new("key").required(true).help(t!("help-config-key")))
+                        .arg(config_key_arg(t!("help-config-key")))
                         .arg(
                             Arg::new("value")
                                 .required(false)
@@ -453,11 +462,9 @@ pub(crate) fn build_cli() -> Command {
                         ),
                 )
                 .subcommand(
-                    Command::new("unset").about(t!("help-config-unset")).arg(
-                        Arg::new("key")
-                            .required(true)
-                            .help(t!("help-config-unset-key")),
-                    ),
+                    Command::new("unset")
+                        .about(t!("help-config-unset"))
+                        .arg(config_key_arg(t!("help-config-unset-key"))),
                 )
                 .subcommand(
                     Command::new("list")

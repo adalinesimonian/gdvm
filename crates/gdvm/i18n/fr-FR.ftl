@@ -101,6 +101,10 @@ gdvm-toml-malformed = { -gdvm-toml } à { $path } ignoré, car il n'a pas pu êt
 help-diagnose = Vérifier l'installation et signaler son état.
 diagnose-base-dir = Répertoire { -gdvm } : { $path }
 diagnose-healthy = Aucun problème détecté.
+diagnose-config-malformed = Le fichier de configuration à { $path } n’est pas du TOML valide, les valeurs par défaut sont donc utilisées et { -gdvm } n’y écrira pas : { $error }
+diagnose-config-ok = Le fichier de configuration est valide.
+diagnose-config-unreadable = Le fichier de configuration à { $path } n’a pas pu être lu, les valeurs par défaut sont donc utilisées et { -gdvm } n’y écrira pas : { $error }
+diagnose-config-value-ignored = { $key } dans le fichier de configuration n’a pas pu être utilisé et est ignoré : { $detail }
 diagnose-install-broken = { $version } n’a pas d’exécutable. Exécutez « { -gdvm } install » pour cette version afin de la réinstaller.
 diagnose-install-ok = { $version } peut être lancé.
 diagnose-partial-downloads =
@@ -368,9 +372,9 @@ help-config-get = Obtenir une valeur de configuration
 help-config-set = Définir une valeur de configuration
 help-config-unset = Supprimer une valeur de configuration
 help-config-list = Lister toutes les valeurs de configuration
-help-config-key = La clé de configuration (ex., prune.max-age-days)
+help-config-key = La clé de configuration
 help-config-value = La valeur à définir pour la clé de configuration
-help-config-unset-key = La clé de configuration à supprimer (ex., prune.max-age-days)
+help-config-unset-key = La clé de configuration à supprimer
 help-config-show-sensitive = Rendre visible les valeurs de configuration sensibles
 help-config-available = Lister toutes les clés de configuration disponibles et leurs valeurs, y compris les valeurs par défaut
 warning-setting-sensitive = Vous définissez une valeur sensible qui sera stockée en texte brut dans votre répertoire personnel.
@@ -380,10 +384,17 @@ config-set-success = Configuration mise à jour avec succès.
 config-unset-success = Clé de configuration { $key } supprimée avec succès.
 config-key-not-set = Clé de configuration non définie.
 config-key-not-set-value = <non défini>
-error-unknown-config-key = Clé de configuration inconnue.
 error-invalid-config-subcommand = Sous-commande de configuration invalide. Utilisez « get », « set », ou « list ».
 error-parse-config = Échec de l'analyse du fichier de configuration.
 error-parse-config-using-default = Utilisation des valeurs de configuration par défaut.
+config-file-unreadable = Le fichier de configuration à { $path } n’a pas pu être lu.
+config-value-ignored = { $key } est ignoré dans le fichier de configuration : { $detail }
+config-problems-multiple =
+    { $count ->
+        [one] Il y a { $count } problème dans le fichier de configuration à { $path }. Exécutez « { -gdvm } diagnose » pour le voir.
+       *[other] Il y a { $count } problèmes dans le fichier de configuration à { $path }. Exécutez « { -gdvm } diagnose » pour les voir.
+    }
+error-config-unusable-not-saving = Écriture dans le fichier de configuration à { $path } annulée, car { -gdvm } n’a pas pu le lire et écraserait son contenu. Corrigez ou supprimez le fichier, puis réessayez.
 
 help-registry = Gérer les registres depuis lesquels installer des builds de { -godot }
 help-registry-add = Ajouter un registre
