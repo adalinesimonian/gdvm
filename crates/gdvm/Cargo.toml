@@ -89,7 +89,7 @@ winapi = { version = "=0.3.9", features = ["winbase"] }
 daemonize = "=0.5.0"
 
 [dev-dependencies]
-serial_test = "=3.5.0"
+serial_test = "=4.0.1"
 zip = "=8.6.0"
 
 [build-dependencies]
