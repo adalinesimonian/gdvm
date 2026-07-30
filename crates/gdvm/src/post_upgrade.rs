@@ -45,11 +45,54 @@ struct PostUpgradeAction {
     run: fn(&Path) -> Result<()>,
 }
 
-const ACTIONS: &[PostUpgradeAction] = &[PostUpgradeAction {
-    id: "reinstall-shims",
-    stage: Stage::BeforeMigrations,
-    run: crate::shims::ensure,
-}];
+const ACTIONS: &[PostUpgradeAction] = &[
+    PostUpgradeAction {
+        id: "reinstall-shims",
+        stage: Stage::BeforeMigrations,
+        run: crate::shims::ensure,
+    },
+    PostUpgradeAction {
+        id: "revoke-everyone-acl",
+        stage: Stage::BeforeMigrations,
+        run: revoke_everyone_acl,
+    },
+];
+
+/// Remove the Everyone permissions the installer used to set on the binary on
+/// Windows.
+#[cfg(target_os = "windows")]
+fn revoke_everyone_acl(base_path: &Path) -> Result<()> {
+    use std::os::windows::process::CommandExt;
+    use std::process::{Command, Stdio};
+
+    use winapi::um::winbase::CREATE_NO_WINDOW;
+
+    let exe_path = base_path.join("bin").join("gdvm.exe");
+
+    if !exe_path.is_file() {
+        return Ok(());
+    }
+
+    // Call icalcs explicitly from System32 so it can't be overridden in PATH.
+    let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".to_string());
+    let icacls = Path::new(&system_root).join(r"System32\icacls.exe");
+
+    let _ = Command::new(icacls)
+        .arg(&exe_path)
+        .args(["/remove:g", "*S-1-1-0"]) // SID for Everyone.
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .creation_flags(CREATE_NO_WINDOW)
+        .status();
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn revoke_everyone_acl(_base_path: &Path) -> Result<()> {
+    Ok(())
+}
 
 /// Run post-upgrade actions and migrations.
 pub fn run(base_path: &Path) -> Result<()> {

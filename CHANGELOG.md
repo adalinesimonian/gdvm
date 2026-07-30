@@ -27,6 +27,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ### Fixed
 
+- The Windows install script no longer grants `Everyone` full control over `gdvm.exe`. Upgrading gdvm will now revoke that permission if it was previously granted.
 - Configuration settings that gdvm cannot read or parse are no longer silently overwritten.
 - Comments, blank lines, and key ordering in `config.toml` are now preserved when gdvm writes to it.
 
