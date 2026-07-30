@@ -155,11 +155,11 @@ fn registry_override_conflicts(
 impl Gdvm {
     /// Create a new Gdvm instance and set up the installation and cache paths.
     pub async fn new() -> Result<Self> {
-        let paths = GdvmPaths::new()?;
+        let config = Config::load().unwrap_or_default();
+        let paths = GdvmPaths::new(&config)?;
         let artifact_cache = ArtifactCache::new(paths.cache_dir().to_path_buf());
         artifact_cache.ensure_dir()?;
 
-        let config = Config::load().unwrap_or_default();
         let mut registries = config.registry_pairs();
         let project = project_registry_pairs();
         for conflict in registry_override_conflicts(&registries, &project) {

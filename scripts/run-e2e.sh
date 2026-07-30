@@ -646,6 +646,34 @@ TEST_SCRIPT
 
 test "Install Godot 4.3" gdvm install 4.3
 
+test "Install uses a custom install path from config" <<'TEST_SCRIPT'
+custom_installs="$HOME/.gdvm-e2e-installs/custom_installs"
+custom_cache="$HOME/.gdvm-e2e-installs/custom_cache"
+rm -rf "$HOME/.gdvm-e2e-installs"
+mkdir -p "$custom_installs" "$custom_cache"
+
+gdvm config set install.path "$custom_installs"
+gdvm config set cache.path "$custom_cache"
+
+gdvm install 4.3 >/tmp/gdvm-custom-path.log 2>&1
+
+assert_dir_exists "$custom_installs" "custom install directory was not created"
+assert_dir_exists "$custom_cache" "custom cache directory was not created"
+assert_path_absent "$HOME/.gdvm/installs/default/4.3-stable" \
+    "install unexpectedly ended up in the default home installs directory"
+
+install_dir="$(find "$custom_installs" -type d -path '*/default/4.3-stable' | head -n 1)"
+if [[ -z "$install_dir" ]]; then
+    fail "Godot install was not found under the configured install path"
+fi
+assert_dir_exists "$install_dir" "Godot install directory was not created"
+
+cat /tmp/gdvm-custom-path.log
+gdvm remove 4.3 --yes
+gdvm config unset install.path
+gdvm config unset cache.path
+TEST_SCRIPT
+
 test "A stale partial download is safely replaced on the next install" <<'TEST_SCRIPT'
 cache_dir="$HOME/.gdvm/cache"
 archive="$(ls "$cache_dir"/*.zip | head -1)"
