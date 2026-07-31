@@ -1,0 +1,166 @@
+# SPDX-FileCopyrightText: Copyright (C) 2026 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      gdvm: ${{ steps.filter.outputs.gdvm }}
+      site: ${{ steps.filter.outputs.site }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Determine affected areas
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          run_all() {
+            echo "::notice::$1 Running all checks."
+            echo "gdvm=true" >> "$GITHUB_OUTPUT"
+            echo "site=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            run_all "Manually triggered."
+          fi
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            run_all "No base commit to compare against."
+          fi
+
+          if ! files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA"); then
+            run_all "Could not diff $BASE_SHA against $HEAD_SHA."
+          fi
+
+          echo "Changed files:"
+          echo "$files"
+
+          gdvm=false
+          site=false
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+
+            case "$file" in
+              # The site inlines the install scripts at build time.
+              scripts/install.sh | scripts/install.ps1)
+                site=true
+                ;;
+              .github/workflows/ci.yml | .github/workflows/site.yml)
+                gdvm=true
+                site=true
+                ;;
+              gh-pages/*)
+                site=true
+                ;;
+              docs/* | *.md)
+                ;;
+              *)
+                gdvm=true
+                ;;
+            esac
+          done <<< "$files"
+
+          echo "gdvm=$gdvm" >> "$GITHUB_OUTPUT"
+          echo "site=$site" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "| Area | Checks run |"
+            echo "| --- | --- |"
+            echo "| gdvm | $gdvm |"
+            echo "| Site | $site |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  licences:
+    name: Lint licences
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint licences
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
+
+  gdvm:
+    name: gdvm
+    needs: changes
+    if: ${{ needs.changes.outputs.gdvm == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build-and-test.yml
+
+  site:
+    name: Site
+    needs: changes
+    if: ${{ needs.changes.outputs.site == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/site.yml
+
+  required-checks:
+    name: Required checks
+    needs: [changes, licences, gdvm, site]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+
+          unsuccessful=$(
+            echo "$RESULTS" |
+              jq -r 'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key'
+          )
+
+          if [ -n "$unsuccessful" ]; then
+            echo "::error::The following checks did not succeed: $(echo "$unsuccessful" | tr '\n' ' ')"
+            exit 1
+          fi
+
+          echo "All required checks passed."

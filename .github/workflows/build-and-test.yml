@@ -21,18 +21,6 @@ permissions:
   contents: read
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - "gh-pages/**"
-      - "*.md"
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - "gh-pages/**"
-      - "*.md"
   workflow_call:
     inputs:
       ref:
@@ -44,10 +32,6 @@ on:
         required: false
         type: boolean
         default: false
-
-concurrency:
-  group: ${{ github.event_name }}-${{ github.event.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-linux-x86_64:

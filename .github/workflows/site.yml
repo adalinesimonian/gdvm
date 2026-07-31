@@ -1,0 +1,111 @@
+# SPDX-FileCopyrightText: Copyright (C) 2026 Adaline Simonian
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This file is part of gdvm.
+#
+# gdvm is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# gdvm is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
+name: Site
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Ref to check out and build. Defaults to the triggering ref."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and check site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          cache-dependency-path: gh-pages/yarn.lock
+          node-version: latest
+          cache: yarn
+
+      - name: Install dependencies
+        working-directory: gh-pages
+        run: yarn --immutable
+
+      - name: Check types
+        working-directory: gh-pages
+        run: yarn typecheck
+
+      - name: Build site
+        working-directory: gh-pages
+        run: yarn build
+
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+
+          dist=gh-pages/dist/client
+          status=0
+
+          fail() {
+            echo "::error::$1"
+            status=1
+          }
+
+          [ -s "$dist/index.html" ] || fail "$dist/index.html is missing or empty."
+
+          while IFS= read -r asset; do
+            served="$dist/${asset#gh-pages/public/}"
+
+            if [ ! -s "$served" ]; then
+              fail "$asset was not emitted to $served."
+            elif ! cmp -s "$asset" "$served"; then
+              fail "$served does not match $asset."
+            fi
+          done < <(find gh-pages/public -type f)
+
+          for pair in install.sh:install.sh install.ps1:install.ps1 install.ps1:install.ps1.txt; do
+            source="scripts/${pair%%:*}"
+            served="$dist/${pair##*:}"
+
+            if [ ! -s "$served" ]; then
+              fail "$source was not emitted to $served."
+            elif ! cmp -s "$source" "$served"; then
+              fail "$served does not match $source."
+            fi
+          done
+
+          if [ -s "$dist/index.html" ]; then
+            body=$(
+              sed -e 's/<script[^>]*>.*<\/script>//g' -e 's/<[^>]*>/ /g' "$dist/index.html" |
+                tr -s '[:space:]' ' ' |
+                sed -e 's/^ //' -e 's/ $//'
+            )
+            title=$(grep -o '<title>[^<]*</title>' "$dist/index.html" | sed -e 's/<[^>]*>//g' || true)
+
+            [ -n "$title" ] || fail "index.html has no page title, prerendering may have failed."
+            [ -n "$body" ] || fail "index.html has no rendered text, prerendering may have failed."
+          fi
+
+          exit $status

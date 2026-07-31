@@ -88,9 +88,6 @@ jobs:
       - name: Install nightly rustfmt
         run: rustup toolchain install nightly --component rustfmt --profile minimal --no-self-update
 
-      - name: Setup UV
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-
       - name: Install dependencies (Linux x86_32)
         if: inputs.os == 'ubuntu-latest' && inputs.target == 'i686-unknown-linux-gnu'
         run: |
@@ -128,11 +125,6 @@ jobs:
             -D clippy::suspicious -D clippy::style -D clippy::complexity \
             -D clippy::perf -D clippy::dbg_macro -D clippy::todo \
             -D clippy::unimplemented -D warnings
-
-      - name: Lint licences
-        if: success() || failure()
-        working-directory: ${{ env.WORKSPACE_DIR }}
-        run: uvx reuse[charset-normalizer] lint
 
       - name: Run unit and integration tests
         if: (success() || failure())
