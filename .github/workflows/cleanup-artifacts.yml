@@ -19,7 +19,7 @@ name: Cleanup Artifacts
 
 on:
   workflow_run:
-    workflows: ["Build and Test"]
+    workflows: ["CI"]
     types: [completed]
   workflow_call:
 
