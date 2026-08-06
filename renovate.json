@@ -9,5 +9,6 @@
       "automerge": true
     }
   ],
-  "baseBranchPatterns": ["main", "registry"]
+  "baseBranchPatterns": ["main", "registry"],
+  "prConcurrentLimit": 1
 }
