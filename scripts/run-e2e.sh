@@ -407,12 +407,30 @@ assert_run_fails_with() {
     return 1
 }
 
+assert_exit_code() {
+    local expected="$1"
+    shift
+    [[ "${1:-}" == "--" ]] && shift
+
+    local output status=0
+    output="$("$@" 2>&1)" || status=$?
+    [[ "$status" -eq "$expected" ]] && return 0
+
+    _assert_header "assert_exit_code" ""
+    _assert_kv "command" "$*"
+    _assert_kv "expected exit status" "$expected"
+    _assert_kv "actual exit status" "$status"
+    _assert_kv "output" "$output"
+    return 1
+}
+
 export -f print_color
 export -f _assert_emit _assert_header _assert_kv fail
 export -f assert_eq assert_ne assert_contains assert_not_contains
 export -f assert_matches assert_not_matches assert_imatches
 export -f assert_path_exists assert_path_absent assert_file_exists assert_dir_exists
 export -f assert_succeeds assert_fails assert_run_contains assert_run_fails_with
+export -f assert_exit_code
 
 test() {
     local desc="$1"
@@ -951,6 +969,56 @@ echo "Script output: $output"
 
 assert_contains "$output" "ENV_VALUE=hello_from_dotenv" \
     "expected env var value not found in Godot output"
+TEST_SCRIPT
+
+test "Godot's exit code is propagated by gdvm run" <<'TEST_SCRIPT'
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+cd "$tmpdir"
+
+gdvm pin 4.3.0
+
+cat > exit_ok.gd << 'GDSCRIPT'
+extends SceneTree
+
+func _initialize():
+    quit(0)
+GDSCRIPT
+
+cat > exit_fail.gd << 'GDSCRIPT'
+extends SceneTree
+
+func _initialize():
+    quit(123)
+GDSCRIPT
+
+assert_exit_code 0 -- gdvm run --console=true -- --headless --script exit_ok.gd
+assert_exit_code 123 -- gdvm run --console=true -- --headless --script exit_fail.gd
+TEST_SCRIPT
+
+test "Godot's exit code is propagated by shims" <<'TEST_SCRIPT'
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+cd "$tmpdir"
+
+gdvm pin 4.3.0
+
+cat > exit_ok.gd << 'GDSCRIPT'
+extends SceneTree
+
+func _initialize():
+    quit(0)
+GDSCRIPT
+
+cat > exit_fail.gd << 'GDSCRIPT'
+extends SceneTree
+
+func _initialize():
+    quit(123)
+GDSCRIPT
+
+assert_exit_code 0 -- godot_shim --headless --script exit_ok.gd
+assert_exit_code 123 -- godot_shim --headless --script exit_fail.gd
 TEST_SCRIPT
 
 test "Link 4.3.0 to a custom path and run it" <<'TEST_SCRIPT'

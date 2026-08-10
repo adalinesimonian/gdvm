@@ -202,7 +202,7 @@ impl<'a> Launcher<'a> {
         registry: Option<&str>,
         console: bool,
         godot_args: &[String],
-    ) -> Result<()> {
+    ) -> Result<i32> {
         let path = self
             .library()
             .get_executable_path(gv, variant, registry, console)?;
@@ -214,36 +214,38 @@ impl<'a> Launcher<'a> {
 
         if console {
             // Run the process attached to the terminal and wait for it to exit
-            std::process::Command::new(&path)
+            let status = std::process::Command::new(&path)
                 .args(godot_args)
                 .envs(dotenv_vars)
                 .stdin(std::process::Stdio::inherit())
                 .stdout(std::process::Stdio::inherit())
                 .stderr(std::process::Stdio::inherit())
                 .status()?;
-        } else {
-            // Detached process configuration
-            #[cfg(target_family = "unix")]
-            {
-                Daemonize::new()
-                    .start()
-                    .map_err(|e| crate::terr!("error-starting-godot").with_source(e))?;
-                std::process::Command::new(&path)
-                    .args(godot_args)
-                    .envs(dotenv_vars)
-                    .spawn()?;
-            }
 
-            #[cfg(target_family = "windows")]
-            {
-                crate::process_utils::spawn_detached(
-                    std::process::Command::new(&path)
-                        .args(godot_args)
-                        .envs(dotenv_vars),
-                )?;
-            }
+            return Ok(crate::process_utils::child_exit_code(status));
         }
 
-        Ok(())
+        // Detached process configuration
+        #[cfg(target_family = "unix")]
+        {
+            Daemonize::new()
+                .start()
+                .map_err(|e| crate::terr!("error-starting-godot").with_source(e))?;
+            std::process::Command::new(&path)
+                .args(godot_args)
+                .envs(dotenv_vars)
+                .spawn()?;
+        }
+
+        #[cfg(target_family = "windows")]
+        {
+            crate::process_utils::spawn_detached(
+                std::process::Command::new(&path)
+                    .args(godot_args)
+                    .envs(dotenv_vars),
+            )?;
+        }
+
+        Ok(0)
     }
 }

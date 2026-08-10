@@ -24,17 +24,22 @@ mod cli;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    if let Err(err) = run().await {
-        gdvm::ui::report_error(&err);
-        std::process::exit(1);
+    match run().await {
+        Ok(0) => {}
+        Ok(code) => std::process::exit(code),
+        Err(err) => {
+            gdvm::ui::report_error(&err);
+            std::process::exit(1);
+        }
     }
 }
 
-async fn run() -> Result<()> {
+async fn run() -> Result<i32> {
     I18n::init()?;
 
     if std::env::var_os(gdvm::app::Updater::BACKGROUND_CHECK_ENV_VAR).is_some() {
-        return Gdvm::new().await?.updater().run_background_check().await;
+        Gdvm::new().await?.updater().run_background_check().await?;
+        return Ok(0);
     }
 
     // Detect if running through "godot" or "godot_console" shim.
@@ -61,7 +66,7 @@ async fn run() -> Result<()> {
             .ok()
             .filter(|v| !v.trim().is_empty());
 
-        if let Err(err) = cli::sub_run_inner(cli::RunConfig {
+        match cli::sub_run_inner(cli::RunConfig {
             gdvm: &Gdvm::new().await?,
             version_input: env_version.as_ref(),
             variant: None,
@@ -73,23 +78,25 @@ async fn run() -> Result<()> {
         })
         .await
         {
-            gdvm::ui::report_error(&err);
+            Ok(code) => return Ok(code),
+            Err(err) => {
+                gdvm::ui::report_error(&err);
 
-            // Wait for 5 seconds before exiting on Windows to allow the user to read the error.
-            // On other platforms, the wrapper script will display the error message in a dialog.
-            #[cfg(target_os = "windows")]
-            std::thread::sleep(std::time::Duration::from_secs(5));
+                // Wait for 5 seconds before exiting on Windows to allow the user to read the error.
+                // On other platforms, the wrapper script will display the error message in a dialog.
+                #[cfg(target_os = "windows")]
+                std::thread::sleep(std::time::Duration::from_secs(5));
 
-            std::process::exit(1);
+                std::process::exit(1);
+            }
         }
-
-        return Ok(());
     }
 
     let matches = cli::build_cli().get_matches();
 
     if let Some(("completions", sub_m)) = matches.subcommand() {
-        return cli::sub_completions(sub_m);
+        cli::sub_completions(sub_m)?;
+        return Ok(0);
     }
 
     if matches.subcommand_name() == Some("diagnose") {
@@ -98,12 +105,14 @@ async fn run() -> Result<()> {
 
     let gdvm = Gdvm::new().await?;
 
+    let mut exit_code = 0;
+
     // Match the subcommand and call the appropriate function
     match matches.subcommand() {
         Some(("install", sub_m)) => cli::sub_install(&gdvm, sub_m).await?,
         Some(("diagnose", sub_m)) => cli::sub_diagnose(&gdvm, sub_m).await?,
         Some(("list", sub_m)) => cli::sub_list(&gdvm, sub_m)?,
-        Some(("run", sub_m)) => cli::sub_run(&gdvm, sub_m).await?,
+        Some(("run", sub_m)) => exit_code = cli::sub_run(&gdvm, sub_m).await?,
         Some(("show", sub_m)) => cli::sub_show(&gdvm, sub_m).await?,
         Some(("info", sub_m)) => cli::sub_info(&gdvm, sub_m).await?,
         Some(("cache-path", sub_m)) => cli::sub_cache_path(&gdvm, sub_m).await?,
@@ -121,5 +130,5 @@ async fn run() -> Result<()> {
         _ => {}
     }
 
-    Ok(())
+    Ok(exit_code)
 }

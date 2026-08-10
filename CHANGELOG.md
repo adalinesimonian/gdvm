@@ -27,6 +27,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ### Fixed
 
+- gdvm no longer swallows Godot's exit code when running it attached to the console, and instead exits with whatever exit code Godot exited with.
 - The Windows install script no longer grants `Everyone` full control over `gdvm.exe`. Upgrading gdvm will now revoke that permission if it was previously granted.
 - Configuration settings that gdvm cannot read or parse are no longer silently overwritten.
 - Comments, blank lines, and key ordering in `config.toml` are now preserved when gdvm writes to it.
