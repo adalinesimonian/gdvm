@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.16.0...main
+
+## v0.16.0
+
 ### New Features
 
 - `gdvm diagnose` now checks the config for problems.
@@ -36,7 +40,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 - Keys in `config.toml` are now namespaced, e.g. `prune.max-age-days`.
 
-**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.15.0...main
+**Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.15.0...v0.16.0
 
 ## v0.15.0
 
