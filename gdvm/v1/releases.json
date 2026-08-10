@@ -2,6 +2,101 @@
 	"schema": 1,
 	"releases": [
 		{
+			"version": "0.16.0",
+			"tag": "v0.16.0",
+			"prerelease": false,
+			"binaries": {
+				"aarch64-apple-darwin": {
+					"filename": "gdvm-aarch64-apple-darwin",
+					"size": 13623984,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-aarch64-apple-darwin"
+					],
+					"sha256": "99d95804d407e626d4762a809282479c1a3339a0c1343d5427a5611842ac4d7d",
+					"provenance": {
+						"attestation_url": "v0.16.0/99d95804d407e626d4762a809282479c1a3339a0c1343d5427a5611842ac4d7d.jsonl"
+					}
+				},
+				"aarch64-pc-windows-msvc": {
+					"filename": "gdvm-aarch64-pc-windows-msvc.exe",
+					"size": 11226960,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-aarch64-pc-windows-msvc.exe"
+					],
+					"sha256": "7a16f3997215133bebde38508addb863c5ba9c7eaab662d42e39cc3e20614815",
+					"provenance": {
+						"attestation_url": "v0.16.0/7a16f3997215133bebde38508addb863c5ba9c7eaab662d42e39cc3e20614815.jsonl"
+					}
+				},
+				"aarch64-unknown-linux-gnu": {
+					"filename": "gdvm-aarch64-unknown-linux-gnu",
+					"size": 15390768,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-aarch64-unknown-linux-gnu"
+					],
+					"sha256": "a3fed362d567abac23aab445e544bfbbd7ed93c0f4571e7b470d96d73a528aa3",
+					"provenance": {
+						"attestation_url": "v0.16.0/a3fed362d567abac23aab445e544bfbbd7ed93c0f4571e7b470d96d73a528aa3.jsonl"
+					}
+				},
+				"i686-pc-windows-msvc": {
+					"filename": "gdvm-i686-pc-windows-msvc.exe",
+					"size": 10625360,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-i686-pc-windows-msvc.exe"
+					],
+					"sha256": "32194419becd0ac32ad52dde25b12364ee0705b28b19bc06d3c1690dae6cc995",
+					"provenance": {
+						"attestation_url": "v0.16.0/32194419becd0ac32ad52dde25b12364ee0705b28b19bc06d3c1690dae6cc995.jsonl"
+					}
+				},
+				"i686-unknown-linux-gnu": {
+					"filename": "gdvm-i686-unknown-linux-gnu",
+					"size": 15764800,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-i686-unknown-linux-gnu"
+					],
+					"sha256": "19f80110acb45a13da5fafb2f733fb5675dc313ecb565358efc6f72eaaaf0065",
+					"provenance": {
+						"attestation_url": "v0.16.0/19f80110acb45a13da5fafb2f733fb5675dc313ecb565358efc6f72eaaaf0065.jsonl"
+					}
+				},
+				"x86_64-apple-darwin": {
+					"filename": "gdvm-x86_64-apple-darwin",
+					"size": 15149632,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-x86_64-apple-darwin"
+					],
+					"sha256": "fc94c44afe2276734f9901e144979796f331d107a53470c955f0fef46e3ac332",
+					"provenance": {
+						"attestation_url": "v0.16.0/fc94c44afe2276734f9901e144979796f331d107a53470c955f0fef46e3ac332.jsonl"
+					}
+				},
+				"x86_64-pc-windows-msvc": {
+					"filename": "gdvm-x86_64-pc-windows-msvc.exe",
+					"size": 13304144,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-x86_64-pc-windows-msvc.exe"
+					],
+					"sha256": "9be1b8356926409c57a40caff9e615f01fc9707e616ce3a19d0d2a9c4154ee8d",
+					"provenance": {
+						"attestation_url": "v0.16.0/9be1b8356926409c57a40caff9e615f01fc9707e616ce3a19d0d2a9c4154ee8d.jsonl"
+					}
+				},
+				"x86_64-unknown-linux-gnu": {
+					"filename": "gdvm-x86_64-unknown-linux-gnu",
+					"size": 16708784,
+					"urls": [
+						"https://github.com/adalinesimonian/gdvm/releases/download/v0.16.0/gdvm-x86_64-unknown-linux-gnu"
+					],
+					"sha256": "271b1cf8d7afec42110c560c31ce5038d00717a6830a9241ff93fe21df64f927",
+					"provenance": {
+						"attestation_url": "v0.16.0/271b1cf8d7afec42110c560c31ce5038d00717a6830a9241ff93fe21df64f927.jsonl"
+					}
+				}
+			}
+		},
+		{
 			"version": "0.15.0",
 			"tag": "v0.15.0",
 			"prerelease": false,
@@ -2100,5 +2195,5 @@
 			}
 		}
 	],
-	"updated_at": "2026-07-18T15:42:35.265Z"
+	"updated_at": "2026-08-10T16:52:46.122Z"
 }
