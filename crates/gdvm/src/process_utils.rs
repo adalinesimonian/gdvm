@@ -16,7 +16,21 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 use std::io;
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
+
+/// Get the exit code of a child process.
+pub fn child_exit_code(status: ExitStatus) -> i32 {
+    #[cfg(target_family = "unix")]
+    {
+        use std::os::unix::process::ExitStatusExt;
+
+        if let Some(signal) = status.signal() {
+            return 128 + signal;
+        }
+    }
+
+    status.code().unwrap_or(1)
+}
 
 /// Spawn `command` detached from the current process.
 pub fn spawn_detached(command: &mut Command) -> io::Result<()> {

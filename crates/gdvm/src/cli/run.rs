@@ -25,7 +25,7 @@ use super::link::collect_possible_paths;
 use super::{VersionRequest, ensure_registry_trusted, keyword_to_version_filter};
 
 /// Handle the 'run' subcommand
-pub(crate) async fn sub_run(gdvm: &Gdvm, matches: &ArgMatches) -> Result<()> {
+pub(crate) async fn sub_run(gdvm: &Gdvm, matches: &ArgMatches) -> Result<i32> {
     // Capture args after "--" to pass directly to child
     let raw_args = match std::env::args().position(|x| x == "--") {
         Some(pos) => std::env::args().skip(pos + 1).collect(),
@@ -67,7 +67,7 @@ pub(crate) struct RunConfig<'a> {
 }
 
 /// Run the Godot executable
-pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
+pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<i32> {
     let RunConfig {
         gdvm,
         version_input,
@@ -123,7 +123,5 @@ pub(crate) async fn sub_run_inner(config: RunConfig<'_>) -> Result<()> {
         resolved.registry.as_deref(),
         console,
         raw_args,
-    )?;
-
-    Ok(())
+    )
 }
