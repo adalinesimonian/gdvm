@@ -21,7 +21,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use crate::artifact_cache::ArtifactCache;
-use crate::config::ConfigFile;
+use crate::config::{Config, ConfigFile};
 use crate::host::{HostPlatform, detect_host};
 use crate::metadata_cache::CacheStore;
 #[cfg(test)]
@@ -65,6 +65,8 @@ pub struct Gdvm {
     host: HostPlatform,
     /// Env vars from `.env` for passing to Godot.
     dotenv_vars: Vec<(String, String)>,
+    /// Machine-level configuration.
+    config: Config,
 }
 
 /// Get env vars from `.env` to pass to Godot.
@@ -189,6 +191,7 @@ impl Gdvm {
             catalogs,
             host,
             dotenv_vars: dotenv_vars(),
+            config,
         };
 
         // Report any available upgrade from the last update check.
@@ -238,6 +241,11 @@ impl Gdvm {
     /// The gdvm base directory.
     pub fn base_path(&self) -> &std::path::Path {
         self.paths.base()
+    }
+
+    /// Machine-level configuration.
+    pub fn config(&self) -> &Config {
+        &self.config
     }
 
     /// The number of partial download files currently in the cache.

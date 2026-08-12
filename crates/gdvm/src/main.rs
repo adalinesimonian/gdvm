@@ -54,11 +54,14 @@ async fn run() -> Result<i32> {
     if exe_name.contains("godot") {
         // Forward all args (skip clap) and treat it like "gdvm run"
 
+        let gdvm = Gdvm::new().await?;
+
         #[cfg(target_os = "windows")]
-        let console_mode = exe_name.contains("console");
+        let console_mode =
+            exe_name.contains("console") || gdvm.config().godot.launch_mode().attaches_console();
 
         #[cfg(not(target_os = "windows"))]
-        let console_mode = true;
+        let console_mode = gdvm.config().godot.launch_mode().attaches_console();
 
         // Pass all arguments to Godot
         let args: Vec<String> = std::env::args().skip(1).collect();
@@ -67,7 +70,7 @@ async fn run() -> Result<i32> {
             .filter(|v| !v.trim().is_empty());
 
         match cli::sub_run_inner(cli::RunConfig {
-            gdvm: &Gdvm::new().await?,
+            gdvm: &gdvm,
             version_input: env_version.as_ref(),
             variant: None,
             console: console_mode,

@@ -19,9 +19,10 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use strum::{AsRefStr, EnumString, VariantNames};
 
 use super::RegistryConfig;
-use super::value::{ConfigValue, IsEmpty, ValueSource, is_empty};
+use super::value::{ConfigEnum, ConfigValue, IsEmpty, ValueSource, is_empty};
 use crate::terr;
 
 /// Schema for the config file. `tables` are settings the user can change with
@@ -269,8 +270,56 @@ macro_rules! config_schema {
 /// for pruning, unless `prune.max-age-days` is configured.
 pub const DEFAULT_PRUNE_MAX_AGE_DAYS: u64 = 30;
 
+/// How Godot is launched by default.
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    EnumString,
+    AsRefStr,
+    VariantNames,
+)]
+#[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
+pub enum GodotLaunchMode {
+    /// Attach Godot to the console and wait for it to exit.
+    Attached,
+    /// Launch Godot detached from the console and return immediately.
+    Detached,
+    /// Follow Godot's platform convention, detached on Windows and attached on
+    /// other platforms.
+    #[default]
+    PlatformDefault,
+}
+
+impl GodotLaunchMode {
+    /// How Godot is launched by default.
+    pub const fn attaches_console(self) -> bool {
+        match self {
+            Self::Attached => true,
+            Self::Detached => false,
+            Self::PlatformDefault => !cfg!(target_os = "windows"),
+        }
+    }
+}
+
+impl ConfigEnum for GodotLaunchMode {}
+
 config_schema! {
     tables {
+        /// Settings for launching Godot.
+        "godot" => godot: GodotConfig {
+            /// How Godot is launched by default.
+            GodotLaunchMode = "launch-mode" => launch_mode: GodotLaunchMode,
+                sensitive = false,
+                default = GodotLaunchMode::PlatformDefault;
+        }
+
         /// Settings for `gdvm prune`.
         "prune" => prune: PruneConfig {
             /// Maximum age, in days, before an unused asset becomes eligible
@@ -351,6 +400,20 @@ mod tests {
     }
 
     #[test]
+    fn test_godot_launch_mode_strings_roundtrip() {
+        for (value, mode) in [
+            ("attached", GodotLaunchMode::Attached),
+            ("detached", GodotLaunchMode::Detached),
+            ("platform-default", GodotLaunchMode::PlatformDefault),
+        ] {
+            assert_eq!(value.parse::<GodotLaunchMode>().unwrap(), mode);
+            assert_eq!(mode.as_ref(), value);
+        }
+
+        assert!("console-attached".parse::<GodotLaunchMode>().is_err());
+    }
+
+    #[test]
     fn test_managed_keys_cover_every_setting() {
         for &key in ConfigKey::ALL {
             assert!(ManagedKey::ALL.contains(&ManagedKey::Setting(key)));
@@ -370,10 +433,13 @@ mod tests {
     fn test_settings_toml_roundtrip() {
         let mut cfg = Config::default();
         cfg.set_value(ConfigKey::PruneMaxAgeDays, "14").unwrap();
+        cfg.set_value(ConfigKey::GodotLaunchMode, "attached")
+            .unwrap();
 
         let parsed: Config = toml::from_str(&toml::to_string(&cfg).unwrap()).unwrap();
 
         assert_eq!(parsed.prune.max_age_days, Some(14));
+        assert_eq!(parsed.godot.launch_mode, Some(GodotLaunchMode::Attached));
     }
 
     #[test]

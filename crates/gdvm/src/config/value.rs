@@ -20,8 +20,12 @@ use std::collections::HashMap;
 use anyhow::Result;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use strum::VariantNames;
 
 use crate::terr;
+
+/// Trait for enums that can be used as config values.
+pub(super) trait ConfigEnum: std::str::FromStr + AsRef<str> + VariantNames {}
 
 /// Where a value came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,6 +61,27 @@ impl ConfigValue for u64 {
 
     fn to_config_string(&self) -> String {
         self.to_string()
+    }
+}
+
+impl<T> ConfigValue for T
+where
+    T: ConfigEnum + Clone + std::fmt::Debug + Serialize + DeserializeOwned,
+{
+    fn parse_config_value(key: &str, value: &str) -> Result<Self> {
+        value.parse().ok().ok_or_else(|| {
+            terr!(
+                "error-config-invalid-enum",
+                key = key,
+                value = value,
+                expected = Self::VARIANTS.join(", ")
+            )
+            .into()
+        })
+    }
+
+    fn to_config_string(&self) -> String {
+        self.as_ref().to_string()
     }
 }
 
