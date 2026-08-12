@@ -183,6 +183,7 @@ error-response-not-utf8 = Svaret fra { $url } er ikke gyldig UTF-8.
 error-response-too-large = Svaret fra { $url } overskrider den maksimale tillatte størrelsen på { $limit } byte.
 error-too-many-redirects = For mange omdirigeringer.
 error-config-invalid-number = Ugyldig verdi for { $key }: { $value } (forventet et tall)
+error-config-invalid-enum = Ugyldig verdi for { $key }: { $value } (mulige verdier: { $expected })
 error-config-unknown-key = Ukjent konfigurasjonsnøkkel: { $key }
 error-invalid-path = Ugyldig sti: { $path }
 error-publish-missing-manifest = registry.json mangler

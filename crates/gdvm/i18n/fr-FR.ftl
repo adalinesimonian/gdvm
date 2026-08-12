@@ -183,6 +183,7 @@ error-response-not-utf8 = La réponse de { $url } n'est pas en UTF-8 valide.
 error-response-too-large = La réponse de { $url } dépasse la taille maximale autorisée de { $limit } octets.
 error-too-many-redirects = Trop de redirections.
 error-config-invalid-number = Valeur non valide pour { $key } : { $value } (nombre attendu)
+error-config-invalid-enum = Valeur non valide pour { $key } : { $value } (valeurs possibles : { $expected })
 error-config-unknown-key = Clé de configuration inconnue : { $key }
 error-invalid-path = Chemin non valide : { $path }
 error-publish-missing-manifest = registry.json manquant

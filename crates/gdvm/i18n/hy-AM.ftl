@@ -203,6 +203,7 @@ error-response-not-utf8 = { $url }-ի պատասխանը վավեր UTF-8 չէ։
 error-response-too-large = { $url }-ի պատասխանը գերազանցում է թույլատրված առավելագույն չափը՝ { $limit } բայթ։
 error-too-many-redirects = Չափազանց շատ վերաուղղորդումներ։
 error-config-invalid-number = Անվավեր արժեք { $key }-ի համար. { $value } (սպասվում էր թիվ)
+error-config-invalid-enum = Անվավեր արժեք { $key }-ի համար. { $value } (հնարավոր արժեքներ՝ { $expected })
 error-config-unknown-key = Անհայտ կարգավորման բանալի. { $key }
 error-invalid-path = Անվավեր ուղի. { $path }
 error-publish-missing-manifest = registry.json-ը բացակայում է

@@ -1021,6 +1021,45 @@ assert_exit_code 0 -- godot_shim --headless --script exit_ok.gd
 assert_exit_code 123 -- godot_shim --headless --script exit_fail.gd
 TEST_SCRIPT
 
+test "gdvm respects Godot launch mode" <<'TEST_SCRIPT'
+tmpdir="$(mktemp -d)"
+trap 'gdvm config unset godot.launch-mode >/dev/null 2>&1 || true; rm -rf "$tmpdir"' EXIT
+cd "$tmpdir"
+
+gdvm pin 4.3.0
+
+cat > exit_fail.gd <<'GDSCRIPT'
+extends SceneTree
+
+func _initialize():
+    quit(123)
+GDSCRIPT
+
+gdvm config set godot.launch-mode attached
+assert_eq attached "$(gdvm config get godot.launch-mode)"
+assert_exit_code 123 -- godot --headless --script exit_fail.gd
+
+gdvm config set godot.launch-mode detached
+assert_eq detached "$(gdvm config get godot.launch-mode)"
+assert_exit_code 0 -- godot --headless --script exit_fail.gd
+
+gdvm config set godot.launch-mode platform-default
+assert_eq platform-default "$(gdvm config get godot.launch-mode)"
+if [[ "$os" == "windows" ]]; then
+    assert_exit_code 0 -- godot --headless --script exit_fail.gd
+    assert_exit_code 0 -- gdvm run -- --headless --script exit_fail.gd
+else
+    assert_exit_code 123 -- godot --headless --script exit_fail.gd
+    assert_exit_code 123 -- gdvm run -- --headless --script exit_fail.gd
+fi
+
+gdvm config set godot.launch-mode detached
+if [[ "$os" == "windows" ]]; then
+    assert_exit_code 123 -- godot_console --headless --script exit_fail.gd
+    assert_exit_code 123 -- gdvm run --console=true -- --headless --script exit_fail.gd
+fi
+TEST_SCRIPT
+
 test "Link 4.3.0 to a custom path and run it" <<'TEST_SCRIPT'
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT

@@ -23,4 +23,6 @@ mod value;
 
 pub use file::{ConfigFile, ConfigFileState, ConfigProblem};
 pub use registries::{RegistryConfig, validate_registry_name};
-pub use schema::{Config, ConfigKey, DEFAULT_PRUNE_MAX_AGE_DAYS, PruneConfig};
+pub use schema::{
+    Config, ConfigKey, DEFAULT_PRUNE_MAX_AGE_DAYS, GodotConfig, GodotLaunchMode, PruneConfig,
+};

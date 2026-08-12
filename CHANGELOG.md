@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Unreleased
 
+### New Features
+
+- The new `godot.launch-mode` setting sets whether Godot runs by default with the console attached, detached, or using Godot's platform default. This should allow scripts to use `godot` or `gdvm run` across platforms without having to work around Windows' default of detached console mode, which can cause issues with scripts that expect to read Godot's output or exit code.
+
 **Full Changelog**: https://github.com/adalinesimonian/gdvm/compare/v0.16.0...main
 
 ## v0.16.0

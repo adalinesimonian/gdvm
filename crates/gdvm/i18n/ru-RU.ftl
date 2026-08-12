@@ -187,6 +187,7 @@ error-response-not-utf8 = Ответ от { $url } не является кор�
 error-response-too-large = Ответ от { $url } превышает максимально допустимый размер { $limit } байт.
 error-too-many-redirects = Слишком много перенаправлений.
 error-config-invalid-number = Недопустимое значение для { $key }: { $value } (ожидалось число)
+error-config-invalid-enum = Недопустимое значение для { $key }: { $value } (допустимые значения: { $expected })
 error-config-unknown-key = Неизвестный ключ конфигурации: { $key }
 error-invalid-path = Недопустимый путь: { $path }
 error-publish-missing-manifest = отсутствует registry.json
