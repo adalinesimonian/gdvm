@@ -1671,13 +1671,13 @@ __metadata:
   linkType: hard
 
 "solid-js@npm:^1.9.14":
-  version: 1.9.14
-  resolution: "solid-js@npm:1.9.14"
+  version: 1.9.15
+  resolution: "solid-js@npm:1.9.15"
   dependencies:
     csstype: "npm:^3.1.0"
     seroval: "npm:~1.5.4"
     seroval-plugins: "npm:~1.5.4"
-  checksum: 10c0/8427451e12860b3422259b0dafd1bdf68061640a10cb6239770636a20a9d8d6c4fcd013c9c64c93fe2f7522c1f8734ebaf00b71a1cf91b74b808ebbbf0dbda22
+  checksum: 10c0/82dfdea2f8de997b096989e57e051882282c8d96c39343637d31f27a941e778b63a107669b64dd139e58ae65f58b41aa073b3d620a3a4ea5f6f361d4b686ba5c
   languageName: node
   linkType: hard
 
