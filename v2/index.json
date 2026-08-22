@@ -2,6 +2,27 @@
 	"schema": 2,
 	"releases": [
 		{
+			"version": "3.6.3-stable",
+			"variants": {
+				"csharp": [
+					"linux-x86",
+					"linux-x86_64",
+					"macos-universal",
+					"windows-x86",
+					"windows-x86_64"
+				],
+				"default": [
+					"linux-arm64",
+					"linux-x86",
+					"linux-x86_64",
+					"macos-universal",
+					"windows-x86",
+					"windows-x86_64"
+				]
+			},
+			"path": "releases/3.6.3-stable.json"
+		},
+		{
 			"version": "4.7.2-stable",
 			"variants": {
 				"csharp": [
