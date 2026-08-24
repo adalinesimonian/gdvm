@@ -228,13 +228,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@brillout/vite-plugin-server-entry@npm:0.7.19":
-  version: 0.7.19
-  resolution: "@brillout/vite-plugin-server-entry@npm:0.7.19"
+"@brillout/vite-plugin-server-entry@npm:^0.7.20":
+  version: 0.7.20
+  resolution: "@brillout/vite-plugin-server-entry@npm:0.7.20"
   dependencies:
     "@brillout/import": "npm:^0.2.6"
     "@brillout/picocolors": "npm:^1.0.26"
-  checksum: 10c0/b0ca943c0756a8cce6a9468020007b65c40903337ee282eb50ddfc9c39136445b6a7976106ba4e5cef7a4cef8e2680558cd27aa631580a76109b9af45645892e
+  checksum: 10c0/8b455a3ed0d8773acc9a60bb82e89924784a29807e2ed9d55d70d913e63acbdae0b900965c4554e7cd4af943aa422312ff1e32710fed394d3be8e9ac531b1d2d
   languageName: node
   linkType: hard
 
@@ -796,36 +796,36 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@universal-deploy/netlify@npm:^0.2.2":
-  version: 0.2.2
-  resolution: "@universal-deploy/netlify@npm:0.2.2"
+"@universal-deploy/netlify@npm:^0.2.3":
+  version: 0.2.3
+  resolution: "@universal-deploy/netlify@npm:0.2.3"
   dependencies:
-    "@universal-deploy/store": "npm:^0.2.1"
+    "@universal-deploy/store": "npm:^0.2.2"
   peerDependencies:
     vite: ">=7.1"
-  checksum: 10c0/28571de13a4b72d4f2bc9e8758f602972444e5d933c558dbcfa4b4efd85003b312cb6f5963f24ecde20e0f00e01fb5dcad99af78f22e6d11e9c7bda1212b5dc1
+  checksum: 10c0/68ad45ae62dea3b3b5a578d875d3d3c35eae2b173f4f6832108b91742285efe2b983b9a95f286026687789fd572497506b126c2c215e8876dcf180679e268c5b
   languageName: node
   linkType: hard
 
-"@universal-deploy/node@npm:^0.1.7":
-  version: 0.1.8
-  resolution: "@universal-deploy/node@npm:0.1.8"
+"@universal-deploy/node@npm:^0.1.10":
+  version: 0.1.10
+  resolution: "@universal-deploy/node@npm:0.1.10"
   dependencies:
-    "@universal-deploy/store": "npm:^0.2.1"
+    "@universal-deploy/store": "npm:^0.2.2"
     magic-string: "npm:^0.30.21"
-    srvx: "npm:^0.11.9"
+    srvx: "npm:^0.12.5"
   peerDependencies:
     vite: ">=7.1"
   peerDependenciesMeta:
     vite:
       optional: true
-  checksum: 10c0/afcf68648c79ca769fe12ead379dbf8f5f87f4f83549c8319570eb6e4ec183017179f13c69a319000cb12793b16d14ca2704f3c910a2aaa19d97c44506a66e82
+  checksum: 10c0/0e9dd02ae26da020271dad897015b53b7030ffbfb2fed7cc1e5bddfa8addf5037a049b4c35a5a1b7e3a593976def4e3b059158b3c2427e2f50494bf4c5016b67
   languageName: node
   linkType: hard
 
-"@universal-deploy/store@npm:^0.2.1":
-  version: 0.2.1
-  resolution: "@universal-deploy/store@npm:0.2.1"
+"@universal-deploy/store@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@universal-deploy/store@npm:0.2.2"
   dependencies:
     rou3: "npm:^0.8.1"
     srvx: "npm:*"
@@ -834,18 +834,18 @@ __metadata:
   peerDependenciesMeta:
     srvx:
       optional: true
-  checksum: 10c0/8079a2d41d17b5b9a8d3dc5859ca18875d989fb695d592bee7a8dff13dfdf34af682384c4cc577ed10b2fbba9686953bdcb6ce4fb528548f10c5a8f9191ed8fe
+  checksum: 10c0/88314de33923cfde675efa2e4b897447febc202ca667d4ad2877e87e70a3e0fff79a293ab6df18d3b42eeda7a338179f6682a9d55af33959ed12c2a4c5ce8d10
   languageName: node
   linkType: hard
 
-"@universal-deploy/vite@npm:^0.1.10":
-  version: 0.1.10
-  resolution: "@universal-deploy/vite@npm:0.1.10"
+"@universal-deploy/vite@npm:^0.1.11":
+  version: 0.1.11
+  resolution: "@universal-deploy/vite@npm:0.1.11"
   dependencies:
-    "@universal-deploy/netlify": "npm:^0.2.2"
-    "@universal-deploy/node": "npm:^0.1.7"
-    "@universal-deploy/store": "npm:^0.2.1"
-    "@universal-middleware/express": "npm:^0.4.26"
+    "@universal-deploy/netlify": "npm:^0.2.3"
+    "@universal-deploy/node": "npm:^0.1.10"
+    "@universal-deploy/store": "npm:^0.2.2"
+    "@universal-middleware/express": "npm:^0.4.31"
     magic-string: "npm:^0.30.21"
     rou3: "npm:^0.8.1"
   peerDependencies:
@@ -853,7 +853,7 @@ __metadata:
   peerDependenciesMeta:
     vite:
       optional: true
-  checksum: 10c0/76a309971f02c3ce36f7767ce870f8dd868917956ec0f45d61f8873c6714676142e088c340d41162bb54419dca635f9d6dc38bde7379f6f93170b3d26ad13436
+  checksum: 10c0/38e689c18c0ee473d220a29a031176f9b3aaaf29836d38c534bcfa89ad6ef046b924ccc7008ef0ad13f5bc5aae89e3c50bb9302014052d2003ebfee8590528c3
   languageName: node
   linkType: hard
 
@@ -896,22 +896,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@universal-middleware/express@npm:^0.4.26":
-  version: 0.4.30
-  resolution: "@universal-middleware/express@npm:0.4.30"
+"@universal-middleware/express@npm:^0.4.31":
+  version: 0.4.31
+  resolution: "@universal-middleware/express@npm:0.4.31"
   dependencies:
     "@universal-middleware/core": "npm:^0.4.18"
-    "@universal-middleware/node": "npm:^0.2.1"
-  checksum: 10c0/af17502aaa642fda54c51efa6a5b290e4cea0c396592d5675379ab36993006ddf455162e70a707b7981b48c205156d9d7054b667322bd7e3209c02242dfafd15
+    "@universal-middleware/node": "npm:^0.2.2"
+  checksum: 10c0/5805c2109258d0000d95f9d1bcf7a5210cf68cfdf81c579eb235b33d5b15782ba806d645b3dae318712c725952b39e04c3ea03b12f1d4d5e6149f0e2e43ccf2a
   languageName: node
   linkType: hard
 
-"@universal-middleware/node@npm:^0.2.1":
-  version: 0.2.1
-  resolution: "@universal-middleware/node@npm:0.2.1"
+"@universal-middleware/node@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@universal-middleware/node@npm:0.2.2"
   dependencies:
     "@universal-middleware/core": "npm:^0.4.18"
-  checksum: 10c0/4d5f0f291a32e32c31d3b387a206393afdfa658d84774ea60fc67cef956806bb7cd366ad87fd321421ed889e5ee1d92537a02b716839aa467f94c1a512cdf5c9
+  checksum: 10c0/ae4a696688a4ec4df2a290ac8b3cdf33cad7ed7c268d23f03dd3eba2e4227d41382a9dc86f6b9f940b8c4a2932c535a68ee1bc10828bc4838e84c57575384818
   languageName: node
   linkType: hard
 
@@ -1427,12 +1427,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^0.30.17, magic-string@npm:^0.30.21":
+"magic-string@npm:^0.30.21":
   version: 0.30.21
   resolution: "magic-string@npm:0.30.21"
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.5.5"
   checksum: 10c0/299378e38f9a270069fc62358522ddfb44e94244baa0d6a8980ab2a9b2490a1d03b236b447eee309e17eb3bddfa482c61259d47960eb018a904f0ded52780c4a
+  languageName: node
+  linkType: hard
+
+"magic-string@npm:^1.2.0":
+  version: 1.2.2
+  resolution: "magic-string@npm:1.2.2"
+  dependencies:
+    "@jridgewell/sourcemap-codec": "npm:^1.5.5"
+  checksum: 10c0/79eddeaf22fa15a227145105c36dc507e67b9fa147750b7abfe35e533ee133085ce40a05c09dd0a49cccd3e8813dc01f1367589fe35e012295e5ffe94122389c
   languageName: node
   linkType: hard
 
@@ -1728,12 +1737,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"srvx@npm:*, srvx@npm:^0.11.9":
+"srvx@npm:*":
   version: 0.11.21
   resolution: "srvx@npm:0.11.21"
   bin:
     srvx: bin/srvx.mjs
   checksum: 10c0/23644b67cb03d36cfebb80ec6e00aa9fd77abd7bcb5c2790814b7ec0eefc9726533589a3cc51d13024b6f69ba0be845e2fdbf4557f5ce05ebe72c67c3ae76452
+  languageName: node
+  linkType: hard
+
+"srvx@npm:^0.12.5":
+  version: 0.12.7
+  resolution: "srvx@npm:0.12.7"
+  bin:
+    srvx: bin/srvx.mjs
+  checksum: 10c0/924ba9153b40f438558fccfeb531158f628d27baa1e048674df8dd4cc768b34bdf244d710cfa97b10d1ac9d262066cd24dca67b73dd77c076c4d25762e294f85
   languageName: node
   linkType: hard
 
@@ -1978,32 +1996,32 @@ __metadata:
   linkType: hard
 
 "vike@npm:^0.4.260":
-  version: 0.4.260
-  resolution: "vike@npm:0.4.260"
+  version: 0.4.261
+  resolution: "vike@npm:0.4.261"
   dependencies:
     "@babel/core": "npm:^7.28.5"
     "@babel/types": "npm:^7.28.5"
     "@brillout/import": "npm:^0.2.6"
     "@brillout/json-serializer": "npm:^0.5.25"
     "@brillout/picocolors": "npm:^1.0.31"
-    "@brillout/vite-plugin-server-entry": "npm:0.7.19"
-    "@universal-deploy/store": "npm:^0.2.1"
-    "@universal-deploy/vite": "npm:^0.1.10"
+    "@brillout/vite-plugin-server-entry": "npm:^0.7.20"
+    "@universal-deploy/store": "npm:^0.2.2"
+    "@universal-deploy/vite": "npm:^0.1.11"
     "@universal-middleware/core": "npm:^0.4.18"
-    "@universal-middleware/node": "npm:^0.2.1"
+    "@universal-middleware/node": "npm:^0.2.2"
     cac: "npm:^6.0.0"
     convert-route: "npm:^1.1.1"
     es-module-lexer: "npm:^1.0.0"
     esbuild: "npm:>=0.19.0"
     json5: "npm:^2.0.0"
-    magic-string: "npm:^0.30.17"
-    picomatch: "npm:^4.0.4"
+    magic-string: "npm:^1.2.0"
+    picomatch: "npm:^4.0.5"
     semver: "npm:^7.8.5"
     sirv: "npm:^3.0.2"
     source-map-support: "npm:^0.5.0"
     tinyglobby: "npm:^0.2.17"
     vite: "npm:>=6.3.0"
-    vite-plugin-wrapper: "npm:^0.1.0"
+    vite-plugin-wrapper: "npm:^0.1.1"
   peerDependencies:
     react-streaming: ">=0.3.42"
     vite: ">=6.3.0"
@@ -2014,7 +2032,7 @@ __metadata:
       optional: true
   bin:
     vike: bin.js
-  checksum: 10c0/79b5e58cf94efd54a2443300b294b206370703c50058b063889f87507d49896b54f4dd1ee415745d7e256a5c52ef91c48b12c21a992c54584f840f321fdac56f
+  checksum: 10c0/a89876b4cbc660ff47efc497707e7f02ad97b7cb8bea9000f94bfc62e70e85a7f19d4bd1d89a18bdcab915ace4586cbfa5f9de9dc516115d073323a1776fdd26
   languageName: node
   linkType: hard
 
@@ -2039,12 +2057,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-wrapper@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "vite-plugin-wrapper@npm:0.1.0"
+"vite-plugin-wrapper@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "vite-plugin-wrapper@npm:0.1.1"
   peerDependencies:
     vite: ">=7"
-  checksum: 10c0/d50b15182e22f22a33baba08cbf55e4bee02df1f53e859610568e03d647a2259eab7ff731de25b4faad82355bdeaf6485ba90dbab50e7ffaa63f5c3a6d651f83
+  checksum: 10c0/d4d4e310a445b18d63fd3658968dd9c60737de99296c13d22d2938bc696b99ba9b297da2b2e2c20840c2572fb7ac3695eae3abc5ee197e532096189b320a6f02
   languageName: node
   linkType: hard
 
