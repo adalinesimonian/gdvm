@@ -1436,7 +1436,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^1.2.0":
+"magic-string@npm:^1.2.2":
   version: 1.2.2
   resolution: "magic-string@npm:1.2.2"
   dependencies:
@@ -1996,8 +1996,8 @@ __metadata:
   linkType: hard
 
 "vike@npm:^0.4.260":
-  version: 0.4.262
-  resolution: "vike@npm:0.4.262"
+  version: 0.4.263
+  resolution: "vike@npm:0.4.263"
   dependencies:
     "@babel/core": "npm:^7.28.5"
     "@babel/types": "npm:^7.28.5"
@@ -2014,7 +2014,7 @@ __metadata:
     es-module-lexer: "npm:^1.0.0"
     esbuild: "npm:>=0.19.0"
     json5: "npm:^2.0.0"
-    magic-string: "npm:^1.2.0"
+    magic-string: "npm:^1.2.2"
     picomatch: "npm:^4.0.5"
     semver: "npm:^7.8.5"
     sirv: "npm:^3.0.2"
@@ -2032,7 +2032,7 @@ __metadata:
       optional: true
   bin:
     vike: bin.js
-  checksum: 10c0/533ed42e30653a8144fea09eafe1fe312fb983a66d8bc4ab98de5edd69c504f28037fc533bb58c7063d5da45d8e2ecba36badfa83d5efc17c206469d4813809e
+  checksum: 10c0/c2ecd00541a5d57e797a0703cbdd9f78fa0acd24b93e29d3fa8d04d64fc94212ae6032c0a88cf6a2d84571948ddc5541848c74029fcaea177177e512ecd53d1a
   languageName: node
   linkType: hard
 
