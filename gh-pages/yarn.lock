@@ -1996,8 +1996,8 @@ __metadata:
   linkType: hard
 
 "vike@npm:^0.4.260":
-  version: 0.4.263
-  resolution: "vike@npm:0.4.263"
+  version: 0.4.264
+  resolution: "vike@npm:0.4.264"
   dependencies:
     "@babel/core": "npm:^7.28.5"
     "@babel/types": "npm:^7.28.5"
@@ -2032,7 +2032,7 @@ __metadata:
       optional: true
   bin:
     vike: bin.js
-  checksum: 10c0/c2ecd00541a5d57e797a0703cbdd9f78fa0acd24b93e29d3fa8d04d64fc94212ae6032c0a88cf6a2d84571948ddc5541848c74029fcaea177177e512ecd53d1a
+  checksum: 10c0/a65b3c0fcaf93c3123800909bc50b52fb65fc4fbb2ddddcad26f2f2dee88eb844e85ab385907cc13bf1aa99fb94079f982cb94e6eb56ed8b259ebcd8657cf5d2
   languageName: node
   linkType: hard
 
