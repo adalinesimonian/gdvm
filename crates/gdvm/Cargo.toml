@@ -39,7 +39,7 @@ fluent-bundle = "=0.16.0"
 unic-langid = { version = "=0.9.6", features = ["unic-langid-macros"] }
 anyhow = "=1.0.104"
 terminal_size = "=0.4.4"
-console = "=0.16.4"
+console = "=0.16.6"
 unicode-width = "=0.2.2"
 icu = "=2.3.1"
 fixed_decimal = { version = "=0.7.2", features = ["ryu"] }
