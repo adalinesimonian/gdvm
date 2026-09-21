@@ -1990,15 +1990,15 @@ __metadata:
   linkType: hard
 
 "vike-solid@npm:^0.8.3":
-  version: 0.8.4
-  resolution: "vike-solid@npm:0.8.4"
+  version: 0.8.5
+  resolution: "vike-solid@npm:0.8.5"
   dependencies:
     isbot-fast: "npm:^1.2.0"
   peerDependencies:
     solid-js: ^1.8.7
     vike: ">=0.4.250"
     vite-plugin-solid: ^2.11.10
-  checksum: 10c0/1da39b99e9bdc9b79bb7c3f5419e532b018f7d4480a141c7ab9f92233019d3aa70cdce8b81100aa0ffe0d1651e5298403f13ff266adce0a67a1f11d9501888f7
+  checksum: 10c0/2ac4561d9de608e1a4e8def81f92673268fa1e2193460b79f161ba5058589de9c54e8877d0c92b5dc14241b73fd3c218cbe3d6458ce204eb8b0e3ee84a2c95cc
   languageName: node
   linkType: hard
 
