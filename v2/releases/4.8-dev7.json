@@ -1,6 +1,95 @@
 {
 	"schema": 2,
-	"updated_at": "2026-09-29T18:43:02.932Z",
+	"updated_at": "2026-10-01T16:33:30.140Z",
 	"version": "4.8-dev7",
-	"variants": {}
+	"variants": {
+		"csharp": {
+			"linux-arm64": {
+				"sha512": "70ac9b7204c96b0766bea4c0c9b84c233a8b16ac26d122f42a432ecccc20a364b803fddae7639fc1e39169212e6a8b7267f64ff1f19605f499ed01c9452a6dc4",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_mono_linux_arm64.zip"
+				]
+			},
+			"linux-x86": {
+				"sha512": "cebaa40367107da633cc129c96002ddffcf9ca876d0d4a5f2180fbcdbfb94ef1f6944e3e7542747b52af94b7b52a0d55d16029d9cc53454ca34d9a19745581c1",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_mono_linux_x86_32.zip"
+				]
+			},
+			"linux-x86_64": {
+				"sha512": "543a8d909a4fbffd3fa9e54baa0d90cdac4d8ca24bca1e071a0432bb39cb7d6973cbf883457df6e7af1942727c59ec74584ba2bb4aedcdb3253c290d5f13c54b",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_mono_linux_x86_64.zip"
+				]
+			},
+			"macos-universal": {
+				"sha512": "efef0373418b9bc24ae37968dc737844ca22cc4936170f8a11b77cf0369c1bbffdc4d9c3b9e1bceaa05a0bea772810c4d06dd0021d19850e282a0acc6c14a30d",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_mono_macos.universal.zip"
+				]
+			},
+			"windows-arm64": {
+				"sha512": "c81d68dd5ba2a94b672f916e3f2a5258af2af76584ccc303005cbabb016abc85e75d867bf9fbc88fdb2651a74963b834ada1b9730ec788d905bd7fdb6ef86489",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_mono_windows_arm64.zip"
+				]
+			},
+			"windows-x86": {
+				"sha512": "9de7c92899c54c0e0b55b6923eba265a3d7b50ae20f21d9c920308709e3f7403a30f3351fb7115eca74c94d78d94a0e910f3deed91b341ae604d0808a7c04386",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_mono_win32.zip"
+				]
+			},
+			"windows-x86_64": {
+				"sha512": "80414bf590bdc7c21a543ad6f49e4c6f1141b3911488b342716c05f13b5f798a1a4377c7c186636f6f59e2aa691c9c1977b993eb80999cf787c7bfec0646654f",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_mono_win64.zip"
+				]
+			}
+		},
+		"default": {
+			"linux-arm64": {
+				"sha512": "977e450011cbbcdfd089bb0e34b02f12aefa4b32407d9c9eedf23b0047d65dae4a75c8e8060978e2747853a7d748b51c4bdaa6903ebc0bff2e8536b62195510c",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_linux.arm64.zip"
+				]
+			},
+			"linux-x86": {
+				"sha512": "5edd27f60f6461071a09d86899681f3d4a49ee62e5c95a009cafe748a04a29b68662b56fba09d5c03307d6a7dd7ae249e7660acead90b1db1ba38a4ef5fc5ea4",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_linux.x86_32.zip"
+				]
+			},
+			"linux-x86_64": {
+				"sha512": "6444078c4984699069e81f4c9fb83b88119a89d6f4dd39790acf9c2e2b1e4d0fb435a0c101aa48d24a81662d2ff50d648bd3475086d2d2ca37ce90374b97ef38",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_linux.x86_64.zip"
+				]
+			},
+			"macos-universal": {
+				"sha512": "9642f4478ede880b427c66194f48be2c865147b76f6d3585ca5b8cd910d75514f3f01496f73ec3fc8c1395bc86bfccf83b4366901683e1b41c718c0214624273",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_macos.universal.zip"
+				]
+			},
+			"windows-arm64": {
+				"sha512": "1f9b8d051b8ae4c2704c30ec138591658061bab3502209b1825ffa33df5bbe92229ac709e48d6d996fc5625abf086a7026624dd38b26871922cdfb98395cb7f8",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_windows_arm64.exe.zip"
+				]
+			},
+			"windows-x86": {
+				"sha512": "3640ecb8367071bae217c5525b9c4c86b65acba3cc1982c028c4f173b9821192cf411b3f29183417e349ad80deeecd711fdd6cc9e78aa3513903831a6f486052",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_win32.exe.zip"
+				]
+			},
+			"windows-x86_64": {
+				"sha512": "7b6dd16fd56a03ff8d0ae51ec242602db6ac5310b351cacbb6d4e3877feedec46974ff908e49bf19963a28c8300fe6c1d2534d379a316ad9b776333339cb95ca",
+				"urls": [
+					"https://github.com/godotengine/godot-builds/releases/download/4.8-dev7/Godot_v4.8-dev7_win64.exe.zip"
+				]
+			}
+		}
+	}
 }
