@@ -2106,15 +2106,15 @@ __metadata:
   linkType: hard
 
 "vite-plugin-solid@npm:^2.11.12":
-  version: 2.11.14
-  resolution: "vite-plugin-solid@npm:2.11.14"
+  version: 2.11.16
+  resolution: "vite-plugin-solid@npm:2.11.16"
   dependencies:
     "@babel/core": "npm:^7.23.3"
     "@types/babel__core": "npm:^7.20.4"
     babel-preset-solid: "npm:^1.8.4"
     merge-anything: "npm:^5.1.7"
     solid-refresh: "npm:^0.6.3"
-    vitefu: "npm:^1.0.4"
+    vitefu: "npm:^1.1.1"
   peerDependencies:
     "@testing-library/jest-dom": ^5.16.6 || ^5.17.0 || ^6.0.0 || ^7.0.0
     solid-js: ^1.7.2
@@ -2122,7 +2122,7 @@ __metadata:
   peerDependenciesMeta:
     "@testing-library/jest-dom":
       optional: true
-  checksum: 10c0/9fe4c9b43b047546d6b006056e90da92edcaf36ad40d5b7ed4e861c603eeed3b9196d279cc27c462e5209b0a055df1e12ef752cffd4150c2fe220335e357a463
+  checksum: 10c0/384920862a7e929572418af6bd565b05a8f9aa10883b1f0825b82e11d7852fb0d088ebe8dd9547f7cbe878fd2c3ddf209d2d5be67e6dfce5eb57177bd36847fb
   languageName: node
   linkType: hard
 
@@ -2192,7 +2192,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitefu@npm:^1.0.4":
+"vitefu@npm:^1.1.1":
   version: 1.1.3
   resolution: "vitefu@npm:1.1.3"
   peerDependencies:
