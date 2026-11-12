@@ -228,13 +228,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@brillout/vite-plugin-server-entry@npm:^0.7.23":
-  version: 0.7.23
-  resolution: "@brillout/vite-plugin-server-entry@npm:0.7.23"
+"@brillout/vite-plugin-server-entry@npm:^0.7.24":
+  version: 0.7.24
+  resolution: "@brillout/vite-plugin-server-entry@npm:0.7.24"
   dependencies:
     "@brillout/import": "npm:^0.2.6"
     "@brillout/picocolors": "npm:^1.0.26"
-  checksum: 10c0/c9d1fc192894448df28b158a81fc654c397708809c0881e3c506b81728ff03ee288d9b38119f4cbc3bc84f89b89bd0e69612320ec737edee5fb76ededeec6e26
+  checksum: 10c0/38b0608e002fa353bb46c543eef1d5f2745499b16d19a9228d3b251818ce570e7974bdf42f358951cc2fcccde48b325d461b29804645879c7cf7e4270d1678bd
   languageName: node
   linkType: hard
 
@@ -871,6 +871,45 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@universal-middleware/core@npm:^0.7.2":
+  version: 0.7.2
+  resolution: "@universal-middleware/core@npm:0.7.2"
+  dependencies:
+    regexparam: "npm:^3.0.0"
+    tough-cookie: "npm:^6.0.2"
+  peerDependencies:
+    "@cloudflare/workers-types": ^4 || ^5
+    "@hattip/core": ^0.0.49
+    "@types/express": ^4 || ^5
+    "@webroute/route": ^0.8
+    elysia: ^1
+    fastify: ^5
+    h3: ^1 || ^2
+    hono: ^4
+    srvx: ">=0.8"
+  peerDependenciesMeta:
+    "@cloudflare/workers-types":
+      optional: true
+    "@hattip/core":
+      optional: true
+    "@types/express":
+      optional: true
+    "@webroute/route":
+      optional: true
+    elysia:
+      optional: true
+    fastify:
+      optional: true
+    h3:
+      optional: true
+    hono:
+      optional: true
+    srvx:
+      optional: true
+  checksum: 10c0/c5b6d81cbbc95f0f9c245bd9d0ebb3c2e8d6ff5a9066ae4ef0f9381bd807737ac167873f74d84732cc688da1ce2379bba4b011b17b1ddc9d7471730f6e949bba
+  languageName: node
+  linkType: hard
+
 "@universal-middleware/express@npm:^0.5.0":
   version: 0.5.3
   resolution: "@universal-middleware/express@npm:0.5.3"
@@ -1322,12 +1361,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^1.4.3":
-  version: 1.4.3
-  resolution: "magic-string@npm:1.4.3"
+"magic-string@npm:^1.4.5":
+  version: 1.4.5
+  resolution: "magic-string@npm:1.4.5"
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.6.0"
-  checksum: 10c0/857743a1e7039d2e867505bb272a57cc605f610b90f6bf9ef6cbf9654e9cd64330ec35e564a58ca455350529872c3ecc01f37da934da130391237f9f593cc565
+  checksum: 10c0/79295b85e19f2e18bb01b81671d27ae192546e88534dfcef2e36f2c04f45b39db497ce85a62efda0336356308cdc037a1c73fc0f1bd0945d12ae1e794163b247
   languageName: node
   linkType: hard
 
@@ -1604,12 +1643,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.3.5, semver@npm:^7.8.5":
+"semver@npm:^7.3.5":
   version: 7.8.5
   resolution: "semver@npm:7.8.5"
   bin:
     semver: bin/semver.js
   checksum: 10c0/b1f3127a5be8125a94f37188b361c212466c292c6910adce3ec106cff5dc211ccaedc4739c11bb70fda59d6fc1f040a9bca289f4e093451521a2372e5231fe0c
+  languageName: node
+  linkType: hard
+
+"semver@npm:^7.8.6":
+  version: 7.8.6
+  resolution: "semver@npm:7.8.6"
+  bin:
+    semver: bin/semver.js
+  checksum: 10c0/bf0a4d16eb067e5391323649e46b4a268644d7f8ee88e37c7668d35e861ec145b6e7df576d898007fc0d9a2cedcbc33f71460aa3bbea18eedfa5af58c064d7fe
   languageName: node
   linkType: hard
 
@@ -1947,27 +1995,27 @@ __metadata:
   linkType: hard
 
 "vike@npm:^0.4.260":
-  version: 0.4.268
-  resolution: "vike@npm:0.4.268"
+  version: 0.4.270
+  resolution: "vike@npm:0.4.270"
   dependencies:
     "@babel/core": "npm:^7.28.5"
     "@babel/types": "npm:^7.28.5"
     "@brillout/import": "npm:^0.2.6"
     "@brillout/json-serializer": "npm:^0.5.27"
     "@brillout/picocolors": "npm:^1.0.31"
-    "@brillout/vite-plugin-server-entry": "npm:^0.7.23"
+    "@brillout/vite-plugin-server-entry": "npm:^0.7.24"
     "@universal-deploy/store": "npm:^0.3.0"
     "@universal-deploy/vite": "npm:^0.2.2"
-    "@universal-middleware/core": "npm:^0.7.0"
+    "@universal-middleware/core": "npm:^0.7.2"
     "@universal-middleware/node": "npm:^0.2.9"
     cac: "npm:^6.0.0"
     convert-route: "npm:^2.0.0"
     es-module-lexer: "npm:^1.0.0"
     json5: "npm:^2.0.0"
-    magic-string: "npm:^1.4.3"
+    magic-string: "npm:^1.4.5"
     picomatch: "npm:^4.0.7"
     rolldown: "npm:>=1.0.0"
-    semver: "npm:^7.8.5"
+    semver: "npm:^7.8.6"
     sirv: "npm:^3.0.2"
     source-map-support: "npm:^0.5.0"
     tinyglobby: "npm:^0.2.17"
@@ -1983,7 +2031,7 @@ __metadata:
       optional: true
   bin:
     vike: bin.js
-  checksum: 10c0/f47284f1e06ff0ce46c10b9d751b7095d3e87f88bde305a02322308eb17018034a12686b70ec34d4f6670c618533e0454731fb8fcfb087c68b505faf997b2069
+  checksum: 10c0/e1ce9859806781df2f931bd4e3d1eaaf283290acd3c2605a252b18507755f7594e5caf5818d7dd2c8703ad891a78de52638249181229358e80f3f684a2abd903
   languageName: node
   linkType: hard
 
