@@ -16,7 +16,7 @@
     "@fontsource/fira-code": "^5.2.7",
     "@types/node": "^26.1.1",
     "lucide-solid": "^1.24.0",
-    "solid-js": "^1.9.14",
+    "solid-js": "^2.0.0",
     "typescript": "^7.0.2",
     "vike": "^0.4.260",
     "vike-solid": "^0.8.3",
